@@ -1,6 +1,7 @@
 """Together AI Flux.1 Schnell 4K visual diffusion adapter."""
 
 from pathlib import Path
+from typing import Any
 from PIL import Image, ImageDraw
 
 from src.core.config import settings
@@ -19,6 +20,8 @@ class TogetherFluxAdapter(VisualProviderProtocol):
         self,
         prompt: str,
         aspect_ratio: str = "16:9",
+        loras: list[dict[str, Any]] | None = None,
+        seed: int | None = None,
     ) -> str:
         """Call Together AI to diffuse a photoreal keyframe image."""
         if is_mock_mode():
@@ -33,7 +36,7 @@ class TogetherFluxAdapter(VisualProviderProtocol):
         # Resolution based on aspect ratio
         width, height = (1344, 768) if aspect_ratio == "16:9" else (768, 1344)
 
-        body = {
+        body: dict[str, Any] = {
             "model": "black-forest-labs/FLUX.1-schnell",
             "prompt": f"Cinematic 4K broadcast still, photorealistic, shallow depth of field: {prompt}",
             "width": width,
@@ -42,6 +45,10 @@ class TogetherFluxAdapter(VisualProviderProtocol):
             "n": 1,
             "response_format": "url",
         }
+        if seed is not None:
+            body["seed"] = seed
+        if loras:
+            body["loras"] = loras
 
         if self.api_key:
             try:
@@ -55,7 +62,14 @@ class TogetherFluxAdapter(VisualProviderProtocol):
         # Offline fallback: returns mock asset identifier
         return f"https://cdn.cineai.studio/assets/flux_mock_{abs(hash(prompt)) % 10000}.jpg"
 
-    def _render_local_canvas(self, prompt: str, output_path: Path, aspect_ratio: str = "16:9") -> Path:
+    def _render_local_canvas(
+        self,
+        prompt: str,
+        output_path: Path,
+        aspect_ratio: str = "16:9",
+        seed: int | None = None,
+        loras: list[dict[str, Any]] | None = None,
+    ) -> Path:
         """Render deterministic graphical canvas locally with zero network calls."""
         target_size = (1920, 1080) if aspect_ratio == "16:9" else (1080, 1920)
         img = Image.new("RGB", target_size, (15, 23, 42))
@@ -65,7 +79,10 @@ class TogetherFluxAdapter(VisualProviderProtocol):
             r, g, b = int(20 + 35 * ratio), int(30 + 15 * ratio), int(50 + 60 * ratio)
             draw.line([(0, y), (target_size[0], y)], fill=(r, g, b))
 
-        draw.text((60, target_size[1] // 2 - 20), f"[Flux 4K Still] {prompt[:70]}...", fill=(240, 240, 250))
+        extra = f" | Seed: {seed}" if seed else ""
+        if loras:
+            extra += f" | LoRAs: {len(loras)}"
+        draw.text((60, target_size[1] // 2 - 20), f"[Flux 4K Still{extra}] {prompt[:70]}...", fill=(240, 240, 250))
         img.save(output_path, format="JPEG", quality=90)
         return output_path
 
@@ -75,21 +92,22 @@ class TogetherFluxAdapter(VisualProviderProtocol):
         output_path: Path | str,
         aspect_ratio: str = "16:9",
         force_live: bool = False,
+        loras: list[dict[str, Any]] | None = None,
+        seed: int | None = None,
     ) -> Path:
         """Generate and save photoreal keyframe image (Together AI -> Serverless Flux -> Canvas)."""
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 
         if is_mock_mode() and not force_live:
-            return self._render_local_canvas(prompt, out, aspect_ratio=aspect_ratio)
+            return self._render_local_canvas(prompt, out, aspect_ratio=aspect_ratio, seed=seed, loras=loras)
 
         client = HTTPClientPool.get_client()
-
 
         # 1. Try Together AI if API key is provided
         if self.api_key:
             try:
-                img_url = await self.generate_image(prompt, aspect_ratio=aspect_ratio)
+                img_url = await self.generate_image(prompt, aspect_ratio=aspect_ratio, loras=loras, seed=seed)
                 if img_url and img_url.startswith("http"):
                     resp = await client.get(img_url, timeout=30.0)
                     if resp.status_code == 200:
@@ -102,8 +120,9 @@ class TogetherFluxAdapter(VisualProviderProtocol):
         try:
             import urllib.parse
             w, h = (1280, 720) if aspect_ratio == "16:9" else (720, 1280)
+            seed_param = f"&seed={seed}" if seed is not None else ""
             encoded = urllib.parse.quote(f"cinematic photorealistic 4k {prompt}")
-            poll_url = f"https://image.pollinations.ai/prompt/{encoded}?width={w}&height={h}&nologo=true"
+            poll_url = f"https://image.pollinations.ai/prompt/{encoded}?width={w}&height={h}&nologo=true{seed_param}"
             resp = await client.get(poll_url, timeout=25.0, follow_redirects=True)
             if resp.status_code == 200 and len(resp.content) > 5000:
                 out.write_bytes(resp.content)
@@ -113,7 +132,7 @@ class TogetherFluxAdapter(VisualProviderProtocol):
             logger.warning(f"serverless_flux_failed: {ex}")
 
         # 3. Deterministic graphical canvas fallback
-        return self._render_local_canvas(prompt, out, aspect_ratio=aspect_ratio)
+        return self._render_local_canvas(prompt, out, aspect_ratio=aspect_ratio, seed=seed, loras=loras)
 
 
 

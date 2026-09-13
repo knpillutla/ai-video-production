@@ -24,6 +24,8 @@ class UserBase(BaseModel):
     avatar_url: str | None = None
     subscription_tier: SubscriptionTier = SubscriptionTier.CREATOR
     preferred_theme: str = "white"
+    home_country: str | None = None
+    cultural_heritage: str | None = None
 
 
 class UserCreate(UserBase):

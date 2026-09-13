@@ -1,4 +1,4 @@
-"""Interactive Pre-Flight Cost, Quota, and Production Mode Gate."""
+"""Interactive Pre-Flight Cost, Quota, Production Tiers, and Mode Gate."""
 
 from typing import Any
 from src.core.telemetry import logger
@@ -6,6 +6,21 @@ from src.domain.cost import EpisodeCostRecord
 from src.domain.creative import Episode
 from src.domain.user import User
 from src.mcp.model_selector.server import audit_provider_credits, select_best_model
+from src.mcp.model_selector.tier_resolver import recommend_production_tiers
+
+
+def _normalize_tier_choice(raw: str, default: str = "balanced") -> str:
+    """Normalize user input or CLI flag into a canonical tier key."""
+    val = raw.strip().lower()
+    if val in ("1", "low", "low_cost", "quick", "test"):
+        return "low_cost"
+    if val in ("2", "bal", "balanced", "std", "creator"):
+        return "balanced"
+    if val in ("3", "cine", "cinematic", "movie", "high"):
+        return "cinematic"
+    if val in ("4", "l", "local", "offline"):
+        return "local"
+    return default
 
 
 async def execute_preflight_gate(
@@ -14,96 +29,119 @@ async def execute_preflight_gate(
     language: str = "en",
     auto_confirm: bool = False,
     local_flag: bool = False,
-) -> tuple[str, bool]:
-    """Execute pre-flight cost display, quota audit, mode recommendation, and user confirmation.
+    cli_tier: str | None = None,
+) -> tuple[str, bool, str]:
+    """Display pre-flight cost breakdown, 3 production tiers, quota audit, and prompt user selection.
 
     Returns:
-        tuple[str, bool]: (selected_mode: "live" | "local" | "cancel", allow_fallback: bool)
+        tuple[str, bool, str]: (selected_mode: "live" | "local" | "cancel", allow_fallback: bool, selected_tier: str)
     """
-    print("\n" + "=" * 70)
-    print(" PRE-FLIGHT COST ESTIMATION & MODEL BREAKDOWN (RULE 7 GATE)")
-    print("=" * 70)
-    print(f" {'Component / Task':<26} {'Model / Engine':<22} {'Est. Units':<13} {'Est. Spend':<10}")
-    print("-" * 70)
-    if episode.cost_record and episode.cost_record.items:
-        for item in episode.cost_record.items:
-            print(f" - {item.component[:24]:<24} {item.model_name[:20]:<20} {str(item.predicted_units)[:11]:<11} ${item.predicted_cost_usd:.4f}")
+    tiers_data = recommend_production_tiers(
+        metadata={"language": language},
+        duration_seconds=float(episode.duration_seconds),
+        scenes_count=4,
+    )
+    tiers = tiers_data["tiers"]
+    t_low, t_bal, t_cine = tiers["low_cost"], tiers["balanced"], tiers["cinematic"]
 
-    print("-" * 70)
-    print(" MCP ROUTING STRATEGY & SELECTION RATIONALE:")
-    for cat, name in [("script_creative", "Scripting"), ("voice_tts", "Voiceover"), ("visual_image", "Visuals"), ("music_bgm", "BGM")]:
-        dec = await select_best_model(category=cat, language=language)
-        print(f" - {name} [{dec['provider']} {dec['selected_model']}]: {dec['selection_reasoning']}")
-
-    print("-" * 70)
-    print(f" TOTAL ESTIMATED SPEND:    ${episode.estimated_cost_usd:.4f} USD")
-    print(f" USER CREDIT BALANCE:      ${user.api_credit_balance_usd:.4f} USD")
-    can_afford = user.api_credit_balance_usd >= episode.estimated_cost_usd
-    print(f" AFFORDABILITY STATUS:     {'APPROVED' if can_afford else 'INSUFFICIENT CREDITS'}")
-    print("=" * 70)
+    print("\n" + "=" * 74)
+    print(" PRE-FLIGHT COST ESTIMATION & PRODUCTION OPTIONS (RULE 7 GATE)")
+    print("=" * 74)
+    print(" 3 PRODUCTION TIERS AVAILABLE (MODEL SELECTOR MCP SERVER):")
+    print("-" * 74)
+    print(f" [1] Low-Cost Quick Test:        ${t_low['total_cost_usd']:.4f} USD")
+    print(f"     Stack: Gemini 1.5 Flash + FLUX Schnell + Edge TTS + Pan-Zoom")
+    print(f"     Best for: {t_low['target_use_case']}")
+    print(f" [2] Balanced Creator Standard:  ${t_bal['total_cost_usd']:.4f} USD  (Recommended Default)")
+    print(f"     Stack: Gemini 1.5 Pro + FLUX Schnell + Azure Neural HD + Suno BGM")
+    print(f"     Best for: {t_bal['target_use_case']}")
+    print(f" [3] High-Fidelity Movie-Like:   ${t_cine['total_cost_usd']:.4f} USD")
+    print(f"     Stack: Claude/Pro + FLUX Dev + ElevenLabs Acting + LivePortrait + Vocal Song")
+    print(f"     Best for: {t_cine['target_use_case']}")
+    print(f" [4] Local Mode (Zero Cost):     $0.0000 USD  (Local mock/synthesizer)")
+    print("-" * 74)
+    print(f" USER CREDIT BALANCE:            ${user.api_credit_balance_usd:.4f} USD")
+    print("=" * 74)
 
     # 1. Audit AI Provider Health and Quota Status
     health = await audit_provider_credits(force_probe=True, strict_production=True)
     print(" AI PROVIDER CREDITS & QUOTA AUDIT (MCP SERVER):")
-    print("-" * 70)
+    print("-" * 74)
     for p in health["providers"]:
         status_tag = f"[{p['status']}]"
         print(f" - {p['provider_name']:<24} {status_tag:<14} {p['quota_details']}")
-    print("-" * 70)
+    print("-" * 74)
 
     # 2. Formulate Recommendation
     has_depleted = not health["production_ready"]
     if local_flag:
-        rec_mode = "LOCAL"
-        rec_reason = "User explicitly specified --local mode flag."
+        rec_mode, rec_reason = "LOCAL", "User specified --local flag."
     elif has_depleted:
-        rec_mode = "LOCAL"
-        blockers_str = "; ".join(health["blockers"][:2])
-        rec_reason = f"Cloud provider quota depleted ({blockers_str})."
+        blockers = "; ".join(health["blockers"][:2])
+        rec_mode, rec_reason = "LOCAL", f"Cloud quota depleted ({blockers})."
     else:
-        rec_mode = "LIVE"
-        rec_reason = "All AI cloud providers active with valid API credits."
+        rec_mode, rec_reason = "LIVE (Balanced)", "All AI cloud providers active with valid credits."
 
-    print(" ENGINE RECOMMENDATION & PRODUCTION MODE SELECTION:")
-    print("-" * 70)
-    print(f" - System Recommendation:   {rec_mode} MODE")
+    print(" ENGINE RECOMMENDATION:")
+    print(f" - System Recommendation:   {rec_mode}")
     print(f" - Rationale:               {rec_reason}")
-    print("-" * 70)
+    print("-" * 74)
 
-    if not can_afford and rec_mode == "LIVE":
-        print(f"[!] Warning: Insufficient studio credits for live mode. Local mode is recommended.")
+    # 3. Handle explicit CLI tier flag or Auto-Confirm
+    if cli_tier:
+        norm_tier = _normalize_tier_choice(cli_tier)
+        if norm_tier == "local" or local_flag:
+            return "local", True, norm_tier
+        if has_depleted:
+            print(f"[!] Alert: Cloud quota depleted for live tier '{norm_tier}'. Local mode recommended.")
+        return "live", False, norm_tier
 
-    # 3. Interactive Confirmation Prompt with Mode Switching
     if auto_confirm:
         if local_flag or has_depleted:
-            print(f"[i] Auto-selected {rec_mode} mode (--yes flag provided).\n")
-            return "local", True
-        return "live", False
+            print(f"[i] Auto-selected LOCAL mode (--yes flag provided).\n")
+            return "local", True, "local"
+        return "live", False, "balanced"
 
-    print(" Options Available:")
+    # 4. Interactive Confirmation & Tier Selection Prompt
+    print(" Select Production Option:")
     if has_depleted:
-        print("  [1] Generate in LOCAL mode (Recommended: offline synthesis, zero API spend)")
-        print("  [2] Cancel and top up cloud provider credits")
+        print("  [1] Low-Cost Quick Test (~$" + f"{t_low['total_cost_usd']:.4f} USD - May fail if quota exhausted)")
+        print("  [2] Balanced Creator Standard (~$" + f"{t_bal['total_cost_usd']:.4f} USD)")
+        print("  [3] High-Fidelity Movie-Like (~$" + f"{t_cine['total_cost_usd']:.4f} USD)")
+        print("  [4] Generate in LOCAL mode (Recommended: offline synthesis, zero API spend)")
+        print("  [5] Cancel and top up cloud provider credits")
         try:
-            choice = input("\nSelect option [1/2] or [L/c] (Default: 1 - Local): ").strip().lower()
-            if choice in ("2", "c", "cancel", "no", "n"):
-                return "cancel", False
-            return "local", True
+            choice = input("\nSelect tier [1/2/3/4/5] (Default: 4 - Local Mode): ").strip().lower()
+            if choice in ("5", "c", "cancel", "no", "n"):
+                return "cancel", False, "cancel"
+            if choice in ("1", "low", "low_cost", "quick"):
+                return "live", False, "low_cost"
+            if choice in ("2", "bal", "balanced"):
+                return "live", False, "balanced"
+            if choice in ("3", "cine", "cinematic", "movie"):
+                return "live", False, "cinematic"
+            return "local", True, "local"
         except EOFError:
-            return "local", True
+            return "local", True, "local"
     else:
-        print("  [1] Proceed with LIVE cloud production (Recommended: full photorealism & neural voice)")
-        print("  [2] Switch to LOCAL mode (Zero API spend, offline synthesis)")
-        print("  [3] Cancel production")
+        print("  [1] Low-Cost Quick Test (~$" + f"{t_low['total_cost_usd']:.4f} USD - Rapid validation)")
+        print("  [2] Balanced Creator Standard (~$" + f"{t_bal['total_cost_usd']:.4f} USD - Recommended Default)")
+        print("  [3] High-Fidelity Movie-Like (~$" + f"{t_cine['total_cost_usd']:.4f} USD - Maximum fidelity)")
+        print("  [4] Switch to LOCAL mode ($0.0000 USD, zero external API spend)")
+        print("  [5] Cancel production")
         try:
-            choice = input("\nSelect option [1/2/3] or [Y/l/c] (Default: 1 - Live): ").strip().lower()
-            if choice in ("2", "l", "local"):
-                return "local", True
-            if choice in ("3", "c", "cancel", "no", "n"):
-                return "cancel", False
-            return "live", False
+            choice = input("\nSelect tier [1/2/3/4/5] (Default: 2 - Balanced): ").strip().lower()
+            if choice in ("5", "c", "cancel", "no", "n"):
+                return "cancel", False, "cancel"
+            if choice in ("1", "low", "low_cost", "quick"):
+                return "live", False, "low_cost"
+            if choice in ("3", "cine", "cinematic", "movie"):
+                return "live", False, "cinematic"
+            if choice in ("4", "l", "local"):
+                return "local", True, "local"
+            return "live", False, "balanced"
         except EOFError:
-            return "live", False
+            return "live", False, "balanced"
 
 
 __all__ = ["execute_preflight_gate"]

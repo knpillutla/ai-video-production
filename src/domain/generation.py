@@ -10,9 +10,16 @@ class MediaFormat(str, Enum):
     AUTO = "auto"
     WEB_SERIES = "web_series"
     MOVIE_CINEMATIC = "movie_cinematic"
+    TRAVEL_GUIDE = "travel_guide"
+    VLOG = "vlog"
     NEWS_TABLOID = "news_tabloid"
     PODCAST_EXPLAINER = "podcast_explainer"
     DANCE_VIDEO = "dance_video"
+    SCENIC_RELAXATION = "scenic_relaxation"
+    WALKING_TOUR = "walking_tour"
+    SCENIC_DRIVE = "scenic_drive"
+    AMBIENT_LOUNGE = "ambient_lounge"
+    NATURE_SANCTUARY = "nature_sanctuary"
 
 
 class VisualStyle(str, Enum):

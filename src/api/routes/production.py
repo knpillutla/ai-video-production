@@ -1,7 +1,7 @@
 """Mandatory Pre-Flight Cost Estimation and Production Confirmation API routes."""
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -13,6 +13,7 @@ from src.domain.cost import EpisodeCostRecord
 from src.domain.creative import Episode
 from src.domain.repo import repo
 from src.domain.user import User
+from src.mcp.model_selector.tier_resolver import recommend_production_tiers
 
 router = APIRouter(prefix="/api/projects", tags=["Production & Cost Governance"])
 
@@ -38,6 +39,8 @@ class PreFlightCostEstimateResponse(BaseModel):
     total_cost_usd: float
     user_credit_balance_usd: float
     can_afford: bool
+    selected_tier: str = "balanced"
+    available_tiers: dict[str, Any] = Field(default_factory=dict)
     has_duplicate_warning: bool = False
     duplicate_warning_message: str | None = None
     conflicting_topic: str | None = None
@@ -46,9 +49,10 @@ class PreFlightCostEstimateResponse(BaseModel):
 
 
 class ProductionConfirmationRequest(BaseModel):
-    """Confirmation request with optional force_proceed consent for warnings."""
+    """Confirmation request with optional force_proceed consent for warnings and tier selection."""
 
     force_proceed: bool = False
+    tier: str = "balanced"
 
 
 class ProductionConfirmationResponse(BaseModel):
@@ -151,6 +155,13 @@ async def estimate_production_cost(
     episode.status = "estimating"
     repo.save_episode(episode)
 
+    fmt_val = episode.format.value if hasattr(episode.format, "value") else str(episode.format)
+    tiers_data = recommend_production_tiers(
+        metadata={"video_format": fmt_val, "genre": show.genre if show else "general"},
+        duration_seconds=float(episode.duration_seconds),
+        scenes_count=max(3, episode.duration_seconds // 30),
+    )
+
     return PreFlightCostEstimateResponse(
         episode_id=episode.id,
         project_title=episode.title,
@@ -160,6 +171,8 @@ async def estimate_production_cost(
         total_cost_usd=total_cost,
         user_credit_balance_usd=round(current_user.api_credit_balance_usd, 4),
         can_afford=can_afford,
+        selected_tier="balanced",
+        available_tiers=tiers_data.get("tiers", {}),
         has_duplicate_warning=is_dup,
         duplicate_warning_message=warning_msg,
         conflicting_topic=conflicting_top,
@@ -180,6 +193,16 @@ async def confirm_production(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Episode project not found")
 
     force_proceed = payload.force_proceed if payload else False
+    chosen_tier = payload.tier.lower() if (payload and payload.tier) else "balanced"
+    if payload and payload.tier and chosen_tier in ("low_cost", "cinematic"):
+        fmt_val = episode.format.value if hasattr(episode.format, "value") else str(episode.format)
+        tiers_data = recommend_production_tiers(
+            metadata={"video_format": fmt_val},
+            duration_seconds=float(episode.duration_seconds),
+            scenes_count=max(3, episode.duration_seconds // 30),
+        )
+        if chosen_tier in tiers_data.get("tiers", {}):
+            episode.estimated_cost_usd = tiers_data["tiers"][chosen_tier]["total_cost_usd"]
 
     # Topic & Metadata Uniqueness Check: Alert and warn if duplicate content unless user confirms to proceed
     from src.mcp.topic_memory.server import check_topic_duplicate
@@ -226,7 +249,7 @@ async def confirm_production(
 
     task = await task_queue.enqueue(
         "produce_video",
-        {"user_id": str(current_user.id), "episode_id": str(episode.id)},
+        {"user_id": str(current_user.id), "episode_id": str(episode.id), "tier": chosen_tier},
     )
 
     return ProductionConfirmationResponse(

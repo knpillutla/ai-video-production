@@ -39,6 +39,11 @@ class CharacterBase(BaseModel):
     name: str
     age_bracket: str = "20s"
     gender: str = "unspecified"
+    ethnicity: str = "south_asian"
+    culture: str = "indian_south"
+    appearance_anchor: str = ""
+    costume_anchor: str = ""
+    seed: int = 42819
     backstory: str = ""
     voice_profile_id: str = "azure_ravi_neural"
 

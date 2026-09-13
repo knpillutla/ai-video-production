@@ -149,3 +149,27 @@ async def test_api_classify_content_endpoint():
         assert ov_data["visual_style"] == "anime"
         assert ov_data["theme"] == "nature_wildlife"
         assert ov_data["is_auto_detected"] is False
+
+
+def test_deterministic_classification_travel_guide():
+    """Verify city tourist spots & monuments are detected as travel_guide and travel_tourism."""
+    result = classifier_agent.detect(
+        text="Top 5 tourist attractions and historical monument sightseeing in Hyderabad city.",
+        title="Hyderabad Tourist Spots",
+    )
+    assert result.media_format == MediaFormat.TRAVEL_GUIDE
+    assert result.theme == ThemeGenre.TRAVEL_TOURISM
+    assert result.visual_style == VisualStyle.REALISTIC
+    assert result.is_auto_detected is True
+
+
+def test_deterministic_classification_travel_vlog():
+    """Verify walking tours and personal travel vlogs are detected as vlog and travel_tourism."""
+    result = classifier_agent.detect(
+        text="A solo travel vlog exploring Old City street food and walking tour through Charminar.",
+        title="Old City Walking Tour Vlog",
+    )
+    assert result.media_format == MediaFormat.VLOG
+    assert result.theme == ThemeGenre.TRAVEL_TOURISM
+    assert result.is_auto_detected is True
+

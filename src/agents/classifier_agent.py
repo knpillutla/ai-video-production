@@ -14,7 +14,7 @@ THEME_PATTERNS: list[tuple[ThemeGenre, list[str]]] = [
     (ThemeGenre.EPIC_ACTION, ["action", "battle", "sword", "warrior", "elevation", "interval", "mass", "clash", "fight", "revenge", "dynasty", "rebel"]),
     (ThemeGenre.BOLLYWOOD_DANCE, ["dance", "hook step", "choreography", "beat drop", "song", "celebration", "sangeet", "musical", "bollywood", "rhythm"]),
     (ThemeGenre.NATURE_WILDLIFE, ["tiger", "leopard", "wildlife", "safari", "nature", "forest", "predator", "ocean", "jungle", "himalayas", "fauna"]),
-    (ThemeGenre.TRAVEL_TOURISM, ["travel", "tourism", "destination", "vlog", "explore", "journey", "backpacking", "resort", "monument", "itinerary"]),
+    (ThemeGenre.TRAVEL_TOURISM, ["travel", "tourism", "destination", "vlog", "explore", "journey", "backpacking", "resort", "monument", "itinerary", "attractions", "tourist", "sightseeing", "places to visit", "heritage", "guide"]),
     (ThemeGenre.ROMANTIC_DRAMA, ["romance", "love", "heartbreak", "wedding", "relationship", "couple", "emotional", "crush", "dating", "lover"]),
     (ThemeGenre.TECH_SCIFI, ["cyberpunk", "ai", "robot", "future", "matrix", "neural", "sci-fi", "quantum", "cyborg", "dystopia", "silicon", "metaverse"]),
 ]
@@ -27,6 +27,8 @@ STYLE_PATTERNS: list[tuple[VisualStyle, list[str]]] = [
 ]
 
 FORMAT_PATTERNS: list[tuple[MediaFormat, list[str]]] = [
+    (MediaFormat.TRAVEL_GUIDE, ["travel guide", "city guide", "tourist attractions", "tourist spots", "places to visit", "sightseeing", "top 10 spots", "things to do in", "monument tour", "guide"]),
+    (MediaFormat.VLOG, ["vlog", "travel vlog", "day in the life", "walking tour", "solo travel", "road trip"]),
     (MediaFormat.DANCE_VIDEO, ["dance video", "hook step", "choreography", "music video", "beat drop", "song dance"]),
     (MediaFormat.NEWS_TABLOID, ["breaking news", "tabloid", "report", "bulletin", "headline", "scandal", "news"]),
     (MediaFormat.PODCAST_EXPLAINER, ["podcast", "explainer", "breakdown", "deep dive", "interview", "discussion", "talk show"]),

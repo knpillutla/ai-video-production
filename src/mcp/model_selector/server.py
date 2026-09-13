@@ -192,7 +192,58 @@ server.register_tool(
     handler=audit_provider_credits,
 )
 
+
+async def resolve_stack_tool(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Dynamically resolve optimal models across all stages based on script metadata."""
+    from src.mcp.model_selector.stack_resolver import resolve_production_stack
+    return resolve_production_stack(metadata)
+
+
+server.register_tool(
+    name="mcp_resolve_production_stack",
+    description="Dynamically resolve the optimal AI model for every pipeline stage based on script metadata (style, format, voice, dance, song)",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "metadata": {
+                "type": "object",
+                "properties": {
+                    "visual_style": {"type": "string", "enum": ["realistic", "anime", "cartoon", "3d", "comic"]},
+                    "video_format": {"type": "string", "enum": ["faceless", "talking_head", "dance_video", "cinematic", "podcast"]},
+                    "audio_type": {"type": "string", "enum": ["instrumental_bgm", "vocal_song", "dialogue_only"]},
+                    "language": {"type": "string", "default": "en"},
+                    "has_dance": {"type": "boolean", "default": False},
+                    "has_lipsync": {"type": "boolean", "default": False},
+                },
+            },
+        },
+        "required": ["metadata"],
+    },
+    handler=resolve_stack_tool,
+)
+
+
+async def recommend_tiers_tool(
+    metadata: dict[str, Any] | None = None, duration_seconds: float = 30.0, scenes_count: int = 4
+) -> dict[str, Any]:
+    """Recommend 3 production options: low-cost quick test, balanced, and high-fidelity cinematic."""
+    from src.mcp.model_selector.tier_resolver import recommend_production_tiers
+    return recommend_production_tiers(metadata, duration_seconds=duration_seconds, scenes_count=scenes_count)
+
+
+server.register_tool(
+    name="mcp_recommend_production_tiers",
+    description="Recommend 3 production tiers: Low-Cost Quick Test, Balanced, and High-Fidelity Cinematic",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "metadata": {"type": "object"},
+            "duration_seconds": {"type": "number", "default": 30.0},
+            "scenes_count": {"type": "integer", "default": 4},
+        },
+    },
+    handler=recommend_tiers_tool,
+)
+
 if __name__ == "__main__":
     server.run_cli()
-
-
