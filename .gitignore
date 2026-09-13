@@ -1,0 +1,70 @@
+# ==============================================================================
+# Git Ignore - Professional AI Video Producer Studio
+# ==============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions & binaries
+*.so
+*.pyd
+*.dll
+*.exe
+
+# Environments & Secrets
+.env
+.env.*
+!.env.example
+.venv/
+env/
+venv/
+ENV/
+
+# Local Storage, SQLite Databases & Generated Media Renders
+storage/*
+!storage/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
+
+# Media Files & Large Assets (Generated during production)
+*.mp4
+*.wav
+*.mp3
+*.aac
+*.jpg
+*.jpeg
+*.png
+*.webp
+
+# Unit test & coverage reports
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Packaging & Builds
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Logs
+logs/
+*.log
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini

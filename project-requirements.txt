@@ -1,0 +1,36 @@
+create a new project to 
+generate video with synched audio (in different languages),thumbnails, tts, subtitles in different languages,bgm, lipsync
+ability to create the video with different thumbnais for different languages
+
+ui for generating video and uploading to youtube to select the following 
+-create script for all aspects of the video with the following options.
+
+-create script based on 
+-- reference to a youtube video 
+-- reference to a script
+-- an idea based on which whole script is created
+-- theme like nature, travel, romantic, bollywood dance videos, telugu dance videos, telugu comedy, web series etc
+-type (long, short etc)
+-length of video
+-media formats (web series, movie, news, tabloids, podcast etc) - by default auto select based on the script if not provided
+-visual styles (animation, realistic, anime, sylized) - by default auto select based on the script if not provided
+
+-show generated videos (from saved videos from azure storage)
+-ability to upload to youtube by selecting a channel
+-config for channel information 
+
+-based on the script, select the options below. default all selected
+-create thumbnails
+-create bgm
+-create audio with lip sync for selected languages (ability to select multiple languages)
+-create tts
+-sync audio with video
+
+backend mcp, tools, skills and agents
+- create a fully generated video based on the ui selected options
+- ability to schedule creation every day based on a theme, do not generate or repeat same topic in the theme
+- save all the artifacts in to azure storage account
+- ability to upload in to youtube (auto generated best thumbnails from the video)
+-- ensure to create tags, title, description based on the popular searches and clickable titles that can be pushed to millions of users
+-- should be able to monitize the channel with out youtube restrictions on the content type
+--this should be high quality 4k video content (optimize for model tokens final video should be in 4k)

@@ -1,0 +1,14 @@
+# Professional AI Video Producer Studio - Core Dependencies
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+pydantic-settings>=2.5.0
+httpx>=0.28.0
+cryptography>=43.0.0
+pyjwt>=2.9.0
+google-auth>=2.30.0
+google-api-python-client>=2.150.0
+aiosqlite>=0.20.0
+numpy>=1.26.0
+pytest>=8.0.0
+pytest-asyncio>=0.23.0

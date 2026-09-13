@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Professional AI Video Producer Studio - SaaS Edition</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg: #080c15;
+      --card: #0f1626;
+      --card-alt: #141d30;
+      --border: #1e293b;
+      --border-focus: #4f46e5;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent: #10b981;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #222f46;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #334363;
+    }
+    .badge-glow {
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-sm select-none">
+
+  <!-- ====================================================================== -->
+  <!-- TOP APP NAVIGATION BAR (High-Concurrency SaaS Shell) -->
+  <!-- ====================================================================== -->
+  <header class="h-16 border-b border-[var(--border)] bg-[#0d1322] flex items-center justify-between px-5 z-20 shrink-0">
+    <!-- Brand & Universe Selector -->
+    <div class="flex items-center gap-5">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+          <i class="fa-solid fa-clapperboard text-white text-base"></i>
+        </div>
+        <div>
+          <span class="font-black text-base tracking-tight bg-gradient-to-r from-white via-gray-200 to-indigo-300 bg-clip-text text-transparent">CineAI Studio</span>
+          <span class="ml-2 px-2 py-0.5 text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 rounded-full uppercase tracking-wider">Pro Studio</span>
+        </div>
+      </div>
+
+      <!-- Show Universe Switcher -->
+      <div class="relative hidden sm:block">
+        <button class="flex items-center gap-2 px-3 py-1.5 bg-[#141d30] hover:bg-[#1a253c] border border-[var(--border)] rounded-xl text-xs transition">
+          <i class="fa-solid fa-film text-purple-400"></i>
+          <span class="font-medium text-gray-300">Universe: <strong class="text-white">Delhi WFH Confusions</strong></span>
+          <i class="fa-solid fa-chevron-down text-gray-400 text-[10px] ml-1"></i>
+        </button>
+      </div>
+
+      <!-- High-Concurrency Engine Status Pill -->
+      <button onclick="openModal('engine-modal')" class="hidden xl:flex items-center gap-2 px-3 py-1 bg-emerald-950/50 hover:bg-emerald-950/80 border border-emerald-500/40 rounded-full text-[11px] text-emerald-300 transition">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Engine: <strong>Azure ACA Primary</strong> • PgBouncer Active (0-GPU CPU)</span>
+        <i class="fa-solid fa-circle-info text-emerald-400 text-[10px] ml-0.5"></i>
+      </button>
+    </div>
+
+    <!-- User Quota, Credits & Profile -->
+    <div class="flex items-center gap-4">
+      <!-- Storage Usage Meter (Tenant Container) -->
+      <div class="hidden lg:flex flex-col items-end text-[11px] text-[var(--text-muted)]">
+        <div class="flex items-center gap-1.5">
+          <i class="fa-solid fa-hard-drive text-indigo-400"></i>
+          <span>Container: <strong class="text-gray-200 font-mono">user-c4b8e28f</strong></span>
+        </div>
+        <div class="flex items-center gap-2 mt-0.5">
+          <div class="w-24 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: 14.2%"></div>
+          </div>
+          <span class="text-[10px] font-mono text-gray-300">14.2 / 250 GB</span>
+        </div>
+      </div>
+
+      <div class="h-6 w-px bg-[var(--border)] hidden lg:block"></div>
+
+      <!-- Credit Balance Pill & Top-Up -->
+      <div class="flex items-center gap-2 bg-[#141d30] border border-emerald-500/40 px-3 py-1.5 rounded-xl shadow-sm">
+        <i class="fa-solid fa-wallet text-emerald-400"></i>
+        <div class="flex flex-col">
+          <span class="text-[9px] text-gray-400 uppercase font-bold tracking-wider leading-none">Credit Balance</span>
+          <span class="font-mono font-bold text-emerald-400 text-xs mt-0.5" id="user-credit-display">$42.50 USD</span>
+        </div>
+        <button onclick="openModal('subscription-modal')" class="ml-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold rounded-lg transition shadow-sm flex items-center gap-1">
+          <i class="fa-solid fa-plus text-[9px]"></i>
+          <span>Add</span>
+        </button>
+      </div>
+
+      <!-- User Google SSO Profile -->
+      <div class="flex items-center gap-3 pl-1">
+        <div class="relative cursor-pointer group" onclick="openModal('subscription-modal')">
+          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" class="w-9 h-9 rounded-full border-2 border-indigo-500 object-cover shadow-md" alt="Google SSO Avatar">
+          <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#0d1322] rounded-full"></span>
+        </div>
+        <div class="hidden xl:flex flex-col text-left">
+          <span class="font-semibold text-xs text-white leading-tight">Krishna P.</span>
+          <span class="text-[10px] text-gray-400">Google SSO Verified</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ====================================================================== -->
+  <!-- MAIN APPLICATION SHELL -->
+  <!-- ====================================================================== -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- LEFT ICON / NAVIGATION SIDEBAR -->
+    <aside class="w-16 md:w-56 bg-[#0a0f1c] border-r border-[var(--border)] flex flex-col justify-between shrink-0">
+      <div class="py-4 space-y-1">
+        <!-- Nav Item: Studio -->
+        <button onclick="switchTab('studio')" id="tab-btn-studio" class="w-full flex items-center gap-3 px-4 py-3 text-white bg-indigo-600/20 border-r-2 border-indigo-500 font-medium transition text-left">
+          <i class="fa-solid fa-wand-magic-sparkles text-indigo-400 w-5 text-center text-base"></i>
+          <span class="hidden md:inline">Video Studio</span>
+        </button>
+
+        <!-- Nav Item: Creative Vault -->
+        <button onclick="switchTab('vault')" id="tab-btn-vault" class="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/40 transition text-left">
+          <i class="fa-solid fa-masks-theater text-purple-400 w-5 text-center text-base"></i>
+          <span class="hidden md:inline">Creative Vault</span>
+        </button>
+
+        <!-- Nav Item: Distribution -->
+        <button onclick="switchTab('channels')" id="tab-btn-channels" class="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/40 transition text-left">
+          <i class="fa-solid fa-share-nodes text-sky-400 w-5 text-center text-base"></i>
+          <span class="hidden md:inline">Channels & Pubs</span>
+        </button>
+
+        <!-- Nav Item: Rights Ledger -->
+        <button onclick="switchTab('rights')" id="tab-btn-rights" class="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/40 transition text-left">
+          <i class="fa-solid fa-shield-halved text-emerald-400 w-5 text-center text-base"></i>
+          <span class="hidden md:inline">Rights Ledger</span>
+        </button>
+
+        <!-- Nav Item: Subscription & Plans -->
+        <button onclick="switchTab('billing')" id="tab-btn-billing" class="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/40 transition text-left">
+          <i class="fa-solid fa-credit-card text-amber-400 w-5 text-center text-base"></i>
+          <span class="hidden md:inline">Plan & Billing</span>
+        </button>
+      </div>
+
+      <!-- Bottom System Status Trigger -->
+      <div class="p-3 border-t border-[var(--border)] space-y-2">
+        <button onclick="openModal('engine-modal')" class="w-full flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-emerald-400 hover:bg-gray-800/40 rounded-xl transition text-left text-xs">
+          <i class="fa-solid fa-server text-emerald-400 w-5 text-center"></i>
+          <span class="hidden md:inline">Scale Telemetry</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- CONTENT WORKSPACE AREA -->
+    <main class="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#080c15]" id="main-container">
+
+      <!-- ====================================================================== -->
+      <!-- TAB 1: VIDEO STUDIO -->
+      <!-- ====================================================================== -->
+      <div id="tab-studio" class="space-y-6">
+        <!-- Header Banner -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#111828] via-[#141e33] to-[#0f172a] border border-[var(--border)] rounded-2xl p-5 shadow-lg">
+          <div>
+            <h1 class="text-xl font-black text-white tracking-tight flex items-center gap-2.5">
+              <span>Episode Production Studio</span>
+              <span class="text-xs font-semibold px-2.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full">YPP Monetization Ready</span>
+            </h1>
+            <p class="text-xs text-gray-400 mt-1">Multi-track 4K compositing, episodic thumbnail numbering, and 2-stage transformative idea synthesis.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button onclick="openModal('cost-modal')" class="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition active:scale-95">
+              <i class="fa-solid fa-rocket text-sm"></i>
+              <span>Produce Master Video</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3-Column Studio Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- COL 1: CONFIGURATION & INTELLIGENCE INPUT (4 cols) -->
+          <div class="lg:col-span-4 space-y-5">
+            <div class="bg-[#0f1626] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+              <h2 class="font-bold text-white text-sm flex items-center justify-between">
+                <span>1. Creative Concept & Source</span>
+                <span class="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded font-mono">Tier 2 LLM</span>
+              </h2>
+
+              <!-- Mode Selection Pills -->
+              <div class="grid grid-cols-3 gap-1.5 p-1 bg-[#090d16] border border-[var(--border)] rounded-xl text-xs">
+                <button onclick="switchInputMode('original')" id="mode-btn-original" class="py-1.5 text-center font-bold bg-indigo-600 text-white rounded-lg shadow transition">Original Idea</button>
+                <button onclick="switchInputMode('youtube')" id="mode-btn-youtube" class="py-1.5 text-center font-medium text-gray-400 hover:text-white rounded-lg transition">YouTube URL</button>
+                <button onclick="switchInputMode('script')" id="mode-btn-script" class="py-1.5 text-center font-medium text-gray-400 hover:text-white rounded-lg transition">Script Text</button>
+              </div>
+
+              <!-- DYNAMIC INPUT VIEW 1: ORIGINAL IDEA -->
+              <div id="input-view-original" class="space-y-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">Project Title & Core Thesis</label>
+                  <input type="text" value="IT Employee WFH Confusions" class="w-full bg-[#090d16] border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-white text-xs focus:outline-none focus:border-indigo-500 transition">
+                </div>
+              </div>
+
+              <!-- DYNAMIC INPUT VIEW 2: YOUTUBE REFERENCE (2-Stage Transformative Ingestion) -->
+              <div id="input-view-youtube" class="hidden space-y-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-300 mb-1.5 flex items-center justify-between">
+                    <span>Reference YouTube Video URL</span>
+                    <span class="text-[10px] text-emerald-400 font-semibold">Anti-Mimicking Active</span>
+                  </label>
+                  <div class="relative">
+                    <input type="text" value="https://www.youtube.com/watch?v=dQw4w9WgXcQ" class="w-full bg-[#090d16] border border-[var(--border)] rounded-xl pl-8 pr-3 py-2 text-white text-xs focus:outline-none focus:border-indigo-500">
+                    <i class="fa-brands fa-youtube text-red-500 absolute left-2.5 top-2.5 text-xs"></i>
+                  </div>
+                </div>
+
+                <!-- 2-Stage Distiller Verification Card -->
+                <div class="p-3 bg-[#131d30] border border-indigo-500/30 rounded-xl space-y-2 text-xs">
+                  <div class="flex items-center justify-between font-semibold text-indigo-300">
+                    <span>2-Stage Transformative Distiller</span>
+                    <span class="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded text-indigo-200">Zero Verbatim Copy</span>
+                  </div>
+                  <div class="text-[11px] text-gray-300 space-y-1">
+                    <p><strong class="text-white">Stage 1 (Gemini Flash):</strong> Extracts abstract premise & tension curve. Strips all names and dialogue.</p>
+                    <p><strong class="text-white">Stage 2 (Gemini Pro):</strong> Synthesizes 100% original narrative starring <span class="text-indigo-400">Aaradhya & Kabir</span>.</p>
+                  </div>
+                  <div class="flex items-center justify-between pt-1 border-t border-gray-700/50 text-[10px]">
+                    <span class="text-gray-400">Cosine Similarity Score:</span>
+                    <span class="text-emerald-400 font-mono font-bold">0.34 (Safe & Original)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- DYNAMIC INPUT VIEW 3: EXTERNAL SCRIPT -->
+              <div id="input-view-script" class="hidden space-y-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">Paste Reference Script</label>
+                  <textarea rows="3" placeholder="Paste script here for transformative distillation..." class="w-full bg-[#090d16] border border-[var(--border)] rounded-xl p-2.5 text-white text-xs focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+              </div>
+
+              <!-- SERIALIZED CONTENT & EPISODIC NUMBERING ENGINE -->
+              <div class="p-3.5 bg-gradient-to-br from-[#121a2d] to-[#152038] border-2 border-indigo-500/40 rounded-xl space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-list-ol text-amber-400"></i>
+                    <span>Web Series / Episodic Mode</span>
+                  </span>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked id="series-mode-toggle" class="sr-only peer">
+                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-gray-300 mb-1">Episode Number</label>
+                    <div class="flex items-center">
+                      <button onclick="changeEpisode(-1)" class="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-l-lg text-xs font-bold">-</button>
+                      <input type="number" id="episode-num-input" value="1" min="1" max="999" class="w-full text-center bg-[#090d16] border-y border-[var(--border)] py-1.5 text-white text-xs font-mono font-bold focus:outline-none">
+                      <button onclick="changeEpisode(1)" class="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-r-lg text-xs font-bold">+</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-gray-300 mb-1">Badge Style</label>
+                    <select id="badge-style-select" onchange="updateThumbnailBadge()" class="w-full bg-[#090d16] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-indigo-500">
+                      <option value="pill" selected>Neon Amber Pill</option>
+                      <option value="box">High-Contrast Block</option>
+                      <option value="ribbon">Cinematic Ribbon</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Multi-Language Audio Selection -->
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 mb-1.5 flex items-center justify-between">
+                  <span>Voice Stems (YouTube MLA)</span>
+                  <span class="text-[10px] text-emerald-400">Azure Speech HD</span>
+                </label>
+                <div class="grid grid-cols-3 gap-2">
+                  <label class="flex items-center gap-2 p-2 bg-[#090d16] border border-indigo-500/40 rounded-xl cursor-pointer">
+                    <input type="checkbox" checked class="rounded text-indigo-600 focus:ring-0">
+                    <span class="text-xs font-medium text-white">Telugu (te)</span>
+                  </label>
+                  <label class="flex items-center gap-2 p-2 bg-[#090d16] border border-indigo-500/40 rounded-xl cursor-pointer">
+                    <input type="checkbox" checked class="rounded text-indigo-600 focus:ring-0">
+                    <span class="text-xs font-medium text-white">Hindi (hi)</span>
+                  </label>
+                  <label class="flex items-center gap-2 p-2 bg-[#090d16] border border-indigo-500/40 rounded-xl cursor-pointer">
+                    <input type="checkbox" checked class="rounded text-indigo-600 focus:ring-0">
+                    <span class="text-xs font-medium text-white">English (en)</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Persistent Characters Included -->
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 mb-1.5 flex items-center justify-between">
+                  <span>Cast From Universe</span>
+                  <a href="#" onclick="switchTab('vault')" class="text-[11px] text-indigo-400 hover:underline">+ Manage Cast</a>
+                </label>
+                <div class="flex items-center gap-3">
+                  <div class="flex items-center gap-2 bg-[#141d30] px-2.5 py-1.5 rounded-lg border border-[var(--border)]">
+                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&auto=format&fit=crop&q=80" class="w-6 h-6 rounded-full object-cover" alt="Aaradhya">
+                    <span class="text-xs font-medium text-white">Aaradhya (Lead)</span>
+                  </div>
+                  <div class="flex items-center gap-2 bg-[#141d30] px-2.5 py-1.5 rounded-lg border border-[var(--border)]">
+                    <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=80&auto=format&fit=crop&q=80" class="w-6 h-6 rounded-full object-cover" alt="Kabir">
+                    <span class="text-xs font-medium text-white">Kabir (Co-Star)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- YouTube Monetization Pre-Flight Safety Card -->
+            <div class="bg-gradient-to-br from-[#0c1829] to-[#0e2238] border border-emerald-500/30 rounded-2xl p-5 space-y-3 shadow-md">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <i class="fa-solid fa-circle-check"></i>
+                  <span>YPP Monetization Audit</span>
+                </span>
+                <span class="font-mono text-base font-bold text-emerald-400">96 / 100</span>
+              </div>
+              <div class="space-y-1.5 text-xs">
+                <div class="flex items-center justify-between text-gray-300">
+                  <span>Anti-Reused Content Score</span>
+                  <span class="text-emerald-400 font-semibold font-mono">0.97 (100% Original)</span>
+                </div>
+                <div class="flex items-center justify-between text-gray-300">
+                  <span>AdSense 11 Safety Categories</span>
+                  <span class="text-emerald-400 font-semibold">Passed (0 Flags)</span>
+                </div>
+                <div class="flex items-center justify-between text-gray-300">
+                  <span>Synthetic Media Disclosure</span>
+                  <span class="text-indigo-400 font-semibold font-mono">true (C2PA tagged)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- COL 2: INTERACTIVE STORYBOARD & TIMELINE (5 cols) -->
+          <div class="lg:col-span-5 space-y-4">
+            <div class="bg-[#0f1626] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+              <div class="flex items-center justify-between">
+                <h2 class="font-bold text-white text-sm flex items-center gap-2">
+                  <span>2. Multi-Layer Storyboard</span>
+                  <span class="text-xs font-normal text-gray-400">(48 Scenes • 8 mins)</span>
+                </h2>
+                <div class="flex items-center gap-2">
+                  <button class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-medium transition">Regenerate All</button>
+                  <button class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition">+ Add Scene</button>
+                </div>
+              </div>
+
+              <!-- Scene 1 Card (Hook) -->
+              <div class="p-4 bg-[#090d16] border border-indigo-500/40 rounded-xl space-y-3">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 bg-indigo-600 text-white font-bold text-[10px] rounded uppercase">Scene 01 • 0:00 - 0:03.8</span>
+                    <span class="text-xs font-semibold text-purple-400">Curiosity Gap Hook</span>
+                  </div>
+                  <span class="text-xs text-gray-400 font-mono">3.8s</span>
+                </div>
+
+                <div class="flex gap-3">
+                  <div class="relative w-28 h-18 bg-gray-800 rounded-lg overflow-hidden shrink-0 border border-gray-700">
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80" class="w-full h-full object-cover" alt="Scene 1 Thumbnail">
+                    <span class="absolute bottom-1 right-1 px-1 bg-black/80 text-[9px] text-white rounded font-mono">Flux Dev</span>
+                  </div>
+                  <div class="flex-1 space-y-1">
+                    <p class="text-xs text-gray-200 line-clamp-2 leading-relaxed">
+                      "వర్క్ ఫ్రమ్ హోమ్ అని చెప్పి రోజుకి 18 గంటలు లాగిన్ లోనే ఉంటే... జీతం ఏమో నెలకి 30 వేలు!"
+                    </p>
+                    <div class="flex items-center gap-3 text-[11px] text-gray-400">
+                      <span><i class="fa-solid fa-volume-high text-indigo-400 mr-1"></i>Aaradhya (Neural HD)</span>
+                      <span><i class="fa-solid fa-camera text-sky-400 mr-1"></i>2.5D Slow Push-in</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Ducking & Audio Strip -->
+                <div class="bg-[#121927] p-2 rounded-lg flex items-center justify-between text-[11px]">
+                  <span class="text-gray-400"><i class="fa-solid fa-music text-purple-400 mr-1.5"></i>BGM Ducked: <strong class="text-emerald-400 font-mono">-18 dB</strong></span>
+                  <span class="text-gray-400"><i class="fa-solid fa-closed-captioning text-amber-400 mr-1.5"></i>Captions: <strong class="text-white">Kinetic Yellow Bounce</strong></span>
+                </div>
+              </div>
+
+              <!-- Scene 2 Card -->
+              <div class="p-4 bg-[#090d16] border border-[var(--border)] rounded-xl space-y-3 opacity-90 hover:opacity-100 transition">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 bg-gray-800 text-gray-300 font-bold text-[10px] rounded uppercase">Scene 02 • 0:03.8 - 0:07.5</span>
+                    <span class="text-xs font-semibold text-gray-400">Escalation Conflict</span>
+                  </div>
+                  <span class="text-xs text-gray-400 font-mono">3.7s</span>
+                </div>
+
+                <div class="flex gap-3">
+                  <div class="relative w-28 h-18 bg-gray-800 rounded-lg overflow-hidden shrink-0 border border-gray-700">
+                    <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=300&auto=format&fit=crop&q=80" class="w-full h-full object-cover" alt="Scene 2 Thumbnail">
+                    <span class="absolute bottom-1 right-1 px-1 bg-black/80 text-[9px] text-white rounded font-mono">Minimax</span>
+                  </div>
+                  <div class="flex-1 space-y-1">
+                    <p class="text-xs text-gray-200 line-clamp-2 leading-relaxed">
+                      "మేనేజర్ కాల్ వచ్చిన ప్రతిసారీ వైఫై కట్ అయిందని అబద్ధం చెప్పే కళ లో మనం డాక్టరేట్ చేసాం."
+                    </p>
+                    <div class="flex items-center gap-3 text-[11px] text-gray-400">
+                      <span><i class="fa-solid fa-volume-high text-indigo-400 mr-1"></i>Kabir (Neural HD)</span>
+                      <span><i class="fa-solid fa-video text-pink-400 mr-1"></i>Hero Motion 1080p</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- COL 3: PACKAGING & EPISODIC THUMBNAIL (3 cols) -->
+          <div class="lg:col-span-3 space-y-4">
+            <div class="bg-[#0f1626] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+              <div class="flex items-center justify-between">
+                <h2 class="font-bold text-white text-sm">3. YouTube Packaging</h2>
+                <span class="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded font-bold">CTR Optimized</span>
+              </div>
+
+              <!-- EPISODIC THUMBNAIL PREVIEW WITH TOP-LEFT BADGE -->
+              <div>
+                <div class="flex items-center justify-between mb-1.5">
+                  <label class="block text-xs font-semibold text-gray-300">A/B Thumbnail & Episode Badge</label>
+                  <span class="text-[10px] text-emerald-400 font-mono">1280x720 16:9</span>
+                </div>
+
+                <!-- The Interactive Thumbnail Card -->
+                <div class="relative rounded-2xl overflow-hidden border-2 border-indigo-500 group shadow-2xl bg-black aspect-video">
+                  <!-- Background Image -->
+                  <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80" class="w-full h-full object-cover" alt="Thumbnail Preview">
+
+                  <!-- [CRITICAL] TOP-LEFT EPISODE BADGE (NEVER BLOCKED BY YOUTUBE TIME PILL) -->
+                  <div id="thumb-episode-badge" class="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-xs rounded-md shadow-xl border border-white/60 tracking-wider uppercase transition-all duration-200 badge-glow">
+                    <i class="fa-solid fa-play text-[9px]"></i>
+                    <span id="badge-text-render">EP 01</span>
+                  </div>
+
+                  <!-- SIMULATED YOUTUBE BOTTOM-RIGHT DURATION PILL (SHOWS SAFE AREA PROOF) -->
+                  <div class="absolute bottom-2 right-2 z-10 px-1.5 py-0.5 bg-black/90 text-white font-mono font-bold text-[10px] rounded border border-white/20 shadow">
+                    8:42
+                  </div>
+
+                  <!-- Bottom Regional Title Overlay -->
+                  <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-3 flex flex-col justify-end">
+                    <span id="thumb-headline-render" class="bg-red-600 text-white font-black text-xs px-2 py-0.5 rounded w-max tracking-wide uppercase shadow">వర్క్ ఫ్రమ్ హోమ్ గోల!</span>
+                    <span id="thumb-sub-render" class="text-[9px] text-gray-300 font-semibold mt-0.5">Telugu: Suranna Bold</span>
+                  </div>
+                </div>
+
+                <!-- Info Callout on Top-Left Safe Area -->
+                <div class="mt-2 p-2 bg-[#121b2d] border border-amber-500/30 rounded-lg text-[10px] text-amber-300 flex items-center gap-2">
+                  <i class="fa-solid fa-triangle-exclamation text-amber-400 shrink-0"></i>
+                  <span>Badge is locked to <strong>Top-Left</strong> so YouTube's bottom-right timestamp never obscures the episode number!</span>
+                </div>
+              </div>
+
+              <!-- Interactive Badge Language Switcher -->
+              <div class="space-y-1.5">
+                <label class="block text-[11px] font-semibold text-gray-300">Live Badge Language Preview</label>
+                <div class="grid grid-cols-3 gap-1 text-[10px]">
+                  <button onclick="setThumbLanguage('te')" id="btn-lang-te" class="py-1 bg-indigo-600 text-white font-bold rounded shadow transition">Telugu (భాగం 01)</button>
+                  <button onclick="setThumbLanguage('en')" id="btn-lang-en" class="py-1 bg-[#141d30] text-gray-300 hover:text-white rounded transition">English (EP 01)</button>
+                  <button onclick="setThumbLanguage('hi')" id="btn-lang-hi" class="py-1 bg-[#141d30] text-gray-300 hover:text-white rounded transition">Hindi (भाग 01)</button>
+                </div>
+              </div>
+
+              <!-- Synthesized High-CTR Title -->
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 mb-1">Synthesized Title (A/B Test)</label>
+                <div id="title-preview-text" class="bg-[#090d16] border border-[var(--border)] rounded-xl p-2.5 text-xs text-gray-200">
+                  వర్క్ ఫ్రమ్ హోమ్ అని చెప్పి మోసం చేసారు! | IT Employee Comedy EP 01 | CineAI Studio
+                </div>
+              </div>
+
+              <!-- Distribution Channel -->
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 mb-1">Direct Target Channel</label>
+                <select class="w-full bg-[#090d16] border border-[var(--border)] rounded-xl px-3 py-2 text-white text-xs">
+                  <option selected>Telugu Comedy Hub (YouTube 420K)</option>
+                  <option>Global Entertainment (YouTube 1.2M)</option>
+                  <option>TikTok Viral Clips</option>
+                </select>
+              </div>
+
+              <!-- Submit Button -->
+              <button onclick="openModal('cost-modal')" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-calculator"></i>
+                <span>Review Estimate & Produce</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================================== -->
+      <!-- TAB 2: CREATIVE VAULT -->
+      <!-- ====================================================================== -->
+      <div id="tab-vault" class="hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-xl font-bold text-white tracking-tight">Creative Vault & Character Universes</h1>
+            <p class="text-xs text-gray-400 mt-1">Air-gapped intellectual property stored in your private cloud container (`user-c4b8e28f`).</p>
+          </div>
+          <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition flex items-center gap-2">
+            <i class="fa-solid fa-plus"></i>
+            <span>Add New Character</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Character Card: Aaradhya -->
+          <div class="bg-[#0f1626] border border-[var(--border)] rounded-2xl p-5 space-y-4 hover:border-indigo-500/50 transition">
+            <div class="flex gap-4 items-center">
+              <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80" class="w-16 h-16 rounded-2xl object-cover border-2 border-indigo-500 shrink-0" alt="Aaradhya">
+              <div>
+                <h3 class="font-bold text-white text-base">Aaradhya</h3>
+                <span class="text-xs text-indigo-400">Female • 20s • Lead Comedic Actor</span>
+                <p class="text-[11px] text-gray-400 mt-1 line-clamp-1">Frustrated software engineer working from home</p>
+              </div>
+            </div>
+            <div class="space-y-1.5 text-xs bg-[#090d16] p-3 rounded-xl">
+              <div class="flex justify-between text-gray-300">
+                <span>Face Vector (IP-Adapter)</span>
+                <span class="text-emerald-400 font-mono">face_embedding.npy (512-dim)</span>
+              </div>
+              <div class="flex justify-between text-gray-300">
+                <span>Neural Voice ID</span>
+                <span class="text-sky-400 font-mono">te-IN-ShrutiNeural</span>
+              </div>
+              <div class="flex justify-between text-gray-300">
+                <span>Costume Profiles</span>
+                <span class="text-white font-semibold">3 (Formal, Casual, Hoodie)</span>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button class="flex-1 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs rounded-lg font-medium transition">Edit Face ID</button>
+              <button class="flex-1 py-1.5 bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600/50 text-xs rounded-lg font-medium transition">Voice Samples</button>
+            </div>
+          </div>
+
+          <!-- Character Card: Kabir -->
+          <div class="bg-[#0f1626] border border-[var(--border)] rounded-2xl p-5 space-y-4 hover:border-indigo-500/50 transition">
+            <div class="flex gap-4 items-center">
+              <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&auto=format&fit=crop&q=80" class="w-16 h-16 rounded-2xl object-cover border-2 border-purple-500 shrink-0" alt="Kabir">
+              <div>
+                <h3 class="font-bold text-white text-base">Kabir</h3>
+                <span class="text-xs text-purple-400">Male • 30s • Co-Star Comedic Lead</span>
+                <p class="text-[11px] text-gray-400 mt-1 line-clamp-1">Cynical senior developer dodging manager standups</p>
+              </div>
+            </div>
+            <div class="space-y-1.5 text-xs bg-[#090d16] p-3 rounded-xl">
+              <div class="flex justify-between text-gray-300">
+                <span>Face Vector (IP-Adapter)</span>
+                <span class="text-emerald-400 font-mono">face_embedding.npy (512-dim)</span>
+              </div>
+              <div class="flex justify-between text-gray-300">
+                <span>Neural Voice ID</span>
+                <span class="text-sky-400 font-mono">te-IN-MohanNeural</span>
+              </div>
+              <div class="flex justify-between text-gray-300">
+                <span>Costume Profiles</span>
+                <span class="text-white font-semibold">2 (Office, Lounge)</span>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button class="flex-1 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs rounded-lg font-medium transition">Edit Face ID</button>
+              <button class="flex-1 py-1.5 bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600/50 text-xs rounded-lg font-medium transition">Voice Samples</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================================== -->
+      <!-- TAB 3: DISTRIBUTION & CHANNELS -->
+      <!-- ====================================================================== -->
+      <div id="tab-channels" class="hidden space-y-6">
+        <div>
+          <h1 class="text-xl font-bold text-white tracking-tight">Channels & Publication Ledgers</h1>
+          <p class="text-xs text-gray-400 mt-1">Decoupled distribution syndication with YouTube Multi-Language Audio (MLA).</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="bg-[#0f1626] border border-[var(--border)] rounded-2xl p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <i class="fa-brands fa-youtube text-red-500 text-2xl"></i>
+                <div>
+                  <h3 class="font-bold text-white text-sm">Telugu Comedy Hub</h3>
+                  <span class="text-xs text-emerald-400">OAuth Cleared • 420K Subs</span>
+                </div>
+              </div>
+              <span class="w-2.5 h-2.5 bg-emerald-400 rounded-full"></span>
+            </div>
+            <div class="bg-[#090d16] p-3 rounded-xl space-y-1.5 text-xs text-gray-300">
+              <div class="flex justify-between">
+                <span>Total Videos Pushed</span>
+                <span class="font-mono text-white font-semibold">34</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Synthetic Disclosure</span>
+                <span class="text-indigo-400 font-semibold">Automated True</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Last Upload</span>
+                <span class="text-gray-400">Yesterday, 18:30 IST</span>
+              </div>
+            </div>
+            <button class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-xs font-semibold transition">View Upload Ledger JSON</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================================== -->
+      <!-- TAB 4: RIGHTS LEDGER & PROVENANCE -->
+      <!-- ====================================================================== -->
+      <div id="tab-rights" class="hidden space-y-6">
+        <div>
+          <h1 class="text-xl font-bold text-white tracking-tight">Auditable Asset Rights Ledger</h1>
+          <p class="text-xs text-gray-400 mt-1">Machine-readable commercial licenses and originality provenance evidence bundles.</p>
+        </div>
+
+        <div class="bg-[#0f1626] border border-[var(--border)] rounded-2xl overflow-hidden shadow-lg">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-[#0d1322] text-gray-400 uppercase font-semibold text-[10px] border-b border-[var(--border)]">
+              <tr>
+                <th class="p-3.5">Asset ID</th>
+                <th class="p-3.5">Type</th>
+                <th class="p-3.5">Provider Source</th>
+                <th class="p-3.5">Commercial License</th>
+                <th class="p-3.5">Content ID Claim Risk</th>
+                <th class="p-3.5">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[var(--border)] text-gray-200">
+              <tr>
+                <td class="p-3.5 font-mono text-indigo-400">aud_suno_track_042</td>
+                <td class="p-3.5">Original BGM</td>
+                <td class="p-3.5">Suno v3.5 Pro API</td>
+                <td class="p-3.5 font-mono">LIC-SUNO-COMM-981240</td>
+                <td class="p-3.5 text-emerald-400 font-semibold">None (Cleared)</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-semibold">100% Cleared</span></td>
+              </tr>
+              <tr>
+                <td class="p-3.5 font-mono text-indigo-400">tts_azure_shruthi_01</td>
+                <td class="p-3.5">Voice Stem</td>
+                <td class="p-3.5">Azure Speech Neural HD</td>
+                <td class="p-3.5 font-mono">MSFT-COGNITIVE-COMM</td>
+                <td class="p-3.5 text-emerald-400 font-semibold">None (Cleared)</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-semibold">100% Cleared</span></td>
+              </tr>
+              <tr>
+                <td class="p-3.5 font-mono text-indigo-400">img_flux_dev_scene01</td>
+                <td class="p-3.5">Keyframe</td>
+                <td class="p-3.5">Together AI Flux.1 Dev</td>
+                <td class="p-3.5 font-mono">TOGETHER-COMM-DEV</td>
+                <td class="p-3.5 text-emerald-400 font-semibold">None (Cleared)</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-semibold">100% Cleared</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ====================================================================== -->
+      <!-- TAB 5: BILLING & SUBSCRIPTIONS -->
+      <!-- ====================================================================== -->
+      <div id="tab-billing" class="hidden space-y-6">
+        <div class="text-center max-w-2xl mx-auto space-y-2">
+          <h1 class="text-2xl font-black text-white tracking-tight">Commercial SaaS Subscription Plans</h1>
+          <p class="text-xs text-gray-400">Scale your automated studio to millions of views without local GPUs.</p>
+        </div>
+
+        <!-- Subscription Pricing Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <!-- Free Trial Plan -->
+          <div class="bg-[#0f1626] border border-[var(--border)] rounded-2xl p-6 space-y-5 flex flex-col justify-between">
+            <div class="space-y-4">
+              <h3 class="text-base font-bold text-white">Starter Creator</h3>
+              <p class="text-xs text-gray-400">Perfect for experimenting and testing single-pass rendering.</p>
+              <div class="text-2xl font-black text-white">$0 <span class="text-xs font-normal text-gray-400">/ forever</span></div>
+              <ul class="space-y-2.5 text-xs text-gray-300">
+                <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>2 videos / month (720p)</li>
+                <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>5 GB private cloud storage</li>
+                <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>$2.00 free generation credits</li>
+                <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Community Discord support</li>
+              </ul>
+            </div>
+            <button class="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-xs font-semibold transition">Free Tier</button>
+          </div>
+
+          <!-- Pro Studio (Active) -->
+          <div class="bg-gradient-to-b from-[#18233a] to-[#0f1626] border-2 border-indigo-500 rounded-2xl p-6 space-y-5 flex flex-col justify-between shadow-2xl relative">
+            <span class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-indigo-600 text-white text-[10px] font-black rounded-full uppercase tracking-wider shadow">Active Subscription</span>
+            <div class="space-y-4">
+              <h3 class="text-base font-bold text-white">Pro Studio</h3>
+              <p class="text-xs text-indigo-300">For serialized creators and multi-language automated YouTube channels.</p>
+              <div class="text-2xl font-black text-white">$79 <span class="text-xs font-normal text-gray-400">/ month</span></div>
+              <ul class="space-y-2.5 text-xs text-gray-300">
+                <li><i class="fa-solid fa-check text-indigo-400 mr-2"></i><strong>60 videos / month (4K UHD)</strong></li>
+                <li><i class="fa-solid fa-check text-indigo-400 mr-2"></i><strong>250 GB</strong> private cloud storage</li>
+                <li><i class="fa-solid fa-check text-indigo-400 mr-2"></i><strong>$90 included credits / month</strong></li>
+                <li><i class="fa-solid fa-check text-indigo-400 mr-2"></i>Episodic Thumbnail Numbering Engine</li>
+                <li><i class="fa-solid fa-check text-indigo-400 mr-2"></i>Talking Avatars & Dance Motion</li>
+                <li><i class="fa-solid fa-check text-indigo-400 mr-2"></i>YouTube Multi-Language Audio (4 tracks)</li>
+                <li><i class="fa-solid fa-check text-indigo-400 mr-2"></i>Rights Ledger & Provenance Manifest</li>
+              </ul>
+            </div>
+            <button onclick="openModal('subscription-modal')" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+              <i class="fa-solid fa-sliders"></i>
+              <span>Manage Plan & Wallet</span>
+            </button>
+          </div>
+
+          <!-- Enterprise Studio -->
+          <div class="bg-[#0f1626] border border-[var(--border)] rounded-2xl p-6 space-y-5 flex flex-col justify-between">
+            <div class="space-y-4">
+              <h3 class="text-base font-bold text-white">Media Enterprise</h3>
+              <p class="text-xs text-gray-400">For multi-channel media networks and automated publishing studios.</p>
+              <div class="text-2xl font-black text-white">$249 <span class="text-xs font-normal text-gray-400">/ month</span></div>
+              <ul class="space-y-2.5 text-xs text-gray-300">
+                <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i><strong>250+ videos / month</strong></li>
+                <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i><strong>1 TB</strong> private storage</li>
+                <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Custom LoRA Character Training</li>
+                <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Dual-Cloud Automated Failover SLA</li>
+                <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Dedicated 24/7 Account Manager</li>
+              </ul>
+            </div>
+            <button class="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-xs font-semibold transition">Contact Sales</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- MODAL 1: MANDATORY PRE-FLIGHT COST CONFIRMATION (CRITICAL DIRECTIVE) -->
+  <!-- ====================================================================== -->
+  <div id="cost-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#0f1626] border border-[var(--border)] rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-4">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-receipt text-emerald-400"></i>
+            <span>Pre-Flight Cost Breakdown & Confirmation</span>
+          </h3>
+          <p class="text-xs text-gray-400 mt-0.5">Project: "IT Employee WFH Confusions" • Episode 01 • 16:9 4K UHD (8 mins)</p>
+        </div>
+        <button onclick="closeModal('cost-modal')" class="text-gray-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Itemized Cost Receipt -->
+      <div class="space-y-2 text-xs">
+        <div class="bg-[#090d16] p-3 rounded-xl space-y-2 border border-[var(--border)]">
+          <div class="flex justify-between text-gray-300">
+            <span>1. Creative Script & Retention Loop (Gemini 1.5 Pro - ~14k tokens)</span>
+            <span class="font-mono text-white font-semibold">$0.02 USD</span>
+          </div>
+          <div class="flex justify-between text-gray-300">
+            <span>2. Multilingual Voiceovers (Azure Speech HD - 3 Stems: TE, HI, EN)</span>
+            <span class="font-mono text-white font-semibold">$0.21 USD</span>
+          </div>
+          <div class="flex justify-between text-gray-300">
+            <span>3. 4K Visuals & Keyframes (Together AI Flux Schnell - 40 images)</span>
+            <span class="font-mono text-white font-semibold">$0.12 USD</span>
+          </div>
+          <div class="flex justify-between text-gray-300">
+            <span>4. Hero Action Motion (Fal.ai Minimax Video-01 - 2 clips)</span>
+            <span class="font-mono text-white font-semibold">$0.30 USD</span>
+          </div>
+          <div class="flex justify-between text-gray-300">
+            <span>5. Talking Avatar Lip-Sync (Fal.ai LivePortrait - 45s)</span>
+            <span class="font-mono text-white font-semibold">$0.54 USD</span>
+          </div>
+          <div class="flex justify-between text-gray-300">
+            <span>6. Commercially Cleared Soundtrack (Suno v3.5 Pro)</span>
+            <span class="font-mono text-white font-semibold">$0.08 USD</span>
+          </div>
+          <div class="flex justify-between text-gray-300">
+            <span>7. Python Single-Pass FFmpeg Compositing (Azure ACA Worker)</span>
+            <span class="font-mono text-white font-semibold">$0.06 USD</span>
+          </div>
+        </div>
+
+        <!-- Total Bill Summary -->
+        <div class="flex items-center justify-between p-3 bg-gradient-to-r from-indigo-950/60 to-purple-950/60 border border-indigo-500/40 rounded-xl">
+          <div>
+            <span class="text-xs font-bold text-white uppercase tracking-wider">Total Production Cost</span>
+            <span class="block text-[11px] text-gray-400">Est. Render Runtime: ~3.5 minutes</span>
+          </div>
+          <div class="text-right">
+            <span class="text-xl font-black text-emerald-400 font-mono">$1.33 USD</span>
+            <span class="block text-[10px] text-gray-300">Deducted from $42.50 Balance</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Policy Guarantees -->
+      <div class="p-3 bg-emerald-950/30 border border-emerald-500/30 rounded-xl flex items-center gap-2.5 text-xs text-emerald-300">
+        <i class="fa-solid fa-circle-check text-base text-emerald-400 shrink-0"></i>
+        <span>Pre-flight compliance score is <strong>96% Green</strong>. Rights ledger manifest will be archived automatically to container <code class="text-white">user-c4b8e28f</code>.</span>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button onclick="closeModal('cost-modal')" class="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold rounded-xl transition">
+          Cancel & Edit Options
+        </button>
+        <button onclick="confirmProduction()" id="btn-confirm-prod" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center gap-2">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>Confirm & Produce Video ($1.33)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- MODAL 2: COMMERCIAL SAAS SUBSCRIPTION & CREDIT WALLET (STRIPE READY) -->
+  <!-- ====================================================================== -->
+  <div id="subscription-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#0f1626] border border-[var(--border)] rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-4">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-credit-card text-indigo-400"></i>
+            <span>SaaS Subscription & Credit Wallet Management</span>
+          </h3>
+          <p class="text-xs text-gray-400 mt-0.5">Powered by Stripe Billing • Commercial Multi-Tenant Metering</p>
+        </div>
+        <button onclick="closeModal('subscription-modal')" class="text-gray-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Active Tier & Wallet Info -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="p-4 bg-[#141d30] border border-indigo-500/40 rounded-xl space-y-2">
+          <span class="text-[10px] text-indigo-300 uppercase font-bold tracking-wider">Current Active Plan</span>
+          <div class="flex items-center justify-between">
+            <span class="text-lg font-black text-white">Pro Studio</span>
+            <span class="text-xs font-bold text-indigo-400 font-mono">$79 / mo</span>
+          </div>
+          <p class="text-[11px] text-gray-300">Renews on Oct 1, 2026 • 250 GB Container Allocated</p>
+        </div>
+
+        <div class="p-4 bg-[#141d30] border border-emerald-500/40 rounded-xl space-y-2">
+          <span class="text-[10px] text-emerald-400 uppercase font-bold tracking-wider">Studio Credit Balance</span>
+          <div class="flex items-center justify-between">
+            <span class="text-xl font-black text-emerald-400 font-mono" id="modal-credit-display">$42.50 USD</span>
+            <span class="text-[10px] text-gray-400">Auto-reload ON</span>
+          </div>
+          <p class="text-[11px] text-gray-300">Sufficient for ~32 additional 8-minute 4K master videos</p>
+        </div>
+      </div>
+
+      <!-- Quick Add Credit Packs (Stripe PaymentIntents) -->
+      <div class="space-y-2">
+        <label class="block text-xs font-semibold text-gray-300">Instant Credit Top-Up (Stripe 1-Click)</label>
+        <div class="grid grid-cols-4 gap-3">
+          <button onclick="addCredits(10)" class="py-2.5 bg-[#090d16] hover:bg-indigo-600 hover:text-white border border-[var(--border)] rounded-xl text-center transition group">
+            <span class="block text-xs font-bold font-mono text-white group-hover:text-white">+$10 USD</span>
+            <span class="block text-[10px] text-gray-400 group-hover:text-indigo-200">~7 Videos</span>
+          </button>
+          <button onclick="addCredits(25)" class="py-2.5 bg-[#090d16] hover:bg-indigo-600 hover:text-white border border-[var(--border)] rounded-xl text-center transition group">
+            <span class="block text-xs font-bold font-mono text-white group-hover:text-white">+$25 USD</span>
+            <span class="block text-[10px] text-gray-400 group-hover:text-indigo-200">~18 Videos</span>
+          </button>
+          <button onclick="addCredits(50)" class="py-2.5 bg-indigo-600/20 hover:bg-indigo-600 text-white border border-indigo-500 rounded-xl text-center transition group">
+            <span class="block text-xs font-bold font-mono text-indigo-300 group-hover:text-white">+$50 USD</span>
+            <span class="block text-[10px] text-indigo-400 group-hover:text-indigo-200">~40 Videos</span>
+          </button>
+          <button onclick="addCredits(100)" class="py-2.5 bg-[#090d16] hover:bg-indigo-600 hover:text-white border border-[var(--border)] rounded-xl text-center transition group">
+            <span class="block text-xs font-bold font-mono text-white group-hover:text-white">+$100 USD</span>
+            <span class="block text-[10px] text-gray-400 group-hover:text-indigo-200">~85 Videos</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Payment Method Preview -->
+      <div class="p-3 bg-[#090d16] border border-[var(--border)] rounded-xl flex items-center justify-between text-xs">
+        <div class="flex items-center gap-3">
+          <i class="fa-brands fa-cc-visa text-blue-400 text-xl"></i>
+          <div>
+            <span class="text-white font-semibold">Visa ending in 4242</span>
+            <span class="block text-[10px] text-gray-400">Expires 12/28 • Default Payment Method</span>
+          </div>
+        </div>
+        <button class="text-xs text-indigo-400 hover:underline">Change Card</button>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button onclick="closeModal('subscription-modal')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold rounded-xl transition">
+          Close
+        </button>
+        <button onclick="switchTab('billing'); closeModal('subscription-modal');" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition">
+          View All Plans & Invoices
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- MODAL 3: HIGH-CONCURRENCY SCALE TELEMETRY (MILLIONS OF USERS MONITOR) -->
+  <!-- ====================================================================== -->
+  <div id="engine-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#0f1626] border border-[var(--border)] rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-4">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-network-wired text-emerald-400"></i>
+            <span>High-Concurrency Millions-of-Users Architecture Telemetry</span>
+          </h3>
+          <p class="text-xs text-gray-400 mt-0.5">Stateless Web Tier • Direct Cloud Streaming • PgBouncer Pool</p>
+        </div>
+        <button onclick="closeModal('engine-modal')" class="text-gray-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Infrastructure Metrics Grid -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+        <div class="p-3 bg-[#090d16] border border-[var(--border)] rounded-xl">
+          <span class="text-[10px] text-gray-400 uppercase font-bold">API Video Load</span>
+          <span class="block text-lg font-black text-emerald-400 font-mono mt-1">0 MB/s</span>
+          <span class="text-[9px] text-gray-400">Direct SAS/V4 Signed</span>
+        </div>
+        <div class="p-3 bg-[#090d16] border border-[var(--border)] rounded-xl">
+          <span class="text-[10px] text-gray-400 uppercase font-bold">PgBouncer Pool</span>
+          <span class="block text-lg font-black text-indigo-400 font-mono mt-1">24 / 10,000</span>
+          <span class="text-[9px] text-gray-400">Zero Socket Exhaustion</span>
+        </div>
+        <div class="p-3 bg-[#090d16] border border-[var(--border)] rounded-xl">
+          <span class="text-[10px] text-gray-400 uppercase font-bold">Redis Cache Hit</span>
+          <span class="block text-lg font-black text-purple-400 font-mono mt-1">98.4%</span>
+          <span class="text-[9px] text-gray-400">Rate Limits & Quotas</span>
+        </div>
+        <div class="p-3 bg-[#090d16] border border-[var(--border)] rounded-xl">
+          <span class="text-[10px] text-gray-400 uppercase font-bold">KEDA CPU Workers</span>
+          <span class="block text-lg font-black text-amber-400 font-mono mt-1">4 Active</span>
+          <span class="text-[9px] text-gray-400">Scales 0 to 500+</span>
+        </div>
+      </div>
+
+      <!-- Architectural Topology Summary -->
+      <div class="p-4 bg-[#141d30] border border-indigo-500/30 rounded-xl space-y-2 text-xs">
+        <h4 class="font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-shield-halved text-indigo-400"></i>
+          <span>Multi-Cloud Disaster Recovery & Failover Topology</span>
+        </h4>
+        <div class="space-y-1 text-gray-300 text-[11px]">
+          <p>• <strong>Primary Cluster:</strong> Azure Container Apps (East US) + Azure Blob Storage (<code class="text-indigo-300">user-{user_id}</code>)</p>
+          <p>• <strong>Hot Standby Cluster:</strong> Google Cloud Run (us-central1) + Google Cloud Storage (<code class="text-sky-300">studio-user-{user_id}</code>)</p>
+          <p>• <strong>Automated Failover:</strong> Cloudflare Global Health Checks probe <code class="text-emerald-300">GET /health</code> every 10s. If Azure fails 3 consecutive checks, traffic shifts to GCP within 15 seconds.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button onclick="closeModal('engine-modal')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs font-semibold rounded-xl transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- JAVASCRIPT LOGIC -->
+  <!-- ====================================================================== -->
+  <script>
+    let currentEpisode = 1;
+    let currentLang = 'te';
+    let userCredits = 42.50;
+
+    function switchTab(tabId) {
+      const tabs = ['studio', 'vault', 'channels', 'rights', 'billing'];
+      tabs.forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tabId) {
+          el.classList.remove('hidden');
+          btn.classList.add('bg-indigo-600/20', 'border-r-2', 'border-indigo-500', 'text-white');
+          btn.classList.remove('text-gray-400');
+        } else {
+          el.classList.add('hidden');
+          btn.classList.remove('bg-indigo-600/20', 'border-r-2', 'border-indigo-500', 'text-white');
+          btn.classList.add('text-gray-400');
+        }
+      });
+    }
+
+    function switchInputMode(mode) {
+      const modes = ['original', 'youtube', 'script'];
+      modes.forEach(m => {
+        const view = document.getElementById(`input-view-${m}`);
+        const btn = document.getElementById(`mode-btn-${m}`);
+        if (m === mode) {
+          view.classList.remove('hidden');
+          btn.classList.add('bg-indigo-600', 'text-white', 'shadow');
+          btn.classList.remove('text-gray-400');
+        } else {
+          view.classList.add('hidden');
+          btn.classList.remove('bg-indigo-600', 'text-white', 'shadow');
+          btn.classList.add('text-gray-400');
+        }
+      });
+    }
+
+    function openModal(modalId) {
+      document.getElementById(modalId).classList.remove('hidden');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+    }
+
+    function changeEpisode(delta) {
+      const input = document.getElementById('episode-num-input');
+      let val = parseInt(input.value) || 1;
+      val = Math.max(1, val + delta);
+      input.value = val;
+      currentEpisode = val;
+      updateThumbnailBadge();
+    }
+
+    function setThumbLanguage(lang) {
+      currentLang = lang;
+      const langs = ['te', 'en', 'hi'];
+      langs.forEach(l => {
+        const btn = document.getElementById(`btn-lang-${l}`);
+        if (l === lang) {
+          btn.className = 'py-1 bg-indigo-600 text-white font-bold rounded shadow transition';
+        } else {
+          btn.className = 'py-1 bg-[#141d30] text-gray-300 hover:text-white rounded transition';
+        }
+      });
+      updateThumbnailBadge();
+    }
+
+    function updateThumbnailBadge() {
+      const badgeRender = document.getElementById('badge-text-render');
+      const headlineRender = document.getElementById('thumb-headline-render');
+      const subRender = document.getElementById('thumb-sub-render');
+      const titleRender = document.getElementById('title-preview-text');
+      const badgeContainer = document.getElementById('thumb-episode-badge');
+      const badgeStyle = document.getElementById('badge-style-select').value;
+      const numStr = String(currentEpisode).padStart(2, '0');
+
+      // Update badge text based on language
+      if (currentLang === 'te') {
+        badgeRender.innerText = `భాగం ${numStr}`;
+        headlineRender.innerText = 'వర్క్ ఫ్రమ్ హోమ్ గోల!';
+        subRender.innerText = 'Telugu: Suranna Bold';
+        titleRender.innerText = `వర్క్ ఫ్రమ్ హోమ్ అని చెప్పి మోసం చేసారు! | IT Employee Comedy EP ${numStr} | CineAI Studio`;
+      } else if (currentLang === 'hi') {
+        badgeRender.innerText = `भाग ${numStr}`;
+        headlineRender.innerText = 'वर्क फ्रॉम होम का सच!';
+        subRender.innerText = 'Hindi: Baloo Devanagari';
+        titleRender.innerText = `वर्क फ्रॉम होम के नाम पर धोखा! | IT Employee Comedy EP ${numStr} | CineAI Studio`;
+      } else {
+        badgeRender.innerText = `EP ${numStr}`;
+        headlineRender.innerText = 'WFH IS A TRAP!';
+        subRender.innerText = 'English: Montserrat Heavy';
+        titleRender.innerText = `They Lied About Remote Work! | IT Employee Comedy EP ${numStr} | CineAI Studio`;
+      }
+
+      // Update badge styling
+      if (badgeStyle === 'pill') {
+        badgeContainer.className = 'absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-xs rounded-full shadow-xl border border-white/60 tracking-wider uppercase transition-all duration-200 badge-glow';
+      } else if (badgeStyle === 'box') {
+        badgeContainer.className = 'absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white font-black text-xs rounded-none shadow-2xl border-2 border-white tracking-widest uppercase transition-all duration-200';
+      } else { // ribbon
+        badgeContainer.className = 'absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-3 py-1 bg-indigo-600/90 backdrop-blur text-white font-black text-xs rounded-md shadow-lg border border-indigo-400/80 tracking-wide uppercase transition-all duration-200';
+      }
+    }
+
+    function addCredits(amount) {
+      userCredits += amount;
+      document.getElementById('user-credit-display').innerText = `$${userCredits.toFixed(2)} USD`;
+      document.getElementById('modal-credit-display').innerText = `$${userCredits.toFixed(2)} USD`;
+      alert(`Successfully added $${amount}.00 USD to your wallet via Stripe! New balance: $${userCredits.toFixed(2)} USD.`);
+    }
+
+    function confirmProduction() {
+      const btn = document.getElementById('btn-confirm-prod');
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Dispatched to Celery/ACA Queue...';
+      btn.disabled = true;
+      btn.classList.add('opacity-75');
+
+      setTimeout(() => {
+        closeModal('cost-modal');
+        userCredits -= 1.33;
+        document.getElementById('user-credit-display').innerText = `$${userCredits.toFixed(2)} USD`;
+        document.getElementById('modal-credit-display').innerText = `$${userCredits.toFixed(2)} USD`;
+        alert(`Production Job #ep_${String(currentEpisode).padStart(3, '0')} successfully enqueued!\n- $1.33 deducted\n- Top-Left Badge: EP ${String(currentEpisode).padStart(2, '0')}\n- Single-pass Python FFmpeg compositor worker has started.`);
+        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Confirm & Produce Video ($1.33)';
+        btn.disabled = false;
+        btn.classList.remove('opacity-75');
+      }, 1200);
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+      updateThumbnailBadge();
+    });
+  </script>
+</body>
+</html>
