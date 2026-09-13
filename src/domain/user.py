@@ -23,6 +23,7 @@ class UserBase(BaseModel):
     display_name: str
     avatar_url: str | None = None
     subscription_tier: SubscriptionTier = SubscriptionTier.CREATOR
+    preferred_theme: str = "white"
 
 
 class UserCreate(UserBase):

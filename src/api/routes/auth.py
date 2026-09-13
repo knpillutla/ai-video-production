@@ -1,5 +1,5 @@
-"""Google OAuth 2.0 and session management API routes."""
-
+from datetime import datetime, timezone
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
@@ -81,3 +81,23 @@ async def create_test_token(req: TestTokenRequest):
 async def get_me(current_user: User = Depends(get_current_user)):
     """Return currently authenticated user profile."""
     return current_user
+
+
+class UserPreferencesRequest(BaseModel):
+    preferred_theme: Optional[str] = None
+    display_name: Optional[str] = None
+
+
+@router.patch("/preferences", response_model=User)
+async def update_user_preferences(
+    req: UserPreferencesRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Save user settings and theme preference."""
+    if req.preferred_theme:
+        current_user.preferred_theme = req.preferred_theme
+    if req.display_name:
+        current_user.display_name = req.display_name
+    current_user.updated_at = datetime.now(timezone.utc)
+    saved = repo.save_user(current_user)
+    return saved

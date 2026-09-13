@@ -11,6 +11,9 @@ class ChannelBase(BaseModel):
     platform: str = "youtube"  # youtube | tiktok | instagram
     channel_name: str
     channel_handle: str | None = None
+    primary_genre: str | None = None  # e.g. telugu_comedy, nature_wildlife
+    primary_language: str = "te"  # default audio language
+    avatar_url: str | None = None
     default_tags: list[str] = Field(default_factory=list)
 
 
@@ -18,6 +21,9 @@ class ChannelCreate(ChannelBase):
     """Payload to configure a new distribution channel."""
 
     oauth_credentials_json: str = ""
+    client_id: str | None = None
+    client_secret: str | None = None
+    refresh_token: str | None = None
 
 
 class Channel(ChannelBase):
@@ -26,6 +32,12 @@ class Channel(ChannelBase):
     id: UUID = Field(default_factory=uuid4)
     user_id: UUID
     is_active: bool = True
+    subscribers_count: int = 0
+    total_views: int = 0
+    total_revenue_usd: float = 0.0
+    total_likes: int = 0
+    encrypted_credentials: str | None = None
+    credentials_configured: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

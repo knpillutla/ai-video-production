@@ -6,9 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 from src.api.routes import (
+    analytics,
     approvals,
     auth,
     billing,
+    channel_analytics,
     channels,
     dashboard,
     production,
@@ -74,7 +76,9 @@ def create_app() -> FastAPI:
     app.include_router(production.router)
     app.include_router(trending.router)
     app.include_router(channels.router)
+    app.include_router(channel_analytics.router)
     app.include_router(schedules.router)
+    app.include_router(analytics.router)
 
     @app.get("/health", tags=["Health"])
     async def health_check():
