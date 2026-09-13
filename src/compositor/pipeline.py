@@ -4,26 +4,23 @@ import time
 from pathlib import Path
 from uuid import UUID
 
-from src.billing.cost_tracker import (
-    actualize_production_cost,
-    calculate_preflight_estimate,
-    save_cost_report,
-)
+from src.agents.qa_gate_agent import qa_gate_agent
+from src.billing.cost_tracker import actualize_production_cost, calculate_preflight_estimate, save_cost_report
+from src.compliance.evidence_bundle import build_evidence_bundle, save_evidence_bundle
+from src.compliance.rights_ledger import rights_ledger
 from src.compositor.ffmpeg_pipeline import execute_single_pass_render
 from src.compositor.timeline import compile_timeline_from_scenes
 from src.core.storage import storage_service
 from src.core.telemetry import logger
-from src.agents.qa_gate_agent import qa_gate_agent
-from src.compliance.evidence_bundle import build_evidence_bundle, save_evidence_bundle
-from src.compliance.rights_ledger import rights_ledger
-from src.domain.rights import AssetType, CommercialLicenseType
 from src.domain.repo import repo
+from src.domain.rights import AssetType, CommercialLicenseType
+from src.mcp.model_selector.audit import audit_pipeline_models
+from src.mcp.topic_memory.server import check_topic_duplicate, remember_topic
 from src.providers.llm.gemini_adapter import GeminiLLMAdapter
 from src.providers.music.suno_adapter import SunoMusicAdapter
 from src.providers.tts.azure_speech import AzureSpeechTTSAdapter
 from src.providers.visual.together_flux import TogetherFluxAdapter
 from src.scripts.local_subtitles import generate_subtitle_bundle
-
 
 VOICE_MAP = {
     "te": "te-IN-MohanNeural",
@@ -36,8 +33,9 @@ VOICE_MAP = {
 class ProductionPipelineCoordinator:
     """Orchestrates the 0-GPU end-to-end video synthesis and single-pass FFmpeg render."""
 
-    def __init__(self):
-        self.llm = GeminiLLMAdapter()
+    def __init__(self, strict: bool = False):
+        self.strict = strict
+        self.llm = GeminiLLMAdapter(strict=strict)
         self.visual = TogetherFluxAdapter()
         self.tts = AzureSpeechTTSAdapter()
         self.music = SunoMusicAdapter()
@@ -50,8 +48,11 @@ class ProductionPipelineCoordinator:
         language: str = "te",
         subtitle_language: str | None = None,
         force_live: bool = False,
+        strict: bool = False,
     ) -> Path:
         """Produce a complete broadcast-grade master video for an episode project."""
+        if strict:
+            self.llm.strict = True
         episode = repo.get_episode(user_id, episode_id)
         if not episode:
             raise ValueError(f"Episode {episode_id} not found for user {user_id}")
@@ -70,11 +71,17 @@ class ProductionPipelineCoordinator:
         logger.info(f"starting_production_pipeline: ep={episode.title}, user={user_id}")
 
         # Check for duplicate topic & metadata; alert and block if duplicate
-        from src.mcp.topic_memory.server import check_topic_duplicate, remember_topic
         meta_dict = {"genre": show.genre if show else "general", "show_slug": show_slug}
         topic_check = await check_topic_duplicate(topic=episode.title, metadata=meta_dict)
         if topic_check.get("is_duplicate"):
             raise ValueError(topic_check.get("alert_message") or "Duplicate content detected.")
+
+        # Evaluate and record MCP Model Selector decisions for this episode
+        await audit_pipeline_models(
+            language=language,
+            output_dir=ep_dir,
+            metadata={"episode_id": str(episode.id), "title": episode.title, "genre": meta_dict["genre"]},
+        )
 
         # 1. Generate Structured Scene Storyboard Plan via Gemini 1.5 Pro
         prompt = f"Write an engaging, high-retention video script on: {episode.title} in {show.genre if show else 'comedy'} genre with duration {episode.duration_seconds}s"
@@ -106,14 +113,10 @@ class ProductionPipelineCoordinator:
             img_path = scenes_dir / f"scene_{idx:02d}.jpg"
             await self.visual.generate_to_file(vis_prompt, output_path=img_path, force_live=force_live)
             rights_ledger.record_asset(
-                episode_id=episode.id,
-                asset_type=AssetType.IMAGE,
-                file_path=str(img_path),
-                provider="TogetherAI/Flux",
-                model_name="FLUX.1-schnell",
+                episode_id=episode.id, asset_type=AssetType.IMAGE, file_path=str(img_path),
+                provider="TogetherAI/Flux", model_name="FLUX.1-schnell",
                 license_type=CommercialLicenseType.FULL_COMMERCIAL_OWNERSHIP,
-                license_id=f"BFL-COMM-{episode.id}-{idx}",
-                cleared=True,
+                license_id=f"BFL-COMM-{episode.id}-{idx}", cleared=True,
             )
 
             # Generate voiceover stem & record rights
@@ -121,44 +124,28 @@ class ProductionPipelineCoordinator:
             voice_id = VOICE_MAP.get(language, "te-IN-MohanNeural")
             await self.tts.synthesize_to_file(dialogue, output_path=voice_path, voice_id=voice_id, force_live=force_live)
             rights_ledger.record_asset(
-                episode_id=episode.id,
-                asset_type=AssetType.VOICE,
-                file_path=str(voice_path),
-                provider="Microsoft/NeuralVoice",
-                model_name=voice_id,
+                episode_id=episode.id, asset_type=AssetType.VOICE, file_path=str(voice_path),
+                provider="Microsoft/NeuralVoice", model_name=voice_id,
                 license_type=CommercialLicenseType.COMMERCIAL_ROYALTY_FREE,
-                license_id=f"MS-TTS-{episode.id}-{idx}",
-                cleared=True,
+                license_id=f"MS-TTS-{episode.id}-{idx}", cleared=True,
             )
 
             compiled_scenes.append({
-                "scene_index": idx,
-                "duration_seconds": dur,
-                "image_path": str(img_path),
-                "voice_path": str(voice_path),
-                "shot_type": sc.get("shot_type", "medium"),
-                "dialogue": dialogue,
+                "scene_index": idx, "duration_seconds": dur, "image_path": str(img_path),
+                "voice_path": str(voice_path), "shot_type": sc.get("shot_type", "medium"), "dialogue": dialogue,
             })
 
-            subtitle_segments.append({
-                "start": current_time,
-                "end": current_time + dur,
-                "text": dialogue,
-            })
+            subtitle_segments.append({"start": current_time, "end": current_time + dur, "text": dialogue})
             current_time += dur
 
         # 3. Generate Commercially Cleared Soundtrack via Suno & record rights
         bgm_path = stems_dir / "bgm_master.wav"
         await self.music.generate_to_file(output_path=bgm_path, genre="cinematic comedy", duration_seconds=current_time)
         rights_ledger.record_asset(
-            episode_id=episode.id,
-            asset_type=AssetType.MUSIC,
-            file_path=str(bgm_path),
-            provider="Suno/CineAI",
-            model_name="v3.5-pro",
+            episode_id=episode.id, asset_type=AssetType.MUSIC, file_path=str(bgm_path),
+            provider="Suno/CineAI", model_name="v3.5-pro",
             license_type=CommercialLicenseType.FULL_COMMERCIAL_OWNERSHIP,
-            license_id=f"SUNO-COMM-{episode.id}",
-            cleared=True,
+            license_id=f"SUNO-COMM-{episode.id}", cleared=True,
         )
 
         # 4. Generate Multi-Language Subtitle Bundle (English default on regional content)
