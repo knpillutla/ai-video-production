@@ -1,5 +1,6 @@
 """Abstract provider protocols and shared HTTP connection pooling."""
 
+import asyncio
 from abc import ABC, abstractmethod
 from typing import Any, Protocol, runtime_checkable
 
@@ -10,21 +11,33 @@ class HTTPClientPool:
     """Manages persistent asynchronous HTTP client sessions for zero socket churn."""
 
     _client: httpx.AsyncClient | None = None
+    _loop: asyncio.AbstractEventLoop | None = None
 
     @classmethod
     def get_client(cls) -> httpx.AsyncClient:
-        if cls._client is None or cls._client.is_closed:
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        if cls._client is None or cls._client.is_closed or (cls._loop is not None and cls._loop is not current_loop):
             cls._client = httpx.AsyncClient(
                 timeout=httpx.Timeout(60.0, connect=10.0),
                 limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
             )
+            cls._loop = current_loop
         return cls._client
 
     @classmethod
     async def close(cls) -> None:
         if cls._client and not cls._client.is_closed:
-            await cls._client.aclose()
-            cls._client = None
+            try:
+                await cls._client.aclose()
+            except RuntimeError:
+                pass
+            finally:
+                cls._client = None
+                cls._loop = None
 
 
 @runtime_checkable
@@ -78,6 +91,26 @@ class LipSyncProtocol(Protocol):
         ...
 
 
+def is_mock_mode() -> bool:
+    """Return True if running in offline mock mode (pytest, test env, or MOCK_ALL_MODELS)."""
+    import os
+
+    if os.getenv("MOCK_ALL_MODELS", "").lower() in ("1", "true", "yes", "on"):
+        return True
+    if os.getenv("TESTING", "").lower() in ("1", "true", "yes", "on"):
+        return True
+    if os.getenv("PYTEST_CURRENT_TEST") is not None:
+        return True
+    try:
+        from src.core.config import settings
+
+        if settings.app.mock_all_models or settings.app.app_env in ("test", "testing"):
+            return True
+    except Exception:
+        pass
+    return False
+
+
 __all__ = [
     "HTTPClientPool",
     "LLMProviderProtocol",
@@ -86,4 +119,6 @@ __all__ = [
     "MusicProviderProtocol",
     "VideoMotionProtocol",
     "LipSyncProtocol",
+    "is_mock_mode",
 ]
+

@@ -6,8 +6,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class MediaSettings(BaseSettings):
     """API credentials for image generation and commercial music scoring."""
 
-    together_api_key: str = "mock-together-key"
-    suno_api_key: str = "mock-suno-key"
+    together_api_key: str = ""
+    suno_api_key: str = ""
+
 
     default_image_model: str = "black-forest-labs/FLUX.1-schnell"
     default_music_model: str = "suno-v3.5-pro"

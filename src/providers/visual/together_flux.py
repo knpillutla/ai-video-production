@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw
 
 from src.core.config import settings
 from src.core.telemetry import logger
-from src.providers.base import HTTPClientPool, VisualProviderProtocol
+from src.providers.base import HTTPClientPool, VisualProviderProtocol, is_mock_mode
 
 
 class TogetherFluxAdapter(VisualProviderProtocol):
@@ -21,6 +21,9 @@ class TogetherFluxAdapter(VisualProviderProtocol):
         aspect_ratio: str = "16:9",
     ) -> str:
         """Call Together AI to diffuse a photoreal keyframe image."""
+        if is_mock_mode():
+            return f"https://cdn.cineai.studio/assets/flux_mock_{abs(hash(prompt)) % 10000}.jpg"
+
         client = HTTPClientPool.get_client()
         headers = {
             "Authorization": f"Bearer {self.api_key or ''}",
@@ -52,6 +55,20 @@ class TogetherFluxAdapter(VisualProviderProtocol):
         # Offline fallback: returns mock asset identifier
         return f"https://cdn.cineai.studio/assets/flux_mock_{abs(hash(prompt)) % 10000}.jpg"
 
+    def _render_local_canvas(self, prompt: str, output_path: Path, aspect_ratio: str = "16:9") -> Path:
+        """Render deterministic graphical canvas locally with zero network calls."""
+        target_size = (1920, 1080) if aspect_ratio == "16:9" else (1080, 1920)
+        img = Image.new("RGB", target_size, (15, 23, 42))
+        draw = ImageDraw.Draw(img)
+        for y in range(target_size[1]):
+            ratio = y / target_size[1]
+            r, g, b = int(20 + 35 * ratio), int(30 + 15 * ratio), int(50 + 60 * ratio)
+            draw.line([(0, y), (target_size[0], y)], fill=(r, g, b))
+
+        draw.text((60, target_size[1] // 2 - 20), f"[Flux 4K Still] {prompt[:70]}...", fill=(240, 240, 250))
+        img.save(output_path, format="JPEG", quality=90)
+        return output_path
+
     async def generate_to_file(
         self,
         prompt: str,
@@ -61,7 +78,12 @@ class TogetherFluxAdapter(VisualProviderProtocol):
         """Generate and save photoreal keyframe image (Together AI -> Serverless Flux -> Canvas)."""
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
+
+        if is_mock_mode():
+            return self._render_local_canvas(prompt, out, aspect_ratio=aspect_ratio)
+
         client = HTTPClientPool.get_client()
+
 
         # 1. Try Together AI if API key is provided
         if self.api_key:
@@ -90,17 +112,8 @@ class TogetherFluxAdapter(VisualProviderProtocol):
             logger.warning(f"serverless_flux_failed: {ex}")
 
         # 3. Deterministic graphical canvas fallback
-        target_size = (1920, 1080) if aspect_ratio == "16:9" else (1080, 1920)
-        img = Image.new("RGB", target_size, (15, 23, 42))
-        draw = ImageDraw.Draw(img)
-        for y in range(target_size[1]):
-            ratio = y / target_size[1]
-            r, g, b = int(20 + 35 * ratio), int(30 + 15 * ratio), int(50 + 60 * ratio)
-            draw.line([(0, y), (target_size[0], y)], fill=(r, g, b))
+        return self._render_local_canvas(prompt, out, aspect_ratio=aspect_ratio)
 
-        draw.text((60, target_size[1] // 2 - 20), f"[Flux 4K Still] {prompt[:70]}...", fill=(240, 240, 250))
-        img.save(out, format="JPEG", quality=90)
-        return out
 
 
 __all__ = ["TogetherFluxAdapter"]

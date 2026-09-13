@@ -16,6 +16,8 @@
 6. **Zero Duplication & Single Source of Truth:** Never create or keep duplicate code, redundant helpers, or overlapping documentation files. Maintain exactly one authoritative source file per domain. Delete superseded drafts immediately.
 7. **Fail-Fast & Idempotent:** Every pipeline step must be replayable and idempotent without corrupting data or consuming redundant API credits.
 8. **Pre-Flight Cost Transparency & Explicit Confirmation:** UI submissions must NEVER immediately trigger generation. The pipeline must first calculate and display an itemized cost breakdown (LLM tokens, TTS characters, visual assets, cloud compute) and require explicit user confirmation before executing billable jobs.
+9. **Model Testing Safety & Cost Guard (Automated Tests Mandate):** When testing models as part of automated tests, **only run one test only with 10 sec duration**; ensure we do not call more than one test, to save on costs. The standard automated test suite (`pytest`) must ALWAYS run 100% locally with offline deterministic mocks/fallbacks even if model keys are present in `.env`.
+
 
 ---
 
@@ -210,3 +212,6 @@ Before completing any task, every agent must verify:
 * [ ] **Modularity:** Is code decomposed into single-responsibility functions with clean inputs and outputs?
 * [ ] **Zero Duplication:** Did I avoid duplicate code, redundant helpers, or duplicate markdown documentation files?
 * [ ] **Cost Confirmation:** Does the UI flow enforce pre-flight cost calculation and explicit confirmation before dispatching rendering/generation jobs?
+* [ ] **Model Testing Safety (Automated Tests):** Did I ensure the automated test suite runs 100% locally with offline mocks? When testing models as part of automated tests, did I verify that only ONE test only was called with a maximum 10-second duration to save on costs?
+
+

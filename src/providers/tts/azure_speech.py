@@ -8,7 +8,7 @@ from pathlib import Path
 
 from src.core.config import settings
 from src.core.telemetry import logger
-from src.providers.base import HTTPClientPool, TTSProviderProtocol
+from src.providers.base import HTTPClientPool, TTSProviderProtocol, is_mock_mode
 
 
 class AzureSpeechTTSAdapter(TTSProviderProtocol):
@@ -26,6 +26,9 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
         language_code: str = "te-IN",
     ) -> bytes:
         """Synthesize text into studio-grade 48kHz 16-bit PCM WAV audio bytes."""
+        if is_mock_mode():
+            return self._generate_synthetic_wav(duration_seconds=max(2.0, len(text.split()) * 0.4))
+
         client = HTTPClientPool.get_client()
         headers = {
             "Ocp-Apim-Subscription-Key": self.api_key or "",
@@ -95,6 +98,11 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
         """Synthesize narration and write directly to disk."""
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
+
+        if is_mock_mode():
+            audio_bytes = self._generate_synthetic_wav(duration_seconds=max(2.0, len(text.split()) * 0.4))
+            out.write_bytes(audio_bytes)
+            return out
 
         if not self.api_key:
             try:

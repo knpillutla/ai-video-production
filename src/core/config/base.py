@@ -17,6 +17,7 @@ class AppSettings(BaseSettings):
     google_client_secret: str = "dev-google-client-secret"
     encryption_master_key: str = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY="
     cors_origins: list[str] = ["http://localhost:3000"]
+    mock_all_models: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",

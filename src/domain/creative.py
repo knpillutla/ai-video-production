@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
+from src.domain.cost import EpisodeCostRecord
 from src.domain.generation import AspectRatio, GenerationOptions, MediaFormat, VisualStyle
 
 
@@ -90,4 +91,5 @@ class Episode(EpisodeBase):
     compliance_score: float = 0.0
     master_video_path: str | None = None
     evidence_bundle_path: str | None = None
+    cost_record: EpisodeCostRecord | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

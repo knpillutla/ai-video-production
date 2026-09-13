@@ -155,6 +155,13 @@
           <span class="hidden md:inline">Rights Ledger</span>
         </button>
 
+        <!-- Nav Item: Media Created & Cost Analytics -->
+        <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/40 transition text-left">
+          <i class="fa-solid fa-chart-pie text-cyan-400 w-5 text-center text-base"></i>
+          <span class="hidden md:inline">Media & Costs</span>
+          <span class="hidden md:inline-block ml-auto text-[9px] font-bold font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded">NEW</span>
+        </button>
+
         <!-- Nav Item: Subscription & Plans -->
         <button onclick="switchTab('billing')" id="tab-btn-billing" class="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/40 transition text-left">
           <i class="fa-solid fa-credit-card text-amber-400 w-5 text-center text-base"></i>
@@ -688,6 +695,82 @@
       </div>
 
       <!-- ====================================================================== -->
+      <!-- TAB: MEDIA CREATED & COST ANALYTICS (PREDICTED VS ACTUALS) -->
+      <!-- ====================================================================== -->
+      <div id="tab-analytics" class="hidden space-y-6">
+        <!-- Header & Quick Metrics -->
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2.5">
+              <h1 class="text-xl font-bold text-white tracking-tight">Produced Media & Cost Analytics</h1>
+              <span class="px-2.5 py-0.5 text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 rounded-full">Model-by-Model Audit</span>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Audit pre-flight predicted estimates vs. measured execution actuals for every generated video.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="loadMediaCostAnalytics()" class="px-3 py-1.5 bg-[#141d30] hover:bg-[#1a253c] border border-[var(--border)] rounded-xl text-xs text-gray-300 transition flex items-center gap-2">
+              <i class="fa-solid fa-arrows-rotate text-cyan-400"></i>
+              <span>Refresh Actuals</span>
+            </button>
+            <button onclick="exportAllCostReports()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs transition flex items-center gap-2 shadow-sm shadow-indigo-600/30">
+              <i class="fa-solid fa-download"></i>
+              <span>Export Ledger JSON</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric Summary Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-[#0f1626] border border-[var(--border)] rounded-xl p-4">
+            <span class="text-[11px] text-gray-400 font-medium">Total Media Rendered</span>
+            <div class="text-xl font-bold text-white mt-1" id="kpi-total-media">3 Videos</div>
+            <span class="text-[10px] text-emerald-400 flex items-center gap-1 mt-1 font-mono">
+              <i class="fa-solid fa-circle-check"></i> 100% Rights Cleared
+            </span>
+          </div>
+          <div class="bg-[#0f1626] border border-[var(--border)] rounded-xl p-4">
+            <span class="text-[11px] text-gray-400 font-medium">Total Pre-Flight Predicted</span>
+            <div class="text-xl font-bold text-gray-200 mt-1" id="kpi-total-predicted">$0.6102 USD</div>
+            <span class="text-[10px] text-gray-400 mt-1 block">Budget Approved Prior to Run</span>
+          </div>
+          <div class="bg-[#0f1626] border border-[var(--border)] rounded-xl p-4">
+            <span class="text-[11px] text-gray-400 font-medium">Total Actual Spend</span>
+            <div class="text-xl font-bold text-indigo-300 mt-1" id="kpi-total-actual">$0.4542 USD</div>
+            <span class="text-[10px] text-emerald-400 flex items-center gap-1 mt-1 font-mono">
+              <i class="fa-solid fa-arrow-trend-down"></i> -$0.1560 (25.5% Saved)
+            </span>
+          </div>
+          <div class="bg-[#0f1626] border border-[var(--border)] rounded-xl p-4">
+            <span class="text-[11px] text-gray-400 font-medium">Prediction Accuracy</span>
+            <div class="text-xl font-bold text-emerald-400 mt-1" id="kpi-avg-accuracy">74.4%</div>
+            <div class="w-full bg-gray-800 h-1.5 rounded-full mt-2 overflow-hidden">
+              <div class="bg-gradient-to-r from-cyan-400 to-emerald-400 h-full rounded-full" style="width: 74.4%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="flex items-center justify-between gap-4 bg-[#0d1322] border border-[var(--border)] p-3 rounded-xl">
+          <div class="flex items-center gap-3 w-full max-w-md">
+            <i class="fa-solid fa-magnifying-glass text-gray-400 text-xs pl-2"></i>
+            <input type="text" id="media-search-input" placeholder="Search by episode title or show..." class="w-full bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none" oninput="filterMediaCostCards()">
+          </div>
+          <div class="flex items-center gap-3">
+            <select id="media-status-filter" class="bg-[#141d30] border border-[var(--border)] rounded-lg text-xs px-2.5 py-1 text-gray-300 focus:outline-none" onchange="filterMediaCostCards()">
+              <option value="all">All Statuses</option>
+              <option value="completed">Completed (Eligible)</option>
+              <option value="review_required">Review Required</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Media List Container (Dynamic Expandable Cards) -->
+        <div id="media-cost-list" class="space-y-4">
+          <!-- Populated dynamically by JavaScript -->
+        </div>
+      </div>
+
+      <!-- ====================================================================== -->
       <!-- TAB 5: BILLING & SUBSCRIPTIONS -->
       <!-- ====================================================================== -->
       <div id="tab-billing" class="hidden space-y-6">
@@ -999,20 +1082,27 @@
     let userCredits = 42.50;
 
     function switchTab(tabId) {
-      const tabs = ['studio', 'vault', 'channels', 'rights', 'billing'];
+      const tabs = ['studio', 'vault', 'channels', 'rights', 'analytics', 'billing'];
       tabs.forEach(t => {
         const el = document.getElementById(`tab-${t}`);
         const btn = document.getElementById(`tab-btn-${t}`);
         if (t === tabId) {
-          el.classList.remove('hidden');
-          btn.classList.add('bg-indigo-600/20', 'border-r-2', 'border-indigo-500', 'text-white');
-          btn.classList.remove('text-gray-400');
+          if (el) el.classList.remove('hidden');
+          if (btn) {
+            btn.classList.add('bg-indigo-600/20', 'border-r-2', 'border-indigo-500', 'text-white');
+            btn.classList.remove('text-gray-400');
+          }
         } else {
-          el.classList.add('hidden');
-          btn.classList.remove('bg-indigo-600/20', 'border-r-2', 'border-indigo-500', 'text-white');
-          btn.classList.add('text-gray-400');
+          if (el) el.classList.add('hidden');
+          if (btn) {
+            btn.classList.remove('bg-indigo-600/20', 'border-r-2', 'border-indigo-500', 'text-white');
+            btn.classList.add('text-gray-400');
+          }
         }
       });
+      if (tabId === 'analytics') {
+        loadMediaCostAnalytics();
+      }
     }
 
     function switchInputMode(mode) {
@@ -1123,6 +1213,272 @@
         btn.disabled = false;
         btn.classList.remove('opacity-75');
       }, 1200);
+    }
+
+    // ======================================================================
+    // MEDIA CREATED & MODEL COST ANALYTICS LOGIC (DRILL-DOWN ENGINE)
+    // ======================================================================
+    const mediaCostRecords = [
+      {
+        id: "f6d0124b-f500-4f14-b441-a0a5b74126b4",
+        title: "IT Employee Remote Work Confusions - Episode 1",
+        show: "IT Employee Remote Work Confusions",
+        episodeNum: 1,
+        badge: "EP 01",
+        duration: "12.0s (Quick Demo)",
+        lang: "Telugu (te) • Sub: EN",
+        status: "completed",
+        statusText: "COMPLETED (ELIGIBLE)",
+        statusBadge: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
+        thumbUrl: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=300&auto=format&fit=crop&q=80",
+        estimatedCost: 0.2034,
+        actualSpend: 0.1514,
+        varianceVal: -0.0520,
+        varianceStr: "-$0.0520 (-25.6%)",
+        varClass: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40",
+        accuracyPct: 74.4,
+        models: [
+          { stage: "Creative Scriptwriting", model: "Gemini 1.5 Pro", cat: "scripting", rate: "$1.25 / 1M tokens", predUnits: "~14,000 tokens", actUnits: "13,420 tokens", predCost: 0.0200, actCost: 0.0168, var: "-$0.0032", status: "Under Budget" },
+          { stage: "Multilingual Voiceover", model: "Azure Neural HD (te-IN-MohanNeural)", cat: "voice", rate: "$0.016 / 1k chars", predUnits: "~1,800 chars", actUnits: "1,450 chars", predCost: 0.0700, actCost: 0.0232, var: "-$0.0468", status: "Under Budget" },
+          { stage: "4K Keyframe Diffusion", model: "Together AI (FLUX.1-schnell)", cat: "visuals", rate: "$0.003 / image", predUnits: "3 keyframes", actUnits: "3 keyframes", predCost: 0.0090, actCost: 0.0090, var: "$0.0000", status: "Exact Match" },
+          { stage: "Master Soundtrack", model: "Suno v3.5 Pro Master BGM", cat: "soundtrack", rate: "$0.080 / track", predUnits: "1 track", actUnits: "1 track", predCost: 0.0800, actCost: 0.0800, var: "$0.0000", status: "Exact Match" },
+          { stage: "Single-Pass CPU Compositor", model: "FFmpeg 7.1 Single-Pass Graph", cat: "compute", rate: "$0.00028 / sec", predUnits: "~12.0s render", actUnits: "11.2s render", predCost: 0.0034, actCost: 0.0031, var: "-$0.0003", status: "Under Budget" }
+        ]
+      },
+      {
+        id: "c4b8e28f-7d12-4c91-9e23-881b7a2d4f10",
+        title: "Delhi WFH Confusions - Episode 1: The Endless Standup",
+        show: "Delhi WFH Confusions",
+        episodeNum: 1,
+        badge: "EP 01",
+        duration: "480s (8.0 mins)",
+        lang: "Hindi (hi) • Sub: EN",
+        status: "completed",
+        statusText: "COMPLETED (ELIGIBLE)",
+        statusBadge: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
+        thumbUrl: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=300&auto=format&fit=crop&q=80",
+        estimatedCost: 0.2850,
+        actualSpend: 0.2640,
+        varianceVal: -0.0210,
+        varianceStr: "-$0.0210 (-7.4%)",
+        varClass: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40",
+        accuracyPct: 92.6,
+        models: [
+          { stage: "Creative Scriptwriting", model: "Gemini 1.5 Pro", cat: "scripting", rate: "$1.25 / 1M tokens", predUnits: "~14,000 tokens", actUnits: "14,100 tokens", predCost: 0.0200, actCost: 0.0176, var: "-$0.0024", status: "Under Budget" },
+          { stage: "Multilingual Voiceover", model: "Azure Neural HD (hi-IN-MadhurNeural)", cat: "voice", rate: "$0.016 / 1k chars", predUnits: "~4,800 chars", actUnits: "4,750 chars", predCost: 0.0768, actCost: 0.0760, var: "-$0.0008", status: "Under Budget" },
+          { stage: "4K Keyframe Diffusion", model: "Together AI (FLUX.1-schnell)", cat: "visuals", rate: "$0.003 / image", predUnits: "24 keyframes", actUnits: "24 keyframes", predCost: 0.0720, actCost: 0.0720, var: "$0.0000", status: "Exact Match" },
+          { stage: "Master Soundtrack", model: "Suno v3.5 Pro Master BGM", cat: "soundtrack", rate: "$0.080 / track", predUnits: "1 track", actUnits: "1 track", predCost: 0.0800, actCost: 0.0800, var: "$0.0000", status: "Exact Match" },
+          { stage: "Single-Pass CPU Compositor", model: "FFmpeg 7.1 Single-Pass Graph", cat: "compute", rate: "$0.00028 / sec", predUnits: "~130s render", actUnits: "128s render", predCost: 0.0362, actCost: 0.0358, var: "-$0.0004", status: "Under Budget" }
+        ]
+      },
+      {
+        id: "9e1a44c7-a82f-410e-8d99-0129bc78e63b",
+        title: "Telugu Comedy Standup - Episode 2: Traffic Tales",
+        show: "Telugu Comedy Standup",
+        episodeNum: 2,
+        badge: "EP 02",
+        duration: "60s (Short / Reel)",
+        lang: "Telugu (te) • Sub: EN",
+        status: "completed",
+        statusText: "COMPLETED (ELIGIBLE)",
+        statusBadge: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
+        thumbUrl: "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=300&auto=format&fit=crop&q=80",
+        estimatedCost: 0.1218,
+        actualSpend: 0.1190,
+        varianceVal: -0.0028,
+        varianceStr: "-$0.0028 (-2.3%)",
+        varClass: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40",
+        accuracyPct: 97.7,
+        models: [
+          { stage: "Creative Scriptwriting", model: "Gemini 1.5 Pro", cat: "scripting", rate: "$1.25 / 1M tokens", predUnits: "~8,000 tokens", actUnits: "7,850 tokens", predCost: 0.0100, actCost: 0.0098, var: "-$0.0002", status: "Under Budget" },
+          { stage: "Multilingual Voiceover", model: "Azure Neural HD (te-IN-ShrutiNeural)", cat: "voice", rate: "$0.016 / 1k chars", predUnits: "~900 chars", actUnits: "880 chars", predCost: 0.0144, actCost: 0.0141, var: "-$0.0003", status: "Under Budget" },
+          { stage: "4K Keyframe Diffusion", model: "Together AI (FLUX.1-schnell)", cat: "visuals", rate: "$0.003 / image", predUnits: "4 keyframes", actUnits: "4 keyframes", predCost: 0.0120, actCost: 0.0120, var: "$0.0000", status: "Exact Match" },
+          { stage: "Master Soundtrack", model: "Suno v3.5 Pro Master BGM", cat: "soundtrack", rate: "$0.080 / track", predUnits: "1 track", actUnits: "1 track", predCost: 0.0800, actCost: 0.0800, var: "$0.0000", status: "Exact Match" },
+          { stage: "Single-Pass CPU Compositor", model: "FFmpeg 7.1 Single-Pass Graph", cat: "compute", rate: "$0.00028 / sec", predUnits: "~19.0s render", actUnits: "18.2s render", predCost: 0.0054, actCost: 0.0051, var: "-$0.0003", status: "Under Budget" }
+        ]
+      }
+    ];
+
+    function loadMediaCostAnalytics() {
+      const container = document.getElementById('media-cost-list');
+      if (!container) return;
+
+      container.innerHTML = mediaCostRecords.map(item => `
+        <div class="bg-[#0f1626] border border-[var(--border)] rounded-2xl overflow-hidden transition hover:border-gray-700 media-card" data-title="${item.title.toLowerCase()}" data-show="${item.show.toLowerCase()}" data-status="${item.status}">
+          <!-- Always Visible Row -->
+          <div class="p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer select-none" onclick="toggleDrilldown('${item.id}')">
+            <div class="flex items-center gap-4">
+              <div class="relative w-24 h-14 rounded-lg overflow-hidden shrink-0 bg-gray-900 border border-gray-800 shadow-sm">
+                <img src="${item.thumbUrl}" alt="${item.title}" class="w-full h-full object-cover">
+                <span class="absolute top-1 left-1 px-1.5 py-0.5 bg-red-600 text-white font-black text-[9px] rounded uppercase shadow">${item.badge}</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-bold text-white text-sm hover:text-indigo-400 transition">${item.title}</h3>
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${item.statusBadge}">${item.statusText}</span>
+                </div>
+                <div class="flex items-center gap-3 text-[11px] text-gray-400 mt-1">
+                  <span><i class="fa-solid fa-film text-purple-400 mr-1"></i>${item.show}</span>
+                  <span>•</span>
+                  <span><i class="fa-regular fa-clock text-sky-400 mr-1"></i>${item.duration}</span>
+                  <span>•</span>
+                  <span><i class="fa-solid fa-language text-emerald-400 mr-1"></i>${item.lang}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Financial Metrics & Expand Trigger -->
+            <div class="flex items-center justify-between md:justify-end gap-5 shrink-0 border-t md:border-t-0 pt-3 md:pt-0 border-gray-800">
+              <div class="text-right">
+                <span class="text-[10px] text-gray-400 uppercase tracking-wider block font-medium">Est. Cost</span>
+                <span class="text-sm font-semibold text-gray-300 font-mono">$${item.estimatedCost.toFixed(4)}</span>
+              </div>
+              <div class="text-right">
+                <span class="text-[10px] text-gray-400 uppercase tracking-wider block font-medium">Actual Spend</span>
+                <span class="text-sm font-bold text-indigo-300 font-mono">$${item.actualSpend.toFixed(4)}</span>
+              </div>
+              <div class="text-right">
+                <span class="text-[10px] text-gray-400 uppercase tracking-wider block font-medium">Variance</span>
+                <span class="text-xs font-bold font-mono px-2 py-0.5 rounded-md ${item.varClass}">${item.varianceStr}</span>
+              </div>
+              <div class="text-right hidden sm:block">
+                <span class="text-[10px] text-gray-400 uppercase tracking-wider block font-medium">Accuracy</span>
+                <span class="text-xs font-bold text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">${item.accuracyPct}%</span>
+              </div>
+              <button class="px-3 py-1.5 text-xs text-indigo-300 hover:text-white bg-[#141d30] hover:bg-indigo-600 rounded-xl border border-gray-800 transition flex items-center gap-2">
+                <span>Drill Down</span>
+                <i id="chevron-${item.id}" class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Expandable Model Breakdown Section -->
+          <div id="drilldown-${item.id}" class="hidden border-t border-gray-800/80 bg-[#0a0f1c] p-5 space-y-4">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-microchip text-indigo-400"></i>
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Itemized Model-by-Model Cost Breakdown</h4>
+              </div>
+              <span class="text-[10px] font-mono text-gray-400">Ledger ID: ${item.id}</span>
+            </div>
+
+            <!-- Breakdown Table -->
+            <div class="overflow-x-auto rounded-xl border border-gray-800/80">
+              <table class="w-full text-left text-xs bg-[#0d1322]">
+                <thead>
+                  <tr class="text-gray-400 border-b border-gray-800 text-[11px] uppercase tracking-wider bg-gray-900/60">
+                    <th class="p-3">Pipeline Stage</th>
+                    <th class="p-3">Model & Provider</th>
+                    <th class="p-3 font-mono">Unit Rate</th>
+                    <th class="p-3">Predicted Units</th>
+                    <th class="p-3">Actual Measured</th>
+                    <th class="p-3 font-mono">Est. Cost</th>
+                    <th class="p-3 font-mono">Actual Cost</th>
+                    <th class="p-3 font-mono">Variance</th>
+                    <th class="p-3">Audit</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800/60 font-mono text-[11px]">
+                  ${item.models.map(m => `
+                    <tr class="hover:bg-gray-800/30 transition">
+                      <td class="p-3 text-gray-200 font-sans font-medium">${m.stage}</td>
+                      <td class="p-3 text-indigo-300 font-sans">${m.model}</td>
+                      <td class="p-3 text-gray-400 text-[10px]">${m.rate}</td>
+                      <td class="p-3 text-gray-300">${m.predUnits}</td>
+                      <td class="p-3 text-white font-semibold">${m.actUnits}</td>
+                      <td class="p-3 text-gray-300">$${m.predCost.toFixed(4)}</td>
+                      <td class="p-3 text-indigo-300 font-bold">$${m.actCost.toFixed(4)}</td>
+                      <td class="p-3 ${m.var.startsWith('-') ? 'text-emerald-400' : (m.var === '$0.0000' ? 'text-gray-400' : 'text-rose-400')}">${m.var}</td>
+                      <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] ${m.status === 'Exact Match' ? 'bg-gray-800 text-gray-300' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">${m.status}</span></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Footer Meta & Actions -->
+            <div class="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+              <div class="flex items-center gap-3 text-gray-400 text-[11px] flex-wrap font-mono">
+                <span><strong class="text-gray-200">Predicted Total:</strong> $${item.estimatedCost.toFixed(4)}</span>
+                <span>•</span>
+                <span><strong class="text-gray-200">Actual Total:</strong> $${item.actualSpend.toFixed(4)}</span>
+                <span>•</span>
+                <span><strong class="text-gray-200">Net Variance:</strong> <span class="${item.varClass} px-1.5 py-0.5 rounded">${item.varianceStr}</span></span>
+                <span>•</span>
+                <span><strong class="text-gray-200">Accuracy:</strong> <span class="text-emerald-400 font-bold">${item.accuracyPct}%</span></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="downloadCostReport('${item.id}')" class="px-3 py-1.5 bg-[#141d30] hover:bg-[#1a253c] border border-[var(--border)] rounded-lg text-gray-300 transition flex items-center gap-1.5 text-[11px]">
+                  <i class="fa-solid fa-file-code text-cyan-400"></i>
+                  <span>Download cost_report.json</span>
+                </button>
+                <button onclick="switchTab('rights')" class="px-3 py-1.5 bg-[#141d30] hover:bg-[#1a253c] border border-[var(--border)] rounded-lg text-gray-300 transition flex items-center gap-1.5 text-[11px]">
+                  <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+                  <span>Evidence Bundle</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleDrilldown(id) {
+      const section = document.getElementById(`drilldown-${id}`);
+      const chevron = document.getElementById(`chevron-${id}`);
+      if (!section) return;
+
+      const isHidden = section.classList.contains('hidden');
+      if (isHidden) {
+        section.classList.remove('hidden');
+        if (chevron) chevron.classList.add('rotate-180');
+      } else {
+        section.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+      }
+    }
+
+    function filterMediaCostCards() {
+      const query = (document.getElementById('media-search-input')?.value || '').toLowerCase();
+      const status = document.getElementById('media-status-filter')?.value || 'all';
+      const cards = document.querySelectorAll('.media-card');
+
+      cards.forEach(card => {
+        const title = card.getAttribute('data-title') || '';
+        const show = card.getAttribute('data-show') || '';
+        const cardStatus = card.getAttribute('data-status') || '';
+
+        const matchesQuery = !query || title.includes(query) || show.includes(query);
+        const matchesStatus = status === 'all' || cardStatus === status;
+
+        if (matchesQuery && matchesStatus) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    }
+
+    function exportAllCostReports() {
+      const blob = new Blob([JSON.stringify(mediaCostRecords, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `media_cost_analytics_ledger_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadCostReport(id) {
+      const item = mediaCostRecords.find(m => m.id === id);
+      if (!item) return;
+      const blob = new Blob([JSON.stringify(item, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cost_report_${id}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     // Initialize on load

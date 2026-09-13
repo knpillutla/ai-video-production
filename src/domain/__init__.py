@@ -1,5 +1,9 @@
 """Domain models package export."""
 
+from src.domain.cost import (
+    EpisodeCostRecord,
+    ModelCostItem,
+)
 from src.domain.creative import (
     Character,
     CharacterCreate,
@@ -18,6 +22,18 @@ from src.domain.generation import (
     GenerationOptions,
     MediaFormat,
     VisualStyle,
+)
+from src.domain.qa import (
+    FrameDefectMetrics,
+    LoudnessMetrics,
+    QualityScoreBreakdown,
+    VideoQAReport,
+)
+from src.domain.rights import (
+    AssetRightsRecord,
+    AssetType,
+    CommercialLicenseType,
+    OriginalityEvidenceBundle,
 )
 from src.domain.user import (
     SubscriptionTier,
@@ -44,4 +60,14 @@ __all__ = [
     "VisualStyle",
     "AspectRatio",
     "GenerationOptions",
+    "AssetType",
+    "CommercialLicenseType",
+    "AssetRightsRecord",
+    "OriginalityEvidenceBundle",
+    "LoudnessMetrics",
+    "FrameDefectMetrics",
+    "QualityScoreBreakdown",
+    "VideoQAReport",
+    "ModelCostItem",
+    "EpisodeCostRecord",
 ]

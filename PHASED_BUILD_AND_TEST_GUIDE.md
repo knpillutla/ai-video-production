@@ -23,7 +23,7 @@ This master matrix details **exactly when each model, media capability, determin
 | **Background Score (BGM)** | `suno-v3.5-pro` | Suno API | **Phase 2** | Commercially cleared instrumental soundtrack ($0.08 / full 2-min loop). |
 | **Audio Ducking Engine** | `local_audio_ducking.py` | Local CPU Script | **Phase 2** | Tier 0 Deterministic: Dips BGM to -18dB during voiceover ($0.00 cost). |
 | **Curated SFX & Foley** | Curated WAV Stems | Blob Storage | **Phase 2** | Pre-cleared whooshes, risers, and sub-bass impacts ($0.00 cost). |
-| **Kinetic Subtitles** | `local_subtitles.py` | PySubs2 / Cairo | **Phase 2** | Tier 0: Word-by-word bouncing highlight boxes (ASS/SRT) ($0.00 cost). |
+| **Multilingual Subtitle Suite** | `local_subtitles.py` + `local_translator.py` | Python / Regional Fonts | **Phase 2** | Tier 0: Default English burned-in kinetic typography for non-English audio + automated 5-language regional bundles (ASS/SRT/VTT) ($0.00 cost). |
 | **Single-Pass Compositor** | `ffmpeg_pipeline.py` + FFmpeg 7.x | 100% Python Engine | **Phase 2** | Single `-filter_complex` execution pass combining all media layers. |
 | **Pre-Flight Cost Modal** | `/estimate-cost` API | FastAPI + Pydantic | **Phase 2** | Mandatory cost gate; blocks jobs until user confirms itemized receipt. |
 | **Episodic Thumbnail Badges**| `local_thumbnail.py` | Python Pillow | **Phase 2** | Tier 0: High-contrast `EP 01` badge in top-left corner ($0.00 cost). |
@@ -185,7 +185,8 @@ src/
 ├── scripts/
 │   ├── local_pan_zoom.py          # FFmpeg 2.5D slow zoom/pan filter builder (< 160 lines)
 │   ├── local_audio_ducking.py     # Dynamic audio ducking (-18dB) (< 150 lines)
-│   └── local_subtitles.py         # Subtitle parsing & SRT/ASS generator (< 160 lines)
+│   ├── local_subtitles.py         # Subtitle parsing, WebVTT & multi-bundle generator (< 180 lines)
+│   └── local_translator.py        # Multilingual transcreation & Indian/World bundle mapper (< 120 lines)
 ├── compositor/
 │   └── ffmpeg_pipeline.py         # Single-pass -filter_complex execution engine (< 240 lines)
 └── api/
@@ -206,8 +207,9 @@ src/
 4. **Camera Dynamics:** Implement `local_pan_zoom.py` applying 2.5D slow camera zoom/pan over static images (saving >80% on video spend).
 5. **Background Score:** Build `suno_adapter.py` to fetch a 2-minute cinematic instrumental loop.
 6. **Audio Ducking:** Build `local_audio_ducking.py` dipping BGM to -18 dB whenever voiceover is active.
-7. **Single-Pass Compositor:** Build `ffmpeg_pipeline.py` executing all layers in a single `-filter_complex` execution pass.
-8. **Pre-Flight Cost Modal:** Build `src/api/routes/production.py` providing `POST /estimate-cost` and `POST /confirm-production`.
+7. **Multilingual Subtitles:** Build `local_subtitles.py` and `local_translator.py` burning default English subtitles on regional content, and exporting multi-language bundles (ASS/SRT/VTT + manifest.json) for 5 Indian or World languages.
+8. **Single-Pass Compositor:** Build `ffmpeg_pipeline.py` executing all layers in a single `-filter_complex` execution pass.
+9. **Pre-Flight Cost Modal:** Build `src/api/routes/production.py` providing `POST /estimate-cost` and `POST /confirm-production`.
 
 ### 2.5 Verification Commands & Tests
 ```powershell
@@ -268,10 +270,17 @@ src/
 5. **QA Gate Agent:** Build `src/agents/qa_gate_agent.py` aggregating QA metrics into a composite score (90–100 Publish Eligible, 75–89 Revision, <75 Blocked).
 6. **Evidence Bundle:** Build `src/compliance/evidence_bundle.py` archiving research sources, script history, rights manifest, and QA report into `projects/{id}/evidence_bundle/`.
 7. **Synthetic Media Tagging:** Inject C2PA metadata into MP4 container and configure YouTube Data API `containsSyntheticMedia: true`.
+8. **Pre-Flight Estimation vs Actuals Cost Governance:** Build `src/domain/cost.py` and `src/billing/cost_tracker.py` saving total estimated cost and model-by-model breakdown prior to generation, updating the *same record* with measured actuals post-execution, and powering a dedicated UI **Media & Cost Analytics Screen** with expandable drill-down inspection.
 
 ### 3.5 Verification Commands & Tests
+
+> [!CAUTION]
+> **Automated Model Testing Cost Rule:**
+> When testing models as part of automated tests, **only run one test only with 10 sec duration**; ensure we do not call more than one test, to save on costs. The test suite must only be run locally even if model keys are present.
+
 ```powershell
 # 1. Test compliance filter with clean and dirty scripts
+
 pytest tests/test_compliance.py -v
 
 # 2. Test LivePortrait lip-sync on a 5-second avatar clip
@@ -282,6 +291,9 @@ python -m src.scripts.local_video_qa --video output/master_video.mp4
 
 # 4. Simulate unverified asset in rights ledger and verify publish is BLOCKED
 pytest tests/test_rights_ledger.py -k "test_unverified_asset_blocks_publish"
+
+# 5. Test cost tracking actuals and model breakdown drilldown
+pytest tests/test_cost_tracking_actuals.py -v
 ```
 
 ### 3.6 Definition of Done
@@ -289,6 +301,8 @@ pytest tests/test_rights_ledger.py -k "test_unverified_asset_blocks_publish"
 * [x] LivePortrait produces lip-synced talking avatar segments without unnatural face warping.
 * [x] `local_video_qa.py` accurately identifies audio that exceeds -14 LUFS or contains black frames.
 * [x] A complete, machine-readable `evidence_bundle.json` is generated alongside the rendered MP4.
+* [x] Total estimated cost and model breakdown are persisted before generation, and updated with actuals post-render.
+* [x] UI includes a dedicated Media & Cost Analytics screen listing all created media with expandable model drill-down.
 
 ---
 

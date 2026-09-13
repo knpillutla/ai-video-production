@@ -7,7 +7,7 @@ from pathlib import Path
 
 from src.core.config import settings
 from src.core.telemetry import logger
-from src.providers.base import HTTPClientPool, MusicProviderProtocol
+from src.providers.base import HTTPClientPool, MusicProviderProtocol, is_mock_mode
 
 
 class SunoMusicAdapter(MusicProviderProtocol):
@@ -24,6 +24,9 @@ class SunoMusicAdapter(MusicProviderProtocol):
         duration_seconds: int = 120,
     ) -> str:
         """Request an original commercial soundtrack from Suno."""
+        if is_mock_mode():
+            return f"https://cdn.cineai.studio/audio/suno_track_{abs(hash(genre)) % 10000}.mp3"
+
         client = HTTPClientPool.get_client()
         headers = {
             "Authorization": f"Bearer {self.api_key or ''}",

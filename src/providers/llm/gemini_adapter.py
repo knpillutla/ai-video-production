@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from src.core.config import settings
 from src.core.telemetry import logger
-from src.providers.base import HTTPClientPool, LLMProviderProtocol
+from src.providers.base import HTTPClientPool, LLMProviderProtocol, is_mock_mode
 
 
 class ScenePlanItem(BaseModel):
@@ -32,11 +32,15 @@ class GeminiLLMAdapter(LLMProviderProtocol):
     """Tier-2 Flagship LLM Adapter powered by Gemini 1.5 Pro via non-blocking Async HTTP."""
 
     def __init__(self, api_key: str | None = None):
-        self.api_key = api_key or settings.llm.google_api_key
+        self.api_key = api_key or settings.llm.google_api_key or settings.llm.gemini_api_key or None
         self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent"
+
 
     async def generate_text(self, prompt: str, system_prompt: str = "", temperature: float = 0.7) -> str:
         """Generate unstructured retention narrative text."""
+        if is_mock_mode():
+            return f"[Generated Script] Topic: {prompt[:80]} | Retention Hook: Did you know this changed everything?"
+
         client = HTTPClientPool.get_client()
         headers = {"Content-Type": "application/json"}
         params = {"key": self.api_key} if self.api_key else {}
@@ -61,8 +65,41 @@ class GeminiLLMAdapter(LLMProviderProtocol):
 
     async def generate_structured(self, prompt: str, schema: dict[str, Any] | None = None) -> dict[str, Any]:
         """Generate structured JSON scene plan obeying Pydantic storyboard contracts."""
+        fallback_plan = {
+            "title": "IT Employee Remote Work Confusions",
+            "hook_thesis": "Why working from home turned into a 24-hour standup call",
+            "target_duration_seconds": 480,
+            "scenes": [
+                {
+                    "scene_index": 0,
+                    "duration_seconds": 3.8,
+                    "shot_type": "close_up",
+                    "visual_prompt": "Cinematic close-up of a tired software engineer looking at dual glowing 4K monitors in dark room",
+                    "dialogue": "వర్క్ ఫ్రమ్ హోమ్ అని చెప్పి రోజుకి 18 గంటలు లాగిన్ లోనే ఉంటే... జీతం ఏమో నెలకి 30 వేలు!",
+                },
+                {
+                    "scene_index": 1,
+                    "duration_seconds": 4.2,
+                    "shot_type": "medium",
+                    "visual_prompt": "Modern apartment desk with cold coffee cup and laptop displaying 10 chat windows",
+                    "dialogue": "మేనేజర్ కాల్ వచ్చిన ప్రతిసారీ వైఫై కట్ అయిందని అబద్ధం చెప్పే కళ లో మనం డాక్టరేట్ చేసాం.",
+                },
+                {
+                    "scene_index": 2,
+                    "duration_seconds": 4.0,
+                    "shot_type": "wide",
+                    "visual_prompt": "Sun rising through high-rise window as engineer stares into the distance laughing",
+                    "dialogue": "కానీ ఆఫీస్ కి వెళ్లి ట్రాఫిక్ లో గంటలు నిలబడటం కంటే ఇంట్లోనే బెస్ట్ కదా!",
+                },
+            ],
+        }
+
+        if is_mock_mode():
+            return fallback_plan
+
         sys_prompt = "You are a broadcast video director. Return ONLY valid JSON adhering to the ScenePlan specification."
         raw = await self.generate_text(prompt, system_prompt=sys_prompt)
+
 
         # Clean markdown codeblocks if model returned ```json ... ```
         clean_json = raw.strip()
@@ -74,35 +111,8 @@ class GeminiLLMAdapter(LLMProviderProtocol):
         try:
             return json.loads(clean_json)
         except Exception:
-            # Deterministic standard 3-scene vertical slice fallback
-            return {
-                "title": "IT Employee Remote Work Confusions",
-                "hook_thesis": "Why working from home turned into a 24-hour standup call",
-                "target_duration_seconds": 480,
-                "scenes": [
-                    {
-                        "scene_index": 0,
-                        "duration_seconds": 3.8,
-                        "shot_type": "close_up",
-                        "visual_prompt": "Cinematic close-up of a tired software engineer looking at dual glowing 4K monitors in dark room",
-                        "dialogue": "వర్క్ ఫ్రమ్ హోమ్ అని చెప్పి రోజుకి 18 గంటలు లాగిన్ లోనే ఉంటే... జీతం ఏమో నెలకి 30 వేలు!",
-                    },
-                    {
-                        "scene_index": 1,
-                        "duration_seconds": 4.2,
-                        "shot_type": "medium",
-                        "visual_prompt": "Modern apartment desk with cold coffee cup and laptop displaying 10 chat windows",
-                        "dialogue": "మేనేజర్ కాల్ వచ్చిన ప్రతిసారీ వైఫై కట్ అయిందని అబద్ధం చెప్పే కళ లో మనం డాక్టరేట్ చేసాం.",
-                    },
-                    {
-                        "scene_index": 2,
-                        "duration_seconds": 4.0,
-                        "shot_type": "wide",
-                        "visual_prompt": "Sun rising through high-rise window as engineer stares into the distance laughing",
-                        "dialogue": "కానీ ఆఫీస్ కి వెళ్లి ట్రాఫిక్ లో గంటలు నిలబడటం కంటే ఇంట్లోనే బెస్ట్ కదా!",
-                    },
-                ],
-            }
+            return fallback_plan
 
 
 __all__ = ["GeminiLLMAdapter", "ScenePlanItem", "ScriptOutput"]
+

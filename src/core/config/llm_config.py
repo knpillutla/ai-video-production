@@ -6,10 +6,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class LLMSettings(BaseSettings):
     """API credentials for LLM providers."""
 
-    gemini_api_key: str = "mock-gemini-key"
-    google_api_key: str = "mock-google-key"
-    anthropic_api_key: str = "mock-anthropic-key"
-    openai_api_key: str = "mock-openai-key"
+    gemini_api_key: str = ""
+    google_api_key: str = ""
+    anthropic_api_key: str = ""
+    openai_api_key: str = ""
+
 
     default_script_model: str = "gemini-1.5-pro"
     default_fast_model: str = "gemini-1.5-flash"

@@ -150,7 +150,8 @@ src/
 │   ├── local_video_qa.py      # Post-render OpenCV/FFmpeg check: -14 LUFS, black/frozen frames (< 220 lines)
 │   ├── local_beat_detector.py # Librosa BPM, kick/snare downbeat & drop detection (< 140 lines)
 │   ├── local_audio_ducking.py # Dynamic volume math & FFmpeg filter graph builder (< 150 lines)
-│   ├── local_subtitles.py     # Karaoke & Hormozi kinetic typography parser (< 160 lines)
+│   ├── local_subtitles.py     # Multilingual bundle generator (ASS, SRT, WebVTT + manifest) (< 180 lines)
+│   ├── local_translator.py    # Deterministic transcreation & Indian/World bundle router (< 120 lines)
 │   ├── local_vector_math.py   # NumPy cosine similarity matrix deduplication (< 120 lines)
 │   ├── local_pan_zoom.py      # 2.5D FFmpeg camera parallax (saves $0.50/clip vs video AI) (< 160 lines)
 │   └── local_thumbnail.py     # Pillow localized font, dropshadow & prominent episode badge renderer (< 200 lines)
@@ -683,7 +684,7 @@ To avoid premature over-engineering, the implementation follows a disciplined **
 1. **Phase 0 (Production Wedge):** 1 niche, 1 format (16:9 documentary), 1 primary language, Asset Rights Ledger, Video QA Gate, human director approval.
 2. **Phase 1 (Core Engine):** Research packet ingestion, 3-second hook generator, scene planner, TTS/BGM mixing, FFmpeg compositor.
 3. **Phase 2 (Monetization Readiness):** YPP compliance validator, commercial rights verification, synthetic media disclosure, YouTube Data API packaging.
-4. **Phase 3 (Localization):** Transcreation engine, Multi-Language Audio (MLA) track binding, localized A/B thumbnails.
+4. **Phase 3 (Localization):** Transcreation engine, Multi-Language Audio (MLA) track binding, localized A/B thumbnails, default English subtitles on regional content, and automated 5-language regional bundles (ASS, SRT, WebVTT).
 5. **Phase 4 (Scale & Autonomy):** Semantic vector topic memory, autonomous cron scheduling, cross-cloud provider arbitrage, and additional genres.
 
 ---
@@ -1188,10 +1189,12 @@ Cloud Storage Root (Azure Blob Account or Google Cloud Storage)
 * **Air-Gapped Media Storage:** Media files are never public; access is granted strictly via short-lived (15-minute) SAS URLs (Azure) or V4 Signed URLs (GCP) bound exclusively to the authenticated user's private container.
 * **Subscription Quotas & Usage Metering:** PostgreSQL tracks each user's `subscription_tier` (`free`, `creator`, `pro_studio`, `enterprise`), metering video minutes, cloud storage GBs, and serverless API credits to enable public SaaS billing.
 
-### 13.4 Cloud Cost Governance (Zero-GPU Serverless Architecture)
-* **Pre-Flight Cost Guard:** Studio API strictly blocks any generation pipeline request until the user reviews and clicks "Confirm & Produce Video" on the itemized cost breakdown.
-* **Zero Idle Compute Billing:** In Azure Container Apps (ACA) and Google Cloud Run, workers scale to **0 replicas** when queue depth is zero. You pay \$0.00 in compute when idle.
-* **No Expensive GPU Node Pools:** Eliminating Kubernetes GPU VMs (`Standard_NC4as_T4` or `g2-standard-4` at \$450–\$900/mo each) in favor of pay-per-second serverless APIs (Together AI, Fal.ai) ensures you only pay for the exact seconds you render.
+### 13.4 Cloud Cost Governance & Model-by-Model Actuals Tracking
+* **Pre-Flight Cost Guard:** Studio API strictly blocks any generation pipeline request until the user reviews and clicks "Confirm & Produce Video" on the itemized cost breakdown across all planned models.
+* **Unified Cost Record & In-Place Actuals Update:** Total estimated cost and itemized breakdown for each model are persisted to `EpisodeCostRecord` prior to generation. Upon pipeline completion, the **exact same record is updated with measured actuals** (LLM tokens consumed, voiceover characters synthesized, keyframes diffused, soundtrack tracks composed, and CPU render seconds) to evaluate forecast accuracy and track budget variance.
+* **UI Media & Cost Analytics Screen:** The web studio provides a dedicated screen listing all created media items showing estimated vs actual costs, net dollar variance, and prediction accuracy rating. Creators can expand each video card/row to inspect an itemized model-by-model drill-down table comparing predicted vs actual units and costs.
+* **Zero Idle Compute Billing:** In Azure Container Apps (ACA) and Google Cloud Run, workers scale to **0 replicas** when queue depth is zero. You pay $0.00 in compute when idle.
+* **No Expensive GPU Node Pools:** Eliminating Kubernetes GPU VMs (`Standard_NC4as_T4` or `g2-standard-4` at $450–$900/mo each) in favor of pay-per-second serverless APIs (Together AI, Fal.ai) ensures you only pay for the exact seconds you render.
 
 ### 13.5 High-Concurrency Infrastructure & Scalability for Millions of Users
 

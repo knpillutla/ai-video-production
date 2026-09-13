@@ -57,6 +57,8 @@
     - 11.3 Domain Data Models (Pydantic / DB Entities)
 12. [Interactive Web Studio UI / UX Specification](#12-interactive-web-studio-ui--ux-specification)
     - 12.1 Mandatory Pre-Flight Cost Estimation & Confirmation Modal (CRITICAL)
+    - 12.2 Media & Cost Analytics Screen (Predicted vs. Actuals Drill-Down)
+    - 12.3 Commercial SaaS Subscription Management & Billing Architecture
 13. [REST API & MCP Tool Specifications](#13-rest-api--mcp-tool-specifications)
     - 13.1 Core REST Endpoints
     - 13.2 Dedicated Model Selector MCP Server (`mcp-model-selector`)
@@ -640,6 +642,7 @@ Azure Blob Storage Account / Google Cloud Storage Root
 │               │   ├── script.json
 │               │   ├── scenes/
 │               │   ├── audio_stems/
+│               │   ├── subtitles/              # Multilingual bundle (ASS, SRT, VTT + manifest.json)
 │               │   ├── master_renders/
 │               │   │   ├── 16x9_master_4k.mp4
 │               │   │   └── 9x16_shorts_cut.mp4
@@ -838,7 +841,44 @@ Instead, an interactive **Pre-Flight Cost Breakdown Modal** renders immediately.
 2. **User Control & Downgrade Options:** If the user wants to reduce costs, they can cancel and adjust settings (e.g., deselect video motion to use image B-roll, saving \$0.50).
 3. **Double-Click Protection & Idempotency:** The confirm button disables itself upon click, displays a spinner, and submits an idempotent idempotency key to prevent accidental duplicate charges.
 
-### 12.2 Commercial SaaS Subscription Management & Billing Architecture
+### 12.2 Media & Cost Analytics Screen (Predicted vs. Actuals Drill-Down)
+
+To provide complete post-production financial transparency, the studio features a dedicated **Media & Cost Analytics Screen** displaying all created media assets alongside their estimated and actual production costs:
+
+```
++──────────────────────────────────────────────────────────────────────────────────────────────────────────────+
+|                                    PRODUCED MEDIA & COST ANALYTICS                                           |
++──────────────────────────────────────────────────────────────────────────────────────────────────────────────+
+| Filter: [ All Shows ▼ ] [ All Statuses ▼ ]                       Search: [ 🔍 Search videos...             ] |
++──────────────────────────────────────────────────────────────────────────────────────────────────────────────+
+| THUMB / TITLE          | FORMAT / DURATION | EST. COST | ACTUAL COST | VARIANCE       | ACCURACY | DRILL DOWN |
++────────────────────────┼───────────────────┼───────────┼─────────────┼────────────────┼──────────┼────────────+
+| [▶] Delhi WFH Ep 01    | 16:9 • 8 mins     | $0.2034   | $0.1514     | -$0.0520 (-25%)| 74.4% 🟢 | [▼ Expand] |
+| [▶] Travel India Ep 02 | 9:16 • 60 secs    | $0.0850   | $0.0810     | -$0.0040 (- 5%)| 95.3% 🟢 | [▼ Expand] |
+| [▶] Daily Tech Ep 05   | 16:9 • 12 mins    | $0.3200   | $0.3310     | +$0.0110 (+ 3%)| 96.6% 🟢 | [▼ Expand] |
++──────────────────────────────────────────────────────────────────────────────────────────────────────────────+
+
+▼ EXPANDED MODEL-BY-MODEL DRILL-DOWN (Delhi WFH Ep 01):
+┌────────────────────────────────┬─────────────────┬──────────────────┬─────────────────┬──────────┬───────────┐
+│ Component / Pipeline Stage     │ AI Model / Ptr  │ Predicted Units  │ Actual Measured │ Est Cost │ Act Cost  │
+├────────────────────────────────┼─────────────────┼──────────────────┼─────────────────┼──────────┼───────────┤
+│ Creative Scriptwriting         │ Gemini 1.5 Pro  │ ~14,000 tokens   │ 13,420 tokens   │ $0.0200  │ $0.0168   │
+│ Multilingual Voiceover         │ Azure Neural HD │ ~1,800 chars     │ 1,450 chars     │ $0.0700  │ $0.0232   │
+│ 4K Keyframe Diffusion          │ FLUX.1-schnell  │ 3 keyframes      │ 3 keyframes     │ $0.0090  │ $0.0090   │
+│ Original Master Soundtrack     │ Suno v3.5 Pro   │ 1 master track   │ 1 master track  │ $0.0800  │ $0.0800   │
+│ Single-Pass CPU Compositor     │ FFmpeg 7.1      │ ~12.0s render    │ 11.2s render    │ $0.0034  │ $0.0031   │
+├────────────────────────────────┴─────────────────┴──────────────────┴─────────────────┼──────────┼───────────┤
+│ TOTAL SPEND BREAKDOWN:                                                                │ $0.1824  │ $0.1321   │
+│ NET VARIANCE: -$0.0503 (Savings; 72.4% forecast accuracy)                             │          │           │
+└───────────────────────────────────────────────────────────────────────────────────────┴──────────┴───────────┘
+```
+
+#### Key Capabilities:
+1. **In-Place Record Updating:** The exact `EpisodeCostRecord` created during pre-flight estimation is updated upon completion with actual tokens, characters, keyframes, and render durations.
+2. **Interactive Expandable Rows:** Clicking `[▼ Expand]` unfolds the model-by-model comparison table directly underneath the media row.
+3. **Drill-Down Modal & Audit Export:** Users can drill down into granular compute logs and download the complete `cost_report.json` alongside the C2PA originality evidence bundle.
+
+### 12.3 Commercial SaaS Subscription Management & Billing Architecture
 
 To open the studio up for public subscriptions, the platform implements an enterprise multi-tier SaaS billing engine integrated with **Stripe Billing**:
 
@@ -1045,9 +1085,10 @@ gantt
 - post-upload claim monitoring
 
 **Phase 3 — Localization**
-- transcreation
-- multilingual audio
-- localized captions/thumbnails
+- transcreation engine
+- multilingual audio (MLA)
+- default English subtitles burned on regional audio + 5-language regional bundles (ASS, SRT, WebVTT + manifest)
+- localized episodic A/B thumbnails
 - language-specific QA
 
 **Phase 4 — Scale**

@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from src.api.deps import get_current_user
+from src.billing.cost_tracker import calculate_preflight_estimate
 from src.core.queue import task_queue
+from src.domain.cost import EpisodeCostRecord
 from src.domain.creative import Episode
 from src.domain.repo import repo
 from src.domain.user import User
@@ -118,6 +120,8 @@ async def estimate_production_cost(
     can_afford = current_user.api_credit_balance_usd >= total_cost
 
     # Persist estimate to episode state
+    cost_rec = calculate_preflight_estimate(episode)
+    episode.cost_record = cost_rec
     episode.estimated_cost_usd = total_cost
     episode.status = "estimating"
     repo.save_episode(episode)
@@ -178,3 +182,21 @@ async def confirm_production(
         deducted_usd=round(deducted, 4),
         remaining_balance_usd=round(current_user.api_credit_balance_usd, 4),
     )
+
+
+@router.get("/{episode_id}/cost-breakdown", response_model=EpisodeCostRecord)
+async def get_production_cost_breakdown(
+    episode_id: UUID,
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve detailed model-by-model predicted vs actual cost breakdown for an episode."""
+    episode = repo.get_episode(current_user.id, episode_id)
+    if not episode:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Episode project not found")
+
+    if not episode.cost_record:
+        episode.cost_record = calculate_preflight_estimate(episode)
+        repo.save_episode(episode)
+
+    return episode.cost_record
+

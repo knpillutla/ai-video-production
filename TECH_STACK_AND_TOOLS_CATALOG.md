@@ -61,6 +61,7 @@ The frontend provides creator-in-the-loop control, timeline inspection, and mand
 | **Real-Time Video Preview** | **Remotion Player** | 4.0+ | In-browser canvas preview of transitions, kinetic text pop-ups, and scene layout before server render. |
 | **Authentication (SSO)** | **NextAuth.js (Auth.js)** | 5.0+ | Google OAuth 2.0 Single Sign-On, JWT session handling, and user profile synchronization. |
 | **Subscription Billing UI**| **Stripe Checkout & Elements** | Latest | Embedded Stripe payment element for self-serve subscription upgrades and credit purchases. |
+| **Media & Cost Analytics** | **Interactive Drilldown Table**| Custom React / Alpine | Screen listing all created media with predicted vs actual costs and expandable model drill-down. |
 | **Icons & Visual Feedback** | **Lucide React** | Latest | Lightweight, clean iconography for studio actions. |
 | **Client Validation** | **Zod** | 3.23+ | Type-safe form validation for project prompts, aspect ratios, and custom model settings. |
 
@@ -73,6 +74,7 @@ The backend handles asynchronous job lifecycle, pre-flight cost calculations, se
 | Component | Technology | Version | Purpose & Architectural Justification |
 | :--- | :--- | :--- | :--- |
 | **Web Framework** | **FastAPI** | 0.115+ | High-throughput asynchronous Python framework with native OpenAPI doc generation and ASGI support. |
+| **Cost Tracker & Actuals** | **Python / Pydantic (src/billing)** | 1.0.0 | Persists pre-flight estimate and updates same record with measured actuals post-execution. |
 | **ASGI Server** | **Uvicorn** | 0.32+ | Ultra-fast ASGI web server implementation using `uvloop` and `httptools`. |
 | **Connection Pooling** | **PgBouncer** | 1.23+ | Connection pooling managing up to 10,000 pooled client connections for millions-of-users scalability. |
 | **SaaS Billing Engine** | **Stripe Python SDK** | 10.0+ | Validates webhook signatures, manages recurring subscription lifecycles, and provisions credit top-ups. |
@@ -129,7 +131,8 @@ src/scripts/
 ├── local_pan_zoom.py          # FFmpeg 2.5D camera parallax builder (saves >80% on video spend)
 ├── local_audio_ducking.py     # Volume ducking math (-18dB speech dip, -6dB pause fade)
 ├── local_audio_sync.py        # Multilingual cadence sync & SSML prosody time-stretching
-├── local_subtitles.py         # Hormozi kinetic typography parser (ASS / SRT)
+├── local_subtitles.py         # Multilingual bundle generator (Hormozi kinetic ASS, SRT, WebVTT + manifest)
+├── local_translator.py        # Deterministic transcreation & Indian/World regional bundle mapper
 ├── local_vector_math.py       # NumPy vectorized cosine similarity matrix math
 ├── local_thumbnail.py         # Pillow (PIL) localized typography overlay renderer
 └── youtube_ingest.py          # Reference YouTube/script idea & thesis distillation engine
@@ -143,7 +146,8 @@ src/scripts/
 | **`local_pan_zoom.py`** | `ffmpeg-python`, `math` | Builds 2.5D slow zoom-in/pan-left expressions over 4K static renders, eliminating video motion fees for B-roll. |
 | **`local_audio_ducking.py`** | `pydub`, `ffmpeg-python` | Generates FFmpeg `sidechaincompress` or volume filter curves with 200ms attack and 350ms release. |
 | **`local_audio_sync.py`** | `soundfile`, `pydub` | Aligns multilingual speech durations across scenes using SSML prosody rate scaling ($\pm 15\%$). |
-| **`local_subtitles.py`** | `pysubs2`, `cairosvg` | Formats word-by-word active highlight boxes with yellow/green styling and Unicode font fallback. |
+| **`local_subtitles.py`** | `pysubs2`, `json` | Formats kinetic ASS highlight boxes, standard SRT, and WebVTT with default English burned captions for regional content. |
+| **`local_translator.py`** | Python Standard | Routes regional bundles (5 Indian or 5 World languages) and transcreates storyboard dialogue across languages. |
 | **`local_vector_math.py`** | `numpy` | Computes $S = \frac{\mathbf{A} \cdot \mathbf{B}}{\|\mathbf{A}\| \|\mathbf{B}\|}$ across historical topic vectors in $< 5$ms. |
 | **`local_thumbnail.py`** | `Pillow (PIL)` | Composites regional fonts (*Suranna*, *Baloo*, *Gidugu*) and renders high-contrast, non-obscured **Episode Numbering Badges** (`EP 01`, `భాగం 01`) in top-left corners. |
 | **`youtube_ingest.py`** | `youtube-transcript-api`, `yt-dlp` | Distills core theme, genre, format, and psychological thesis from references for 100% original script generation. |

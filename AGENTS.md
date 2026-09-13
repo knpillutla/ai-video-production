@@ -40,4 +40,12 @@ All AI agents working within this workspace must adhere strictly to the engineer
 * When a user submits a video for production from the UI, the system must first calculate and display the total estimated cost and an itemized breakdown (tokens, voice characters, images/clips, compute).
 * Generation jobs must remain blocked until the user explicitly clicks the confirmation button.
 
+### 8. Model Testing Safety & Cost Guard (Single Test Only, Max 10s Duration)
+* **Automated Tests Core Mandate:** When testing models as part of automated tests, **only run one test only with 10 sec duration**, to ensure we do not call more than one test, to save on costs.
+* **Zero Paid Calls in Default Test Suite:** The standard test suite (`pytest`) must ALWAYS run 100% locally with offline deterministic mocks/fallbacks. Even if paid API keys are present in `.env` or system environment, the full test suite must NEVER call external AI models.
+* **Strict Single Test Limit for Live Models:** When testing actual/live external AI models (Gemini, Together Flux, Azure Speech, Suno, Fal) as part of automated tests, you must **run only ONE test only**. Never call or run more than one test against live models.
+* **Hard 10-Second Duration Cap:** Any automated test that calls an actual model or synthesizes video/audio must be strictly capped to a **maximum duration of 10 seconds** (and minimal token/character count) to prevent enormous API expenditures.
+
+
 Refer to [AGENT_INSTRUCTIONS.md](file:///c:/neel-1/projects/content-generation/AGENT_INSTRUCTIONS.md) for detailed architecture, code patterns, and the pre-commit self-audit checklist.
+

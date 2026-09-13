@@ -1,6 +1,6 @@
 create a new project to 
-generate video with synched audio (in different languages),thumbnails, tts, subtitles in different languages,bgm, lipsync
-ability to create the video with different thumbnais for different languages
+generate video with synched audio (in different languages), thumbnails, tts, subtitles in different languages (if language is non-English, default subtitle is English; automatically create 4-5 regional Indian or World language subtitle tracks), bgm, lipsync
+ability to create the video with different thumbnails for different languages
 
 ui for generating video and uploading to youtube to select the following 
 -create script for all aspects of the video with the following options.
@@ -33,4 +33,10 @@ backend mcp, tools, skills and agents
 - ability to upload in to youtube (auto generated best thumbnails from the video)
 -- ensure to create tags, title, description based on the popular searches and clickable titles that can be pushed to millions of users
 -- should be able to monitize the channel with out youtube restrictions on the content type
---this should be high quality 4k video content (optimize for model tokens final video should be in 4k)
+-- this should be high quality 4k video content (optimize for model tokens final video should be in 4k)
+
+cost governance & actuals tracking:
+- save total estimated cost and itemized breakdown for each model before generation
+- after execution, update the same record with actuals (tokens, voice characters, images diffused, render compute) to measure prediction accuracy and budget variance
+- testing models safety rule: when testing models as part of automated tests, only run one test only with 10 sec duration, to ensure we do not call more than one test, to save on costs; the test suite must only be run locally even if model keys are present
+
