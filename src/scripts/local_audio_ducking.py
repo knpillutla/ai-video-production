@@ -68,9 +68,16 @@ def calculate_lufs_gain_offset(
     return round(target_lufs - current_lufs, 2)
 
 
+def calculate_ducking_volume_db(speech_active: bool, duck_db: float = -18.0) -> float:
+    """Return decibel gain level depending on speech presence."""
+    return duck_db if speech_active else -6.0
+
+
 __all__ = [
     "AudioDuckingConfig",
     "build_sidechain_ducking_filter",
     "build_timeline_volume_expression",
     "calculate_lufs_gain_offset",
+    "calculate_ducking_volume_db",
 ]
+
