@@ -37,7 +37,8 @@ async def lifespan(app: FastAPI):
     async def video_worker(payload: dict):
         u_id = UUID(payload["user_id"])
         ep_id = UUID(payload["episode_id"])
-        await pipeline_coordinator.produce_episode_master(u_id, ep_id, dry_run=True)
+        dry_run = payload.get("dry_run", False)
+        await pipeline_coordinator.produce_episode_master(u_id, ep_id, dry_run=dry_run)
 
     task_queue.register_handler("produce_video", video_worker)
     await task_queue.start_worker()

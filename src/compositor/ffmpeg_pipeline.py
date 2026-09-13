@@ -150,8 +150,12 @@ async def execute_single_pass_render(
     logger.info(f"rendering_single_pass: out={out.name}, duration={timeline.total_duration_seconds}s")
 
     if dry_run:
-        logger.info("dry_run_enabled: skipping ffmpeg process launch")
-        out.touch()
+        logger.info("dry_run_enabled: copying minimal valid mp4 container")
+        stub_path = Path(__file__).parent / "minimal_valid_master.mp4"
+        if stub_path.exists():
+            shutil.copyfile(stub_path, out)
+        else:
+            out.touch()
         return out
 
     # Run FFmpeg process asynchronously
