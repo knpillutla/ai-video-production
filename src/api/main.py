@@ -5,7 +5,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
-from src.api.routes import auth, billing, production, projects, shows, trending
+from src.api.routes import (
+    approvals,
+    auth,
+    billing,
+    channels,
+    dashboard,
+    production,
+    projects,
+    schedules,
+    shows,
+    trending,
+)
 from src.core.config import settings
 from src.core.telemetry import logger
 
@@ -56,10 +67,14 @@ def create_app() -> FastAPI:
     # Register API routers
     app.include_router(auth.router)
     app.include_router(billing.router)
+    app.include_router(dashboard.router)
+    app.include_router(approvals.router)
     app.include_router(shows.router)
     app.include_router(projects.router)
     app.include_router(production.router)
     app.include_router(trending.router)
+    app.include_router(channels.router)
+    app.include_router(schedules.router)
 
     @app.get("/health", tags=["Health"])
     async def health_check():

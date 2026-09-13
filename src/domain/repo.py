@@ -6,7 +6,7 @@ from uuid import UUID
 
 from src.core.config import settings
 from src.domain.creative import Character, Episode, Show
-from src.domain.distribution import Channel, ChannelPublication
+from src.domain.distribution import Channel, ChannelPublication, ScheduleJob
 from src.domain.user import User
 
 
@@ -21,6 +21,7 @@ class MemoryRepository:
         self.episodes: dict[UUID, Episode] = {}
         self.channels: dict[UUID, Channel] = {}
         self.publications: dict[UUID, ChannelPublication] = {}
+        self.schedules: dict[UUID, ScheduleJob] = {}
         self._load()
 
     def _save(self) -> None:
@@ -32,6 +33,7 @@ class MemoryRepository:
             "episodes": {str(k): v.model_dump(mode="json") for k, v in self.episodes.items()},
             "channels": {str(k): v.model_dump(mode="json") for k, v in self.channels.items()},
             "publications": {str(k): v.model_dump(mode="json") for k, v in self.publications.items()},
+            "schedules": {str(k): v.model_dump(mode="json") for k, v in self.schedules.items()},
         }
         with open(self.file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)
@@ -48,6 +50,7 @@ class MemoryRepository:
             self.episodes = {UUID(k): Episode(**v) for k, v in data.get("episodes", {}).items()}
             self.channels = {UUID(k): Channel(**v) for k, v in data.get("channels", {}).items()}
             self.publications = {UUID(k): ChannelPublication(**v) for k, v in data.get("publications", {}).items()}
+            self.schedules = {UUID(k): ScheduleJob(**v) for k, v in data.get("schedules", {}).items()}
         except Exception:
             pass
 
@@ -59,6 +62,7 @@ class MemoryRepository:
         self.episodes.clear()
         self.channels.clear()
         self.publications.clear()
+        self.schedules.clear()
         if self.file_path.exists():
             try:
                 self.file_path.unlink()
@@ -66,6 +70,9 @@ class MemoryRepository:
                 pass
 
     # User operations
+    def get_user(self, user_id: UUID) -> User | None:
+        return self.users.get(user_id)
+
     def get_user_by_email(self, email: str) -> User | None:
         return next((u for u in self.users.values() if u.email.lower() == email.lower()), None)
 
@@ -110,6 +117,51 @@ class MemoryRepository:
         self.episodes[episode.id] = episode
         self._save()
         return episode
+
+    # Channel operations (user-scoped)
+    def list_channels(self, user_id: UUID) -> list[Channel]:
+        return [c for c in self.channels.values() if c.user_id == user_id]
+
+    def get_channel(self, user_id: UUID, channel_id: UUID) -> Channel | None:
+        c = self.channels.get(channel_id)
+        return c if c and c.user_id == user_id else None
+
+    def save_channel(self, channel: Channel) -> Channel:
+        self.channels[channel.id] = channel
+        self._save()
+        return channel
+
+    # Publication operations (user-scoped)
+    def list_publications(self, user_id: UUID, channel_id: UUID | None = None) -> list[ChannelPublication]:
+        if channel_id:
+            return [p for p in self.publications.values() if p.user_id == user_id and p.channel_id == channel_id]
+        return [p for p in self.publications.values() if p.user_id == user_id]
+
+    def save_publication(self, publication: ChannelPublication) -> ChannelPublication:
+        self.publications[publication.id] = publication
+        self._save()
+        return publication
+
+    # Schedule operations (user-scoped)
+    def list_schedules(self, user_id: UUID) -> list[ScheduleJob]:
+        return [s for s in self.schedules.values() if s.user_id == user_id]
+
+    def get_schedule(self, user_id: UUID, schedule_id: UUID) -> ScheduleJob | None:
+        s = self.schedules.get(schedule_id)
+        return s if s and s.user_id == user_id else None
+
+    def save_schedule(self, schedule: ScheduleJob) -> ScheduleJob:
+        self.schedules[schedule.id] = schedule
+        self._save()
+        return schedule
+
+    def delete_schedule(self, user_id: UUID, schedule_id: UUID) -> bool:
+        s = self.get_schedule(user_id, schedule_id)
+        if s:
+            del self.schedules[schedule_id]
+            self._save()
+            return True
+        return False
 
 
 # Singleton repository instance

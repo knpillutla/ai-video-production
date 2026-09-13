@@ -16,11 +16,15 @@ from src.domain.distribution import (
     Channel,
     ChannelCreate,
     ChannelPublication,
+    ScheduleJob,
+    ScheduleJobCreate,
 )
 from src.domain.generation import (
     AspectRatio,
+    ContentClassification,
     GenerationOptions,
     MediaFormat,
+    ThemeGenre,
     VisualStyle,
 )
 from src.domain.qa import (
@@ -56,8 +60,12 @@ __all__ = [
     "Channel",
     "ChannelCreate",
     "ChannelPublication",
+    "ScheduleJob",
+    "ScheduleJobCreate",
     "MediaFormat",
     "VisualStyle",
+    "ThemeGenre",
+    "ContentClassification",
     "AspectRatio",
     "GenerationOptions",
     "AssetType",

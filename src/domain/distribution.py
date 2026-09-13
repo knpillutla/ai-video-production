@@ -43,3 +43,34 @@ class ChannelPublication(BaseModel):
     synthetic_media_disclosed: bool = True
     selected_language_thumbnail: str | None = None
     multi_language_audio_tracks: list[str] = Field(default_factory=list)
+
+
+class ScheduleJobBase(BaseModel):
+    """Autonomous recurring schedule attributes."""
+
+    theme: str = "telugu_comedy"
+    format: str = "web_series"
+    visual_style: str = "realistic"
+    cadence: str = "daily"  # daily | weekly
+    time_of_day_utc: str = "06:00"
+    target_languages: list[str] = Field(default_factory=lambda: ["te", "hi", "en"])
+    auto_publish: bool = False
+    auto_publish_channel_id: UUID | None = None
+
+
+class ScheduleJobCreate(ScheduleJobBase):
+    """Payload to schedule recurring video creation."""
+
+    show_id: UUID
+
+
+class ScheduleJob(ScheduleJobBase):
+    """Scheduled autonomous generation entity."""
+
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+    show_id: UUID
+    is_active: bool = True
+    last_run_at: datetime | None = None
+    total_videos_created: int = 0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
