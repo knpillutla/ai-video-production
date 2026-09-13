@@ -214,17 +214,21 @@
               </h2>
 
               <!-- Mode Selection Pills -->
-              <div class="grid grid-cols-3 gap-1.5 p-1 bg-[#090d16] border border-[var(--border)] rounded-xl text-xs">
-                <button onclick="switchInputMode('original')" id="mode-btn-original" class="py-1.5 text-center font-bold bg-indigo-600 text-white rounded-lg shadow transition">Original Idea</button>
-                <button onclick="switchInputMode('youtube')" id="mode-btn-youtube" class="py-1.5 text-center font-medium text-gray-400 hover:text-white rounded-lg transition">YouTube URL</button>
-                <button onclick="switchInputMode('script')" id="mode-btn-script" class="py-1.5 text-center font-medium text-gray-400 hover:text-white rounded-lg transition">Script Text</button>
+              <div class="grid grid-cols-4 gap-1 p-1 bg-[#090d16] border border-[var(--border)] rounded-xl text-[11px]">
+                <button onclick="switchInputMode('original')" id="mode-btn-original" class="py-1.5 text-center font-bold bg-indigo-600 text-white rounded-lg shadow transition">Original</button>
+                <button onclick="switchInputMode('youtube')" id="mode-btn-youtube" class="py-1.5 text-center font-medium text-gray-400 hover:text-white rounded-lg transition">YT URL</button>
+                <button onclick="switchInputMode('script')" id="mode-btn-script" class="py-1.5 text-center font-medium text-gray-400 hover:text-white rounded-lg transition">Script</button>
+                <button onclick="switchInputMode('trending')" id="mode-btn-trending" class="py-1.5 text-center font-medium text-amber-400 hover:text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg transition flex items-center justify-center gap-1">
+                  <i class="fa-solid fa-fire text-amber-400 text-[10px]"></i>
+                  <span>Trending</span>
+                </button>
               </div>
 
               <!-- DYNAMIC INPUT VIEW 1: ORIGINAL IDEA -->
               <div id="input-view-original" class="space-y-3">
                 <div>
                   <label class="block text-xs font-semibold text-gray-300 mb-1.5">Project Title & Core Thesis</label>
-                  <input type="text" value="IT Employee WFH Confusions" class="w-full bg-[#090d16] border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-white text-xs focus:outline-none focus:border-indigo-500 transition">
+                  <input type="text" id="project-title-input" value="IT Employee WFH Confusions" oninput="debounceAutoDetect()" class="w-full bg-[#090d16] border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-white text-xs focus:outline-none focus:border-indigo-500 transition">
                 </div>
               </div>
 
@@ -263,6 +267,104 @@
                 <div>
                   <label class="block text-xs font-semibold text-gray-300 mb-1.5">Paste Reference Script</label>
                   <textarea rows="3" placeholder="Paste script here for transformative distillation..." class="w-full bg-[#090d16] border border-[var(--border)] rounded-xl p-2.5 text-white text-xs focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+              </div>
+
+              <!-- DYNAMIC INPUT VIEW 4: YOUTUBE TRENDING TOPICS -->
+              <div id="input-view-trending" class="hidden space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-fire text-amber-400"></i>
+                    <span>YouTube Trending Topics</span>
+                  </span>
+                  <select id="trending-region-select" onchange="loadTrendingTopics()" class="bg-[#090d16] border border-[var(--border)] rounded-lg px-2 py-1 text-white text-[11px] focus:outline-none focus:border-indigo-500">
+                    <option value="IN" selected>India (Telugu / Hindi)</option>
+                    <option value="GLOBAL">Global / US</option>
+                    <option value="ALL">All Regions</option>
+                  </select>
+                </div>
+                <p class="text-[11px] text-gray-400 leading-tight">Pick a viral YouTube trend below. CineAI will automatically distill its core psychology and generate a 100% original script without mimicking.</p>
+                <div id="trending-topics-container" class="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+                  <!-- Populated by JavaScript -->
+                </div>
+              </div>
+
+              <!-- SMART FORMAT, VISUAL STYLE & THEME INTELLIGENCE (AUTO-SELECT + USER OVERRIDE) -->
+              <div class="p-3.5 bg-gradient-to-br from-[#0c1424] to-[#121c32] border border-indigo-500/40 rounded-xl space-y-3 shadow-md">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-indigo-400 text-xs"></i>
+                    <span class="text-xs font-bold text-white">Format, Style & Theme</span>
+                  </div>
+                  <div id="classification-status-pill">
+                    <span class="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full text-[10px] font-mono flex items-center gap-1 font-bold">
+                      <i class="fa-solid fa-bolt text-indigo-400"></i>
+                      <span>AI Inferred (94%)</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- 3 Dropdown Selectors with 1-Click Override -->
+                <div class="space-y-2.5">
+                  <!-- Media Format -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-gray-300 mb-1 flex items-center justify-between">
+                      <span>Media Format</span>
+                      <span class="text-[10px] text-gray-400">Pacing & Geometry</span>
+                    </label>
+                    <select id="format-select" onchange="onClassificationChange('format')" class="w-full bg-[#090d16] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-indigo-500 transition">
+                      <option id="opt-fmt-auto" value="auto" selected>⚡ Auto-Detect (Inferred: WEB SERIES)</option>
+                      <option value="web_series">Web Series (Episodic Arc)</option>
+                      <option value="movie_cinematic">Cinematic Movie (Widescreen 2.39:1)</option>
+                      <option value="news_tabloid">News & Tabloids (Fast Cuts & Chyrons)</option>
+                      <option value="podcast_explainer">Podcast & Explainer (Split Screen)</option>
+                      <option value="dance_video">Dance Video (Fal MimicMotion + Beat Sync)</option>
+                    </select>
+                  </div>
+
+                  <!-- Visual Style -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-gray-300 mb-1 flex items-center justify-between">
+                      <span>Visual Style</span>
+                      <span class="text-[10px] text-gray-400">Render & Diffusion Engine</span>
+                    </label>
+                    <select id="visual-style-select" onchange="onClassificationChange('style')" class="w-full bg-[#090d16] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-indigo-500 transition">
+                      <option id="opt-style-auto" value="auto" selected>⚡ Auto-Detect (Inferred: REALISTIC)</option>
+                      <option value="realistic">Photorealistic 4K (Flux Dev + Minimax)</option>
+                      <option value="anime">Anime & Manga (Cel-Shaded Toon)</option>
+                      <option value="animation_3d">3D Animation (Pixar / CGI Grade)</option>
+                      <option value="stylized_comic">Stylized Comic (Graphic Novel Dynamic)</option>
+                    </select>
+                  </div>
+
+                  <!-- Theme & Genre -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-gray-300 mb-1 flex items-center justify-between">
+                      <span>Theme & Genre</span>
+                      <span class="text-[10px] text-gray-400">Tone & Foley Cues</span>
+                    </label>
+                    <select id="theme-select" onchange="onClassificationChange('theme')" class="w-full bg-[#090d16] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-indigo-500 transition">
+                      <option id="opt-theme-auto" value="auto" selected>⚡ Auto-Detect (Inferred: TELUGU COMEDY)</option>
+                      <option value="telugu_comedy">Telugu Comedy & Satire</option>
+                      <option value="epic_action">Pan-Indian Epic Action (Mass Elevation)</option>
+                      <option value="bollywood_dance">Bollywood Dance & Celebration</option>
+                      <option value="nature_wildlife">Nature & Wildlife Documentary</option>
+                      <option value="travel_tourism">Travel & Tourism Showcase</option>
+                      <option value="romantic_drama">Romantic Drama & Emotion</option>
+                      <option value="tech_scifi">Tech, Cyberpunk & Sci-Fi</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Explanation / Override Status Pill & Reset Action -->
+                <div class="pt-2 border-t border-[var(--border)] flex items-center justify-between text-[11px]">
+                  <p id="classification-explanation-text" class="text-[10.5px] text-gray-300 leading-tight">
+                    <strong class="text-white">AI Auto-Inferred:</strong> WEB SERIES • REALISTIC • TELUGU COMEDY from thesis. (Select any dropdown to override).
+                  </p>
+                  <button type="button" id="btn-reset-classification" onclick="resetClassification()" class="hidden ml-2 px-2 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded text-[10px] shrink-0 transition flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span>Reset</span>
+                  </button>
                 </div>
               </div>
 
@@ -906,6 +1008,27 @@
         </div>
       </div>
 
+      <!-- Duplicate Content Warning Alert Banner (If triggered) -->
+      <div id="duplicate-warning-banner" class="hidden p-4 bg-amber-950/70 border-2 border-amber-500/80 rounded-xl space-y-2.5 text-xs text-amber-200 shadow-lg">
+        <div class="flex items-center justify-between font-bold text-amber-300">
+          <span class="flex items-center gap-2 text-sm">
+            <i class="fa-solid fa-triangle-exclamation text-amber-400 text-base"></i>
+            <span>Warning: Similar Topic & Metadata Detected</span>
+          </span>
+          <span id="dup-similarity-badge" class="px-2.5 py-0.5 bg-amber-500/30 border border-amber-400/50 rounded-full font-mono text-[10px] text-amber-200">86% Match</span>
+        </div>
+        <p id="dup-warning-text" class="text-[11px] text-amber-200/90 leading-relaxed">
+          A video with a very similar concept already exists: <strong class="text-white" id="dup-conflicting-topic">"IT Employee Remote Work Confusions"</strong>. Generating duplicate content may cause audience cannibalization and YouTube demonetization.
+        </p>
+        <div class="flex items-center justify-between pt-2 border-t border-amber-500/30 text-[11px]">
+          <span class="text-amber-300/80">You can cancel to edit, or confirm and proceed anyway:</span>
+          <button type="button" onclick="confirmProduction(true)" class="px-3.5 py-1.5 bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white font-bold rounded-lg text-xs transition flex items-center gap-1.5 shadow-md">
+            <i class="fa-solid fa-forward text-[10px]"></i>
+            <span>Confirm & Proceed Anyway</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Policy Guarantees -->
       <div class="p-3 bg-emerald-950/30 border border-emerald-500/30 rounded-xl flex items-center gap-2.5 text-xs text-emerald-300">
         <i class="fa-solid fa-circle-check text-base text-emerald-400 shrink-0"></i>
@@ -1106,28 +1229,277 @@
     }
 
     function switchInputMode(mode) {
-      const modes = ['original', 'youtube', 'script'];
+      const modes = ['original', 'youtube', 'script', 'trending'];
       modes.forEach(m => {
         const view = document.getElementById(`input-view-${m}`);
         const btn = document.getElementById(`mode-btn-${m}`);
         if (m === mode) {
-          view.classList.remove('hidden');
-          btn.classList.add('bg-indigo-600', 'text-white', 'shadow');
-          btn.classList.remove('text-gray-400');
+          if (view) view.classList.remove('hidden');
+          if (btn) {
+            btn.classList.add('bg-indigo-600', 'text-white', 'shadow');
+            btn.classList.remove('text-gray-400');
+          }
         } else {
-          view.classList.add('hidden');
-          btn.classList.remove('bg-indigo-600', 'text-white', 'shadow');
-          btn.classList.add('text-gray-400');
+          if (view) view.classList.add('hidden');
+          if (btn) {
+            btn.classList.remove('bg-indigo-600', 'text-white', 'shadow');
+            btn.classList.add('text-gray-400');
+          }
         }
+      });
+      if (mode === 'trending') {
+        loadTrendingTopics();
+      }
+    }
+
+    const trendingCatalog = [
+      {
+        id: "trend_001",
+        title: "Why Indian Tech Companies Are Calling Everyone Back to Office in 2026",
+        channel: "Tech Bharat Insider",
+        views: "1.4M views",
+        category: "Tech & Corporate",
+        genre: "comedy",
+        angle: "Satirical day-in-the-life of an engineer avoiding work at the cafeteria",
+      },
+      {
+        id: "trend_002",
+        title: "SS Rajamouli & Mahesh Babu Globe-Trotting Action Adventure Sneak Peek",
+        channel: "Tollywood Cinema World",
+        views: "3.8M views",
+        category: "Cinema & Action",
+        genre: "epic_action",
+        angle: "Mass action elevation scene analyzing jungle exploration stunts",
+      },
+      {
+        id: "trend_003",
+        title: "The Secret Submarine Cable Network Carrying 99% of Global Internet Traffic",
+        channel: "Engineering Marvels",
+        views: "2.1M views",
+        category: "Documentary",
+        genre: "documentary",
+        angle: "Deep-sea fiber optic survival documentary with 2.5D camera zoompan",
+      },
+      {
+        id: "trend_004",
+        title: "Hyderabad Sunday Biryani Wars: Old City vs Gachibowli Showdown",
+        channel: "Telugu Foodie Diaries",
+        views: "980K views",
+        category: "Culture & Comedy",
+        genre: "comedy",
+        angle: "Humorous linguistic debate between an IT fresher and an Old City chef",
+      }
+    ];
+
+    async function loadTrendingTopics() {
+      const container = document.getElementById('trending-topics-container');
+      if (!container) return;
+      const region = document.getElementById('trending-region-select')?.value || 'IN';
+      container.innerHTML = '<div class="text-center py-4 text-gray-400 text-xs"><i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Fetching live trending topics...</div>';
+
+      try {
+        const res = await fetch(`/api/trending/youtube?region=${region}`);
+        if (res.ok) {
+          const data = await res.json();
+          renderTrendingCards(data);
+          return;
+        }
+      } catch (e) {
+        console.warn('Using local curated trending catalog fallback:', e);
+      }
+      renderTrendingCards(trendingCatalog);
+    }
+
+    function renderTrendingCards(items) {
+      const container = document.getElementById('trending-topics-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'p-3 bg-[#090d16] hover:bg-[#131d30] border border-[var(--border)] hover:border-amber-500/50 rounded-xl transition cursor-pointer space-y-2 text-xs group';
+        card.onclick = () => selectTrendingTopic(item);
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <h4 class="font-bold text-white group-hover:text-amber-300 transition text-[12px] leading-snug">${item.title}</h4>
+            <span class="px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-[10px] rounded-full shrink-0 font-bold">${item.views_count ? (item.views_count / 1000000).toFixed(1) + 'M views' : item.views}</span>
+          </div>
+          <div class="flex items-center justify-between text-[10px] text-gray-400">
+            <span><i class="fa-brands fa-youtube text-red-500 mr-1"></i>${item.channel_title || item.channel}</span>
+            <span class="text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded">${item.category}</span>
+          </div>
+          <p class="text-[11px] text-emerald-400 bg-emerald-950/40 p-1.5 rounded border border-emerald-500/20">
+            <strong class="text-white">Original Angle:</strong> ${item.suggested_angle || item.angle}
+          </p>
+          <div class="flex items-center justify-end pt-1">
+            <button type="button" class="px-2.5 py-1 bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white font-bold rounded-lg text-[10px] flex items-center gap-1 shadow">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>Select & Create Original Script</span>
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
       });
     }
 
+    // ======================================================================
+    // HYBRID SMART CLASSIFICATION & USER OVERRIDE ENGINE
+    // ======================================================================
+    let detectedClassification = {
+      format: 'web_series',
+      style: 'realistic',
+      theme: 'telugu_comedy',
+      confidence: 0.94
+    };
+
+    let debounceTimer = null;
+    function debounceAutoDetect() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        autoDetectClassification();
+      }, 350);
+    }
+
+    function onClassificationChange(type) {
+      updateClassificationUIState();
+    }
+
+    function updateClassificationUIState() {
+      const fmtSelect = document.getElementById('format-select');
+      const styleSelect = document.getElementById('visual-style-select');
+      const themeSelect = document.getElementById('theme-select');
+      const statusPill = document.getElementById('classification-status-pill');
+      const explanationText = document.getElementById('classification-explanation-text');
+      const resetBtn = document.getElementById('btn-reset-classification');
+
+      if (!fmtSelect || !styleSelect || !themeSelect) return;
+
+      const isFmtOverride = fmtSelect.value !== 'auto';
+      const isStyleOverride = styleSelect.value !== 'auto';
+      const isThemeOverride = themeSelect.value !== 'auto';
+      const isOverridden = isFmtOverride || isStyleOverride || isThemeOverride;
+
+      if (isOverridden) {
+        statusPill.innerHTML = '<span class="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full text-[10px] font-mono flex items-center gap-1 font-bold"><i class="fa-solid fa-pen text-amber-400"></i> User Override</span>';
+        if (resetBtn) resetBtn.classList.remove('hidden');
+        if (explanationText) {
+          const parts = [];
+          if (isFmtOverride) parts.push(`Format: ${fmtSelect.options[fmtSelect.selectedIndex].text.split('(')[0].trim()}`);
+          if (isStyleOverride) parts.push(`Style: ${styleSelect.options[styleSelect.selectedIndex].text.split('(')[0].trim()}`);
+          if (isThemeOverride) parts.push(`Theme: ${themeSelect.options[themeSelect.selectedIndex].text.split('(')[0].trim()}`);
+          explanationText.innerHTML = `<strong class="text-amber-300">Custom Override:</strong> ${parts.join(' • ')} (Remaining attributes auto-inferred).`;
+        }
+      } else {
+        statusPill.innerHTML = `<span class="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 rounded-full text-[10px] font-mono flex items-center gap-1 font-bold"><i class="fa-solid fa-bolt text-indigo-400"></i> AI Inferred (${Math.round(detectedClassification.confidence * 100)}%)</span>`;
+        if (resetBtn) resetBtn.classList.add('hidden');
+        if (explanationText) {
+          explanationText.innerHTML = `<strong class="text-white">AI Auto-Inferred:</strong> ${detectedClassification.format.replace('_', ' ').toUpperCase()} • ${detectedClassification.style.toUpperCase()} • ${detectedClassification.theme.replace('_', ' ').toUpperCase()} from thesis. (Select any dropdown to override).`;
+        }
+      }
+    }
+
+    function resetClassification() {
+      const fmtSelect = document.getElementById('format-select');
+      const styleSelect = document.getElementById('visual-style-select');
+      const themeSelect = document.getElementById('theme-select');
+      if (fmtSelect) fmtSelect.value = 'auto';
+      if (styleSelect) styleSelect.value = 'auto';
+      if (themeSelect) themeSelect.value = 'auto';
+      autoDetectClassification();
+    }
+
+    function updateAutoOptionLabels() {
+      const fmtOpt = document.getElementById('opt-fmt-auto');
+      const styleOpt = document.getElementById('opt-style-auto');
+      const themeOpt = document.getElementById('opt-theme-auto');
+      if (fmtOpt) fmtOpt.innerText = `⚡ Auto-Detect (Inferred: ${detectedClassification.format.replace('_', ' ').toUpperCase()})`;
+      if (styleOpt) styleOpt.innerText = `⚡ Auto-Detect (Inferred: ${detectedClassification.style.toUpperCase()})`;
+      if (themeOpt) themeOpt.innerText = `⚡ Auto-Detect (Inferred: ${detectedClassification.theme.replace('_', ' ').toUpperCase()})`;
+    }
+
+    async function autoDetectClassification(textOverride = null) {
+      const titleInput = document.getElementById('project-title-input');
+      const text = textOverride || (titleInput ? titleInput.value : '');
+      if (!text.trim()) return;
+
+      try {
+        const res = await fetch('/api/projects/classify-content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text, title: text })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          detectedClassification = {
+            format: data.media_format,
+            style: data.visual_style,
+            theme: data.theme,
+            confidence: data.confidence
+          };
+          updateAutoOptionLabels();
+          updateClassificationUIState();
+          return;
+        }
+      } catch (e) {
+        console.warn('Local heuristic fallback for classification:', e);
+      }
+
+      // Offline / Local heuristic fallback
+      const lower = text.toLowerCase();
+      if (lower.includes('dance') || lower.includes('step') || lower.includes('song')) {
+        detectedClassification = { format: 'dance_video', style: 'realistic', theme: 'bollywood_dance', confidence: 0.95 };
+      } else if (lower.includes('tiger') || lower.includes('wildlife') || lower.includes('nature') || lower.includes('forest') || lower.includes('mountain')) {
+        detectedClassification = { format: 'movie_cinematic', style: 'realistic', theme: 'nature_wildlife', confidence: 0.93 };
+      } else if (lower.includes('action') || lower.includes('battle') || lower.includes('sword') || lower.includes('warrior') || lower.includes('mass')) {
+        detectedClassification = { format: 'movie_cinematic', style: 'realistic', theme: 'epic_action', confidence: 0.94 };
+      } else if (lower.includes('anime') || lower.includes('manga')) {
+        detectedClassification = { format: 'web_series', style: 'anime', theme: 'tech_scifi', confidence: 0.96 };
+      } else if (lower.includes('cyberpunk') || lower.includes('ai') || lower.includes('robot') || lower.includes('future')) {
+        detectedClassification = { format: 'movie_cinematic', style: 'realistic', theme: 'tech_scifi', confidence: 0.91 };
+      } else {
+        detectedClassification = { format: 'web_series', style: 'realistic', theme: 'telugu_comedy', confidence: 0.92 };
+      }
+      updateAutoOptionLabels();
+      updateClassificationUIState();
+    }
+
+    function selectTrendingTopic(item) {
+      const titleInput = document.getElementById('project-title-input');
+      const chosenAngle = item.suggested_angle || item.title;
+      if (titleInput) {
+        titleInput.value = chosenAngle;
+      }
+      switchInputMode('original');
+      autoDetectClassification(chosenAngle);
+      alert(`Selected Trending Topic!\nTitle: "${item.title}"\nTransformative Angle: "${chosenAngle}"\nFormat, Style & Theme auto-adapted!`);
+    }
+
     function openModal(modalId) {
-      document.getElementById(modalId).classList.remove('hidden');
+      const modal = document.getElementById(modalId);
+      if (!modal) return;
+      modal.classList.remove('hidden');
+
+      if (modalId === 'cost-modal') {
+        // Check if current topic triggers similarity warning
+        const titleInput = document.getElementById('project-title-input');
+        const currentTitle = titleInput ? titleInput.value.toLowerCase() : '';
+        const warnBanner = document.getElementById('duplicate-warning-banner');
+
+        if (currentTitle.includes('remote work') || currentTitle.includes('wfh confusions')) {
+          if (warnBanner) {
+            warnBanner.classList.remove('hidden');
+            document.getElementById('dup-conflicting-topic').innerText = '"IT Employee Remote Work Confusions (EP 01)"';
+            document.getElementById('dup-similarity-badge').innerText = '88.4% Match';
+          }
+        } else {
+          if (warnBanner) warnBanner.classList.add('hidden');
+        }
+      }
     }
 
     function closeModal(modalId) {
-      document.getElementById(modalId).classList.add('hidden');
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.add('hidden');
     }
 
     function changeEpisode(delta) {
@@ -1162,7 +1534,6 @@
       const badgeStyle = document.getElementById('badge-style-select').value;
       const numStr = String(currentEpisode).padStart(2, '0');
 
-      // Update badge text based on language
       if (currentLang === 'te') {
         badgeRender.innerText = `భాగం ${numStr}`;
         headlineRender.innerText = 'వర్క్ ఫ్రమ్ హోమ్ గోల!';
@@ -1180,12 +1551,11 @@
         titleRender.innerText = `They Lied About Remote Work! | IT Employee Comedy EP ${numStr} | CineAI Studio`;
       }
 
-      // Update badge styling
       if (badgeStyle === 'pill') {
         badgeContainer.className = 'absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-xs rounded-full shadow-xl border border-white/60 tracking-wider uppercase transition-all duration-200 badge-glow';
       } else if (badgeStyle === 'box') {
         badgeContainer.className = 'absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white font-black text-xs rounded-none shadow-2xl border-2 border-white tracking-widest uppercase transition-all duration-200';
-      } else { // ribbon
+      } else {
         badgeContainer.className = 'absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-3 py-1 bg-indigo-600/90 backdrop-blur text-white font-black text-xs rounded-md shadow-lg border border-indigo-400/80 tracking-wide uppercase transition-all duration-200';
       }
     }
@@ -1197,7 +1567,13 @@
       alert(`Successfully added $${amount}.00 USD to your wallet via Stripe! New balance: $${userCredits.toFixed(2)} USD.`);
     }
 
-    function confirmProduction() {
+    function confirmProduction(forceProceed = false) {
+      const warnBanner = document.getElementById('duplicate-warning-banner');
+      if (!forceProceed && warnBanner && !warnBanner.classList.contains('hidden')) {
+        alert('Duplicate Content Warning: Please review the warning banner and confirm if you want to proceed anyway.');
+        return;
+      }
+
       const btn = document.getElementById('btn-confirm-prod');
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Dispatched to Celery/ACA Queue...';
       btn.disabled = true;
@@ -1208,12 +1584,14 @@
         userCredits -= 1.33;
         document.getElementById('user-credit-display').innerText = `$${userCredits.toFixed(2)} USD`;
         document.getElementById('modal-credit-display').innerText = `$${userCredits.toFixed(2)} USD`;
-        alert(`Production Job #ep_${String(currentEpisode).padStart(3, '0')} successfully enqueued!\n- $1.33 deducted\n- Top-Left Badge: EP ${String(currentEpisode).padStart(2, '0')}\n- Single-pass Python FFmpeg compositor worker has started.`);
+        const proceedMsg = forceProceed ? " (User Confirmed Override on Similar Topic)" : "";
+        alert(`Production Job #ep_${String(currentEpisode).padStart(3, '0')} successfully enqueued!${proceedMsg}\n- $1.33 deducted\n- Top-Left Badge: EP ${String(currentEpisode).padStart(2, '0')}\n- Single-pass Python FFmpeg compositor worker has started.`);
         btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Confirm & Produce Video ($1.33)';
         btn.disabled = false;
         btn.classList.remove('opacity-75');
       }, 1200);
     }
+
 
     // ======================================================================
     // MEDIA CREATED & MODEL COST ANALYTICS LOGIC (DRILL-DOWN ENGINE)

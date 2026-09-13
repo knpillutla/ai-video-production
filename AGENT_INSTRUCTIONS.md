@@ -17,6 +17,8 @@
 7. **Fail-Fast & Idempotent:** Every pipeline step must be replayable and idempotent without corrupting data or consuming redundant API credits.
 8. **Pre-Flight Cost Transparency & Explicit Confirmation:** UI submissions must NEVER immediately trigger generation. The pipeline must first calculate and display an itemized cost breakdown (LLM tokens, TTS characters, visual assets, cloud compute) and require explicit user confirmation before executing billable jobs.
 9. **Model Testing Safety & Cost Guard (Automated Tests Mandate):** When testing models as part of automated tests, **only run one test only with 10 sec duration**; ensure we do not call more than one test, to save on costs. The standard automated test suite (`pytest`) must ALWAYS run 100% locally with offline deterministic mocks/fallbacks even if model keys are present in `.env`.
+10. **Terraform-Only IaC:** Always create Terraform scripts only for all cloud platforms (Azure, GCP, AWS, Multi-Cloud). Never use Bicep, ARM, CloudFormation, or platform-specific template languages.
+11. **Topic, Metadata & Story Deduplication & User Alerting:** Every time a video is created, save the topic, metadata information (genre, tags, target audience, format), and the final story created from the script into the persistent Topic Memory vault. When the user creates for similar metadata or topic (cosine similarity $\ge 0.80$ or heavy metadata overlap), do not create duplicate content; block generation immediately and alert the user with a descriptive duplicate alert.
 
 
 ---
@@ -213,5 +215,7 @@ Before completing any task, every agent must verify:
 * [ ] **Zero Duplication:** Did I avoid duplicate code, redundant helpers, or duplicate markdown documentation files?
 * [ ] **Cost Confirmation:** Does the UI flow enforce pre-flight cost calculation and explicit confirmation before dispatching rendering/generation jobs?
 * [ ] **Model Testing Safety (Automated Tests):** Did I ensure the automated test suite runs 100% locally with offline mocks? When testing models as part of automated tests, did I verify that only ONE test only was called with a maximum 10-second duration to save on costs?
+* [ ] **Terraform-Only IaC Check:** Did I ensure all infrastructure as code scripts are declared exclusively in Terraform (`.tf`) with zero Bicep/ARM files?
+* [ ] **Topic, Metadata & Story Deduplication Check:** Does the pipeline save the topic, metadata, and final story, and alert/block duplicate content attempts?
 
 

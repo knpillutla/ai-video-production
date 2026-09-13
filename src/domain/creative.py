@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
 from src.domain.cost import EpisodeCostRecord
-from src.domain.generation import AspectRatio, GenerationOptions, MediaFormat, VisualStyle
+from src.domain.generation import AspectRatio, GenerationOptions, MediaFormat, ThemeGenre, VisualStyle
 
 
 class ShowBase(BaseModel):
@@ -67,6 +67,7 @@ class EpisodeBase(BaseModel):
     duration_seconds: int = 480
     format: MediaFormat = MediaFormat.WEB_SERIES
     visual_style: VisualStyle = VisualStyle.REALISTIC
+    theme: ThemeGenre = ThemeGenre.AUTO
     aspect_ratio: AspectRatio = AspectRatio.LANDSCAPE_16_9
     options: GenerationOptions = Field(default_factory=GenerationOptions)
 
@@ -77,6 +78,9 @@ class EpisodeCreate(EpisodeBase):
     show_id: UUID
     topic_or_idea: str = ""
     youtube_reference_url: str | None = None
+    format: MediaFormat = MediaFormat.AUTO
+    visual_style: VisualStyle = VisualStyle.AUTO
+    theme: ThemeGenre = ThemeGenre.AUTO
 
 
 class Episode(EpisodeBase):

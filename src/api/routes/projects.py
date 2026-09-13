@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from src.api.deps import get_current_user
 from src.core.storage import storage_service
 from src.domain.creative import Episode, EpisodeCreate
+from src.domain.generation import ContentClassification, MediaFormat, ThemeGenre, VisualStyle
 from src.domain.repo import repo
 from src.domain.user import User
 
@@ -20,13 +21,24 @@ async def create_project(req: EpisodeCreate, current_user: User = Depends(get_cu
     if not show:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent Show not found")
 
+    from src.agents.classifier_agent import classifier_agent
+
+    resolved = classifier_agent.resolve_classification(
+        text=req.topic_or_idea or req.title,
+        user_format=req.format,
+        user_style=req.visual_style,
+        user_theme=req.theme,
+        title=req.title,
+    )
+
     episode = Episode(
         user_id=current_user.id,
         show_id=req.show_id,
         title=req.title,
         duration_seconds=req.duration_seconds,
-        format=req.format,
-        visual_style=req.visual_style,
+        format=resolved.media_format,
+        visual_style=resolved.visual_style,
+        theme=resolved.theme,
         aspect_ratio=req.aspect_ratio,
         options=req.options,
     )
@@ -121,3 +133,30 @@ async def ingest_reference_source(
 
     distilled = distill_reference_source(req.source_text, genre_hint=req.genre)
     return distilled
+
+
+class ClassifyContentRequest(BaseModel):
+    """Payload to detect or override content format and style."""
+
+    text: str
+    title: str | None = None
+    user_format: MediaFormat = MediaFormat.AUTO
+    user_style: VisualStyle = VisualStyle.AUTO
+    user_theme: ThemeGenre = ThemeGenre.AUTO
+
+
+@router.post("/classify-content", response_model=ContentClassification)
+async def classify_content(
+    req: ClassifyContentRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Auto-detect Media Format, Visual Style, and Theme with user override support."""
+    from src.agents.classifier_agent import classifier_agent
+
+    return classifier_agent.resolve_classification(
+        text=req.text,
+        user_format=req.user_format,
+        user_style=req.user_style,
+        user_theme=req.user_theme,
+        title=req.title,
+    )

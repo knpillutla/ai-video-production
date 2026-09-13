@@ -1,6 +1,7 @@
 """Mandatory Pre-Flight Cost Estimation and Production Confirmation API routes."""
 
 from datetime import datetime, timezone
+from typing import Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -37,6 +38,17 @@ class PreFlightCostEstimateResponse(BaseModel):
     total_cost_usd: float
     user_credit_balance_usd: float
     can_afford: bool
+    has_duplicate_warning: bool = False
+    duplicate_warning_message: str | None = None
+    conflicting_topic: str | None = None
+    similarity_score: float = 0.0
+    can_force_proceed: bool = True
+
+
+class ProductionConfirmationRequest(BaseModel):
+    """Confirmation request with optional force_proceed consent for warnings."""
+
+    force_proceed: bool = False
 
 
 class ProductionConfirmationResponse(BaseModel):
@@ -59,6 +71,19 @@ async def estimate_production_cost(
     episode = repo.get_episode(current_user.id, episode_id)
     if not episode:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Episode project not found")
+
+    # Topic & Metadata Uniqueness Check: Warn user with option to confirm & proceed
+    from src.mcp.topic_memory.server import check_topic_duplicate
+    show = repo.get_show(current_user.id, episode.show_id)
+    show_slug = show.slug if show else "default"
+    topic_check = await check_topic_duplicate(
+        topic=episode.title,
+        metadata={"genre": show.genre if show else "general", "show_slug": show_slug},
+    )
+    is_dup = topic_check.get("is_duplicate", False)
+    warning_msg = topic_check.get("alert_message") if is_dup else None
+    conflicting_top = topic_check.get("conflicting_topic") if is_dup else None
+    sim_score = topic_check.get("max_similarity_score", 0.0) if is_dup else 0.0
 
     # Itemized cost computation based on duration and selected options
     duration_mins = max(1, episode.duration_seconds // 60)
@@ -135,18 +160,47 @@ async def estimate_production_cost(
         total_cost_usd=total_cost,
         user_credit_balance_usd=round(current_user.api_credit_balance_usd, 4),
         can_afford=can_afford,
+        has_duplicate_warning=is_dup,
+        duplicate_warning_message=warning_msg,
+        conflicting_topic=conflicting_top,
+        similarity_score=sim_score,
+        can_force_proceed=True,
     )
 
 
 @router.post("/{episode_id}/confirm-production", response_model=ProductionConfirmationResponse)
 async def confirm_production(
     episode_id: UUID,
+    payload: Optional[ProductionConfirmationRequest] = None,
     current_user: User = Depends(get_current_user),
 ):
     """Mandatory Step 2: Explicit confirmation from user to deduct credits and queue render."""
     episode = repo.get_episode(current_user.id, episode_id)
     if not episode:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Episode project not found")
+
+    force_proceed = payload.force_proceed if payload else False
+
+    # Topic & Metadata Uniqueness Check: Alert and warn if duplicate content unless user confirms to proceed
+    from src.mcp.topic_memory.server import check_topic_duplicate
+    show = repo.get_show(current_user.id, episode.show_id)
+    show_slug = show.slug if show else "default"
+    topic_check = await check_topic_duplicate(
+        topic=episode.title,
+        metadata={"genre": show.genre if show else "general", "show_slug": show_slug},
+    )
+    if topic_check.get("is_duplicate") and not force_proceed:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "DUPLICATE_TOPIC_WARNING",
+                "warning": topic_check.get("alert_message"),
+                "conflicting_topic": topic_check.get("conflicting_topic"),
+                "similarity_score": topic_check.get("max_similarity_score"),
+                "can_force_proceed": True,
+                "message": "Similar content detected. Provide force_proceed=true to confirm and proceed anyway.",
+            },
+        )
 
     if episode.estimated_cost_usd <= 0:
         raise HTTPException(

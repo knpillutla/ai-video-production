@@ -35,8 +35,16 @@ class SwarmCoordinator:
         ws.mkdir(parents=True, exist_ok=True)
         logger.info(f"swarm_pipeline_started: run_id={run_id}, topic='{topic}'")
 
-        # Step 1: Topic Originality Check via MCP Topic Memory
-        topic_check = await check_topic_duplicate(topic)
+        # Step 1: Topic & Metadata Originality Check via MCP Topic Memory
+        topic_check = await check_topic_duplicate(topic, metadata={"genre": genre, "language": language})
+        if topic_check.get("is_duplicate"):
+            logger.warning(f"swarm_duplicate_blocked: {topic_check.get('alert_message')}")
+            return {
+                "run_id": run_id,
+                "status": "DUPLICATE_BLOCKED",
+                "alert_message": topic_check.get("alert_message"),
+                "topic_check": topic_check,
+            }
 
         # Step 2: Model Selection & Pre-Flight Cost via MCP Model Selector
         model_selection = await select_best_model(
@@ -92,8 +100,14 @@ class SwarmCoordinator:
             contains_synthetic_media=True,
         )
 
-        # Step 10: Commit Approved Topic to Memory
-        await remember_topic(topic=topic, episode_id=run_id, show_slug=genre)
+        # Step 10: Commit Approved Topic, Metadata & Final Story to Topic Memory
+        await remember_topic(
+            topic=topic,
+            metadata={"genre": genre, "language": language, "tags": seo_meta.get("search_tags", [])},
+            final_story=full_dialogue,
+            episode_id=run_id,
+            show_slug=genre,
+        )
 
         logger.info(f"swarm_pipeline_completed: run_id={run_id}, status=SUCCESS")
         return {

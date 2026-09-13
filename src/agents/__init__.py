@@ -1,6 +1,9 @@
 """Specialized Agent Swarm Package."""
 
 from src.agents.audio_foley_agent import AudioFoleyAgent, audio_foley_agent
+from src.agents.choreography_agent import ChoreographyAgent, choreography_agent
+from src.agents.classifier_agent import ClassifierAgent, classifier_agent
+from src.agents.epic_cinema_agent import EpicCinemaAgent, epic_cinema_agent
 from src.agents.growth_seo_agent import GrowthSEOAgent, growth_seo_agent
 from src.agents.qa_gate_agent import QAGateAgent, qa_gate_agent
 from src.agents.script_agent import ScriptAgent, script_agent
@@ -10,6 +13,12 @@ from src.agents.transcreation_agent import TranscreationAgent, transcreation_age
 __all__ = [
     "AudioFoleyAgent",
     "audio_foley_agent",
+    "ChoreographyAgent",
+    "choreography_agent",
+    "ClassifierAgent",
+    "classifier_agent",
+    "EpicCinemaAgent",
+    "epic_cinema_agent",
     "GrowthSEOAgent",
     "growth_seo_agent",
     "QAGateAgent",
@@ -21,3 +30,4 @@ __all__ = [
     "TranscreationAgent",
     "transcreation_agent",
 ]
+

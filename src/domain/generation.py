@@ -33,6 +33,30 @@ class AspectRatio(str, Enum):
     CINEMATIC_21_9 = "21:9"
 
 
+class ThemeGenre(str, Enum):
+    """Creative genre and narrative theme presets."""
+
+    AUTO = "auto"
+    TELUGU_COMEDY = "telugu_comedy"
+    EPIC_ACTION = "epic_action"
+    BOLLYWOOD_DANCE = "bollywood_dance"
+    NATURE_WILDLIFE = "nature_wildlife"
+    TRAVEL_TOURISM = "travel_tourism"
+    ROMANTIC_DRAMA = "romantic_drama"
+    TECH_SCIFI = "tech_scifi"
+
+
+class ContentClassification(BaseModel):
+    """Inferred or explicit format, visual style, and theme metadata."""
+
+    media_format: MediaFormat = MediaFormat.AUTO
+    visual_style: VisualStyle = VisualStyle.AUTO
+    theme: ThemeGenre = ThemeGenre.AUTO
+    is_auto_detected: bool = True
+    confidence: float = Field(default=0.95, ge=0.0, le=1.0)
+    explanation: str = ""
+
+
 class GenerationOptions(BaseModel):
     """User-toggleable generation pipeline options (all default True)."""
 

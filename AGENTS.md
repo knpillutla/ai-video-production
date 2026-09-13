@@ -47,5 +47,16 @@ All AI agents working within this workspace must adhere strictly to the engineer
 * **Hard 10-Second Duration Cap:** Any automated test that calls an actual model or synthesizes video/audio must be strictly capped to a **maximum duration of 10 seconds** (and minimal token/character count) to prevent enormous API expenditures.
 
 
+### 9. Mandatory Terraform-Only IaC
+* **Always create Terraform scripts only for all cloud platforms** (Azure, GCP, AWS, Multi-Cloud).
+* Never use Bicep, ARM templates, CloudFormation, or platform-specific template languages. Standardize on HashiCorp Terraform (`.tf`) files for 100% of infrastructure declarations.
+
+### 10. Topic, Metadata & Final Story Deduplication & User Alerting
+* **Mandatory Persistence:** Every time a video is created, save the topic, metadata information (genre, tags, audience, format), and the final story synthesized from the script into the persistent Topic Memory vault.
+* **Pre-Creation Duplicate Guard:** When a user creates or estimates a video with similar metadata or topic (cosine similarity $\ge 0.80$ or heavy metadata overlap), the system MUST NOT create the duplicate content.
+* **Mandatory User Alert:** Immediately block the request (HTTP 409 Conflict) and display a prominent alert to the user detailing the existing conflicting topic, episode ID, and similarity percentage to prevent channel demonetization and wasted budget.
+
+
 Refer to [AGENT_INSTRUCTIONS.md](file:///c:/neel-1/projects/content-generation/AGENT_INSTRUCTIONS.md) for detailed architecture, code patterns, and the pre-commit self-audit checklist.
+
 

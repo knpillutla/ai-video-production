@@ -68,10 +68,27 @@ class ProductionPipelineCoordinator:
 
         logger.info(f"starting_production_pipeline: ep={episode.title}, user={user_id}")
 
+        # Check for duplicate topic & metadata; alert and block if duplicate
+        from src.mcp.topic_memory.server import check_topic_duplicate, remember_topic
+        meta_dict = {"genre": show.genre if show else "general", "show_slug": show_slug}
+        topic_check = await check_topic_duplicate(topic=episode.title, metadata=meta_dict)
+        if topic_check.get("is_duplicate"):
+            raise ValueError(topic_check.get("alert_message") or "Duplicate content detected.")
+
         # 1. Generate Structured Scene Storyboard Plan via Gemini 1.5 Pro
         prompt = f"Write an engaging, high-retention video script on: {episode.title} in {show.genre if show else 'comedy'} genre"
         storyboard_data = await self.llm.generate_structured(prompt)
         scenes_list = storyboard_data.get("scenes", [])
+
+        # Commit topic, metadata, and synthesized story to Topic Memory
+        full_story_text = " ".join(s.get("dialogue", "") for s in scenes_list)
+        await remember_topic(
+            topic=episode.title,
+            metadata=meta_dict,
+            final_story=full_story_text,
+            episode_id=str(episode.id),
+            show_slug=show_slug,
+        )
 
         # 2. Synthesize Visual Keyframes and Voice Stems for each scene
         compiled_scenes = []

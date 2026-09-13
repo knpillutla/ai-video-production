@@ -39,4 +39,11 @@ cost governance & actuals tracking:
 - save total estimated cost and itemized breakdown for each model before generation
 - after execution, update the same record with actuals (tokens, voice characters, images diffused, render compute) to measure prediction accuracy and budget variance
 - testing models safety rule: when testing models as part of automated tests, only run one test only with 10 sec duration, to ensure we do not call more than one test, to save on costs; the test suite must only be run locally even if model keys are present
+
+cloud infrastructure as code (iac):
+- always create terraform scripts only for all platforms (azure, gcp, aws, multi-cloud). never use bicep, arm, or platform-specific templates
+
+topic, metadata & story deduplication & user alert:
+- everytime a video is created, save the topic, metadata information (genre, tags, target audience, format), and the final story created from the script
+- when the user is creating for similar metadata or topic, do not create duplicate content for the same topic and alert the user to prevent channel demonetization
 
