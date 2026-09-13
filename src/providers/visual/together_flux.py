@@ -74,12 +74,13 @@ class TogetherFluxAdapter(VisualProviderProtocol):
         prompt: str,
         output_path: Path | str,
         aspect_ratio: str = "16:9",
+        force_live: bool = False,
     ) -> Path:
         """Generate and save photoreal keyframe image (Together AI -> Serverless Flux -> Canvas)."""
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 
-        if is_mock_mode():
+        if is_mock_mode() and not force_live:
             return self._render_local_canvas(prompt, out, aspect_ratio=aspect_ratio)
 
         client = HTTPClientPool.get_client()

@@ -94,12 +94,13 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
         text: str,
         output_path: Path | str,
         voice_id: str = "te-IN-ShrutiNeural",
+        force_live: bool = False,
     ) -> Path:
         """Synthesize narration and write directly to disk."""
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 
-        if is_mock_mode():
+        if is_mock_mode() and not force_live:
             audio_bytes = self._generate_synthetic_wav(duration_seconds=max(2.0, len(text.split()) * 0.4))
             out.write_bytes(audio_bytes)
             return out
@@ -107,9 +108,22 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
         if not self.api_key:
             try:
                 import edge_tts
+                import subprocess
+                import tempfile
+                from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary
 
                 comm = edge_tts.Communicate(text, voice=voice_id)
-                await comm.save(str(out))
+                with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp_mp3:
+                    tmp_name = tmp_mp3.name
+                await comm.save(tmp_name)
+
+                # Convert to standard 48kHz mono 16-bit PCM WAV
+                conv_cmd = [get_ffmpeg_binary(), "-y", "-i", tmp_name, "-ar", "48000", "-ac", "1", str(out)]
+                subprocess.run(conv_cmd, capture_output=True, timeout=15)
+                try:
+                    Path(tmp_name).unlink(missing_ok=True)
+                except Exception:
+                    pass
                 if out.exists() and out.stat().st_size > 100:
                     logger.info(f"edge_tts_synthesized: {out.name} ({out.stat().st_size} bytes)")
                     return out

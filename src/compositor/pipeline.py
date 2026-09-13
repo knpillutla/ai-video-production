@@ -49,6 +49,7 @@ class ProductionPipelineCoordinator:
         dry_run: bool = False,
         language: str = "te",
         subtitle_language: str | None = None,
+        force_live: bool = False,
     ) -> Path:
         """Produce a complete broadcast-grade master video for an episode project."""
         episode = repo.get_episode(user_id, episode_id)
@@ -76,7 +77,7 @@ class ProductionPipelineCoordinator:
             raise ValueError(topic_check.get("alert_message") or "Duplicate content detected.")
 
         # 1. Generate Structured Scene Storyboard Plan via Gemini 1.5 Pro
-        prompt = f"Write an engaging, high-retention video script on: {episode.title} in {show.genre if show else 'comedy'} genre"
+        prompt = f"Write an engaging, high-retention video script on: {episode.title} in {show.genre if show else 'comedy'} genre with duration {episode.duration_seconds}s"
         storyboard_data = await self.llm.generate_structured(prompt)
         scenes_list = storyboard_data.get("scenes", [])
 
@@ -103,7 +104,7 @@ class ProductionPipelineCoordinator:
 
             # Generate keyframe image & record rights
             img_path = scenes_dir / f"scene_{idx:02d}.jpg"
-            await self.visual.generate_to_file(vis_prompt, output_path=img_path)
+            await self.visual.generate_to_file(vis_prompt, output_path=img_path, force_live=force_live)
             rights_ledger.record_asset(
                 episode_id=episode.id,
                 asset_type=AssetType.IMAGE,
@@ -118,7 +119,7 @@ class ProductionPipelineCoordinator:
             # Generate voiceover stem & record rights
             voice_path = stems_dir / f"voice_{idx:02d}.wav"
             voice_id = VOICE_MAP.get(language, "te-IN-MohanNeural")
-            await self.tts.synthesize_to_file(dialogue, output_path=voice_path, voice_id=voice_id)
+            await self.tts.synthesize_to_file(dialogue, output_path=voice_path, voice_id=voice_id, force_live=force_live)
             rights_ledger.record_asset(
                 episode_id=episode.id,
                 asset_type=AssetType.VOICE,

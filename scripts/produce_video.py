@@ -25,9 +25,11 @@ async def run_production(
     title: str = "IT Employee WFH Confusions",
     episode_number: int = 1,
     genre: str = "comedy",
+    duration: int = 480,
     language: str = "te",
     dry_run: bool = False,
     subtitle_language: str | None = None,
+    force_live: bool = False,
 ):
     """Execute the Phase 2 & 3 end-to-end video production and compliance pipeline."""
     active_sub = subtitle_language or ("en" if language.lower() != "en" else "en")
@@ -37,8 +39,10 @@ async def run_production(
     print(f"• Title:              {title}")
     print(f"• Episode Number:     {episode_number:02d}")
     print(f"• Genre:              {genre}")
+    print(f"• Target Duration:    {duration}s")
     print(f"• Spoken Language:    {language}")
     print(f"• Burned Subtitles:   {active_sub} (Default English)")
+    print(f"• Live Synthesis:     {force_live}")
     print(f"• Dry Run:            {dry_run}")
     print("-" * 70)
 
@@ -67,7 +71,7 @@ async def run_production(
         show_id=show.id,
         title=f"{title} - Episode {episode_number}",
         episode_number=episode_number,
-        duration_seconds=480,
+        duration_seconds=duration,
     )
     episode.cost_record = calculate_preflight_estimate(episode)
     episode.estimated_cost_usd = episode.cost_record.predicted_total_usd
@@ -108,6 +112,7 @@ async def run_production(
         dry_run=effective_dry_run,
         language=language,
         subtitle_language=active_sub,
+        force_live=force_live,
     )
     print(f"[4/4] Master Video Generated: {final_video}")
 
@@ -147,8 +152,10 @@ def main():
     parser.add_argument("--title", type=str, default="IT Employee WFH Confusions", help="Project/Show title")
     parser.add_argument("--episode", type=int, default=1, help="Episode number")
     parser.add_argument("--genre", type=str, default="comedy", help="Genre classification")
+    parser.add_argument("--duration", type=int, default=480, help="Target duration in seconds")
     parser.add_argument("--language", type=str, default="te", help="Primary spoken language: te, hi, en, es")
     parser.add_argument("--subtitle-language", type=str, default=None, help="Burned subtitle language (defaults to 'en')")
+    parser.add_argument("--live", action="store_true", help="Use live free serverless visual/voice synthesis")
     parser.add_argument("--dry-run", action="store_true", help="Compile and generate assets without running FFmpeg binary")
 
     args = parser.parse_args()
@@ -157,9 +164,11 @@ def main():
             title=args.title,
             episode_number=args.episode,
             genre=args.genre,
+            duration=args.duration,
             language=args.language,
             dry_run=args.dry_run,
             subtitle_language=args.subtitle_language,
+            force_live=args.live,
         )
     )
 
