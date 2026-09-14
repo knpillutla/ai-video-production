@@ -65,7 +65,7 @@ def compile_timeline_from_scenes(
         track_items.append(item)
 
         # Record speech interval for audio ducking
-        if item.voice_path or item.dialogue_text:
+        if item.voice_path and (not hasattr(item.voice_path, "exists") or item.voice_path.exists()):
             speech_intervals.append((current_time, current_time + dur))
 
         current_time += dur

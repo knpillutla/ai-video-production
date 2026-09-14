@@ -1,0 +1,34 @@
+# ==============================================================================
+# CINEAI STUDIO - PRODUCTION CLI COMMAND EXAMPLES & CHEATSHEET
+# ==============================================================================
+
+# 1. Full Production (Male Voiceover Narration + Background Music)
+# Combines male neural narration with full background music ducked under speech:
+python .\scripts\produce_video.py --title "nature" --duration 30 --local --voice-over --narration-male --bgm
+
+# 2. Voice-Only Narration (Male Voiceover - No Background Music)
+# Voice audio only (a cappella narration), zero background music:
+python .\scripts\produce_video.py --title "nature" --duration 30 --local --voice-over --narration-male
+
+# 3. Pure Ambient Nature / Scenic (No Voiceover - Raindrops & Nature Sounds BGM Only)
+# No spoken voice; plays relaxing ambient raindrops and nature sounds BGM:
+python .\scripts\produce_video.py --title "nature" --duration 30 --local --bgm
+
+# 4. Conversational Dialogue with Talking Avatar Lipsync (--tts)
+# When --tts is passed, conversational audio dialogue and character lip sync are both enabled:
+python .\scripts\produce_video.py --title "WFH Confusions" --genre comedy --duration 30 --local --tts --bgm
+
+# 5. Auto-Identification of TTS & Lipsync (Based on Theme, Idea & Screenplay Script)
+# The system automatically detects conversational dialogue from idea/script and enables TTS + Lipsync:
+python .\scripts\produce_video.py --idea "Two techies argue over an AI predicting Bangalore traffic" --genre comedy --duration 30 --local --bgm
+python .\scripts\produce_video.py --script "scripts/my_script.txt" --duration 30 --local --bgm
+
+# 6. YouTube Reference Link (--youtube-reference-link)
+# Pass a reference YouTube link for creative thesis, pacing, or concept adaptation:
+python .\scripts\produce_video.py --title "India in 4K" --youtube-reference-link "https://www.youtube.com/watch?v=-BLxlHRYpac" --duration 30 --local --bgm
+
+# 7. Female Voiceover Narration (--narration-female)
+python .\scripts\produce_video.py --theme "nature" --duration 30 --narration-female --bgm --local
+
+# 8. Multilingual Narration (Synthesizes parallel voice stems across target languages)
+python .\scripts\produce_video.py --theme "nature" --duration 30 --voice-over --narration-female --languages "en,te,hi" --bgm --local

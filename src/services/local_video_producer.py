@@ -24,20 +24,25 @@ def _sanitize_slug(text: str) -> str:
     return re.sub(r"_+", "_", slug)[:48] or "default_title"
 
 
-def _generate_scene_image(prompt: str, title: str, scene_idx: int, output_path: Path, is_short: bool) -> Path:
+def _generate_scene_image(
+    prompt: str, title: str, scene_idx: int, output_path: Path, is_short: bool,
+    color_palette_rgb: list[tuple[int, int, int]] | None = None,
+    art_style_name: str | None = None, architecture_style: str | None = None,
+    lighting_scheme: str | None = None,
+) -> Path:
     """Render a high-resolution keyframe image using PIL with gradients and typography."""
     size = (1080, 1920) if is_short else (1920, 1080)
     img = Image.new("RGB", size, (12, 18, 32))
     draw = ImageDraw.Draw(img)
 
-    # Gradient background
+    # Gradient background from reference palette
     h = size[1]
-    color_palette = [
-        ((15, 23, 42), (30, 58, 138)),    # Scene 1: Deep Navy to Blue
-        ((20, 30, 50), (4, 120, 87)),     # Scene 2: Dark Slate to Emerald
-        ((35, 15, 45), (126, 34, 206)),   # Scene 3: Dark Violet to Purple
-    ]
-    c_start, c_end = color_palette[scene_idx % len(color_palette)]
+    if color_palette_rgb and len(color_palette_rgb) >= 2:
+        c_start = color_palette_rgb[scene_idx % len(color_palette_rgb)]
+        c_end = color_palette_rgb[(scene_idx + 1) % len(color_palette_rgb)]
+    else:
+        fallback = [((15, 23, 42), (30, 58, 138)), ((20, 30, 50), (4, 120, 87)), ((35, 15, 45), (126, 34, 206))]
+        c_start, c_end = fallback[scene_idx % len(fallback)]
 
     for y in range(h):
         r_ratio = y / h
@@ -53,16 +58,21 @@ def _generate_scene_image(prompt: str, title: str, scene_idx: int, output_path: 
 
     # Title & Scene Text
     draw.text((120, 140), "CINEAI STUDIO • 0-GPU LOCAL SYNTHESIS", fill=(129, 140, 248))
-    draw.text((120, 200), f"PROJECT: {title.upper()}", fill=(255, 255, 255))
-    draw.text((120, 260), f"SCENE {scene_idx + 1:02d} • CAMERA MOTION: 2.5D KINETIC ZOOM", fill=(52, 211, 153))
+    draw.text((120, 190), f"PROJECT: {title.upper()}", fill=(255, 255, 255))
+    if art_style_name:
+        draw.text((120, 240), f"ART STYLE: {art_style_name.upper()[:50]}", fill=(251, 191, 36))
+    draw.text((120, 290), f"SCENE {scene_idx + 1:02d} • CAMERA MOTION: 2.5D KINETIC ZOOM", fill=(52, 211, 153))
 
     # Center Prompt Card
-    card_y1 = cy - 120
-    card_y2 = cy + 120
+    card_y1, card_y2 = cy - 130, cy + 130
     draw.rectangle([120, card_y1, size[0] - 120, card_y2], fill=(15, 23, 42), outline=(99, 102, 241), width=2)
     clean_prompt = prompt[:160] + "..." if len(prompt) > 160 else prompt
-    draw.text((160, card_y1 + 40), f"Beat: {clean_prompt}", fill=(241, 245, 249))
-    draw.text((160, card_y1 + 90), "Status: Real-time physical render in local storage", fill=(148, 163, 184))
+    draw.text((160, card_y1 + 30), f"Beat: {clean_prompt[:70]}", fill=(241, 245, 249))
+    if architecture_style:
+        draw.text((160, card_y1 + 75), f"Architecture: {architecture_style[:65]}", fill=(251, 191, 36))
+    if lighting_scheme:
+        draw.text((160, card_y1 + 120), f"Lighting: {lighting_scheme[:65]}", fill=(52, 211, 153))
+    draw.text((160, card_y1 + 165), "Status: Real-time physical render in local storage", fill=(148, 163, 184))
 
     # Bottom watermark
     draw.text((120, size[1] - 140), "1080p Master Render • Local File Storage Verified", fill=(148, 163, 184))
@@ -94,11 +104,16 @@ def _generate_synthetic_tone_wav(output_path: Path, duration_sec: float, base_fr
     return output_path
 
 
-def _generate_stereo_bgm_wav(output_path: Path, duration_sec: float) -> Path:
-    """Generate 48kHz stereo WAV soundtrack with upbeat acoustic harmonic chords."""
+def _generate_stereo_bgm_wav(output_path: Path, duration_sec: float, art_style: str = "") -> Path:
+    """Generate 48kHz stereo WAV soundtrack with genre-specific harmonic chords."""
     sr = 48000
     total_samples = int(sr * duration_sec)
-    pitches = [261.63, 329.63, 392.00, 523.25]  # C Major Pentatonic
+    if "indian" in art_style.lower() or "vibrant" in art_style.lower():
+        pitches = [261.63, 293.66, 329.63, 392.00, 440.00]  # Raag Bhupali
+    elif "modern" in art_style.lower() or "architecture" in art_style.lower():
+        pitches = [220.00, 261.63, 329.63, 392.00]  # Ambient Minimalist
+    else:
+        pitches = [261.63, 329.63, 392.00, 523.25]  # C Major Pentatonic
     beat_samples = sr // 2  # 120 BPM
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -130,6 +145,15 @@ async def produce_local_video_episode(
     style_type: str = "Realistic (Photoreal)",
     youtube_url: str | None = None,
     duration_seconds: float = 6.0,
+    enable_bgm: bool = True,
+    enable_tts: bool | None = None,
+    enable_voice_over: bool | None = None,
+    enable_lipsync: bool | None = None,
+    voice_gender: str = "female",
+    language: str = "en",
+    theme: str | None = None,
+    idea: str | None = None,
+    script: str | None = None,
 ) -> dict[str, Any]:
     """Execute complete local synthesis and single-pass FFmpeg compilation into storage/."""
     t0 = time.perf_counter()
@@ -137,28 +161,76 @@ async def produce_local_video_episode(
     show_slug = _sanitize_slug(title)
     ep_slug = _sanitize_slug(episode_id)
 
-    # 1. Resolve storage directories
+    # Auto-infer audio modalities if flags are not explicitly passed
+    if enable_voice_over is None and enable_tts is None:
+        from src.agents.classifier_agent import classifier_agent
+        auto_tts, auto_lipsync = classifier_agent.infer_audio_modalities(theme, idea or prompt, script, format_type)
+        enable_tts, enable_lipsync = auto_tts, auto_lipsync if enable_lipsync is None else enable_lipsync
+        enable_voice_over = not auto_tts
+    else:
+        enable_voice_over = True if enable_voice_over is None else bool(enable_voice_over)
+        enable_tts = False if enable_tts is None else bool(enable_tts)
+        enable_lipsync = enable_tts if enable_lipsync is None else bool(enable_lipsync)
+
+    from src.scripts.youtube_ingest import extract_reference_video_attributes
+    ref_attrs = extract_reference_video_attributes(
+        url=youtube_url, title=title, text=f"{prompt} {theme or ''} {idea or ''}",
+        default_genre=video_type, user_format=format_type,
+    )
+    if youtube_url:
+        style_type = ref_attrs.style_type if style_type == "Realistic (Photoreal)" else style_type
+        video_type = ref_attrs.video_type if video_type == "Travel Guide & Doc" else video_type
+
+    # 1. Resolve storage directories and IMMEDIATELY save user_inputs.json first
     ep_dir = storage_service.get_episode_path(user_id, show_slug, ep_slug)
-    scenes_dir = ep_dir / "scenes"
-    stems_dir = ep_dir / "audio_stems"
-    renders_dir = ep_dir / "master_renders"
+    scenes_dir, stems_dir, renders_dir = ep_dir / "scenes", ep_dir / "audio_stems", ep_dir / "master_renders"
     for d in (scenes_dir, stems_dir, renders_dir):
         d.mkdir(parents=True, exist_ok=True)
 
-    # 2. Synthesize 2 visual scenes (total ~6s, strictly compliant with Rule 8 max 10s duration)
+    user_inputs = {
+        "user_id": user_id, "episode_id": episode_id, "title": title, "prompt": prompt,
+        "production_type": production_type, "tier": tier, "video_type": video_type,
+        "format_type": format_type, "style_type": style_type, "youtube_url": youtube_url,
+        "art_style": ref_attrs.art_style_display, "architecture_style": ref_attrs.architecture_style,
+        "lighting_scheme": ref_attrs.lighting_scheme, "color_palette": ref_attrs.color_palette,
+        "camera_language": ref_attrs.camera_language, "soundtrack_style": ref_attrs.soundtrack_style,
+        "reference_attributes": ref_attrs.model_dump(mode="json"),
+        "duration_seconds": duration_seconds, "enable_bgm": enable_bgm, "enable_tts": enable_tts,
+        "enable_voice_over": enable_voice_over, "enable_lipsync": enable_lipsync,
+        "voice_gender": voice_gender, "language": language, "theme": theme, "idea": idea,
+        "script": script, "created_at": time.time(),
+    }
+    with open(ep_dir / "user_inputs.json", "w", encoding="utf-8") as f:
+        json.dump(user_inputs, f, indent=2)
+
+    # 2. Synthesize 2 visual scenes (Rule 8 max 10s duration) with reference art & architecture
     scene_dur = duration_seconds / 2.0
-    scene1_img = _generate_scene_image(f"Opening: {prompt}", title, 0, scenes_dir / "scene_01.jpg", is_short)
-    scene2_img = _generate_scene_image(f"Climax: {prompt}", title, 1, scenes_dir / "scene_02.jpg", is_short)
+    scene1_img = _generate_scene_image(
+        f"Opening: {prompt}", title, 0, scenes_dir / "scene_01.jpg", is_short,
+        color_palette_rgb=ref_attrs.color_palette_rgb, art_style_name=ref_attrs.art_style_display,
+        architecture_style=ref_attrs.architecture_style, lighting_scheme=ref_attrs.lighting_scheme,
+    )
+    scene2_img = _generate_scene_image(
+        f"Climax: {prompt}", title, 1, scenes_dir / "scene_02.jpg", is_short,
+        color_palette_rgb=ref_attrs.color_palette_rgb, art_style_name=ref_attrs.art_style_display,
+        architecture_style=ref_attrs.architecture_style, lighting_scheme=ref_attrs.lighting_scheme,
+    )
 
-    # 3. Synthesize voice stems & BGM soundtrack
-    voice1 = _generate_synthetic_tone_wav(stems_dir / "voice_01.wav", scene_dur, 280.0)
-    voice2 = _generate_synthetic_tone_wav(stems_dir / "voice_02.wav", scene_dur, 330.0)
-    bgm_file = _generate_stereo_bgm_wav(stems_dir / "bgm_master.wav", duration_seconds)
+    # 3. Synthesize voice stems & BGM soundtrack based on options
+    voice1, voice2, bgm_file = None, None, None
+    if enable_voice_over or enable_tts:
+        f1, f2 = (180.0, 210.0) if voice_gender.lower() == "male" else (280.0, 330.0)
+        voice1 = _generate_synthetic_tone_wav(stems_dir / "voice_01.wav", scene_dur, f1)
+        voice2 = _generate_synthetic_tone_wav(stems_dir / "voice_02.wav", scene_dur, f2)
+    if enable_bgm:
+        bgm_file = _generate_stereo_bgm_wav(stems_dir / "bgm_master.wav", duration_seconds, art_style=ref_attrs.art_style)
 
-    # 4. Compile timeline
+    # 4. Compile timeline with reference camera movements
+    cam1 = "drone_zoom_in" if "drone" in ref_attrs.camera_language.lower() else "zoom_in"
+    cam2 = "pan_reveal" if "pan" in ref_attrs.camera_language.lower() or "reveal" in ref_attrs.camera_language.lower() else "pan_left"
     compiled_scenes = [
-        {"duration_seconds": scene_dur, "image_path": str(scene1_img), "voice_path": str(voice1), "shot_type": "medium", "camera_movement": "zoom_in"},
-        {"duration_seconds": scene_dur, "image_path": str(scene2_img), "voice_path": str(voice2), "shot_type": "wide", "camera_movement": "pan_left"},
+        {"duration_seconds": scene_dur, "image_path": str(scene1_img), "voice_path": str(voice1) if voice1 else None, "shot_type": "wide", "camera_movement": cam1},
+        {"duration_seconds": scene_dur, "image_path": str(scene2_img), "voice_path": str(voice2) if voice2 else None, "shot_type": "medium", "camera_movement": cam2},
     ]
     target_res = (1080, 1920) if is_short else (1920, 1080)
     timeline = compile_timeline_from_scenes(compiled_scenes, bgm_path=bgm_file, target_resolution=target_res, fps=30)
@@ -168,49 +240,44 @@ async def produce_local_video_episode(
     out_mp4 = renders_dir / f"master_{fmt_tag}_{ep_slug}.mp4"
     await execute_single_pass_render(timeline, out_mp4, dry_run=False)
 
-    # Mirror to static preview path for immediate browser compatibility
     static_preview = Path("src/static/videos/preview_master.mp4")
     if out_mp4.exists() and out_mp4.stat().st_size > 1000:
         static_preview.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(out_mp4, static_preview)
 
-    # 6. Itemize generated artifacts
+    # 6. Itemize generated artifacts & save project manifest
+
     def _fmt_size(sz: int) -> str:
         return f"{sz / 1024:.1f} KB" if sz < 1024 * 1024 else f"{sz / (1024 * 1024):.1f} MB"
 
     container_name = sanitize_container_name(user_id)
-    rel_mp4 = f"/storage/{container_name}/creative_vault/shows_and_titles/{show_slug}/episodes/{ep_slug}/master_renders/{out_mp4.name}"
-
+    base_url = f"/storage/{container_name}/creative_vault/shows_and_titles/{show_slug}/episodes/{ep_slug}"
     artifacts = [
-        {"name": out_mp4.name, "size": _fmt_size(out_mp4.stat().st_size), "type": "Video", "icon": "fa-film", "desc": "1080p Single-Pass FFmpeg Master Video", "url": rel_mp4},
-        {"name": "scene_01.jpg", "size": _fmt_size(scene1_img.stat().st_size), "type": "Image", "icon": "fa-images", "desc": "Keyframe Image Scene 1", "url": f"/storage/{container_name}/creative_vault/shows_and_titles/{show_slug}/episodes/{ep_slug}/scenes/scene_01.jpg"},
-        {"name": "scene_02.jpg", "size": _fmt_size(scene2_img.stat().st_size), "type": "Image", "icon": "fa-images", "desc": "Keyframe Image Scene 2", "url": f"/storage/{container_name}/creative_vault/shows_and_titles/{show_slug}/episodes/{ep_slug}/scenes/scene_02.jpg"},
-        {"name": "voice_01.wav", "size": _fmt_size(voice1.stat().st_size), "type": "Audio", "icon": "fa-microphone", "desc": "Voiceover Narration Stem 1", "url": f"/storage/{container_name}/creative_vault/shows_and_titles/{show_slug}/episodes/{ep_slug}/audio_stems/voice_01.wav"},
-        {"name": "bgm_master.wav", "size": _fmt_size(bgm_file.stat().st_size), "type": "Audio", "icon": "fa-music", "desc": "Stereo Acoustic BGM Soundtrack", "url": f"/storage/{container_name}/creative_vault/shows_and_titles/{show_slug}/episodes/{ep_slug}/audio_stems/bgm_master.wav"},
+        {"name": out_mp4.name, "size": _fmt_size(out_mp4.stat().st_size), "type": "Video", "icon": "fa-film", "desc": "1080p Single-Pass FFmpeg Master Video", "url": f"{base_url}/master_renders/{out_mp4.name}"},
+        {"name": "scene_01.jpg", "size": _fmt_size(scene1_img.stat().st_size), "type": "Image", "icon": "fa-images", "desc": "Keyframe Image Scene 1", "url": f"{base_url}/scenes/scene_01.jpg"},
+        {"name": "scene_02.jpg", "size": _fmt_size(scene2_img.stat().st_size), "type": "Image", "icon": "fa-images", "desc": "Keyframe Image Scene 2", "url": f"{base_url}/scenes/scene_02.jpg"},
+        {"name": "user_inputs.json", "size": "1.2 KB", "type": "JSON", "icon": "fa-sliders", "desc": "User Input Parameters & Configuration Record", "url": f"{base_url}/user_inputs.json"},
         {"name": "project_manifest.json", "size": "2.1 KB", "type": "JSON", "icon": "fa-code", "desc": "Project Manifest & Traceability Metadata"},
     ]
+    if voice1 and voice1.exists():
+        artifacts.append({"name": "voice_01.wav", "size": _fmt_size(voice1.stat().st_size), "type": "Audio", "icon": "fa-microphone", "desc": "Voiceover Narration Stem 1", "url": f"{base_url}/audio_stems/voice_01.wav"})
+    if bgm_file and bgm_file.exists():
+        artifacts.append({"name": "bgm_master.wav", "size": _fmt_size(bgm_file.stat().st_size), "type": "Audio", "icon": "fa-music", "desc": "Stereo Acoustic BGM Soundtrack", "url": f"{base_url}/audio_stems/bgm_master.wav"})
 
     manifest_data = {
         "episode_id": episode_id, "title": title, "prompt": prompt, "production_type": production_type,
         "video_type": video_type, "format_type": format_type, "style_type": style_type, "tier": tier,
         "youtube_url": youtube_url, "duration_seconds": duration_seconds, "rendered_at": time.time(),
-        "video_file": str(out_mp4.name), "artifacts": artifacts,
+        "video_file": str(out_mp4.name), "artifacts": artifacts, "user_inputs": user_inputs,
     }
     with open(ep_dir / "project_manifest.json", "w", encoding="utf-8") as f:
         json.dump(manifest_data, f, indent=2)
 
     elapsed = round(time.perf_counter() - t0, 2)
     logger.info(f"local_video_produced: {out_mp4.name} in {elapsed}s, size={out_mp4.stat().st_size}b")
-
     return {
-        "success": True,
-        "job_id": f"job_{ep_slug}_{int(time.time())}",
-        "episode_id": episode_id,
-        "title": title,
-        "video_url": rel_mp4,
-        "storage_path": str(out_mp4),
-        "file_size_bytes": out_mp4.stat().st_size,
-        "duration_seconds": duration_seconds,
-        "render_time_seconds": elapsed,
-        "artifacts": artifacts,
+        "success": True, "job_id": f"job_{ep_slug}_{int(time.time())}", "episode_id": episode_id,
+        "title": title, "video_url": f"{base_url}/master_renders/{out_mp4.name}", "storage_path": str(out_mp4),
+        "file_size_bytes": out_mp4.stat().st_size, "duration_seconds": duration_seconds,
+        "render_time_seconds": elapsed, "artifacts": artifacts,
     }

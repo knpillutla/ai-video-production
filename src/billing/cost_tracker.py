@@ -11,7 +11,8 @@ from src.domain.creative import Episode
 def calculate_preflight_estimate(episode: Episode) -> EpisodeCostRecord:
     """Calculate itemized pre-flight cost prediction and model breakdown before production."""
     duration_mins = max(1, episode.duration_seconds // 60)
-    stems_count = len(episode.options.target_languages) if episode.options.enable_tts else 1
+    tts_enabled = getattr(episode.options, "enable_tts", True)
+    stems_count = len(episode.options.target_languages) if tts_enabled else 0
     est_images = max(3, duration_mins * 3)
 
     items: list[ModelCostItem] = [
@@ -24,12 +25,12 @@ def calculate_preflight_estimate(episode: Episode) -> EpisodeCostRecord:
             predicted_cost_usd=0.0200,
         ),
         ModelCostItem(
-            component=f"Multilingual Neural Voiceovers ({stems_count} Stems)",
+            component=f"Multilingual Neural Voiceovers ({stems_count} Stems)" if tts_enabled else "Neural Voiceovers (Disabled)",
             model_name="Azure Speech HD (Neural)",
             category="voice",
             unit_cost_usd=0.000016,
-            predicted_units=f"~{duration_mins * 600} characters",
-            predicted_cost_usd=round(0.0700 * max(1, stems_count), 4),
+            predicted_units=f"~{duration_mins * 600} characters" if tts_enabled else "0 characters (disabled)",
+            predicted_cost_usd=round(0.0700 * max(1, stems_count), 4) if tts_enabled else 0.0,
         ),
         ModelCostItem(
             component="4K Keyframe Visual Diffusion",
@@ -40,12 +41,12 @@ def calculate_preflight_estimate(episode: Episode) -> EpisodeCostRecord:
             predicted_cost_usd=round(est_images * 0.0030, 4),
         ),
         ModelCostItem(
-            component="Original Commercial Soundtrack",
+            component="Original Commercial Soundtrack" if getattr(episode.options, "enable_bgm", True) else "Soundtrack / BGM (Disabled)",
             model_name="Suno v3.5 Pro",
             category="soundtrack",
             unit_cost_usd=0.0800,
-            predicted_units="1 master soundtrack",
-            predicted_cost_usd=0.0800,
+            predicted_units="1 master soundtrack" if getattr(episode.options, "enable_bgm", True) else "0 tracks (disabled)",
+            predicted_cost_usd=0.0800 if getattr(episode.options, "enable_bgm", True) else 0.0,
         ),
         ModelCostItem(
             component="Python Single-Pass FFmpeg Compositor",

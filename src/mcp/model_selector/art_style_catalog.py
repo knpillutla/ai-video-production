@@ -62,10 +62,16 @@ def lookup_art_style(style_query: str | None = None, country: str | None = None)
         return ART_STYLE_INTELLIGENCE_CATALOG["nordic_noir_minimalism"]
     if "mughal" in q or "miniature" in q or "rajasthani" in q:
         return ART_STYLE_INTELLIGENCE_CATALOG["indian_mughal_miniature"]
+    if "india" in q or "indian" in q or "taj_mahal" in q or "varanasi" in q or "rajasthan" in q:
+        return ART_STYLE_INTELLIGENCE_CATALOG["indian_vibrant_4k"]
+    if "modern" in q or "architecture" in q or "skyscraper" in q or "brutalist" in q or "skyline" in q:
+        return ART_STYLE_INTELLIGENCE_CATALOG["modern_architectural_minimalism"]
     if "synthwave" in q or "80s" in q or "vaporwave" in q or "outrun" in q:
         return ART_STYLE_INTELLIGENCE_CATALOG["retro_80s_synthwave"]
 
     # Country-based aesthetic defaults if style_query is unspecified
+    if c in ("in", "india"):
+        return ART_STYLE_INTELLIGENCE_CATALOG["indian_vibrant_4k"]
     if c in ("jp", "japan"):
         return ART_STYLE_INTELLIGENCE_CATALOG["japanese_ukiyo_e"]
     if c in ("kr", "korea", "south korea"):

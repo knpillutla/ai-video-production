@@ -32,7 +32,7 @@ COUNTRY_CULTURE_MAP: dict[str, dict[str, str]] = {
 SCRIPT_CULTURE_KEYWORDS: list[tuple[list[str], dict[str, str]]] = [
     (
         [
-            "hyderabad", "charminar", "chennai", "bengaluru", "bangalore", "kerala", "tirupati",
+            "hyderabad", "hyd", "charminar", "chennai", "bengaluru", "bangalore", "kerala", "tirupati",
             "kanchipuram", "telugu", "tamil", "kannada", "malayalam", "saree", "pattu", "pelli",
             "lungi", "panche", "kuchipudi", "bharatanatyam", "tollywood", "gongura", "biryani",
             "dosa", "idli", "andhra", "telangana", "rayalaseema", "vizag", "vijayawada",
@@ -72,6 +72,7 @@ class DerivedCulturalContext(BaseModel):
     art_style_prompt: str = ""
     art_style_lighting: str = ""
     art_style_palette: str = ""
+    architecture_style: str = ""
     recommended_loras: list[dict[str, Any]] = Field(default_factory=list)
     voice_id: str = "en-US-ChristopherNeural"
     voice_provider: str = "Microsoft Azure Speech HD"
@@ -144,7 +145,7 @@ def derive_cultural_context(
 
     # 4. Fallback to language code mapping
     if not profile:
-        lang_code = language.lower().strip()
+        lang_code = language.lower().strip().replace("_", "-").split("-")[0]
         if lang_code in ("te", "ta", "kn", "ml"):
             profile = {"culture": "indian_south", "ethnicity": "south_asian", "female_costume": "indian_traditional_saree", "male_costume": "indian_traditional_dhoti"}
             source = f"language_code:{lang_code}"
@@ -254,6 +255,7 @@ def derive_cultural_context(
         art_style_prompt=style_info.get("prompt_decorations", ""),
         art_style_lighting=style_info.get("lighting_scheme", ""),
         art_style_palette=style_info.get("color_palette", ""),
+        architecture_style=style_info.get("architecture_style", ""),
         recommended_loras=active_loras,
         voice_id=selected_voice,
         voice_provider=voice_provider,

@@ -20,12 +20,40 @@ from src.mcp.topic_memory.server import check_topic_duplicate, remember_topic
 
 
 THEME_TOPIC_POOLS: dict[str, list[str]] = {
+    "nature": [
+        "Amazon Rainforest Canopy and Emerald River Expedition",
+        "Bora Bora Azure Ocean Coral Reef and Marine Sanctuary",
+        "Seychelles Anse Source d'Argent Granite Beaches",
+        "Cherrapunji Cascading Waterfalls in Monsoon Rain",
+        "Patagonian Wind-Swept Steppes and Jagged Peaks",
+        "Icelandic Glacial Hot Springs and Volcanic Geysers",
+        "Norwegian Lofoten Islands Aurora Borealis and Fjords",
+        "Serengeti Golden Savannah Sunset and Wildlife",
+        "Swiss Alps Lauterbrunnen Valley and Cascading Waterfalls",
+        "Kyoto Arashiyama Bamboo Grove and Gentle Rain Sanctuary",
+    ],
+    "nature_wildlife": [
+        "Himalayan Snow Leopard Stealth Stalking in Blizzard",
+        "Sundarbans Royal Bengal Tiger Night Patrol",
+        "Western Ghats Bioluminescent Canopy Ecosystem",
+        "Great Indian Desert Falcon Aerial Pursuit",
+        "Kaziranga Rhino Sanctuary Dawn Awakening",
+        "Amazon Rainforest Jaguar River Prowl",
+        "Great Barrier Reef Sea Turtle Sanctuary",
+    ],
     "telugu_comedy": [
         "IT Employee Secret Second Job Confusions",
         "Bangalore Landlord Apartment Interview Madness",
         "Fake Resume Tech Lead First Day Standup Panic",
         "WFH Employee Electricity Cut Wifi Hotspot Drama",
         "Gated Community WhatsApp Group War Confusions",
+    ],
+    "travel_tourism": [
+        "Top Tourist Spots in Hyderabad",
+        "Kyoto Historic Shrines and Bamboo Forest Walking Tour",
+        "Swiss Alpine Lauterbrunnen Waterfalls and Scenic Train",
+        "Santorini Cliffside Whitewashed Caldera Vista",
+        "Amalfi Coast Pastel Terraces and Mediterranean Sunset",
     ],
     "epic_action": [
         "Rebel Commander Fortress Breach at Midnight",
@@ -41,12 +69,11 @@ THEME_TOPIC_POOLS: dict[str, list[str]] = {
         "Monsoon Rain High-Energy Celebration Routine",
         "Midnight Neon Wedding Floor Grand Finale",
     ],
-    "nature_wildlife": [
-        "Himalayan Snow Leopard Stealth Stalking in Blizzard",
-        "Sundarbans Royal Bengal Tiger Night Patrol",
-        "Western Ghats Bioluminescent Canopy Ecosystem",
-        "Great Indian Desert Falcon Aerial Pursuit",
-        "Kaziranga Rhino Sanctuary Dawn Awakening",
+    "tech_scifi": [
+        "Neo Tokyo Cyberpunk Neon Rain and Flying Shuttles",
+        "Deep Ocean Quantum Fiber Cable Repair Sanctuary",
+        "Orbital Solar Array Maintenance in Zero Gravity",
+        "AI Autonomous Megacity Skylines at Twilight",
     ],
 }
 
@@ -56,7 +83,39 @@ class DailyThemeScheduler:
 
     async def get_fresh_original_topic(self, theme: str, show_slug: str = "default") -> str:
         """Find or synthesize a candidate topic guaranteed to have cosine similarity < 0.80."""
-        pool = THEME_TOPIC_POOLS.get(theme, THEME_TOPIC_POOLS["telugu_comedy"])
+        t_key = theme.lower().replace("-", "_").strip()
+        alias_map = {
+            "comedy": "telugu_comedy",
+            "action": "epic_action",
+            "dance": "bollywood_dance",
+            "wildlife": "nature_wildlife",
+            "travel": "travel_tourism",
+            "tourism": "travel_tourism",
+            "guide": "travel_tourism",
+            "scifi": "tech_scifi",
+            "sci_fi": "tech_scifi",
+            "tech": "tech_scifi",
+        }
+        mapped_key = alias_map.get(t_key, t_key)
+        pool = THEME_TOPIC_POOLS.get(mapped_key)
+        if not pool:
+            for k, p in THEME_TOPIC_POOLS.items():
+                if k in t_key or t_key in k:
+                    pool = p
+                    break
+
+        if not pool:
+            title_theme = theme.title()
+            pool = [
+                f"{title_theme} Expedition across Amazon Rainforest Canopy",
+                f"{title_theme} over Bora Bora Azure Ocean Lagoon",
+                f"{title_theme} along Seychelles White Granite Beaches",
+                f"{title_theme} through Cascading Waterfalls in Monsoon Rain",
+                f"{title_theme} across Patagonian Wind-Swept Steppes",
+                f"{title_theme} amid Icelandic Glaciers and Geysers",
+                f"{title_theme} under Norwegian Fjords Aurora Borealis",
+                f"{title_theme} at Swiss Alpine Lauterbrunnen Valley",
+            ]
 
         for candidate in pool:
             check = await check_topic_duplicate(candidate, metadata={"genre": theme, "show_slug": show_slug})
@@ -64,7 +123,6 @@ class DailyThemeScheduler:
                 logger.info(f"scheduler_fresh_topic_found: topic='{candidate}' similarity={check.get('max_similarity_score', 0)}")
                 return candidate
 
-        # If all pool ideas are near duplicates, append an original variant pivot
         pivot_topic = f"{pool[0]} - New Original Twist {uuid4().hex[:4]}"
         logger.info(f"scheduler_pivoted_topic: topic='{pivot_topic}'")
         return pivot_topic

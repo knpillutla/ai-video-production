@@ -102,6 +102,20 @@ function wizardConfirmAndProduce() {
 
   const newId = `EP-00${studioVideos.length + 1}`;
   const uniqueJobId = `job_${newId.toLowerCase()}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+  const voiceGenderSelect = document.getElementById("wizard-voice-gender-select");
+  const durationSelect = document.getElementById("wizard-duration-select");
+  const durationSec = durationSelect ? parseInt(durationSelect.value, 10) : 10;
+  const enableBgmToggle = document.getElementById("wizard-toggle-bgm");
+  const enableVoiceOverToggle = document.getElementById("wizard-toggle-voice-over");
+  const enableTtsToggle = document.getElementById("wizard-toggle-tts");
+  const enableLipsyncToggle = document.getElementById("wizard-toggle-lipsync");
+
+  const voiceGender = voiceGenderSelect?.value || "female";
+  const enableBgm = enableBgmToggle ? enableBgmToggle.checked : true;
+  const enableVoiceOver = enableVoiceOverToggle ? enableVoiceOverToggle.checked : true;
+  const enableTts = enableTtsToggle ? enableTtsToggle.checked : false;
+  const enableLipsync = enableLipsyncToggle ? enableLipsyncToggle.checked : false;
+
   const newVid = {
     id: newId,
     jobId: uniqueJobId,
@@ -111,6 +125,8 @@ function wizardConfirmAndProduce() {
     formatType: formatType,
     styleType: sty.includes("Pixar") ? "3D Animation" : (sty.includes("Anime") ? "Anime (Shonen)" : "Realistic (Photoreal)"),
     productionType: prodType,
+    durationSeconds: durationSec,
+    duration: `${durationSec}s`,
     status: "queued",
     youtubeStatus: "unpublished",
     youtubeChannel: null,
@@ -124,6 +140,11 @@ function wizardConfirmAndProduce() {
     tierName: tier.name + ` (${tier.priceStr})`,
     cost: tier.priceUsd,
     costStr: tier.priceStr,
+    voiceGender: voiceGender,
+    enableBgm: enableBgm,
+    enableVoiceOver: enableVoiceOver,
+    enableTts: enableTts,
+    enableLipsync: enableLipsync,
     createdAt: Date.now(),
     startedAt: null,
     completedAt: null,

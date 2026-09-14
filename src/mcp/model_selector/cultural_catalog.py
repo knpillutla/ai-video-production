@@ -220,10 +220,10 @@ CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
 }
 
 
-def lookup_cultural_stack(culture: str | None = None, language: str = "te") -> dict[str, Any]:
+def lookup_cultural_stack(culture: str | None = None, language: str = "en") -> dict[str, Any]:
     """Retrieve optimal AI model stack and cultural rationale for a culture and language."""
     key = (culture or "western_global").lower().replace("-", "_")
-    lang = (language or "en").lower().strip()
+    lang = (language or "en").lower().strip().replace("-", "_").split("_")[0]
     if "egypt" in key or "arab" in key or lang == "ar":
         return CULTURAL_MODEL_MATRIX["egyptian"]
     if "ital" in key or lang == "it":
@@ -246,13 +246,17 @@ def resolve_cultural_voice(culture: str | None = None, language: str = "en", gen
     cult_safe = culture or "western_global"
     stack = lookup_cultural_stack(culture=cult_safe, language=language)
     v_map = stack.get("voice_tts", {})
-    l_key = (language or "en").lower().strip()
+    raw_lang = (language or "en").lower().strip().replace("-", "_")
+    base_lang = raw_lang.split("_")[0]
     g_key = "male" if (gender or "female").lower() == "male" else "female"
 
-    if l_key in v_map and isinstance(v_map[l_key], dict):
-        return v_map[l_key].get(g_key, v_map[l_key].get("female", "en-US-JennyNeural"))
-    if l_key in v_map and isinstance(v_map[l_key], str):
-        return v_map[l_key]
+    for cand in (raw_lang, base_lang):
+        if cand in v_map:
+            val = v_map[cand]
+            if isinstance(val, dict):
+                return val.get(g_key, val.get("female", "en-US-JennyNeural"))
+            if isinstance(val, str):
+                return val
 
     # Fallbacks based on culture and gender
     if "egypt" in cult_safe or "arab" in cult_safe:

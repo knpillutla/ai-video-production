@@ -49,6 +49,18 @@ async def create_project(req: EpisodeCreate, current_user: User = Depends(get_cu
     manifest["topic_or_idea"] = req.topic_or_idea
     manifest["youtube_reference_url"] = req.youtube_reference_url
     await storage_service.save_json(ep_path / "project_manifest.json", manifest)
+
+    user_inputs = {
+        "user_id": str(current_user.id), "episode_id": str(saved_ep.id), "show_id": str(req.show_id),
+        "title": req.title, "duration_seconds": req.duration_seconds,
+        "format": str(req.format.value if hasattr(req.format, "value") else req.format),
+        "visual_style": str(req.visual_style.value if hasattr(req.visual_style, "value") else req.visual_style),
+        "theme": str(req.theme.value if hasattr(req.theme, "value") else req.theme),
+        "aspect_ratio": str(req.aspect_ratio.value if hasattr(req.aspect_ratio, "value") else req.aspect_ratio),
+        "topic_or_idea": req.topic_or_idea, "custom_script": req.custom_script,
+        "youtube_reference_url": req.youtube_reference_url, "options": req.options.model_dump(mode="json"),
+    }
+    await storage_service.save_json(ep_path / "user_inputs.json", user_inputs)
     return saved_ep
 
 

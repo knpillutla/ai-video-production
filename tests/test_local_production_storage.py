@@ -22,6 +22,13 @@ async def test_local_video_production_persists_to_storage():
             "production_type": "Theme",
             "tier": "low_cost",
             "duration_seconds": 4.0,
+            "enable_bgm": True,
+            "enable_voice_over": True,
+            "enable_tts": False,
+            "enable_lipsync": False,
+            "voice_gender": "female",
+            "language": "en",
+            "youtube_reference_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         }
 
         resp = await client.post("/api/production/local-produce", json=payload)
@@ -51,11 +58,23 @@ async def test_local_video_production_persists_to_storage():
         assert voice1.exists() and voice1.stat().st_size > 1000
         assert bgm.exists() and bgm.stat().st_size > 1000
 
-        # 4. Verify project manifest JSON
+        # 4. Verify user_inputs.json persistence on disk
+        user_inputs_file = ep_dir / "user_inputs.json"
+        assert user_inputs_file.exists(), "user_inputs.json must exist on disk in episode workspace"
+        import json
+        with open(user_inputs_file, "r", encoding="utf-8") as f:
+            inputs_data = json.load(f)
+        assert inputs_data["enable_bgm"] is True
+        assert inputs_data["enable_voice_over"] is True
+        assert inputs_data["voice_gender"] == "female"
+        assert inputs_data["youtube_url"] == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        assert any(a["name"] == "user_inputs.json" for a in data["artifacts"])
+
+        # 5. Verify project manifest JSON
         manifest = ep_dir / "project_manifest.json"
         assert manifest.exists() and manifest.stat().st_size > 100
 
-        # 5. Verify static file serving from /storage
+        # 6. Verify static file serving from /storage
         stream_resp = await client.get(data["video_url"])
         assert stream_resp.status_code == 200
         assert "video/mp4" in stream_resp.headers.get("content-type", "")

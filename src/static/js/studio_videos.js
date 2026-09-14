@@ -206,7 +206,17 @@ function startLocalVideoProductionJob(newVid) {
         format_type: newVid.formatType || "Long (16:9)",
         style_type: newVid.styleType || "Realistic (Photoreal)",
         youtube_url: newVid.youtubeReferenceUrl || null,
-        duration_seconds: 6.0
+        youtube_reference_url: newVid.youtubeReferenceUrl || null,
+        enable_bgm: newVid.enableBgm !== undefined ? newVid.enableBgm : true,
+        enable_voice_over: newVid.enableVoiceOver !== undefined ? newVid.enableVoiceOver : true,
+        enable_tts: newVid.enableTts !== undefined ? newVid.enableTts : null,
+        enable_lipsync: newVid.enableLipsync !== undefined ? newVid.enableLipsync : null,
+        voice_gender: newVid.voiceGender || "female",
+        language: newVid.langCode || (newVid.language && newVid.language.includes("Telugu") ? "te" : (newVid.language && newVid.language.includes("Hindi") ? "hi" : "en")),
+        theme: newVid.productionType === "Theme" ? newVid.concept : null,
+        idea: newVid.productionType === "Idea" ? newVid.concept : null,
+        script: newVid.productionType === "Script" ? newVid.concept : null,
+        duration_seconds: newVid.durationSeconds ? parseFloat(newVid.durationSeconds) : 10.0
       })
     })
       .then(res => { if (!res.ok) throw new Error("HTTP " + res.status); return res.json(); })

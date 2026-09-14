@@ -39,7 +39,16 @@ async def lifespan(app: FastAPI):
         u_id = UUID(payload["user_id"])
         ep_id = UUID(payload["episode_id"])
         dry_run = payload.get("dry_run", False)
-        await pipeline_coordinator.produce_episode_master(u_id, ep_id, dry_run=dry_run)
+        tier = payload.get("tier", "balanced")
+        enable_bgm = payload.get("enable_bgm")
+        enable_vo = payload.get("enable_voice_over", True)
+        enable_lipsync = payload.get("enable_lipsync")
+        gender = payload.get("voice_gender", "female")
+        await pipeline_coordinator.produce_episode_master(
+            u_id, ep_id, dry_run=dry_run, tier=tier,
+            enable_bgm=enable_bgm, enable_voice_over=enable_vo,
+            enable_lipsync=enable_lipsync, gender=gender,
+        )
 
     task_queue.register_handler("produce_video", video_worker)
     await task_queue.start_worker()

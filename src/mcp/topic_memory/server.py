@@ -8,8 +8,12 @@ from src.scripts.youtube_ingest import compute_text_cosine_similarity
 
 server = MCPServerBase(server_name="mcp-topic-memory", version="1.0.0")
 
-# Persistent in-memory & file-backed topic, metadata, and story vault
-_TOPIC_VAULT: List[Dict[str, Any]] = [
+import json
+from pathlib import Path
+
+VAULT_FILE = Path("storage/topic_memory_vault.json")
+
+_SEED_VAULT: List[Dict[str, Any]] = [
     {
         "topic": "IT Employee Remote Work Confusions and Standup Comedy",
         "show_slug": "delhi_wfh_confusions",
@@ -27,6 +31,42 @@ _TOPIC_VAULT: List[Dict[str, Any]] = [
         "created_at": "2026-09-11T12:00:00Z",
     },
 ]
+
+
+def _get_vault() -> List[Dict[str, Any]]:
+    """Retrieve in-memory and disk-persisted topic memory entries."""
+    entries = list(_SEED_VAULT)
+    if VAULT_FILE.is_file():
+        try:
+            data = json.loads(VAULT_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                seen = {e["topic"] for e in entries}
+                for item in data:
+                    if item.get("topic") not in seen:
+                        entries.append(item)
+                        seen.add(item["topic"])
+        except Exception:
+            pass
+    return entries
+
+
+def _persist_vault(record: Dict[str, Any]) -> None:
+    """Append a newly remembered topic to disk vault."""
+    try:
+        VAULT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        current = []
+        if VAULT_FILE.is_file():
+            try:
+                current = json.loads(VAULT_FILE.read_text(encoding="utf-8"))
+            except Exception:
+                current = []
+        current.append(record)
+        VAULT_FILE.write_text(json.dumps(current, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+_TOPIC_VAULT = _get_vault()
 
 
 def _format_metadata_str(meta: Optional[Dict[str, Any]]) -> str:
@@ -50,6 +90,8 @@ async def check_topic_duplicate(
     conflicting_entry: Optional[Dict[str, Any]] = None
     candidate_meta_str = _format_metadata_str(metadata)
 
+    global _TOPIC_VAULT
+    _TOPIC_VAULT = _get_vault()
     for entry in _TOPIC_VAULT:
         # 1. Topic cosine similarity (60% weight)
         topic_sim = compute_text_cosine_similarity(topic, entry["topic"])
@@ -120,6 +162,7 @@ async def remember_topic(
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     _TOPIC_VAULT.append(record)
+    _persist_vault(record)
     return {
         "status": "memorized",
         "total_topics_tracked": len(_TOPIC_VAULT),

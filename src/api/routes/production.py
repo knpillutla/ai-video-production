@@ -53,6 +53,11 @@ class ProductionConfirmationRequest(BaseModel):
 
     force_proceed: bool = False
     tier: str = "balanced"
+    enable_bgm: Optional[bool] = None
+    enable_tts: Optional[bool] = None
+    enable_voice_over: Optional[bool] = None
+    enable_lipsync: Optional[bool] = None
+    voice_gender: Optional[str] = None
 
 
 class ProductionConfirmationResponse(BaseModel):
@@ -91,58 +96,19 @@ async def estimate_production_cost(
 
     # Itemized cost computation based on duration and selected options
     duration_mins = max(1, episode.duration_seconds // 60)
-    stems_count = len(episode.options.target_languages) if episode.options.enable_tts else 0
+    has_speech = getattr(episode.options, "enable_tts", True) or getattr(episode.options, "enable_voice_over", True)
+    stems_count = len(episode.options.target_languages) if has_speech else 0
+    enable_bgm = getattr(episode.options, "enable_bgm", True)
+    enable_lipsync = getattr(episode.options, "enable_lipsync", False)
 
     items: list[CostItem] = [
-        CostItem(
-            component="Creative Script & Retention Loop",
-            provider="Gemini 1.5 Pro (Tier 2)",
-            units_measured="~14,000 tokens",
-            unit_cost_usd=0.00000125,
-            total_cost_usd=0.0200,
-        ),
-        CostItem(
-            component=f"Multilingual Neural Voiceovers ({stems_count} Stems)",
-            provider="Azure Speech HD (Neural)",
-            units_measured=f"~{duration_mins * 600} characters",
-            unit_cost_usd=0.000016,
-            total_cost_usd=round(0.0700 * max(1, stems_count), 4),
-        ),
-        CostItem(
-            component="4K Keyframe Visual Diffusion",
-            provider="Together AI (Flux.1 Schnell)",
-            units_measured=f"{duration_mins * 5} keyframe images",
-            unit_cost_usd=0.003,
-            total_cost_usd=round(duration_mins * 5 * 0.003, 4),
-        ),
-        CostItem(
-            component="Hero Action Motion Synthesis",
-            provider="Fal.ai (Minimax Video-01)",
-            units_measured="2 cinematic motion clips",
-            unit_cost_usd=0.15,
-            total_cost_usd=0.3000,
-        ),
-        CostItem(
-            component="Talking Avatar Lip-Sync",
-            provider="Fal.ai (LivePortrait)",
-            units_measured="45 seconds active speech",
-            unit_cost_usd=0.012,
-            total_cost_usd=0.5400,
-        ),
-        CostItem(
-            component="Original Commercial Soundtrack",
-            provider="Suno v3.5 Pro API",
-            units_measured="1 full master track",
-            unit_cost_usd=0.08,
-            total_cost_usd=0.0800,
-        ),
-        CostItem(
-            component="Python Single-Pass FFmpeg Compositor",
-            provider="Azure ACA / Cloud Run (0-GPU CPU)",
-            units_measured="~210 seconds render time",
-            unit_cost_usd=0.00028,
-            total_cost_usd=0.0600,
-        ),
+        CostItem(component="Creative Script & Retention Loop", provider="Gemini 1.5 Pro (Tier 2)", units_measured="~14,000 tokens", unit_cost_usd=0.00000125, total_cost_usd=0.0200),
+        CostItem(component=f"Multilingual Neural Voiceovers ({stems_count} Stems)", provider="Azure Speech HD (Neural)", units_measured=f"~{duration_mins * 600} characters", unit_cost_usd=0.000016, total_cost_usd=round(0.0700 * max(1, stems_count), 4) if has_speech else 0.0),
+        CostItem(component="4K Keyframe Visual Diffusion", provider="Together AI (Flux.1 Schnell)", units_measured=f"{duration_mins * 5} keyframe images", unit_cost_usd=0.003, total_cost_usd=round(duration_mins * 5 * 0.003, 4)),
+        CostItem(component="Hero Action Motion Synthesis", provider="Fal.ai (Minimax Video-01)", units_measured="2 cinematic motion clips", unit_cost_usd=0.15, total_cost_usd=0.3000),
+        CostItem(component="Talking Avatar Lip-Sync", provider="Fal.ai (LivePortrait)", units_measured="45 seconds active speech", unit_cost_usd=0.012, total_cost_usd=0.5400 if enable_lipsync else 0.0),
+        CostItem(component="Original Commercial Soundtrack", provider="Suno v3.5 Pro API", units_measured="1 full master track", unit_cost_usd=0.08, total_cost_usd=0.0800 if enable_bgm else 0.0),
+        CostItem(component="Python Single-Pass FFmpeg Compositor", provider="Azure ACA / Cloud Run (0-GPU CPU)", units_measured="~210 seconds render time", unit_cost_usd=0.00028, total_cost_usd=0.0600),
     ]
 
     total_cost = round(sum(it.total_cost_usd for it in items), 4)
@@ -245,12 +211,22 @@ async def confirm_production(
 
     episode.status = "queued"
     episode.selected_tier = chosen_tier
-    episode.actual_spend_usd = deducted
-    repo.save_episode(episode)
+    if payload:
+        if payload.enable_bgm is not None: episode.options.enable_bgm = payload.enable_bgm
+        if payload.enable_tts is not None: episode.options.enable_tts = payload.enable_tts
+        if payload.enable_voice_over is not None: episode.options.enable_voice_over = payload.enable_voice_over
+        if payload.enable_lipsync is not None: episode.options.enable_lipsync = payload.enable_lipsync
+        if payload.voice_gender: episode.options.voice_gender = payload.voice_gender
 
     task = await task_queue.enqueue(
         "produce_video",
-        {"user_id": str(current_user.id), "episode_id": str(episode.id), "tier": chosen_tier},
+        {
+            "user_id": str(current_user.id), "episode_id": str(episode.id), "tier": chosen_tier,
+            "enable_bgm": episode.options.enable_bgm, "enable_tts": episode.options.enable_tts,
+            "enable_voice_over": getattr(episode.options, "enable_voice_over", True),
+            "enable_lipsync": getattr(episode.options, "enable_lipsync", False),
+            "voice_gender": getattr(episode.options, "voice_gender", "female"),
+        },
     )
 
     return ProductionConfirmationResponse(

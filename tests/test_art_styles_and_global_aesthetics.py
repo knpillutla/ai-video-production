@@ -33,6 +33,8 @@ def test_art_style_catalog_definitions():
         "mexican_muralism_magical_realism",
         "nordic_noir_minimalism",
         "indian_mughal_miniature",
+        "indian_vibrant_4k",
+        "modern_architectural_minimalism",
         "retro_80s_synthwave",
         "photorealistic_cinematic",
     ]
@@ -149,10 +151,11 @@ async def test_scenic_pipeline_offline_production():
     show = Show(user_id=user.id, title="Swiss Alpine Escapes", slug="swiss_escapes", genre="scenic")
     repo.save_show(show)
 
+    unique_title = f"Murren Alpine Pathway Tour {uuid4().hex[:6]}"
     ep = Episode(
         user_id=user.id,
         show_id=show.id,
-        title="Lauterbrunnen Rainy Village Walk",
+        title=unique_title,
         episode_number=1,
         duration_seconds=15,
         format=MediaFormat.WALKING_TOUR,
@@ -172,3 +175,38 @@ async def test_scenic_pipeline_offline_production():
     updated_ep = repo.get_episode(user.id, ep.id)
     assert updated_ep.status == "completed"
     assert updated_ep.master_video_path
+
+
+def test_reference_video_attributes_extraction():
+    """Verify extracting format, style, type, aesthetics, art styling, architecture and sound from reference."""
+    from src.scripts.youtube_ingest import extract_reference_video_attributes
+
+    # 1. India in 4K YouTube reference
+    attrs = extract_reference_video_attributes(
+        url="https://www.youtube.com/watch?v=-BLxlHRYpac",
+        title="India in 4K",
+        text="A visual journey across incredible monuments, drone aerials and palaces",
+    )
+    assert attrs.art_style == "indian_vibrant_4k"
+    assert "Indian 4K" in attrs.art_style_display
+    assert attrs.format_type == "Long (16:9)"
+    assert attrs.video_type == "Travel Guide & Doc"
+    assert "Mughal" in attrs.architecture_style or "Rajput" in attrs.architecture_style or "temple" in attrs.architecture_style
+    assert "golden-hour" in attrs.lighting_scheme.lower() or "sunlight" in attrs.lighting_scheme.lower()
+    assert "saffron" in attrs.color_palette.lower()
+    assert "drone" in attrs.camera_language.lower()
+    assert "sitar" in attrs.soundtrack_style.lower()
+    assert attrs.enable_bgm is True
+    assert len(attrs.color_palette_rgb) >= 3
+
+    # 2. Modern Architecture & Megacity reference
+    arch_attrs = extract_reference_video_attributes(
+        title="Tokyo Metropolis & Modern Architecture",
+        text="Contemporary glass skyscrapers and brutalist concrete structures",
+    )
+    assert arch_attrs.art_style == "modern_architectural_minimalism"
+    assert "Modern Architectural" in arch_attrs.art_style_display
+    assert "glass" in arch_attrs.architecture_style.lower() or "steel" in arch_attrs.architecture_style.lower()
+    assert "blue-hour" in arch_attrs.lighting_scheme.lower() or "twilight" in arch_attrs.lighting_scheme.lower()
+    assert "minimalist" in arch_attrs.soundtrack_style.lower() or "electronic" in arch_attrs.soundtrack_style.lower()
+

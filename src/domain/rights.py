@@ -14,6 +14,7 @@ class AssetType(str, Enum):
     VOICE = "voice"
     MUSIC = "music"
     VIDEO_CLIP = "video_clip"
+    VIDEO_MOTION = "video_motion"
     AVATAR = "avatar"
     SFX = "sfx"
 

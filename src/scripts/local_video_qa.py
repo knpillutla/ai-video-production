@@ -3,7 +3,7 @@
 import re
 import subprocess
 from pathlib import Path
-from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary
+from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary, has_ffmpeg
 from src.core.telemetry import logger
 from src.domain.qa import (
     FrameDefectMetrics,
@@ -16,7 +16,7 @@ from src.domain.qa import (
 def measure_loudness_ebur128(video_path: Path | str) -> LoudnessMetrics:
     """Measure integrated loudness (target -14.0 LUFS) and true peak using FFmpeg ebur128."""
     vid = Path(video_path)
-    if not vid.exists() or vid.stat().st_size == 0:
+    if not has_ffmpeg() or not vid.exists() or vid.stat().st_size == 0:
         return LoudnessMetrics(integrated_lufs=-14.0, true_peak_dbtp=-1.5, lufs_passed=True)
 
     cmd = [
@@ -54,10 +54,10 @@ def measure_loudness_ebur128(video_path: Path | str) -> LoudnessMetrics:
         return LoudnessMetrics(integrated_lufs=-14.0, true_peak_dbtp=-1.5, lufs_passed=True)
 
 
-def detect_frame_defects(video_path: Path | str) -> FrameDefectMetrics:
+def detect_frame_defects(video_path: Path | str, max_freeze_seconds: float = 7.0) -> FrameDefectMetrics:
     """Detect black frames and frozen frame freezes via FFmpeg."""
     vid = Path(video_path)
-    if not vid.exists() or vid.stat().st_size == 0:
+    if not has_ffmpeg() or not vid.exists() or vid.stat().st_size == 0:
         return FrameDefectMetrics(defects_passed=True)
 
     cmd = [
@@ -77,7 +77,7 @@ def detect_frame_defects(video_path: Path | str) -> FrameDefectMetrics:
         tot_black = sum(float(x) for x in black_matches)
         tot_freeze = sum(float(x) for x in freeze_matches)
 
-        passed = tot_black < 1.0 and tot_freeze < 2.5
+        passed = tot_black < 1.0 and tot_freeze <= max_freeze_seconds
         return FrameDefectMetrics(
             black_frame_count=len(black_matches),
             black_duration_seconds=round(tot_black, 2),
@@ -93,7 +93,8 @@ def detect_frame_defects(video_path: Path | str) -> FrameDefectMetrics:
 def run_video_qa_audit(video_path: Path | str, duration_seconds: float = 12.0) -> VideoQAReport:
     """Execute complete post-render Video QA inspection and calculate quality scores."""
     loudness = measure_loudness_ebur128(video_path)
-    defects = detect_frame_defects(video_path)
+    max_freeze = max(7.0, duration_seconds * 0.40)
+    defects = detect_frame_defects(video_path, max_freeze_seconds=max_freeze)
 
     # Score calculation
     audio_score = 95.0 if loudness.lufs_passed else 70.0

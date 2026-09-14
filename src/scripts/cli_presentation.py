@@ -19,6 +19,13 @@ def print_cli_header(
     dry_run: bool,
     culture_context: Any | None = None,
     char_name: str | None = None,
+    theme: str | None = None,
+    idea: str | None = None,
+    script_preview: str | None = None,
+    voice_over: bool = True,
+    voice_gender: str = "female",
+    bgm: bool = False,
+    lipsync: bool = False,
 ) -> None:
     """Print standard CineAI Studio CLI production banner."""
     print("=" * 72)
@@ -27,6 +34,12 @@ def print_cli_header(
     print(f" - Title:             {title}")
     print(f" - Content Format:    {fmt_str.upper()}")
     print(f" - Genre:             {genre}")
+    if theme:
+        print(f" - Narrative Theme:   {theme}")
+    if idea:
+        print(f" - Story Concept:     {idea}")
+    if script_preview:
+        print(f" - Screenplay Script: {script_preview}")
     print(f" - Target Duration:   {duration}s")
     print(f" - Spoken Language:   {language}")
     print(f" - Burned Subtitles:  {active_sub} (Default English)")
@@ -38,8 +51,16 @@ def print_cli_header(
             if getattr(culture_context, "art_style_palette", ""):
                 print(f" - Color Palette:     {culture_context.art_style_palette}")
         print(f" - Costume / Outfit:  {culture_context.clothing_style}")
-        print(f" - Voiceover Neural:  {culture_context.voice_id} ({culture_context.voice_provider})")
-        print(f" - Music Soundtrack:  {culture_context.music_style}")
+        if voice_over:
+            voice_type = "Conversational Talking Avatar" if lipsync else "Narration Voiceover"
+            print(f" - Voice Neural ({voice_type}): {culture_context.voice_id} [{voice_gender.upper()}]")
+        else:
+            print(f" - Voice Neural:      Disabled (No Speech Audio)")
+        if bgm:
+            bgm_desc = culture_context.music_style if voice_over else "Gentle rain drops, distant thunder, and relaxing ambient nature sounds"
+            print(f" - Music Soundtrack:  {bgm_desc}")
+        else:
+            print(f" - Music Soundtrack:  Disabled (No Background Music)")
         if culture_context.recommended_loras:
             lora_names = [l.get("name") or l.get("path") for l in culture_context.recommended_loras]
             print(f" - Active LoRAs:      {', '.join(str(n) for n in lora_names if n)}")

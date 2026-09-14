@@ -138,6 +138,42 @@ class ClassifierAgent:
             explanation=explanation,
         )
 
+    def infer_audio_modalities(
+        self,
+        theme: str | None = None,
+        idea: str | None = None,
+        script: str | None = None,
+        media_format: MediaFormat | str | None = None,
+    ) -> tuple[bool, bool]:
+        """Deterministically infer whether content needs conversational TTS and talking avatar LipSync."""
+        combined = f"{theme or ''} {idea or ''}".lower()
+        fmt_str = str(getattr(media_format, "value", media_format) or "").lower()
+
+        # 1. Script Inspection: dialogue tags or quoted character lines
+        if script and len(script.strip()) > 0:
+            import re
+            has_dialogue_tags = bool(re.search(r"^[A-Za-z0-9_ ]+:\s*.+", script, re.MULTILINE))
+            has_quoted_speech = bool(re.search(r"[\"'].+?[\"']", script))
+            if has_dialogue_tags or has_quoted_speech:
+                return True, True
+
+        # 2. Format-Based Inference: character-driven vs ambient relaxation
+        if any(f in fmt_str for f in ("web_series", "sitcom", "movie", "dialogue", "skit", "interview", "podcast")):
+            return True, True
+        if any(f in fmt_str for f in ("scenic_relaxation", "walking_tour", "scenic_drive", "ambient_lounge", "nature_sanctuary")):
+            return False, False
+
+        # 3. Theme & Idea Cue Detection
+        conversational_cues = ("comedy", "confusions", "dialogue", "argument", "conversation", "debate", "office", "wfh", "chat", "discuss")
+        if any(cue in combined for cue in conversational_cues):
+            return True, True
+
+        ambient_cues = ("nature", "rain", "monsoon", "waterfall", "relaxation", "ambient", "forest", "beach", "ocean", "meditation")
+        if any(cue in combined for cue in ambient_cues):
+            return False, False
+
+        return False, False
+
 
 classifier_agent = ClassifierAgent()
 __all__ = ["ClassifierAgent", "classifier_agent"]

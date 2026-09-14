@@ -74,6 +74,9 @@ class EpisodeBase(BaseModel):
     visual_style: VisualStyle = VisualStyle.REALISTIC
     theme: ThemeGenre = ThemeGenre.AUTO
     aspect_ratio: AspectRatio = AspectRatio.LANDSCAPE_16_9
+    topic_or_idea: str = ""
+    custom_script: str | None = None
+    youtube_reference_url: str | None = None
     options: GenerationOptions = Field(default_factory=GenerationOptions)
 
 
@@ -81,8 +84,6 @@ class EpisodeCreate(EpisodeBase):
     """Payload to initiate a new episode under a show."""
 
     show_id: UUID
-    topic_or_idea: str = ""
-    youtube_reference_url: str | None = None
     format: MediaFormat = MediaFormat.AUTO
     visual_style: VisualStyle = VisualStyle.AUTO
     theme: ThemeGenre = ThemeGenre.AUTO

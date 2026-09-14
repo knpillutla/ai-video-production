@@ -37,6 +37,12 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
             "User-Agent": "CineAIStudio/2.0",
         }
 
+        # Auto-align voice if text contains Telugu script and an English voice was passed
+        has_telugu = any("\u0c00" <= ch <= "\u0c7f" for ch in text)
+        if has_telugu and voice_id.startswith("en-"):
+            voice_id = "te-IN-ShrutiNeural"
+            language_code = "te-IN"
+
         # Construct SSML with standard broadcast rate & pitch
         ssml = (
             f"<speak version='1.0' xml:lang='{language_code}'>"
@@ -105,21 +111,27 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
             out.write_bytes(audio_bytes)
             return out
 
+        # Auto-align voice if text contains Telugu script and an English voice was passed
+        has_telugu = any("\u0c00" <= ch <= "\u0c7f" for ch in text)
+        if has_telugu and voice_id.startswith("en-"):
+            voice_id = "te-IN-ShrutiNeural"
+
         if not self.api_key:
             try:
                 import edge_tts
                 import subprocess
                 import tempfile
-                from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary
+                from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary, has_ffmpeg
 
                 comm = edge_tts.Communicate(text, voice=voice_id)
                 with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp_mp3:
                     tmp_name = tmp_mp3.name
                 await comm.save(tmp_name)
 
-                # Convert to standard 48kHz mono 16-bit PCM WAV
-                conv_cmd = [get_ffmpeg_binary(), "-y", "-i", tmp_name, "-ar", "48000", "-ac", "1", str(out)]
-                subprocess.run(conv_cmd, capture_output=True, timeout=15)
+                # Convert to standard 48kHz mono 16-bit PCM WAV if FFmpeg is available
+                if has_ffmpeg():
+                    conv_cmd = [get_ffmpeg_binary(), "-y", "-i", tmp_name, "-ar", "48000", "-ac", "1", str(out)]
+                    subprocess.run(conv_cmd, capture_output=True, timeout=15)
                 try:
                     Path(tmp_name).unlink(missing_ok=True)
                 except Exception:

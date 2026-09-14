@@ -61,12 +61,41 @@ class SunoMusicAdapter(MusicProviderProtocol):
         out.parent.mkdir(parents=True, exist_ok=True)
 
         total_samples = int(sample_rate * duration_seconds)
+        is_nature_rain = any(
+            k in genre.lower()
+            for k in ("rain", "drop", "nature", "stream", "forest", "ambient", "thunder", "water")
+        )
 
-        # Generate lively comedy rhythmic acoustic motif (plucked marimba / pizzicato feel)
         with wave.open(str(out), "wb") as wav_file:
             wav_file.setnchannels(2)  # Stereo
             wav_file.setsampwidth(2)  # 16-bit
             wav_file.setframerate(sample_rate)
+
+            if is_nature_rain:
+                try:
+                    import numpy as np
+
+                    t = np.linspace(0, duration_seconds, total_samples, endpoint=False)
+                    nature_bed = (
+                        0.28 * np.sin(2 * np.pi * 65 * t)
+                        + 0.16 * np.sin(2 * np.pi * 130 * t)
+                        + 0.12 * np.sin(2 * np.pi * 432 * t) * (0.6 + 0.4 * np.sin(2 * np.pi * 0.2 * t))
+                    )
+                    interval = sample_rate // 14
+                    pitches = np.array([1650.0, 2200.0, 1850.0, 2800.0, 1420.0, 2450.0, 1980.0, 3100.0])
+                    indices = np.arange(total_samples)
+                    offset = (indices % interval) / sample_rate
+                    drop_step = (indices // interval) % len(pitches)
+                    drop_freq = pitches[drop_step]
+                    drop_decay = np.exp(-60.0 * offset)
+                    drop_val = drop_decay * np.sin(2 * np.pi * drop_freq * offset)
+
+                    sig_l = np.clip((5000 * (nature_bed * 0.45 + drop_val * 0.55) * 0.85), -32767, 32767).astype(np.int16)
+                    sig_r = np.clip((5000 * (nature_bed * 0.45 + drop_val * 0.55) * 0.65), -32767, 32767).astype(np.int16)
+                    wav_file.writeframes(np.column_stack((sig_l, sig_r)).tobytes())
+                    return out
+                except Exception as ex:
+                    logger.warning(f"numpy_nature_audio_fallback: {ex}")
 
             # Pentatonic comedy bounce notes (C4, D4, E4, G4, A4, C5)
             pitches = [261.63, 329.63, 392.00, 523.25, 440.00, 329.63]
