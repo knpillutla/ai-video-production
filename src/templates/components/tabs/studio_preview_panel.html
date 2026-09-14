@@ -1,0 +1,110 @@
+<!-- RIGHT PREVIEW PANEL: Master Video Player & Real-time Inspector -->
+<aside id="studio-preview-panel" class="w-full xl:w-[420px] 2xl:w-[480px] shrink-0 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-xl flex flex-col gap-4 transition-all duration-300">
+  <!-- Panel Header & Fullscreen Toggle -->
+  <div class="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-3">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse shrink-0"></span>
+      <h3 class="font-black text-white text-sm truncate" id="panel-header-title">Preview &amp; Inspector</h3>
+    </div>
+    <div class="flex items-center gap-1.5 shrink-0">
+      <!-- Fullscreen Toggle for the Right Panel -->
+      <button onclick="toggleRightPanelFullscreen()" id="btn-expand-right-panel" class="p-1.5 px-2.5 bg-slate-800 hover:bg-slate-700 border border-[var(--border)] text-gray-300 hover:text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-sm" title="Toggle Panel Fullscreen">
+        <i id="panel-expand-icon" class="fa-solid fa-expand text-indigo-400"></i>
+        <span id="panel-expand-text" class="text-[11px]">Expand Panel</span>
+      </button>
+      <button onclick="toggleRightPanelVisibility()" id="btn-close-right-panel" class="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-slate-800 transition" title="Hide Panel">
+        <i class="fa-solid fa-xmark text-xs"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Master Video Player Box -->
+  <div class="relative bg-slate-950 rounded-xl overflow-hidden border border-slate-800/80 shadow-inner group">
+    <!-- Playable HTML5 Video -->
+    <video id="studio-panel-video" controls playsinline preload="metadata" class="w-full aspect-video bg-black object-contain block">
+      <source src="/static/videos/preview_master.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+
+    <!-- Processing State Overlay (shown if video is processing or queued) -->
+    <div id="studio-panel-processing-overlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center space-y-3">
+      <div class="w-12 h-12 rounded-full border-4 border-indigo-500/30 border-t-indigo-500 animate-spin flex items-center justify-center">
+        <i class="fa-solid fa-wand-magic-sparkles text-indigo-400 text-sm animate-pulse"></i>
+      </div>
+      <div>
+        <div id="studio-panel-processing-title" class="font-bold text-white text-xs">AI Video Pipeline Active</div>
+        <div id="studio-panel-processing-subtitle" class="text-[11px] text-indigo-300">Synthesizing audio stems &amp; rendering 1080p master...</div>
+      </div>
+      <div class="w-48 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full w-2/3 animate-pulse"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player Controls & Expand Video Button -->
+  <div class="flex items-center justify-between gap-2 px-1">
+    <div class="flex items-center gap-2">
+      <button onclick="togglePanelVideoPlay()" id="btn-panel-play-video" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition">
+        <i id="panel-play-icon" class="fa-solid fa-play text-[10px]"></i>
+        <span id="panel-play-text">Play</span>
+      </button>
+      <span id="panel-video-duration" class="font-mono text-[10px] text-gray-400">1080p • 60 FPS</span>
+    </div>
+    <!-- Expand Video to Full Screen Button -->
+    <button onclick="expandVideoFullscreen()" id="btn-expand-video-fullscreen" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-[var(--border)] text-indigo-300 hover:text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-sm" title="Expand Video to Full Screen">
+      <i class="fa-solid fa-maximize text-xs text-indigo-400"></i>
+      <span>Expand Video</span>
+    </button>
+  </div>
+
+  <!-- Video Metadata & Badges Card -->
+  <div class="bg-slate-900/70 border border-[var(--border)] rounded-xl p-3.5 space-y-2.5 text-xs">
+    <div class="flex items-start justify-between gap-2">
+      <div class="min-w-0">
+        <h4 id="panel-video-title" class="font-bold text-white text-xs leading-snug truncate">Delhi Techie Moonlighting Confusions</h4>
+        <div id="panel-video-concept" class="text-[10px] text-gray-400 line-clamp-2 mt-0.5">Satirical comedy of an IT engineer juggling two remote jobs.</div>
+      </div>
+      <span id="panel-video-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">COMPLETED</span>
+    </div>
+
+    <!-- Metadata Pills Grid -->
+    <div class="grid grid-cols-2 gap-1.5 pt-1 text-[10px]">
+      <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
+        <span class="text-gray-500 block">Unique Job ID</span>
+        <span id="panel-meta-jobid" class="font-mono font-semibold text-indigo-300 truncate block">job_ep003_c4b8e28f</span>
+      </div>
+      <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
+        <span class="text-gray-500 block">Video Type</span>
+        <span id="panel-meta-videotype" class="font-semibold text-blue-300 truncate block">Web Series</span>
+      </div>
+      <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
+        <span class="text-gray-500 block">Format &amp; Style</span>
+        <span id="panel-meta-format-style" class="font-semibold text-cyan-300 truncate block">Long (16:9) • Realistic</span>
+      </div>
+      <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
+        <span class="text-gray-500 block">Production Tier &amp; Cost</span>
+        <span id="panel-meta-tier-cost" class="font-mono font-bold text-emerald-400 truncate block">Cinematic • $0.2850</span>
+      </div>
+    </div>
+
+    <!-- Timestamps Ledger -->
+    <div class="border-t border-slate-800/80 pt-2 space-y-1 font-mono text-[10px]">
+      <div class="flex justify-between text-gray-400"><span>Created:</span> <span id="panel-ts-created" class="text-gray-300">—</span></div>
+      <div class="flex justify-between text-gray-400"><span>Processing Start:</span> <span id="panel-ts-started" class="text-gray-300">—</span></div>
+      <div class="flex justify-between text-gray-400"><span>Completed:</span> <span id="panel-ts-completed" class="text-emerald-400">—</span></div>
+      <div class="flex justify-between text-gray-400"><span>Published YouTube:</span> <span id="panel-ts-published" class="text-red-400">—</span></div>
+    </div>
+  </div>
+
+  <!-- Bottom Actions -->
+  <div class="flex items-center gap-2 pt-1">
+    <button id="panel-btn-artifacts" onclick="viewEpisodeArtifacts(selectedLedgerVideoId)" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 border border-[var(--border)] text-purple-300 hover:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
+      <i class="fa-solid fa-box-archive text-xs"></i>
+      <span>Inspect Artifacts</span>
+    </button>
+    <button id="panel-btn-youtube" onclick="publishSelectedPanelVideo()" class="flex-1 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow">
+      <i class="fa-brands fa-youtube text-xs"></i>
+      <span id="panel-btn-youtube-text">1-Click Publish</span>
+    </button>
+  </div>
+</aside>

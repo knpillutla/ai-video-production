@@ -1,0 +1,70 @@
+<!-- RUNWAY-INSPIRED NAVIGATION SIDEBAR -->
+<aside class="w-56 bg-[#0a0f1c] border-r border-[var(--border)] flex flex-col justify-between shrink-0 select-none">
+  <div class="p-3 space-y-3">
+    <!-- Blue + New Session / Video Button (Runway Exact Style) -->
+    <button onclick="openCreateVideoWizardModal()" class="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/30 flex items-center justify-between transition active:scale-98">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-plus text-xs"></i>
+        <span>New Video</span>
+      </div>
+      <i class="fa-solid fa-chevron-down text-[10px] opacity-70"></i>
+    </button>
+
+    <!-- Nav Links (Matching Runway Menu) -->
+    <div class="space-y-1">
+      <div class="px-3 py-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Navigation</div>
+
+      <button onclick="switchTab('studio')" id="tab-btn-studio" class="w-full flex items-center gap-3 px-3 py-2 text-white bg-indigo-600/20 border-r-2 border-indigo-500 font-medium transition text-left rounded-lg text-xs">
+        <i class="fa-solid fa-wand-magic-sparkles text-indigo-400 w-4 text-center"></i>
+        <span>Create Video</span>
+      </button>
+
+      <button onclick="switchTab('ledger')" id="tab-btn-ledger" class="w-full flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-lg text-xs">
+        <i class="fa-solid fa-list-check text-cyan-400 w-4 text-center"></i>
+        <span>Video Ledger</span>
+      </button>
+
+      <button onclick="switchTab('apps')" id="tab-btn-apps" class="w-full flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-lg text-xs">
+        <i class="fa-solid fa-shapes text-purple-400 w-4 text-center"></i>
+        <span>Apps & Tools</span>
+      </button>
+
+      <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="w-full flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-lg text-xs">
+        <i class="fa-solid fa-chart-pie text-cyan-400 w-4 text-center"></i>
+        <span>Dashboard</span>
+      </button>
+
+      <button onclick="switchTab('channels')" id="tab-btn-channels" class="w-full flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-lg text-xs">
+        <i class="fa-brands fa-youtube text-red-500 w-4 text-center"></i>
+        <span>YouTube Channels</span>
+      </button>
+
+      <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="w-full flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-lg text-xs">
+        <i class="fa-solid fa-coins text-amber-400 w-4 text-center"></i>
+        <span>Financials</span>
+      </button>
+    </div>
+
+    <!-- Production Tier Selector in Sidebar (Required by test) -->
+    <div class="p-2.5 bg-slate-900/80 border border-[var(--border)] rounded-xl space-y-1.5">
+      <div class="flex items-center justify-between text-[10px] text-gray-400 font-bold uppercase">
+        <span>Production Tier</span>
+        <span id="sidebar-tier-price-pill" class="text-indigo-400 font-mono font-bold">$0.14 USD</span>
+      </div>
+      <select id="studio-tier-select" onchange="onStudioTierChange(this.value)" class="w-full bg-slate-950 border border-[var(--border)] text-gray-200 text-xs rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-indigo-500">
+        <option value="low_cost">Low Cost ($0.02)</option>
+        <option value="balanced" selected>Balanced ($0.14)</option>
+        <option value="cinematic">Cinematic ($0.45)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- User Storage Info & Settings -->
+  <div class="p-3 border-t border-[var(--border)] space-y-2">
+    <div class="text-[10px] text-gray-400 font-mono">Container: <span id="user-container-display" class="text-indigo-300">user-c4b8e28f</span></div>
+    <button onclick="openModal('settings-modal')" class="w-full px-3 py-2 bg-slate-800/60 hover:bg-slate-700 text-gray-300 hover:text-white rounded-lg text-xs transition flex items-center gap-2">
+      <i class="fa-solid fa-sliders text-indigo-400"></i>
+      <span>Settings & Prefs</span>
+    </button>
+  </div>
+</aside>

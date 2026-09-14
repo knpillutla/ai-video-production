@@ -1,0 +1,39 @@
+<!-- SETTINGS MODAL: User Preferences & Theme -->
+<div id="settings-modal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl">
+    <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+      <h3 class="font-black text-white text-base flex items-center gap-2">
+        <i class="fa-solid fa-sliders text-indigo-400"></i>
+        <span>User Settings & Preferences</span>
+      </h3>
+      <button onclick="closeModal('settings-modal')" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <form onsubmit="saveUserSettings(event)" class="space-y-4">
+      <div>
+        <label class="block text-gray-400 text-xs font-semibold mb-1">Display Name</label>
+        <input type="text" id="settings-display-name" class="w-full px-3 py-2 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-xs">
+      </div>
+
+      <div>
+        <label class="block text-gray-400 text-xs font-semibold mb-1">Preferred UI Theme</label>
+        <select id="settings-theme-select" class="w-full px-3 py-2 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-xs">
+          <option value="dark">Dark Studio (Default)</option>
+          <option value="light">Pure White (Light)</option>
+          <option value="cyberpunk">Cyberpunk Neon</option>
+          <option value="amoled">Obsidian AMOLED</option>
+        </select>
+      </div>
+
+      <div class="p-3 bg-slate-900/60 border border-[var(--border)] rounded-xl text-xs space-y-1">
+        <div class="font-bold text-white">Private Storage Container</div>
+        <div class="text-indigo-400 font-mono text-[11px]">user-c4b8e28f (Isolated)</div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeModal('settings-modal')" class="px-4 py-2 bg-slate-800 text-gray-300 rounded-lg text-xs">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>

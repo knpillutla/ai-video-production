@@ -1,0 +1,16 @@
+<!-- Modal 9: Professional Studio Guidance Modal -->
+<div id="studio-popup-modal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+  <div class="bg-[var(--card)] border border-indigo-500/40 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl text-center">
+    <div class="w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 mx-auto flex items-center justify-center text-xl">
+      <i class="fa-solid fa-circle-info"></i>
+    </div>
+    <h3 id="popup-title" class="text-lg font-black text-white">Notice</h3>
+    <p id="popup-message" class="text-xs text-gray-300 leading-relaxed whitespace-pre-line"></p>
+    <div id="popup-next-step-box" class="p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-xl text-xs text-indigo-200 text-left hidden"></div>
+    <div class="pt-2 flex justify-center gap-3">
+      <button id="popup-confirm-btn" onclick="onStudioModalConfirm()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-lg">
+        Got It
+      </button>
+    </div>
+  </div>
+</div>

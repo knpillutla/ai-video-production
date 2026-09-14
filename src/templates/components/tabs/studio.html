@@ -1,0 +1,152 @@
+<!-- TAB: CREATE VIDEO (Runway-Inspired Focused Video Creation Screen) -->
+<div id="tab-studio" class="space-y-6">
+  <!-- RUNWAY HERO: "What do you want to create?" -->
+  <div class="bg-gradient-to-b from-[#111828]/90 to-[#0c1220] border border-[var(--border)] rounded-2xl p-6 shadow-xl space-y-4">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-black text-white tracking-tight">What do you want to create?</h1>
+        <p class="text-xs text-gray-400">Autonomous AI video engine powered by multi-tier models, Telugu/Hindi transcreation &amp; YouTube syndication.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="switchTab('ledger')" class="px-3.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 border border-[var(--border)] text-indigo-300 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm" title="View Video Production Ledger">
+          <i class="fa-solid fa-list-check text-xs"></i>
+          <span>View Video Ledger</span>
+        </button>
+        <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          Pipeline Ready
+        </span>
+      </div>
+    </div>
+
+    <!-- Central Runway Prompt Card -->
+    <div class="bg-slate-900/90 border border-indigo-500/30 rounded-2xl p-5 shadow-2xl space-y-4">
+      <!-- Creation Mode Selector: Theme (Default), Idea, Script -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="inline-flex items-center p-1 bg-slate-950/80 border border-slate-800 rounded-xl gap-1">
+          <button type="button" onclick="setCreationMode('theme', true)" id="mode-pill-theme" class="px-3.5 py-1 text-xs font-bold rounded-lg transition bg-indigo-600 text-white shadow flex items-center gap-1.5" title="Explore topics, documentary themes, and world subjects">
+            <i class="fa-solid fa-compass text-[11px] text-emerald-400"></i>
+            <span>Theme</span>
+          </button>
+          <button type="button" onclick="setCreationMode('idea', true)" id="mode-pill-idea" class="px-3.5 py-1 text-xs font-medium text-gray-400 hover:text-white rounded-lg transition flex items-center gap-1.5" title="Creative story concept, characters, comedic angles">
+            <i class="fa-solid fa-lightbulb text-[11px] text-yellow-400"></i>
+            <span>Idea</span>
+          </button>
+          <button type="button" onclick="setCreationMode('script', true)" id="mode-pill-script" class="px-3.5 py-1 text-xs font-medium text-gray-400 hover:text-white rounded-lg transition flex items-center gap-1.5" title="Paste full dialogue, screenplay, or scene breakdown">
+            <i class="fa-solid fa-scroll text-[11px] text-purple-400"></i>
+            <span>Script</span>
+          </button>
+        </div>
+        <span id="creation-mode-hint" class="text-[11px] text-gray-400 hidden sm:inline-block font-mono">Theme active • Documentary, World &amp; Travel topics</span>
+      </div>
+
+      <!-- Textarea Input Box -->
+      <div class="relative">
+        <textarea id="youtube-prompt-input" rows="3" placeholder="explore niagara falls" class="w-full p-3.5 bg-slate-950/80 border border-slate-700/60 rounded-xl text-white text-xs placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
+      </div>
+
+      <!-- YouTube URL Reference Input -->
+      <div class="relative w-full">
+        <i class="fa-brands fa-youtube absolute left-3.5 top-3 text-red-500 text-sm"></i>
+        <input type="text" id="youtube-url-input" placeholder="Paste YouTube Reference URL (Optional)..." class="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-700/60 rounded-xl text-white text-xs placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition">
+        <!-- Hidden analyze reference button for automated test DOM compatibility -->
+        <button id="btn-analyze-youtube" onclick="analyzeReferenceConcept()" class="hidden" aria-hidden="true"></button>
+      </div>
+
+      <!-- 3 Production Tier Selectors (Required for tests and UI) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+        <!-- Low Cost Card -->
+        <div onclick="selectProductionTier('low_cost')" id="tier-card-low_cost" class="p-3 bg-slate-950/70 border border-slate-800 hover:border-emerald-500 rounded-xl cursor-pointer transition">
+          <div id="guided-card-low_cost" class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <input type="radio" id="tier-radio-low_cost" name="tier_choice" value="low_cost" class="accent-emerald-500">
+              <span class="font-bold text-emerald-400 text-xs">Low-Cost Test</span>
+            </div>
+            <span class="font-mono font-bold text-white text-xs">$0.02 USD</span>
+          </div>
+          <p class="text-[10px] text-gray-400 mt-1">FLUX Schnell • 10s Draft Test • Azure TTS</p>
+        </div>
+
+        <!-- Balanced Card -->
+        <div onclick="selectProductionTier('balanced')" id="tier-card-balanced" class="p-3 bg-indigo-950/40 border border-indigo-500 rounded-xl cursor-pointer transition ring-1 ring-indigo-500/40">
+          <div id="guided-card-balanced" class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <input type="radio" id="tier-radio-balanced" name="tier_choice" value="balanced" checked class="accent-indigo-500">
+              <span class="font-bold text-indigo-300 text-xs">Balanced Creator</span>
+            </div>
+            <span class="font-mono font-bold text-white text-xs">$0.14 USD</span>
+          </div>
+          <p class="text-[10px] text-gray-400 mt-1">FLUX Dev • Azure Speech • YouTube Ready</p>
+        </div>
+
+        <!-- Cinematic Card -->
+        <div onclick="selectProductionTier('cinematic')" id="tier-card-cinematic" class="p-3 bg-slate-950/70 border border-slate-800 hover:border-purple-500 rounded-xl cursor-pointer transition">
+          <div id="guided-card-cinematic" class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <input type="radio" id="tier-radio-cinematic" name="tier_choice" value="cinematic" class="accent-purple-500">
+              <span class="font-bold text-purple-300 text-xs">Cinematic 4K</span>
+            </div>
+            <span class="font-mono font-bold text-white text-xs">$0.45 USD</span>
+          </div>
+          <p class="text-[10px] text-gray-400 mt-1">FLUX Pro • Suno BGM • 4K Master</p>
+        </div>
+      </div>
+
+      <!-- Bottom Centered Generate Button -->
+      <div class="flex justify-center pt-2">
+        <button id="btn-guided-generate" onclick="quickTestProduceFromPrompt()" class="px-10 py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-black rounded-xl text-sm flex items-center gap-2.5 transition shadow-xl shadow-indigo-600/30 active:scale-95 group">
+          <i class="fa-solid fa-bolt text-yellow-300 group-hover:scale-110 transition-transform"></i>
+          <span>Generate</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATIVE PRESETS & INSPIRATION -->
+  <div class="space-y-3">
+    <div class="flex items-center justify-between">
+      <h3 class="text-sm font-bold text-gray-300 flex items-center gap-2">
+        <i class="fa-solid fa-sparkles text-indigo-400"></i>
+        <span>Creative Themes &amp; Idea Presets</span>
+      </h3>
+      <button onclick="openCreateVideoWizardModal()" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1">
+        <span>Open Guided 3-Step Wizard</span>
+        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+      </button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div onclick="usePresetPrompt('theme', 'explore niagara falls')" class="p-3.5 bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] hover:border-emerald-500/50 rounded-xl cursor-pointer transition space-y-1 group active:scale-95 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Theme</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-gray-500 group-hover:text-emerald-400"></i>
+        </div>
+        <div class="font-bold text-white text-xs group-hover:text-emerald-300">Explore Niagara Falls</div>
+        <div class="text-[10px] text-gray-400">Geological vistas, rainbow mist &amp; Horseshoe abyss.</div>
+      </div>
+      <div onclick="usePresetPrompt('theme', 'deep ocean underwater fiber cables repair documentary in Indian Ocean')" class="p-3.5 bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] hover:border-emerald-500/50 rounded-xl cursor-pointer transition space-y-1 group active:scale-95 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Theme</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-gray-500 group-hover:text-emerald-400"></i>
+        </div>
+        <div class="font-bold text-white text-xs group-hover:text-emerald-300">Deep Ocean Fiber Cables</div>
+        <div class="text-[10px] text-gray-400">Subsea robotics repair documentary in Indian Ocean.</div>
+      </div>
+      <div onclick="usePresetPrompt('idea', 'Delhi techie remote job juggle comedy sketch')" class="p-3.5 bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] hover:border-indigo-500/50 rounded-xl cursor-pointer transition space-y-1 group active:scale-95 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Idea</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-gray-500 group-hover:text-indigo-400"></i>
+        </div>
+        <div class="font-bold text-white text-xs group-hover:text-indigo-300">Delhi Techie Moonlighting</div>
+        <div class="text-[10px] text-gray-400">IT engineer juggling dual remote jobs comedy sketch.</div>
+      </div>
+      <div onclick="usePresetPrompt('script', 'SCENE 1: Boiling spices and heat transfer of masala chai in 60s')" class="p-3.5 bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] hover:border-purple-500/50 rounded-xl cursor-pointer transition space-y-1 group active:scale-95 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Script</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-gray-500 group-hover:text-purple-400"></i>
+        </div>
+        <div class="font-bold text-white text-xs group-hover:text-purple-300">Masala Chai Chemistry</div>
+        <div class="text-[10px] text-gray-400">Spices and heat transfer rapid 60s educational reel.</div>
+      </div>
+    </div>
+  </div>
+</div>

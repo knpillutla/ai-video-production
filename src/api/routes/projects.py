@@ -54,8 +54,9 @@ async def create_project(req: EpisodeCreate, current_user: User = Depends(get_cu
 
 @router.get("", response_model=list[Episode])
 async def list_projects(show_id: UUID | None = None, current_user: User = Depends(get_current_user)):
-    """List only projects and episodes owned by the current authenticated user."""
-    return repo.list_episodes(current_user.id, show_id)
+    """List only projects and episodes owned by the current authenticated user, sorted by date desc."""
+    episodes = repo.list_episodes(current_user.id, show_id)
+    return sorted(episodes, key=lambda e: e.created_at, reverse=True)
 
 
 @router.get("/{episode_id}", response_model=Episode)

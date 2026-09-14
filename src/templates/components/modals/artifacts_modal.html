@@ -1,0 +1,39 @@
+<!-- ARTIFACTS MODAL: Traceability & Pipeline Asset Inspector -->
+<div id="artifacts-modal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+  <div class="bg-[var(--card)] border border-indigo-500/40 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+    <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-purple-600/20 text-purple-400 flex items-center justify-center text-sm">
+          <i class="fa-solid fa-box-archive"></i>
+        </div>
+        <div>
+          <h3 id="artifacts-modal-title" class="font-black text-white text-base">Pipeline Artifacts &amp; Traceability</h3>
+          <p id="artifacts-modal-job-id" class="text-[11px] font-mono text-indigo-300">Job UUID: job_ep004_c4b8e28f</p>
+        </div>
+      </div>
+      <button onclick="closeArtifactsModal()" class="text-gray-400 hover:text-white text-base">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Metadata Pill Badges -->
+    <div id="artifacts-meta-badges" class="flex flex-wrap items-center gap-2 text-xs">
+      <!-- Injected dynamically: Video Type, Format (Long/Short), Style, Tier -->
+    </div>
+
+    <!-- Generated Artifact Files List -->
+    <div class="space-y-2">
+      <div class="text-xs font-bold text-gray-300 uppercase tracking-wider">Produced Pipeline Artifacts</div>
+      <div id="artifacts-file-list" class="space-y-2">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between pt-2 border-t border-[var(--border)] text-xs">
+      <span class="text-gray-400 font-mono text-[10px]">Cloud Vault: <strong class="text-indigo-300">user-c4b8e28f/creative_vault</strong></span>
+      <button onclick="closeArtifactsModal()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow text-xs">
+        Close Inspector
+      </button>
+    </div>
+  </div>
+</div>

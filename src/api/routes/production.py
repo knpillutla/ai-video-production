@@ -244,6 +244,7 @@ async def confirm_production(
     repo.save_user(current_user)
 
     episode.status = "queued"
+    episode.selected_tier = chosen_tier
     episode.actual_spend_usd = deducted
     repo.save_episode(episode)
 

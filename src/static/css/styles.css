@@ -1,0 +1,91 @@
+:root {
+  --bg: #090d16;
+  --card: #0f172a;
+  --card-hover: #1e293b;
+  --border: #1e293b;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --accent: #6366f1;
+}
+
+[data-theme="light"] {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --card-hover: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --accent: #4f46e5;
+}
+
+[data-theme="cyberpunk"] {
+  --bg: #080314;
+  --card: #130924;
+  --card-hover: #22103e;
+  --border: #ff007f33;
+  --text: #00f0ff;
+  --text-muted: #e280ff;
+  --accent: #ff007f;
+}
+
+[data-theme="amoled"] {
+  --bg: #000000;
+  --card: #080808;
+  --card-hover: #121212;
+  --border: #222222;
+  --text: #ffffff;
+  --text-muted: #888888;
+  --accent: #3b82f6;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.6);
+}
+
+/* CineAI Studio: Fullscreen Right Panel Inspector */
+.panel-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  border-radius: 0 !important;
+  background-color: rgba(9, 13, 22, 0.98) !important;
+  backdrop-filter: blur(20px) !important;
+  overflow-y: auto !important;
+  padding: 2rem !important;
+  margin: 0 !important;
+}
+
+[data-theme="light"] .panel-fullscreen {
+  background-color: rgba(248, 250, 252, 0.98) !important;
+}
+
+.panel-fullscreen #studio-panel-video {
+  max-height: 55vh;
+  margin: 0 auto;
+}

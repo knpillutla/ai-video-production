@@ -95,6 +95,7 @@ class Episode(EpisodeBase):
     user_id: UUID
     show_id: UUID
     status: str = "draft"  # draft | estimating | queued | rendering | completed | failed
+    selected_tier: str = "balanced"  # low_cost | balanced | cinematic
     estimated_cost_usd: float = 0.0
     actual_spend_usd: float = 0.0
     compliance_score: float = 0.0

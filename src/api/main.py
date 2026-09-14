@@ -13,6 +13,7 @@ from src.api.routes import (
     channel_analytics,
     channels,
     dashboard,
+    local_production,
     production,
     projects,
     schedules,
@@ -80,6 +81,7 @@ def create_app() -> FastAPI:
     app.include_router(channel_analytics.router)
     app.include_router(schedules.router)
     app.include_router(analytics.router)
+    app.include_router(local_production.router)
 
     @app.get("/health", tags=["Health"])
     async def health_check():
@@ -92,15 +94,26 @@ def create_app() -> FastAPI:
             "environment": settings.app.app_env,
         }
 
+    from pathlib import Path
+    from fastapi.staticfiles import StaticFiles
+
+    static_dir = Path(__file__).resolve().parent.parent / "static"
+    if static_dir.exists():
+        app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+    storage_dir = Path(__file__).resolve().parent.parent.parent / "storage"
+    storage_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/storage", StaticFiles(directory=str(storage_dir)), name="storage")
+
     @app.get("/", response_class=HTMLResponse, tags=["Web Studio UI"])
     @app.get("/ui", response_class=HTMLResponse, tags=["Web Studio UI"])
     async def serve_studio_ui():
         """Serve the interactive Web Studio SaaS dashboard."""
-        from pathlib import Path
-        ui_path = Path(__file__).resolve().parent.parent / "static" / "index.html"
-        if ui_path.exists():
-            return HTMLResponse(content=ui_path.read_text(encoding="utf-8"))
-        return HTMLResponse("<h1>CineAI Studio API Online</h1><p>Visit /docs for Swagger UI</p>")
+        try:
+            from src.api.ui_composer import render_studio_html
+            return HTMLResponse(content=render_studio_html())
+        except Exception as exc:
+            return HTMLResponse(f"<h1>CineAI Studio API Online</h1><p>{exc}</p>")
 
     return app
 

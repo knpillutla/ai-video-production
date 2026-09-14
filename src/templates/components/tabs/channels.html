@@ -1,0 +1,43 @@
+<!-- TAB: YOUTUBE CHANNELS -->
+<div id="tab-channels" class="space-y-6 hidden">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-black text-white tracking-tight">Connected YouTube Channels</h1>
+      <p class="text-xs text-gray-400">Manage OAuth credentials, auto-publishing schedules &amp; syndication rules.</p>
+    </div>
+    <button onclick="showStudioModal({title: 'Add Channel', message: 'YouTube OAuth integration modal will launch for account linking.', nextStep: 'Authorize Studio in Google Cloud.'})" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs flex items-center gap-2">
+      <i class="fa-brands fa-youtube"></i>
+      <span>Connect New Channel</span>
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="p-4 bg-[var(--card)] border border-[var(--border)] rounded-xl space-y-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-red-600/20 text-red-500 flex items-center justify-center text-xl font-bold">@</div>
+        <div>
+          <h3 class="font-bold text-white text-sm">@telugucomedyhub</h3>
+          <p class="text-xs text-gray-400">Telugu Comedy Shorts &amp; Web Series • 32.4K Subs</p>
+        </div>
+      </div>
+      <div class="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span>Auto-Publish Active (Daily at 6:30 PM IST)</span>
+      </div>
+    </div>
+
+    <div class="p-4 bg-[var(--card)] border border-[var(--border)] rounded-xl space-y-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-xl font-bold">@</div>
+        <div>
+          <h3 class="font-bold text-white text-sm">@cineai_docs</h3>
+          <p class="text-xs text-gray-400">Tech &amp; Ocean Documentaries • 16.2K Subs</p>
+        </div>
+      </div>
+      <div class="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span>Auto-Publish Active (Weekly Saturdays)</span>
+      </div>
+    </div>
+  </div>
+</div>

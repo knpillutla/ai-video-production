@@ -1,0 +1,90 @@
+<!-- TAB: RUNWAY APPS GALLERY (Exact Visual Match to User Screenshot) -->
+<div id="tab-apps" class="space-y-6 hidden">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- Left Column: Category Navigation -->
+    <div class="lg:col-span-4 space-y-4">
+      <div>
+        <h1 class="text-2xl font-black text-white tracking-tight">What do you want to create?</h1>
+        <div class="relative mt-3">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+          <input type="text" id="apps-search-input" onkeyup="filterAppsCatalog()" placeholder="Search apps and tools" class="w-full pl-8 pr-3 py-2 bg-slate-900 border border-[var(--border)] rounded-xl text-white text-xs placeholder-gray-500 focus:outline-none focus:border-indigo-500">
+        </div>
+      </div>
+
+      <!-- Sub-tabs: Starter Kits, Custom, Image, Video, Audio, Model -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs border-b border-[var(--border)] text-gray-400">
+        <button class="pb-2 font-bold text-white border-b-2 border-white whitespace-nowrap">Starter Kits</button>
+        <button class="pb-2 hover:text-white whitespace-nowrap">Custom</button>
+        <button class="pb-2 hover:text-white whitespace-nowrap">Image</button>
+        <button class="pb-2 hover:text-white whitespace-nowrap">Video</button>
+        <button class="pb-2 hover:text-white whitespace-nowrap">Audio</button>
+        <button class="pb-2 hover:text-white whitespace-nowrap">Model &gt;</button>
+      </div>
+
+      <!-- Vertical Category Cards -->
+      <div class="space-y-2">
+        <div onclick="selectAppCategory('film')" id="cat-card-film" class="p-3 bg-slate-900/60 hover:bg-slate-800/80 border border-[var(--border)] rounded-xl cursor-pointer transition flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-clapperboard text-sm"></i>
+          </div>
+          <div>
+            <div class="font-bold text-white text-xs">Film or shorts</div>
+            <div class="text-[11px] text-gray-400">Scenes, characters, VFX &amp; Narrative</div>
+          </div>
+        </div>
+
+        <div onclick="selectAppCategory('marketing')" id="cat-card-marketing" class="p-3 bg-slate-900/60 hover:bg-slate-800/80 border border-[var(--border)] rounded-xl cursor-pointer transition flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-bag-shopping text-sm"></i>
+          </div>
+          <div>
+            <div class="font-bold text-white text-xs">Marketing</div>
+            <div class="text-[11px] text-gray-400">Product, campaign &amp; brand content</div>
+          </div>
+        </div>
+
+        <div onclick="selectAppCategory('social')" id="cat-card-social" class="p-3 bg-indigo-600/20 border-2 border-indigo-500 rounded-xl cursor-pointer transition flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-indigo-500/30 text-indigo-300 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-mobile-screen text-sm"></i>
+          </div>
+          <div>
+            <div class="font-bold text-white text-xs">Social</div>
+            <div class="text-[11px] text-gray-300">Reels, TikToks &amp; platform-ready content</div>
+          </div>
+        </div>
+
+        <div onclick="selectAppCategory('educational')" id="cat-card-educational" class="p-3 bg-slate-900/60 hover:bg-slate-800/80 border border-[var(--border)] rounded-xl cursor-pointer transition flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-graduation-cap text-sm"></i>
+          </div>
+          <div>
+            <div class="font-bold text-white text-xs">Educational content</div>
+            <div class="text-[11px] text-gray-400">Animation &amp; storytelling</div>
+          </div>
+        </div>
+
+        <div onclick="selectAppCategory('experimental')" id="cat-card-experimental" class="p-3 bg-slate-900/60 hover:bg-slate-800/80 border border-[var(--border)] rounded-xl cursor-pointer transition flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-palette text-sm"></i>
+          </div>
+          <div>
+            <div class="font-bold text-white text-xs">Experimental art</div>
+            <div class="text-[11px] text-gray-400">Abstract VFX, motion &amp; music visuals</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Recommended Apps Grid (Matching Screenshot) -->
+    <div class="lg:col-span-8 space-y-4">
+      <div>
+        <h2 id="apps-category-title" class="text-2xl font-black text-white">Social</h2>
+        <p id="apps-category-desc" class="text-xs text-gray-400">Recommended apps to get you started</p>
+      </div>
+
+      <div id="apps-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Rendered dynamically by apps_catalog.js -->
+      </div>
+    </div>
+  </div>
+</div>

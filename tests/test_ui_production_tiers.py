@@ -148,11 +148,12 @@ async def test_confirm_production_tier_insufficient_funds():
 
 
 def test_ui_html_tier_elements_and_javascript():
-    """Verify index.html includes the 3-tier cards, sidebar selector, and JS handlers."""
-    html_path = Path("src/static/index.html")
-    assert html_path.exists(), "src/static/index.html not found"
+    """Verify composed Studio UI includes 3-tier cards, sidebar selector, and JS handlers."""
+    from src.api.ui_composer import render_studio_html
 
-    content = html_path.read_text(encoding="utf-8")
+    content = render_studio_html()
+    js_content = "\n".join(f.read_text(encoding="utf-8") for f in Path("src/static/js").glob("*.js"))
+    full_content = content + "\n" + js_content
 
     assert 'id="tier-card-low_cost"' in content
     assert 'id="tier-card-balanced"' in content
@@ -165,6 +166,89 @@ def test_ui_html_tier_elements_and_javascript():
     assert 'id="studio-tier-select"' in content
     assert 'id="sidebar-tier-price-pill"' in content
 
-    assert "selectProductionTier" in content
-    assert "onStudioTierChange" in content
-    assert "PRODUCTION_TIERS" in content
+    # Guided workflow inputs & controls
+    assert 'id="youtube-url-input"' in content
+    assert 'id="youtube-prompt-input"' in content
+    assert 'id="btn-analyze-youtube"' in content
+    assert 'id="guided-card-low_cost"' in content
+    assert 'id="guided-card-balanced"' in content
+    assert 'id="guided-card-cinematic"' in content
+    assert 'id="btn-guided-generate"' in content
+
+    assert "selectProductionTier" in full_content
+    assert "onStudioTierChange" in full_content
+    assert "analyzeReferenceConcept" in full_content
+    assert "quickTestProduceFromPrompt" in full_content
+    assert "PRODUCTION_TIERS" in full_content
+
+
+def test_ui_video_studio_history_table_and_wizard_modal():
+    """Verify Video Studio shows current videos status table desc and guided wizard modal."""
+    from src.api.ui_composer import render_studio_html
+
+    content = render_studio_html()
+    js_content = "\n".join(f.read_text(encoding="utf-8") for f in Path("src/static/js").glob("*.js"))
+    full_content = content + "\n" + js_content
+
+    # Top button to create new video
+    assert 'id="btn-top-create-video"' in content
+    assert "Create New Video" in content
+
+    # Current videos status table (Date/Time DESC, Option Selected, Cost, YouTube Status)
+    assert 'id="studio-video-history-rows"' in content
+    assert "Date / Time (DESC)" in content
+    assert "Option Selected" in content
+    assert "Published to YouTube" in content
+    assert 'id="studio-filter-status"' in content
+    assert 'id="studio-filter-tier"' in content
+    assert 'id="studio-filter-youtube"' in content
+
+    # Modal 10: Guided Create New Video Wizard
+    assert 'id="create-video-wizard-modal"' in content
+    assert 'id="wizard-step-1-container"' in content
+    assert 'id="wizard-step-2-container"' in content
+    assert 'id="wizard-step-3-container"' in content
+    assert 'id="btn-wizard-analyze"' in content
+    assert 'id="wizard-card-low_cost"' in content
+    assert 'id="wizard-card-balanced"' in content
+    assert 'id="wizard-card-cinematic"' in content
+    assert 'id="btn-wizard-confirm"' in content
+
+    # Modal 9: Professional Studio Guidance Modal
+    assert 'id="studio-popup-modal"' in content
+    assert 'id="popup-title"' in content
+    assert 'id="popup-message"' in content
+    assert 'id="popup-next-step-box"' in content
+    assert 'id="popup-confirm-btn"' in content
+
+    # JavaScript controller functions
+    assert "openCreateVideoWizardModal" in full_content
+    assert "closeCreateVideoWizardModal" in full_content
+    assert "wizardGoToStep" in full_content
+    assert "wizardAnalyzeConcept" in full_content
+    assert "wizardSelectTier" in full_content
+    assert "wizardConfirmAndProduce" in full_content
+    assert "renderStudioVideoHistory" in full_content
+    assert "showStudioModal" in full_content
+    assert "closeStudioModal" in full_content
+    assert "onStudioModalConfirm" in full_content
+
+
+@pytest.mark.asyncio
+async def test_ui_route_and_static_files_serving():
+    """Verify FastAPI serves composed UI at / and static assets at /static/."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        ui_resp = await ac.get("/")
+        assert ui_resp.status_code == 200
+        assert "text/html" in ui_resp.headers.get("content-type", "")
+        assert 'id="tab-studio"' in ui_resp.text
+        assert 'id="create-video-wizard-modal"' in ui_resp.text
+
+        css_resp = await ac.get("/static/css/styles.css")
+        assert css_resp.status_code == 200
+        assert "--bg:" in css_resp.text
+
+        js_resp = await ac.get("/static/js/wizard_ui.js")
+        assert js_resp.status_code == 200
+        assert "openCreateVideoWizardModal" in js_resp.text
+

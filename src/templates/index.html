@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineAI Studio - Autonomous AI Video Production</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-sm">
+
+  <!-- TOP HEADER -->
+  {% include "components/layout/header.html" %}
+
+  <div class="flex-1 flex overflow-hidden">
+    <!-- RUNWAY SIDEBAR -->
+    {% include "components/layout/sidebar.html" %}
+
+    <!-- MAIN WORKSPACE TABS -->
+    <main class="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[var(--bg)] space-y-6">
+      {% include "components/tabs/apps.html" %}
+      {% include "components/tabs/studio.html" %}
+      {% include "components/tabs/ledger.html" %}
+      {% include "components/tabs/dashboard.html" %}
+      {% include "components/tabs/channels.html" %}
+      {% include "components/tabs/analytics.html" %}
+    </main>
+  </div>
+
+  <!-- MODALS -->
+  {% include "components/modals/auth_modal.html" %}
+  {% include "components/modals/settings_modal.html" %}
+  {% include "components/modals/wizard_modal.html" %}
+  {% include "components/modals/guide_modal.html" %}
+  {% include "components/modals/player_modal.html" %}
+  {% include "components/modals/artifacts_modal.html" %}
+
+  <!-- JAVASCRIPT ENGINES -->
+  <script src="/static/js/core_state.js?v=2.5"></script>
+  <script src="/static/js/theme_settings.js?v=2.5"></script>
+  <script src="/static/js/apps_catalog.js?v=2.5"></script>
+  <script src="/static/js/default_videos_data.js?v=2.5"></script>
+  <script src="/static/js/studio_videos.js?v=2.5"></script>
+  <script src="/static/js/studio_modal.js?v=2.5"></script>
+  <script src="/static/js/player_controller.js?v=2.5"></script>
+  <script src="/static/js/artifacts_controller.js?v=2.5"></script>
+  <script src="/static/js/prompt_generator.js?v=2.5"></script>
+  <script src="/static/js/guided_wizard.js?v=2.5"></script>
+  <script src="/static/js/dashboard_stats.js?v=2.5"></script>
+  <script src="/static/js/wizard_ui.js?v=2.5"></script>
+  <script src="/static/js/preview_panel.js?v=2.5"></script>
+  <script src="/static/js/app_init.js?v=2.5"></script>
+</body>
+</html>
