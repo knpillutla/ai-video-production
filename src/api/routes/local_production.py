@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from src.services.local_video_producer import produce_local_video_episode
 from src.core.storage import storage_service
+from src.core.telemetry import logger
 
 router = APIRouter(prefix="/api/production", tags=["Local Production Engine"])
 
@@ -78,12 +79,27 @@ async def produce_video_locally(req: LocalProduceRequest):
     eff_gender = "male" if req.narration_male else ("female" if req.narration_female else (req.voice_gender or "female"))
     eff_script = req.script or req.custom_script
 
+    user_id_val = req.user_id or "user_krishna_01"
+    from src.mcp.topic_memory.server import check_topic_duplicate, remember_topic
+    topic_check = await check_topic_duplicate(
+        topic=title,
+        metadata={"video_type": req.video_type, "format_type": req.format_type, "style_type": req.style_type},
+        final_story=req.prompt,
+        user_id=user_id_val,
+        threshold=0.80,
+    )
+    if topic_check.get("is_duplicate"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=topic_check.get("alert_message") or f"Duplicate topic detected for user {user_id_val}.",
+        )
+
     try:
         result = await produce_local_video_episode(
             prompt=req.prompt,
             title=title,
             episode_id=req.episode_id or "EP-001",
-            user_id=req.user_id or "user_krishna_01",
+            user_id=user_id_val,
             production_type=req.production_type or "Theme",
             tier=req.tier or "low_cost",
             video_type=req.video_type or "Travel Guide & Doc",
@@ -101,8 +117,18 @@ async def produce_video_locally(req: LocalProduceRequest):
             idea=req.idea,
             script=eff_script,
         )
+        await remember_topic(
+            topic=title,
+            metadata={"video_type": req.video_type, "format_type": req.format_type, "style_type": req.style_type},
+            final_story=req.prompt,
+            episode_id=req.episode_id or "EP-001",
+            user_id=user_id_val,
+        )
         return LocalProduceResponse(**result)
+    except HTTPException:
+        raise
     except Exception as exc:
+        logger.error(f"local_production_failed: {exc}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Local production synthesis failed: {str(exc)}",

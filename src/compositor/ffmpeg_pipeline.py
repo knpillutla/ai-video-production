@@ -2,6 +2,8 @@
 
 import asyncio
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 from src.compositor.timeline import CompiledTimeline
@@ -11,28 +13,32 @@ from src.scripts.local_pan_zoom import build_zoompan_expression
 
 
 def get_ffmpeg_binary() -> str:
-    """Resolve FFmpeg binary path from system PATH or imageio_ffmpeg fallback."""
+    """Resolve FFmpeg binary path from system PATH, imageio_ffmpeg, or local virtualenv."""
     sys_ffmpeg = shutil.which("ffmpeg")
     if sys_ffmpeg:
         return sys_ffmpeg
     try:
         import imageio_ffmpeg
-
-        return imageio_ffmpeg.get_ffmpeg_exe()
+        exe = imageio_ffmpeg.get_ffmpeg_exe()
+        if exe and Path(exe).exists():
+            return str(exe)
     except Exception:
-        return "ffmpeg"
+        pass
+
+    root = Path(__file__).resolve().parent.parent.parent
+    for venv_name in (".venv", "venv"):
+        v_dir = root / venv_name
+        if v_dir.exists():
+            for match in v_dir.glob("**/imageio_ffmpeg/binaries/ffmpeg*.exe"):
+                if match.is_file():
+                    return str(match)
+    return "ffmpeg"
 
 
 def has_ffmpeg() -> bool:
     """Check if an FFmpeg binary is available on the system or bundled."""
-    if shutil.which("ffmpeg"):
-        return True
-    try:
-        import imageio_ffmpeg
-
-        return bool(imageio_ffmpeg.get_ffmpeg_exe())
-    except Exception:
-        return False
+    bin_path = get_ffmpeg_binary()
+    return bool(shutil.which(bin_path) or Path(bin_path).exists())
 
 
 def build_single_pass_command(
@@ -158,18 +164,22 @@ async def execute_single_pass_render(
             out.touch()
         return out
 
-    # Run FFmpeg process asynchronously
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    stdout, stderr = await proc.communicate()
+    # Run FFmpeg process asynchronously without Windows SelectorEventLoop or console initialization failure
+    def _run_ffmpeg():
+        flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        return subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=flags,
+        )
 
-    if proc.returncode != 0:
-        err_msg = stderr.decode(errors="replace")[-500:]
-        logger.error(f"ffmpeg_render_failed: code={proc.returncode}, err={err_msg}")
-        raise RuntimeError(f"FFmpeg rendering failed (code {proc.returncode}): {err_msg}")
+    proc_res = await asyncio.to_thread(_run_ffmpeg)
+
+    if proc_res.returncode != 0:
+        err_msg = proc_res.stderr.decode(errors="replace")[-500:]
+        logger.error(f"ffmpeg_render_failed: code={proc_res.returncode}, err={err_msg}")
+        raise RuntimeError(f"FFmpeg rendering failed (code {proc_res.returncode}): {err_msg}")
 
     logger.info(f"render_completed_successfully: {out}")
     return out

@@ -63,7 +63,10 @@ class SunoMusicAdapter(MusicProviderProtocol):
         total_samples = int(sample_rate * duration_seconds)
         is_nature_rain = any(
             k in genre.lower()
-            for k in ("rain", "drop", "nature", "stream", "forest", "ambient", "thunder", "water")
+            for k in (
+                "rain", "drop", "nature", "stream", "forest", "ambient", "thunder",
+                "water", "waterfall", "walk", "river", "ocean", "canopy", "mountain"
+            )
         )
 
         with wave.open(str(out), "wb") as wav_file:
@@ -97,21 +100,32 @@ class SunoMusicAdapter(MusicProviderProtocol):
                 except Exception as ex:
                     logger.warning(f"numpy_nature_audio_fallback: {ex}")
 
-            # Pentatonic comedy bounce notes (C4, D4, E4, G4, A4, C5)
-            pitches = [261.63, 329.63, 392.00, 523.25, 440.00, 329.63]
-            beat_len = max(1, sample_rate // 4)  # 120 BPM tempo
+            is_ambient = any(
+                k in genre.lower()
+                for k in ("ambient", "lofi", "piano", "calm", "relax", "peaceful", "scenic", "acoustic", "travel")
+            )
+            if is_ambient:
+                pitches = [196.00, 261.63, 329.63, 392.00]  # G3, C4, E4, G4 - Warm peaceful chord
+                beat_len = max(1, sample_rate)  # 60 BPM calm cadence
+                decay_rate = 1.8
+                max_amp = 4000
+            else:
+                pitches = [261.63, 329.63, 392.00, 523.25, 440.00, 329.63]
+                beat_len = max(1, sample_rate // 4)  # 120 BPM tempo
+                decay_rate = 4.5
+                max_amp = 5000
 
             frames = bytearray()
             for i in range(total_samples):
                 t = i / sample_rate
                 step = (i // beat_len) % len(pitches)
                 freq = pitches[step]
-                decay = math.exp(-5.0 * ((i % beat_len) / beat_len))
+                decay = math.exp(-decay_rate * ((i % beat_len) / beat_len))
 
                 base_tone = math.sin(2 * math.pi * freq * t) + 0.3 * math.sin(4 * math.pi * freq * t)
                 bass_tone = 0.4 * math.sin(2 * math.pi * (freq / 2) * t)
 
-                sample_val = int(7000 * decay * (base_tone + bass_tone))
+                sample_val = int(max_amp * decay * (base_tone + bass_tone))
                 sig_left = int(sample_val * (0.85 if step % 2 == 0 else 0.65))
                 sig_right = int(sample_val * (0.65 if step % 2 == 0 else 0.85))
                 frames.extend(struct.pack("<hh", sig_left, sig_right))

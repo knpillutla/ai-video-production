@@ -77,7 +77,7 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
         return self._generate_synthetic_wav(duration_seconds=max(2.0, len(text.split()) * 0.4))
 
     def _generate_synthetic_wav(self, duration_seconds: float = 3.0, sample_rate: int = 48000) -> bytes:
-        """Generate a valid 48kHz mono 16-bit PCM WAV in pure Python (0 dependencies)."""
+        """Generate a valid 48kHz mono 16-bit PCM WAV with gentle speech cadence audio."""
         buffer = io.BytesIO()
         total_samples = int(sample_rate * duration_seconds)
 
@@ -86,10 +86,13 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
             wav_file.setsampwidth(2)  # 16-bit PCM
             wav_file.setframerate(sample_rate)
 
-            # Generate audible 330Hz tone
             frames = bytearray()
+            word_period = max(1, sample_rate // 3)
             for i in range(total_samples):
-                val = int(8000 * math.sin(2 * math.pi * 330 * (i / sample_rate)))
+                t = i / sample_rate
+                word_phase = (i % word_period) / word_period
+                envelope = 0.5 * (1.0 - math.cos(2 * math.pi * word_phase)) if word_phase < 0.70 else 0.0
+                val = int(800 * envelope * (math.sin(2 * math.pi * 140 * t) + 0.3 * math.sin(2 * math.pi * 280 * t)))
                 frames.extend(struct.pack("<h", val))
             wav_file.writeframes(frames)
 

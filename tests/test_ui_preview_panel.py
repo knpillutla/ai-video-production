@@ -134,3 +134,35 @@ def test_ui_generate_clears_prompt_and_queues_with_request_id():
     assert 'switchTab("ledger")' in prompt_gen_js
     assert 'renderStudioVideoHistory()' in prompt_gen_js
     assert 'selectLedgerVideo(newId)' in prompt_gen_js
+
+
+def test_ui_creative_ideas_as_template_and_user_edits_authoritative():
+    """Verify creative ideas act as templates and user changes are authoritative."""
+    from pathlib import Path
+    prompt_gen_js = Path("src/static/js/prompt_generator.js").read_text(encoding="utf-8")
+    studio_videos_js = Path("src/static/js/studio_videos.js").read_text(encoding="utf-8")
+    studio_html = Path("src/templates/components/tabs/studio.html").read_text(encoding="utf-8")
+
+    # Clear button exists in Studio HTML
+    assert 'id="btn-studio-clear"' in studio_html
+    assert 'clearStudioInputs()' in studio_html
+
+    # Template card selection populates ONLY active mode and clears other fields
+    assert 'function selectCreativeTopic(topicKey)' in prompt_gen_js
+    assert 'clearTemplateCardHighlights()' in prompt_gen_js
+    assert 'deriveTitleFromInput(' in prompt_gen_js
+
+    # Typing into inputs clears preset card highlights (user edits override template)
+    assert 'pInput.addEventListener("input", clearTemplateCardHighlights)' in prompt_gen_js
+    assert 'uInput.addEventListener("input", clearTemplateCardHighlights)' in prompt_gen_js
+
+    # User inputs are read directly at submission time without template string overrides
+    assert 'let userPrompt = (promptInput?.value || "").trim()' in prompt_gen_js
+    assert 'const userUrl = (urlInput?.value || "").trim()' in prompt_gen_js
+
+    # Single-option payload logic in studio_videos.js
+    assert 'theme: newVid.productionType === "Theme" ?' in studio_videos_js
+    assert 'idea: newVid.productionType === "Idea" ?' in studio_videos_js
+    assert 'script: newVid.productionType === "Script" ?' in studio_videos_js
+    assert 'youtube_url: newVid.productionType === "YouTube Reference" ?' in studio_videos_js
+

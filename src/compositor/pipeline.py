@@ -110,7 +110,7 @@ class ProductionPipelineCoordinator:
         logger.info(f"starting_production_pipeline: ep={episode.title}, user={user_id}, tier={tier}")
 
         meta_dict = {"genre": show.genre if show else "general", "show_slug": show_slug, "tier": tier}
-        topic_check = await check_topic_duplicate(topic=episode.title, metadata=meta_dict)
+        topic_check = await check_topic_duplicate(topic=episode.title, metadata=meta_dict, user_id=str(user_id))
         if topic_check.get("is_duplicate"):
             raise ValueError(topic_check.get("alert_message") or "Duplicate content detected.")
 
@@ -131,7 +131,7 @@ class ProductionPipelineCoordinator:
         scenes_list = storyboard_data.get("scenes", [])
 
         full_story_text = " ".join(s.get("dialogue", "") for s in scenes_list)
-        await remember_topic(topic=episode.title, metadata=meta_dict, final_story=full_story_text, episode_id=str(episode.id), show_slug=show_slug)
+        await remember_topic(topic=episode.title, metadata=meta_dict, final_story=full_story_text, episode_id=str(episode.id), show_slug=show_slug, user_id=str(user_id))
 
         user_entity = repo.get_user(user_id)
         derived_culture = derive_cultural_context(

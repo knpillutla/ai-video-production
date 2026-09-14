@@ -88,6 +88,7 @@ async def estimate_production_cost(
     topic_check = await check_topic_duplicate(
         topic=episode.title,
         metadata={"genre": show.genre if show else "general", "show_slug": show_slug},
+        user_id=str(current_user.id),
     )
     is_dup = topic_check.get("is_duplicate", False)
     warning_msg = topic_check.get("alert_message") if is_dup else None
@@ -177,6 +178,7 @@ async def confirm_production(
     topic_check = await check_topic_duplicate(
         topic=episode.title,
         metadata={"genre": show.genre if show else "general", "show_slug": show_slug},
+        user_id=str(current_user.id),
     )
     if topic_check.get("is_duplicate") and not force_proceed:
         raise HTTPException(

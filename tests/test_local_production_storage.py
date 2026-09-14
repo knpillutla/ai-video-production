@@ -12,6 +12,9 @@ async def test_local_video_production_persists_to_storage():
     """Verify local production generates MP4 master, scenes, audio stems, and manifests into storage/."""
     app = create_app()
 
+    from src.mcp.topic_memory.server import clear_topic_vault
+    clear_topic_vault("user_krishna_01")
+
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         # Enforce Rule 8: 1 single test only, duration capped to 4 seconds
         payload = {

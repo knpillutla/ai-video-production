@@ -1,13 +1,10 @@
 """Deterministic local video production service generating physical MP4s, stems, and manifests into storage/."""
 
-import io
 import json
 import math
 import re
 import shutil
-import struct
 import time
-import wave
 from pathlib import Path
 from typing import Any
 from PIL import Image, ImageDraw
@@ -82,55 +79,6 @@ def _generate_scene_image(
     return output_path
 
 
-def _generate_synthetic_tone_wav(output_path: Path, duration_sec: float, base_freq: float) -> Path:
-    """Generate 48kHz mono 16-bit PCM WAV narration stem with gentle audible tone."""
-    sr = 48000
-    total_samples = int(sr * duration_sec)
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(sr)
-        frames = bytearray()
-        for i in range(total_samples):
-            t = i / sr
-            decay = 0.8 + 0.2 * math.sin(2 * math.pi * 2.0 * t)
-            val = int(6000 * decay * math.sin(2 * math.pi * base_freq * t))
-            frames.extend(struct.pack("<h", val))
-        wf.writeframes(frames)
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_bytes(buf.getvalue())
-    return output_path
-
-
-def _generate_stereo_bgm_wav(output_path: Path, duration_sec: float, art_style: str = "") -> Path:
-    """Generate 48kHz stereo WAV soundtrack with genre-specific harmonic chords."""
-    sr = 48000
-    total_samples = int(sr * duration_sec)
-    if "indian" in art_style.lower() or "vibrant" in art_style.lower():
-        pitches = [261.63, 293.66, 329.63, 392.00, 440.00]  # Raag Bhupali
-    elif "modern" in art_style.lower() or "architecture" in art_style.lower():
-        pitches = [220.00, 261.63, 329.63, 392.00]  # Ambient Minimalist
-    else:
-        pitches = [261.63, 329.63, 392.00, 523.25]  # C Major Pentatonic
-    beat_samples = sr // 2  # 120 BPM
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with wave.open(str(output_path), "wb") as wf:
-        wf.setnchannels(2)
-        wf.setsampwidth(2)
-        wf.setframerate(sr)
-        frames = bytearray()
-        for i in range(total_samples):
-            t = i / sr
-            step = (i // beat_samples) % len(pitches)
-            freq = pitches[step]
-            decay = math.exp(-3.5 * ((i % beat_samples) / beat_samples))
-            val = int(5000 * decay * math.sin(2 * math.pi * freq * t))
-            frames.extend(struct.pack("<hh", int(val * 0.8), int(val * 0.9)))
-        wf.writeframes(frames)
-    return output_path
 
 
 async def produce_local_video_episode(
@@ -181,11 +129,19 @@ async def produce_local_video_episode(
         style_type = ref_attrs.style_type if style_type == "Realistic (Photoreal)" else style_type
         video_type = ref_attrs.video_type if video_type == "Travel Guide & Doc" else video_type
 
-    # 1. Resolve storage directories and IMMEDIATELY save user_inputs.json first
+    world_setting = None
+    if production_type == "Theme" or theme or any(k in prompt.lower() for k in ("rain", "walk", "nature", "city", "ocean")):
+        from src.services.world_theme_rotator import resolve_world_theme_setting
+        world_setting = resolve_world_theme_setting(theme or prompt, user_id=user_id)
+        if world_setting:
+            ref_attrs.architecture_style = world_setting.architecture
+            ref_attrs.lighting_scheme = world_setting.lighting
+            ref_attrs.color_palette_rgb = world_setting.palette_rgb
+
+    # 1. Resolve storage directories and save user_inputs.json
     ep_dir = storage_service.get_episode_path(user_id, show_slug, ep_slug)
     scenes_dir, stems_dir, renders_dir = ep_dir / "scenes", ep_dir / "audio_stems", ep_dir / "master_renders"
-    for d in (scenes_dir, stems_dir, renders_dir):
-        d.mkdir(parents=True, exist_ok=True)
+    for d in (scenes_dir, stems_dir, renders_dir): d.mkdir(parents=True, exist_ok=True)
 
     user_inputs = {
         "user_id": user_id, "episode_id": episode_id, "title": title, "prompt": prompt,
@@ -194,36 +150,63 @@ async def produce_local_video_episode(
         "art_style": ref_attrs.art_style_display, "architecture_style": ref_attrs.architecture_style,
         "lighting_scheme": ref_attrs.lighting_scheme, "color_palette": ref_attrs.color_palette,
         "camera_language": ref_attrs.camera_language, "soundtrack_style": ref_attrs.soundtrack_style,
-        "reference_attributes": ref_attrs.model_dump(mode="json"),
-        "duration_seconds": duration_seconds, "enable_bgm": enable_bgm, "enable_tts": enable_tts,
-        "enable_voice_over": enable_voice_over, "enable_lipsync": enable_lipsync,
-        "voice_gender": voice_gender, "language": language, "theme": theme, "idea": idea,
-        "script": script, "created_at": time.time(),
+        "world_location": world_setting.location if world_setting else None,
+        "reference_attributes": ref_attrs.model_dump(mode="json"), "duration_seconds": duration_seconds,
+        "enable_bgm": enable_bgm, "enable_tts": enable_tts, "enable_voice_over": enable_voice_over,
+        "enable_lipsync": enable_lipsync, "voice_gender": voice_gender, "language": language,
+        "theme": theme, "idea": idea, "script": script, "created_at": time.time(),
     }
-    with open(ep_dir / "user_inputs.json", "w", encoding="utf-8") as f:
-        json.dump(user_inputs, f, indent=2)
+    with open(ep_dir / "user_inputs.json", "w", encoding="utf-8") as f: json.dump(user_inputs, f, indent=2)
 
-    # 2. Synthesize 2 visual scenes (Rule 8 max 10s duration) with reference art & architecture
+    # 2. Synthesize 2 visual scenes with world location beats & architecture
     scene_dur = duration_seconds / 2.0
+    s1 = f"{world_setting.setting_title}: {world_setting.scene_1_beat}" if world_setting else f"Opening: {prompt}"
+    s2 = f"{world_setting.location}: {world_setting.scene_2_beat}" if world_setting else f"Climax: {prompt}"
     scene1_img = _generate_scene_image(
-        f"Opening: {prompt}", title, 0, scenes_dir / "scene_01.jpg", is_short,
+        s1, title, 0, scenes_dir / "scene_01.jpg", is_short,
         color_palette_rgb=ref_attrs.color_palette_rgb, art_style_name=ref_attrs.art_style_display,
         architecture_style=ref_attrs.architecture_style, lighting_scheme=ref_attrs.lighting_scheme,
     )
     scene2_img = _generate_scene_image(
-        f"Climax: {prompt}", title, 1, scenes_dir / "scene_02.jpg", is_short,
+        s2, title, 1, scenes_dir / "scene_02.jpg", is_short,
         color_palette_rgb=ref_attrs.color_palette_rgb, art_style_name=ref_attrs.art_style_display,
         architecture_style=ref_attrs.architecture_style, lighting_scheme=ref_attrs.lighting_scheme,
     )
 
     # 3. Synthesize voice stems & BGM soundtrack based on options
     voice1, voice2, bgm_file = None, None, None
-    if enable_voice_over or enable_tts:
-        f1, f2 = (180.0, 210.0) if voice_gender.lower() == "male" else (280.0, 330.0)
-        voice1 = _generate_synthetic_tone_wav(stems_dir / "voice_01.wav", scene_dur, f1)
-        voice2 = _generate_synthetic_tone_wav(stems_dir / "voice_02.wav", scene_dur, f2)
+    if enable_voice_over:
+        from src.providers.tts.azure_speech import AzureSpeechTTSAdapter
+        tts = AzureSpeechTTSAdapter()
+        v_gen = (voice_gender or "female").lower()
+        if language == "te":
+            v_id = "te-IN-ShrutiNeural" if v_gen == "female" else "te-IN-MohanNeural"
+        elif language == "hi":
+            v_id = "hi-IN-SwaraNeural" if v_gen == "female" else "hi-IN-MadhurNeural"
+        else:
+            v_id = "en-US-JennyNeural" if v_gen == "female" else "en-US-GuyNeural"
+
+        if script and len(script.strip()) > 0:
+            lines = [l.strip() for l in script.splitlines() if l.strip()]
+            d1 = lines[0] if lines else prompt
+            d2 = lines[1] if len(lines) > 1 else d1
+        else:
+            d1 = f"Exploring {world_setting.setting_title if world_setting else title}."
+            d2 = f"Immersed in {world_setting.location if world_setting else prompt}."
+
+        voice1 = await tts.synthesize_to_file(d1, stems_dir / "voice_01.wav", voice_id=v_id)
+        voice2 = await tts.synthesize_to_file(d2, stems_dir / "voice_02.wav", voice_id=v_id)
+
     if enable_bgm:
-        bgm_file = _generate_stereo_bgm_wav(stems_dir / "bgm_master.wav", duration_seconds, art_style=ref_attrs.art_style)
+        bgm_path = stems_dir / "bgm_master.wav"
+        bgm_genre = ref_attrs.soundtrack_style or "Gentle rain drops, distant thunder, and relaxing ambient nature sounds"
+        if world_setting and getattr(world_setting, "category", None):
+            bgm_genre = f"{world_setting.category}, {bgm_genre}"
+        if any(k in (theme or prompt).lower() for k in ("rain", "waterfall", "forest", "nature", "stream", "river", "walk", "ocean", "canopy")):
+            bgm_genre = f"Rain nature ambient stream, {bgm_genre}"
+        from src.providers.music.suno_adapter import SunoMusicAdapter
+        await SunoMusicAdapter().generate_to_file(bgm_path, genre=bgm_genre, duration_seconds=duration_seconds)
+        bgm_file = bgm_path
 
     # 4. Compile timeline with reference camera movements
     cam1 = "drone_zoom_in" if "drone" in ref_attrs.camera_language.lower() else "zoom_in"
@@ -243,7 +226,10 @@ async def produce_local_video_episode(
     static_preview = Path("src/static/videos/preview_master.mp4")
     if out_mp4.exists() and out_mp4.stat().st_size > 1000:
         static_preview.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(out_mp4, static_preview)
+        try:
+            shutil.copyfile(out_mp4, static_preview)
+        except Exception as copy_exc:
+            logger.warning(f"preview_copy_deferred: {copy_exc}")
 
     # 6. Itemize generated artifacts & save project manifest
 

@@ -110,13 +110,14 @@ async def test_api_production_estimate_cost_blocks_duplicate_topic():
         show = Show(user_id=uid, title="IT Comedy Universe", slug="it_comedy_universe", genre="comedy")
         repo.save_show(show)
 
-        # Seed an existing topic
+        # Seed an existing topic for this user
         existing_title = f"Chai Break Standup Gossip - {uuid4().hex[:6]}"
         await remember_topic(
             topic=existing_title,
             metadata={"genre": "comedy"},
             final_story="Engineers discussing sprint deadlines by the tea stall.",
             episode_id="ep_tea_001",
+            user_id=user_id,
         )
 
         # Create Episode with duplicate title
@@ -216,3 +217,55 @@ def test_terraform_only_iac_verification():
     deploy_dir = Path("deploy")
     bicep_files = list(deploy_dir.rglob("*.bicep"))
     assert len(bicep_files) == 0, f"Found prohibited Bicep files: {bicep_files}"
+
+
+@pytest.mark.asyncio
+async def test_user_scoped_topic_deduplication_and_vault_clearing():
+    """Verify deduplication checks user's existing topics only, not across all users."""
+    from src.mcp.topic_memory.server import clear_topic_vault
+    # 1. Clear vault for clean test isolation
+    clear_topic_vault()
+
+    topic_name = f"Wild Safari Serengeti Predators - {uuid4().hex[:6]}"
+    user_a = "user_alpha_01"
+    user_b = "user_beta_02"
+
+    # User A records a topic
+    await remember_topic(
+        topic=topic_name,
+        metadata={"genre": "documentary", "tags": ["wildlife", "safari"]},
+        final_story="Cheetah chasing gazelle across golden African savannah.",
+        episode_id="ep_user_a_001",
+        user_id=user_a,
+    )
+
+    # User A proposes duplicate topic -> BLOCKED (similarity >= 0.80)
+    check_a = await check_topic_duplicate(
+        topic=topic_name,
+        user_id=user_a,
+        threshold=0.80,
+    )
+    assert check_a["is_duplicate"] is True
+    assert check_a["conflicting_topic"] == topic_name
+
+    # User B proposes SAME topic -> NOT BLOCKED (deduplication scoped to user's existing topics)
+    check_b = await check_topic_duplicate(
+        topic=topic_name,
+        user_id=user_b,
+        threshold=0.80,
+    )
+    assert check_b["is_duplicate"] is False
+    assert check_b["conflicting_topic"] is None
+
+    # Clear vault for User A only
+    cleared = clear_topic_vault(user_id=user_a)
+    assert cleared >= 1
+
+    # User A can now re-propose the topic cleanly
+    check_a_after = await check_topic_duplicate(
+        topic=topic_name,
+        user_id=user_a,
+        threshold=0.80,
+    )
+    assert check_a_after["is_duplicate"] is False
+

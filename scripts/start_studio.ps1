@@ -54,6 +54,9 @@ $CandidateVenvs = @(
 foreach ($cand in $CandidateVenvs) {
     if (Test-Path $cand) {
         $PythonExe = $cand
+        $VenvDir = Split-Path -Parent (Split-Path -Parent $cand)
+        $env:VIRTUAL_ENV = $VenvDir
+        $env:PATH = "$(Join-Path $VenvDir 'Scripts');$env:PATH"
         break
     }
 }
@@ -138,13 +141,13 @@ if ($Foreground) {
 # 9. Background Execution (DEFAULT)
 Write-Host "[*] Launching Studio API server & background agent workers in BACKGROUND..." -ForegroundColor Yellow
 
+$ProcArgs = @("-u") + $UvicornArgs
 $Proc = Start-Process -FilePath $PythonExe `
-    -ArgumentList $UvicornArgs `
+    -ArgumentList $ProcArgs `
     -WorkingDirectory $ProjectRoot `
     -RedirectStandardOutput $StdOutLog `
     -RedirectStandardError $StdErrLog `
-    -PassThru `
-    -WindowStyle Hidden
+    -PassThru
 
 if (-not $Proc) {
     Write-Error "[!] Failed to launch background Studio process."

@@ -205,22 +205,43 @@ function startLocalVideoProductionJob(newVid) {
         video_type: newVid.videoType || "Travel Guide & Doc",
         format_type: newVid.formatType || "Long (16:9)",
         style_type: newVid.styleType || "Realistic (Photoreal)",
-        youtube_url: newVid.youtubeReferenceUrl || null,
-        youtube_reference_url: newVid.youtubeReferenceUrl || null,
+        youtube_url: newVid.productionType === "YouTube Reference" ? (newVid.youtubeReferenceUrl || null) : null,
+        youtube_reference_url: newVid.productionType === "YouTube Reference" ? (newVid.youtubeReferenceUrl || null) : null,
         enable_bgm: newVid.enableBgm !== undefined ? newVid.enableBgm : true,
         enable_voice_over: newVid.enableVoiceOver !== undefined ? newVid.enableVoiceOver : true,
         enable_tts: newVid.enableTts !== undefined ? newVid.enableTts : null,
         enable_lipsync: newVid.enableLipsync !== undefined ? newVid.enableLipsync : null,
         voice_gender: newVid.voiceGender || "female",
         language: newVid.langCode || (newVid.language && newVid.language.includes("Telugu") ? "te" : (newVid.language && newVid.language.includes("Hindi") ? "hi" : "en")),
-        theme: newVid.productionType === "Theme" ? newVid.concept : null,
-        idea: newVid.productionType === "Idea" ? newVid.concept : null,
-        script: newVid.productionType === "Script" ? newVid.concept : null,
+        theme: newVid.productionType === "Theme" ? (newVid.theme || newVid.concept) : null,
+        idea: newVid.productionType === "Idea" ? (newVid.idea || newVid.concept) : null,
+        script: newVid.productionType === "Script" ? (newVid.script || newVid.concept) : null,
         duration_seconds: newVid.durationSeconds ? parseFloat(newVid.durationSeconds) : 10.0
       })
     })
-      .then(res => { if (!res.ok) throw new Error("HTTP " + res.status); return res.json(); })
+      .then(async res => {
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = errData.detail || ("HTTP " + res.status);
+          if (res.status === 409) {
+            newVid.status = "blocked";
+            newVid.completedAt = Date.now();
+            saveVideosState();
+            renderStudioVideoHistory();
+            if (typeof selectLedgerVideo === "function" && selectedLedgerVideoId === newVid.id) selectLedgerVideo(newVid.id);
+            showStudioModal({
+              title: "Duplicate Content Blocked",
+              message: errMsg,
+              nextStep: "Video creation blocked to prevent demonetization. Run scripts/clear_cache.ps1 or enter a new topic."
+            });
+            return null;
+          }
+          throw new Error(errMsg);
+        }
+        return res.json();
+      })
       .then(data => {
+        if (!data) return;
         newVid.status = "completed";
         newVid.completedAt = Date.now();
         if (data.video_url) newVid.videoUrl = data.video_url;

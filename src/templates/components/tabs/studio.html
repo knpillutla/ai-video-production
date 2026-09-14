@@ -41,11 +41,17 @@
             <span>YouTube Reference</span>
           </button>
         </div>
-        <span id="creation-mode-hint" class="text-[11px] text-gray-400 hidden sm:inline-block font-mono">Theme active • Documentary, World &amp; Travel topics</span>
+        <div class="flex items-center gap-2">
+          <span id="creation-mode-hint" class="text-[11px] text-gray-400 hidden sm:inline-block font-mono">Theme active • Documentary, World &amp; Travel topics</span>
+          <button type="button" id="btn-studio-clear-top" onclick="clearStudioInputs()" class="px-2.5 py-1 text-[11px] font-semibold text-gray-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg transition flex items-center gap-1.5 active:scale-95" title="Clear all inputs">
+            <i class="fa-solid fa-rotate-left text-[10px]"></i>
+            <span>Clear</span>
+          </button>
+        </div>
       </div>
 
-      <!-- YouTube URL Reference Input (Shown prominently or in YouTube mode) -->
-      <div id="youtube-url-container" class="relative w-full">
+      <!-- YouTube URL Reference Input (Shown only in YouTube mode, hidden in Theme) -->
+      <div id="youtube-url-container" class="relative w-full hidden">
         <i class="fa-brands fa-youtube absolute left-3.5 top-3 text-red-500 text-sm"></i>
         <input type="text" id="youtube-url-input" placeholder="Paste YouTube Reference URL (e.g. https://www.youtube.com/watch?v=-BLxlHRYpac)..." class="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-700/60 rounded-xl text-white text-xs placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition">
         <!-- Hidden analyze reference button for automated test DOM compatibility -->
@@ -151,8 +157,12 @@
         </div>
       </div>
 
-      <!-- Bottom Centered Generate Button -->
-      <div class="flex justify-center pt-2">
+      <!-- Bottom Centered Action Buttons: Clear & Generate -->
+      <div class="flex items-center justify-center gap-3 pt-2">
+        <button type="button" id="btn-studio-clear" onclick="clearStudioInputs()" class="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-gray-300 hover:text-white font-bold rounded-xl text-xs flex items-center gap-2 transition border border-slate-700 active:scale-95 shadow-md hover:border-slate-600" title="Clear all input fields and reset">
+          <i class="fa-solid fa-rotate-left text-xs text-gray-400"></i>
+          <span>Clear</span>
+        </button>
         <button id="btn-guided-generate" onclick="quickTestProduceFromPrompt()" class="px-10 py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-black rounded-xl text-sm flex items-center gap-2.5 transition shadow-xl shadow-indigo-600/30 active:scale-95 group">
           <i class="fa-solid fa-bolt text-yellow-300 group-hover:scale-110 transition-transform"></i>
           <span>Generate</span>
@@ -161,51 +171,19 @@
     </div>
   </div>
 
-  <!-- CREATIVE PRESETS & INSPIRATION -->
+  <!-- CREATIVE PRESETS & INSPIRATION (Dynamic based on selected mode) -->
   <div class="space-y-3">
     <div class="flex items-center justify-between">
       <h3 class="text-sm font-bold text-gray-300 flex items-center gap-2">
         <i class="fa-solid fa-sparkles text-indigo-400"></i>
-        <span>Creative Themes &amp; Idea Presets</span>
+        <span id="creative-presets-title">Theme Presets (Nature, Wildlife, Heritage, Travel)</span>
       </h3>
       <button onclick="openCreateVideoWizardModal()" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1">
         <span>Open Guided 3-Step Wizard</span>
         <i class="fa-solid fa-arrow-right text-[10px]"></i>
       </button>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-      <div onclick="usePresetPrompt('theme', 'Malaysia Exploration')" class="p-3.5 bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] hover:border-emerald-500/50 rounded-xl cursor-pointer transition space-y-1 group active:scale-95 shadow-sm">
-        <div class="flex items-center justify-between">
-          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Theme</span>
-          <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-gray-500 group-hover:text-emerald-400"></i>
-        </div>
-        <div class="font-bold text-white text-xs group-hover:text-emerald-300">Malaysia Exploration</div>
-        <div class="text-[10px] text-gray-400">Tropical rainforests, Petronas towers &amp; vibrant culture.</div>
-      </div>
-      <div onclick="usePresetPrompt('youtube', 'India in 4K - Eternal Wonders', 'https://www.youtube.com/watch?v=-BLxlHRYpac')" class="p-3.5 bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] hover:border-red-500/50 rounded-xl cursor-pointer transition space-y-1 group active:scale-95 shadow-sm">
-        <div class="flex items-center justify-between">
-          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30">YouTube Ref</span>
-          <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-gray-500 group-hover:text-red-400"></i>
-        </div>
-        <div class="font-bold text-white text-xs group-hover:text-red-300">India 4K Reference Styling</div>
-        <div class="text-[10px] text-gray-400">Apply drone cinematography, golden lighting &amp; sitar BGM.</div>
-      </div>
-      <div onclick="usePresetPrompt('idea', 'Delhi techie remote job juggle comedy sketch')" class="p-3.5 bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] hover:border-indigo-500/50 rounded-xl cursor-pointer transition space-y-1 group active:scale-95 shadow-sm">
-        <div class="flex items-center justify-between">
-          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Idea</span>
-          <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-gray-500 group-hover:text-indigo-400"></i>
-        </div>
-        <div class="font-bold text-white text-xs group-hover:text-indigo-300">Delhi Techie Moonlighting</div>
-        <div class="text-[10px] text-gray-400">IT engineer juggling dual remote jobs comedy sketch.</div>
-      </div>
-      <div onclick="usePresetPrompt('script', 'SCENE 1: Boiling spices and heat transfer of masala chai in 60s')" class="p-3.5 bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] hover:border-purple-500/50 rounded-xl cursor-pointer transition space-y-1 group active:scale-95 shadow-sm">
-        <div class="flex items-center justify-between">
-          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Script</span>
-          <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-gray-500 group-hover:text-purple-400"></i>
-        </div>
-        <div class="font-bold text-white text-xs group-hover:text-purple-300">Masala Chai Chemistry</div>
-        <div class="text-[10px] text-gray-400">Spices and heat transfer rapid 60s educational reel.</div>
-      </div>
-    </div>
+    <!-- Dynamic Cards Rendered by JavaScript based on active creation mode -->
+    <div id="creative-templates-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
   </div>
 </div>
