@@ -81,8 +81,12 @@ THEME_TOPIC_POOLS: dict[str, list[str]] = {
 class DailyThemeScheduler:
     """Autonomous scheduler executing daily theme-based video generation with zero repetition."""
 
-    async def get_fresh_original_topic(self, theme: str, show_slug: str = "default") -> str:
-        """Find or synthesize a candidate topic guaranteed to have cosine similarity < 0.80."""
+    async def get_fresh_original_topic(
+        self, theme: str, show_slug: str = "default",
+        language: str = "en", user_id: str | None = None,
+    ) -> str:
+        """Find or synthesize a candidate topic guaranteed to have cosine similarity < 0.80
+        for the given language scope."""
         t_key = theme.lower().replace("-", "_").strip()
         alias_map = {
             "comedy": "telugu_comedy",
@@ -117,10 +121,14 @@ class DailyThemeScheduler:
                 f"{title_theme} at Swiss Alpine Lauterbrunnen Valley",
             ]
 
+        dup_meta = {"genre": theme, "show_slug": show_slug, "language": language}
         for candidate in pool:
-            check = await check_topic_duplicate(candidate, metadata={"genre": theme, "show_slug": show_slug})
+            check = await check_topic_duplicate(
+                candidate, metadata=dup_meta,
+                user_id=user_id, language=language,
+            )
             if not check.get("is_duplicate", False):
-                logger.info(f"scheduler_fresh_topic_found: topic='{candidate}' similarity={check.get('max_similarity_score', 0)}")
+                logger.info(f"scheduler_fresh_topic_found: topic='{candidate}' similarity={check.get('max_similarity_score', 0)} language={language}")
                 return candidate
 
         pivot_topic = f"{pool[0]} - New Original Twist {uuid4().hex[:4]}"

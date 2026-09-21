@@ -9,6 +9,19 @@ from src.core.telemetry import logger
 from src.providers.base import HTTPClientPool, LLMProviderProtocol, is_mock_mode
 
 
+class CharacterMetadata(BaseModel):
+    """Culturally authentic character metadata synthesized from script."""
+
+    name: str = Field(description="Culturally authentic character name matching language/region")
+    age: int = Field(default=24, description="Character age (default mid-20s per Directive 12)")
+    gender: str = Field(default="female", description="'male' or 'female'")
+    body_composition: str = Field(default="medium_fit", description="'skinny', 'medium_fit', 'athletic_strong', 'curvy_healthy', 'chubby'")
+    height: str = Field(default="medium", description="'short', 'medium', 'tall'")
+    role: str = Field(default="heroine", description="'hero', 'heroine', 'supporting', 'troupe'")
+    relationship: str = Field(default="lead", description="'lover', 'friend', 'mom', 'dad', 'son', 'daughter', 'teacher', 'uncle', 'lead'")
+    appearance_summary: str = Field(default="", description="Visual prompt describing physical appearance, attire, and features")
+
+
 class ScenePlanItem(BaseModel):
     """Structured scene storyboard specification."""
 
@@ -24,6 +37,7 @@ class ScriptOutput(BaseModel):
 
     title: str
     hook_thesis: str
+    characters: list[CharacterMetadata] = Field(default_factory=list, description="List of characters in the production")
     scenes: list[ScenePlanItem]
     target_duration_seconds: int = 480
     recommended_fps: int = Field(default=30, description="24 for film drama, 30 for dance/music, 60 for walking/action")

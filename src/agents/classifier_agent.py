@@ -234,6 +234,17 @@ class ClassifierAgent:
             return int(m.group(1))
         return None
 
+    def extract_vocal_arrangement_from_text(self, text: str) -> str | None:
+        """Extract explicit vocal track arrangement cues (male, female, duet)."""
+        t = text.lower()
+        if any(c in t for c in ("both singing", "duet", "duet vocals", "couple singing", "both male and female singing", "male and female vocals", "both male and female")):
+            return "duet"
+        if any(c in t for c in ("only male", "male voice", "male vocals", "male singing", "male singer", "hero singing")):
+            return "male"
+        if any(c in t for c in ("only female", "female voice", "female vocals", "female singing", "female singer", "heroine singing")):
+            return "female"
+        return None
+
     def extract_prompt_overrides(self, text: str) -> dict[str, Any]:
         """Synthesize automatic overrides for language, gender, format, duration, and audio modalities from prompt."""
         overrides: dict[str, Any] = {}
@@ -241,10 +252,17 @@ class ClassifierAgent:
         lang = self.extract_language_from_text(text)
         if lang:
             overrides["language"] = lang
-        gender = self.extract_gender_from_text(text)
-        if gender:
-            overrides["gender"] = gender
-            overrides["voice_gender"] = gender
+        vocal_arr = self.extract_vocal_arrangement_from_text(text)
+        if vocal_arr:
+            overrides["voice_gender"] = vocal_arr
+            overrides["vocal_gender"] = vocal_arr
+            if vocal_arr in ("male", "female"):
+                overrides["gender"] = vocal_arr
+        else:
+            gender = self.extract_gender_from_text(text)
+            if gender:
+                overrides["gender"] = gender
+                overrides["voice_gender"] = gender
         dur = self.extract_duration_from_text(text)
         if dur:
             overrides["duration"] = dur

@@ -166,10 +166,11 @@ async def remember_topic(
 ) -> Dict[str, Any]:
     """Record an approved topic, its metadata, and final story into memory vault scoped to user."""
     eff_user_id = user_id or (metadata.get("user_id") if metadata else None)
+
     record = {
         "topic": topic.strip(),
         "metadata": metadata or {},
-        "final_story": final_story.strip(),
+        "final_story": final_story,
         "episode_id": episode_id,
         "show_slug": show_slug,
         "user_id": str(eff_user_id) if eff_user_id else None,

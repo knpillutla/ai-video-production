@@ -77,8 +77,8 @@ class SunoMusicAdapter(MusicProviderProtocol):
                         task_id = data["data"]
                     if task_id:
                         poll_url = f"https://api.musicapi.ai/api/v1/sonic/task/{task_id}"
-                        for _ in range(15):  # Poll up to ~45 seconds
-                            await asyncio.sleep(3)
+                        for poll_i in range(40):  # Poll up to ~180s (MusicAPI→Suno custom lyrics takes 60-120s)
+                            await asyncio.sleep(4.5)
                             task_resp = await client.get(poll_url, headers=headers, timeout=15.0)
                             if task_resp.status_code == 200:
                                 t_data = task_resp.json()
@@ -102,6 +102,7 @@ class SunoMusicAdapter(MusicProviderProtocol):
         self,
         output_path: Path | str,
         genre: str = "cinematic comedy",
+        mood: str = "playful energetic",
         duration_seconds: float = 12.0,
         sample_rate: int = 48000,
         lyrics: str = "",
@@ -122,6 +123,7 @@ class SunoMusicAdapter(MusicProviderProtocol):
             try:
                 audio_url = await self.generate_track(
                     genre=genre,
+                    mood=mood,
                     duration_seconds=int(duration_seconds),
                     lyrics=lyrics,
                     title=title,

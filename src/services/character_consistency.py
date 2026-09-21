@@ -78,9 +78,19 @@ def get_or_create_character_anchor(
     culture: str = "indian_south",
     costume_style: str = "indian_traditional",
     gender: str = "female",
+    language: str = "en",
+    age: int | None = None,
+    body_composition: str | None = None,
+    height: str | None = None,
+    role: str | None = None,
+    appearance_summary: str | None = None,
 ) -> CharacterVisualAnchor:
     """Retrieve existing character anchor from universe repo or initialize a culturally authentic anchor."""
-    name = character_name or ("Ananya" if gender.lower() == "female" else "Ravi")
+    from src.mcp.model_selector.cultural_names import resolve_cultural_character_name
+
+    name = character_name or resolve_cultural_character_name(
+        culture=culture, language=language, gender=gender, seed=abs(hash(str(show_id))) % 100
+    )
     existing_chars = repo.list_characters(user_id, show_id)
     match = next((c for c in existing_chars if c.name.lower() == name.lower()), None)
 
@@ -109,17 +119,21 @@ def get_or_create_character_anchor(
         )
 
     # Initialize character anchor (Mandatory: balanced fit build, neither too skinny nor chubby, mid-20s)
-    if gender.lower() == "female":
+    eff_age = age or 24
+    eff_body = body_composition or "balanced naturally fit medium-slender build"
+    if appearance_summary:
+        appearance = appearance_summary
+    elif gender.lower() == "female":
         appearance = (
-            "24-year-old, mid-20s, balanced naturally fit medium-slender build, graceful feminine curves with toned midriff, neither too skinny nor chubby, "
-            "breathtakingly beautiful South Asian woman, warm golden-dusky glowing complexion, expressive big dark brown eyes, "
-            "long thick wavy black hair, radiant charming smile"
+            f"{eff_age}-year-old, mid-20s, {eff_body}, graceful feminine curves with toned midriff, neither too skinny nor chubby, "
+            f"breathtakingly beautiful South Asian woman, warm golden-dusky glowing complexion, expressive big dark brown eyes, "
+            f"long thick wavy black hair, radiant charming smile"
         )
     else:
         appearance = (
-            "25-year-old, mid-20s, naturally fit lean-athletic healthy masculine build, neither too skinny nor chubby, "
-            "remarkably handsome South Asian man, warm wheatish skin tone, well-defined sharp jawline, short neatly styled black hair, "
-            "clean trimmed light stubble, confident expressive dark eyes"
+            f"{eff_age}-year-old, mid-20s, {eff_body}, healthy masculine build, neither too skinny nor chubby, "
+            f"remarkably handsome South Asian man, warm wheatish skin tone, well-defined sharp jawline, short neatly styled black hair, "
+            f"clean trimmed light stubble, confident expressive dark eyes"
         )
 
     char_entity = Character(
