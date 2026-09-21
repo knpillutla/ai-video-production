@@ -200,7 +200,7 @@ async def execute_single_pass_render(
         logger.info(f"master_render_cache_hit: reusing existing master render {out.name} ({out.stat().st_size} bytes)")
         return out
 
-    fast_cmd = build_fast_concat_command(timeline, out)
+    fast_cmd = build_fast_concat_command(timeline, out, ffmpeg_bin=get_ffmpeg_binary())
     if fast_cmd:
         logger.info(f"fast_stream_copy_concat_active: stitching {len(timeline.scenes)} video clips via -c:v copy (<1.5s)")
         cmd = fast_cmd

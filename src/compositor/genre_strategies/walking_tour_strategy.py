@@ -31,8 +31,10 @@ class WalkingTourStrategy:
             video_format="walking_tour",
             target_duration_seconds=duration_seconds, language=language,
         )
+        target_scenes = max(1, round(duration_seconds / 10.0))
         strict_pov = (
-            "\n\nCRITICAL DIRECTIVES FOR WALKING TOURS (Directives 11, 13):\n"
+            f"\n\nCRITICAL DIRECTIVES FOR WALKING TOURS (Directives 11, 13, 14):\n"
+            f"0. TARGET SCENE COUNT & PACING: For a {duration_seconds}-second video, you MUST generate EXACTLY {target_scenes} scenes of 10.0 seconds each (or 15s for long form), perfectly summing to {duration_seconds}s total.\n"
             "1. STRICT FIRST-PERSON EYE-LEVEL POV (ZERO FOREGROUND AVATAR OBSTRUCTION): The camera IS the viewer walking forward at an ultra-slow, peaceful 1.5–2.0 km/h cadence. "
             "Never place a single synthetic character or avatar directly in front of the camera lens. The 'characters' array MUST BE AN EMPTY LIST []. "
             "All shots are viewed from the direct eye-level perspective of the viewer exploring the environment.\n"

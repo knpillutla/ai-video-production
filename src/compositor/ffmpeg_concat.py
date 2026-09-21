@@ -14,16 +14,12 @@ def build_fast_concat_command(
     """Construct ultra-fast stream-copy concat command (-f concat -safe 0 -c:v copy) in < 1.5s."""
     if not (timeline.scenes and all(sc.video_path and sc.video_path.exists() for sc in timeline.scenes)):
         return None
-    if timeline.subtitle_path and timeline.subtitle_path.exists():
-        return None
-    if getattr(timeline, "film_lut", None):
-        return None
 
     concat_txt = output_path.parent / "concat_inputs.txt"
-    lines = [f"file '{str(sc.video_path).replace(chr(92), '/')}'" for sc in timeline.scenes if sc.video_path]
+    lines = [f"file '{str(sc.video_path.resolve()).replace(chr(92), '/')}'" for sc in timeline.scenes if sc.video_path]
     concat_txt.write_text("\n".join(lines), encoding="utf-8")
 
-    cmd: list[str] = [ffmpeg_bin, "-y", "-f", "concat", "-safe", "0", "-i", str(concat_txt)]
+    cmd: list[str] = [ffmpeg_bin, "-y", "-f", "concat", "-safe", "0", "-i", str(concat_txt.resolve())]
 
     # Mix audio stems with stream-copied video
     input_cursor = 1
