@@ -18,9 +18,10 @@ All AI agents working within this workspace must adhere strictly to the engineer
 * **Single-Pass FFmpeg:** Combine transitions, overlays, audio ducking, and captions into a single `-filter_complex` execution. Never chain sequential re-encodings.
 * **Vectorized Math & Connection Pooling:** Use NumPy for vector distance calculations and reuse persistent `httpx.AsyncClient` instances across requests.
 
-### 3. Reusable Deterministic Scripts First
+### 3. Reusable Deterministic Scripts & Universal Artifact Caching
 * Recurring tasks must be implemented as standalone, reusable Python scripts located in `scripts/` or modular service utilities.
 * Cache assets and LLM outputs using SHA-256 prompt hashing to prevent redundant API expenditure.
+* **Universal Artifact Caching & Idempotency Mandate (All Media Categories):** Reuse created artifacts as much as possible; all production pipeline stages must be strictly idempotent. This rule applies universally across **ALL categories—images, references, backgrounds, scripts, songs, video, audio, lipsync, thumbnails, and composite renders**. If an artifact file already exists on disk and is non-empty for that project/episode/task, **we MUST NOT create or call external models again**. If an artifact is deleted or does not exist, then and only then create it again as required for improvements.
 
 ### 4. Hard 300-Line Limit Per File
 * **No code file may exceed 300 lines** (target 120–220 lines).
@@ -30,7 +31,7 @@ All AI agents working within this workspace must adhere strictly to the engineer
 * Prefer pure functions without hidden side effects.
 * Use explicit dependency injection for all external clients (storage, LLMs, APIs).
 * Enforce typed Pydantic contracts for all domain data passed between boundaries.
-* Ensure all pipeline steps are idempotent and fail-fast.
+* Ensure all pipeline steps are 100% idempotent and fail-fast: if an artifact exists, reuse it; if deleted or missing, recreate as required.
 
 ### 6. Zero Duplication & Single Source of Truth
 * Never create or keep duplicate code, redundant utility functions, or overlapping `.md` documentation files.
@@ -57,6 +58,64 @@ All AI agents working within this workspace must adhere strictly to the engineer
 * **Mandatory User Alert:** Immediately block the request (HTTP 409 Conflict) and display a prominent alert to the user detailing the existing conflicting topic, episode ID, and similarity percentage to prevent channel demonetization and wasted budget.
 
 
+### 11. Mandatory YouTube Partner Program (YPP) Monetization-Safe Content Standards
+* **Anti-Demonetization Narrative Guard (No Ambient-Only Loops):** Never produce silent, uncurated, or static ambient/nature loops without substantial narrative or editorial value. All scenic, travel, or ambient-style productions MUST incorporate scripted voiceover commentary, educational trivia, or cultural storytelling (via TTS narration and timed subtitles) to satisfy YouTube's strict editorial transformation criteria and avoid "Reused / Repetitive Content" demonetization.
+* **100% Commercial Master Rights (Zero Content ID Claims):** Never scrape, sample, or re-upload third-party commercial audio tracks or copyrighted video clips. All BGM and soundtracks must be generated via commercially cleared AI engines (e.g., Suno v3.5 Pro with full commercial master rights) or local procedural DSP audio stems to guarantee zero Content ID strikes or revenue sharing.
+* **AdSense Advertiser-Friendly Compliance (Green Dollar Guarantee):** Run all scripts, lyrics, and metadata through `local_compliance.py` across YouTube's 11 advertiser-unfriendly categories. For mass folk, dance, or comedic content, ensure lyrical themes and choreographic prompts remain strictly within family-friendly / advertiser-safe bounds to avoid yellow-dollar restricted ad placement.
+* **Mandatory Synthetic Media Disclosure:** When publishing or preparing metadata via YouTube Data API v3 (`mcp-multi-publisher`), always set the synthetic/AI-generated content disclosure tag (`has_synthetic_media=True`) to maintain algorithmic trust and channel compliance.
+
+### 12. Mandatory Character Physicality & Autonomous Contextual Wardrobe/Aesthetics Derivation
+* **Default Physicality & Age (Balanced Fit Build):** All main characters (both male and female) MUST have a **balanced, naturally fit, healthy medium-slender build (neither too skinny/bony nor too chubby, graceful feminine curves for women, lean-athletic fit build for men)**, strikingly beautiful / handsome, and in their **mid-20s (ages 23–27)** unless explicitly instructed otherwise by the user.
+* **Autonomous Aesthetic & Wardrobe Derivation:** The user must NEVER be required to manually specify clothing, background aesthetics, color palettes, or set design. The system and story agents must **autonomously derive** these elements directly from the narrative beats, cultural context, and genre synthesized by Gemini.
+* **Contextual Scene-Matched Outfits:** Outfits and wardrobe MUST dynamically and authentically match the context of the specific scenes of the story (e.g., festive village jathara -> vibrant traditional festive attire; modern IT office/WFH -> stylish smart-casual; rainy alpine trek -> functional stylish waterproof alpine outdoor wear; romantic evening -> elegant evening wear).
+
+### 13. Natural Daylight Lighting & Realistic Human Walking Cadence Standards
+* **Natural Daylight Over Artificial Yellow Flares:** Outdoor productions (village celebrations, dance, street scenes) MUST default to crisp, balanced natural daylight (5400K–5600K color temperature, natural sky, realistic balanced skin tones). Strictly prohibit artificial golden-hour lens flare blowouts, oversaturated amber tints, or monochromatic yellow washes.
+* **Realistic Walking Tour Cadence (3 km/h):** First-person POV walking tours (e.g., Swiss Alps, city walks) MUST be paced at a gentle, leisurely human walking cadence (~1 m/s / 3 km/h) with subtle steadycam sway. Never generate high-speed forward rushes, aggressive zooms, or drone-velocity translations that disrupt calm viewer immersion.
+
+### 14. Mandatory Broadcast Video, Audio & Story-Driven Dynamic FPS Standards
+* **Directorial Story-Driven FPS Selection:** Frame rates must never be arbitrary or hardcoded; Gemini MUST autonomously determine `recommended_fps` as part of the story and scene direction:
+  - **24 fps:** Cinematic drama, narrative shorts, emotional dialogues, and slow romance (provides natural cinematic motion blur; prevents the artificial "soap opera" effect).
+  - **30 fps:** Music videos, mass folk dance, upbeat choreography, and stage comedy (provides optimal temporal sharpness for fast footwork and spinning costumes while retaining cinematic cadence).
+  - **60 fps:** First-person POV walking tours, fluid scenic landscape tracking, and action motion (eliminates pan judder and creates realistic physical immersion).
+* **Broadcast Audio Standards:** All audio stems and final masters MUST be formatted to **48,000 Hz (48 kHz) 24-bit stereo**, encoded in **AAC at 256–320 kbps**, normalized to **-14.0 LUFS (±1.0 LUFS)** integrated loudness (True Peak < -1.0 dBFS, YouTube & EBU R128 standard), with deterministic ducking of BGM down by -18 dB to -22 dB during speech.
+* **Visually Lossless 4K Video:** Master all final video deliveries in **4K UHD (3840×2160 for 16:9, 2160×3840 for 9:16 Shorts)** at **CRF 18–20** visually lossless quality via single-pass FFmpeg, `yuv420p` pixel format, and `+faststart` MP4 metadata.
+
+### 15. Mandatory Beat-Driven Choreographic Progression & Musical Alignment Standards
+* **Gemini Lyrics & Scriptwriting Contract:** In all dance, song, and musical productions, **Gemini MUST create the structured script and rhyming lyrical verse / hook couplets** with metric cadence (*prasa*), rhythmic meter, and cultural authenticity. Never allow Suno or external models to hallucinate arbitrary lyrics without Gemini's structured direction.
+* **Suno Music & Beat Composition from Lyrics:** **Suno composes the song, instrumentation, and beats directly based on Gemini's lyrics.** Suno MUST receive Gemini's exact generated lyrics in its `prompt` parameter along with musical tags (`tags: "[genre], [BPM], [instruments], [vocal_gender] vocals"`). Suno then synthesizes the musical arrangement, rhythm, drum transients, and singing performance directly aligned to those lyrics.
+* **Strict Vocal Gender & Lead Performer Consistency:** The vocal gender passed to Suno MUST strictly match the gender of the on-screen lead performer (e.g., Male lead dancer -> `male vocals` / deep energetic hero vocals; Female lead dancer -> `female vocals`). Strictly prohibit pairing a male dancer with a female vocal track or vice versa.
+* **Mandatory Facial Lip-Sync for Musical Dance (`fal-ai/sync-lipsync`):** On-screen singing/dancing lead characters in medium shots and close-ups MUST be processed through the avatar lip-sync pipeline (`fal-ai/sync-lipsync` or `fal-ai/live-portrait`) driven by the Suno vocal track stem, ensuring the mouth moves in authentic synchronization with the sung lyrics.
+* **Strict Ban on Hardcoded or Cached Audio Reuse Across Different Productions:** Never hardcode, recycle, or reuse audio stems across different productions (e.g. reusing legacy test audio like `surrumantadiro_song.mp3`). Every distinct production must use freshly composed Gemini lyrics and Suno music tailored to the episode topic.
+* **Song Reusability During Iterative Video Improvements (No Duplicate Songs):** When testing and iterating on the same video/episode for visual, prompt, or editorial improvements, if a Suno song has already been created and exists on disk for that specific video project, NEVER invoke Suno again. Always reuse the existing synthesized song stem to prevent redundant API expenditures and unwanted duplicate song variations.
+* **Musical Choreographic Progression (Anti-Monotony Guard):** Every dance production (folk, mass, classical, hip-hop, pop) must dynamically change its visual choreography in lockstep with the musical shifts of the song. Prohibit single, static dance loops that repeat across an entire track.
+* **Three-Phase Musical-Choreography Mapping:**
+  - **Phase 1: Rhythm Setup / Intro:** Swagger walk forward, rhythmic shoulder shrugs, subtle hip sway, teasing facial expressions (*abhinaya*).
+  - **Phase 2: Lyrical Verse / Transitions:** Expressive narrative hand gestures matching lyrics, half-turn spins, call-and-response interactions with background troupe.
+  - **Phase 3: The Beat Drop / Signature Hook:** High-intensity signature hook step—vigorous synchronized foot-stomping, rapid waist twists, spinning *chakkars* with whirling skirts, and explosive troupe jumps.
+* **Deterministic Beat Alignment & Snapping:** Run audio through `LocalBeatDetector` (`local_beat_detector.py`) to compute BPM, downbeats, and drops. Scene transitions MUST snap directly to musical downbeats (`align_scene_cuts_to_beats`) so choreographic shifts hit precisely on kick drum transients.
+* **Gemini Directorial Choreography Prompts:** Gemini's storyboard scenes must explicitly specify choreographic intensity tags (`intro_groove`, `verse_acting`, `beat_drop_hook`) and distinct physical steps for each musical beat.
+* **Zero Spoken Narration in Dance Videos (Musical Lip-Sync Only):** In musical and dance videos, the character must NEVER speak spoken narrative text, video titles, or prompt descriptions. Lip-sync synchronization MUST be driven directly by the musical song track and sung lyrics (Suno stem), preserving 100% of the instrumentation, rhythm, and festive singing. Spoken dialogue TTS is strictly prohibited in dance music productions.
+
+### 16. Mandatory Story-Driven Multi-Location Progression & Camera-Matched Background Depth
+* **Multi-Location Hubs for Long-Form Songs (Anti-Static Set Guard):** In full songs (e.g., 2–3+ minute productions), never anchor the entire video to a single static set. Gemini must autonomously derive and rotate across **3 to 4 distinct location hubs** matching the lyrical narrative (e.g., village bazaar street -> lush green paddy fields -> ancient banyan tree platform -> twilight fairgrounds).
+* **Camera-Matched Optical Background Depth (Angle Consistency):** Within each location, backgrounds must authentically adapt to shot geometry and focal length:
+  - **Wide Shot:** Expansive environmental panorama with deep depth-of-field capturing full background architecture and troupe formations.
+  - **Medium Shot:** 50mm cinematic perspective with moderate natural background depth and subtle bokeh.
+  - **Close-Up:** 85mm portrait framing with creamy optical bokeh ($f/1.4$) dissolving background elements into soft blur to maximize facial expression and lipsync focus.
+  - **Low-Angle:** Ground-level upward perspective capturing ground dust, dancing feet, and towering sky/flags.
+* **Autonomous Directorial Derivation:** The user must NEVER have to specify location transitions or focal depth; Gemini dynamically enriches each scene's `location_hub`, `shot_type`, and optical background descriptors directly from lyrics and musical energy.
+
+### 17. Mandatory Blue-Chip Nature & Wildlife Documentary Standards (BBC / NatGeo Style)
+* **Cinematic 24 fps Film Cadence:** Blue-chip nature documentaries must default to **24.0 fps** with natural cinematic motion blur to convey majestic scale, monumental timelessness, and avoid high-speed artificial video effects.
+* **Sweeping Expansive Cinematography:** Prioritize slow forward aerial glides over pristine glacial waters, slow crane descents over granite peaks and ancient canopies, and deep optical depth-of-field. Strictly prohibit aggressive zooms, rapid panning, or shaky-cam translations.
+* **Grand Orchestral Score & Natural Foley:** Combine a sweeping orchestral score (swelling strings, French horn fanfares, resonant cellos) with natural environmental foley (mountain wind whispers, rushing glacial streams, bird calls). Enforce deterministic -18 dB sidechain ducking during speech with 2–3s musical breathing spaces between narration beats.
+* **Authoritative Measured Narration:** Narration must be poetic, educational, and paced deliberately (~120–130 wpm) with rich geographical, ecological, and geological lore (guaranteeing YPP monetization safety).
+
+### 18. Mandatory Mountain & Extreme Climate Survival Documentary Standards (BBC Human Planet / NatGeo Style)
+* **Visceral Atmospheric Realism:** Capture the existential contrast between harsh unforgiving nature and human endurance. Exterior scenes must depict sub-zero blizzards, wind gusts carving powder drifts, desolate stone shelters, frost-crusted wood, and resilient shepherds guiding livestock. Interior scenes feature low-lit shelters, glowing hearth embers, boiling brass tea kettles with rising steam, and weathered, dignified faces.
+* **Cinematic 24.0 fps Film Cadence:** Default strictly to **24.0 fps** with authentic motion blur to convey the heavy, monumental drift of snowstorms and deliberate human struggle.
+* **Procedural Survival Foley & Sparse Melancholic Acoustic Score:** Layer authentic sub-zero wind howling, boots crunching deep snow, and fire embers with sparse traditional acoustic strings (e.g., rubab, mountain flute, low cello drone).
+* **Authoritative Poetic Narration (YPP Anti-Demonetization Guard):** Deliver deliberate measured voiceover (~110–125 wpm) weaving survival tactics, nomadic culture, and geography to provide educational transformation and avoid YouTube's "Repetitive Content" demonetization.
+
 Refer to [AGENT_INSTRUCTIONS.md](file:///c:/neel-1/projects/content-generation/AGENT_INSTRUCTIONS.md) for detailed architecture, code patterns, and the pre-commit self-audit checklist.
-
-

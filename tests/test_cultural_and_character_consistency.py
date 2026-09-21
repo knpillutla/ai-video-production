@@ -202,3 +202,36 @@ def test_telugu_monsoon_rain_dance_and_costume_derivation():
     assert dance_stack["costume_style"] == "telugu_rain_folk_saree"
     assert dance_stack["visual_model"] == "flux-1-dev"
 
+
+def test_character_physicality_and_scene_contextual_outfits():
+    """Verify characters default to balanced fit build (neither too skinny nor chubby), mid-20s, beautiful/handsome."""
+    repo.clear()
+    uid = uuid4()
+    sid = uuid4()
+
+    # Female protagonist anchor
+    female_anchor = get_or_create_character_anchor(
+        user_id=uid, show_id=sid, character_name="Sneha", gender="female"
+    )
+    assert "neither too skinny nor chubby" in female_anchor.appearance_anchor.lower()
+    assert "curves" in female_anchor.appearance_anchor.lower()
+    assert "beautiful" in female_anchor.appearance_anchor.lower()
+    assert "mid-20s" in female_anchor.appearance_anchor.lower()
+
+    # Male protagonist anchor
+    male_anchor = get_or_create_character_anchor(
+        user_id=uid, show_id=sid, character_name="Varun", gender="male"
+    )
+    assert "neither too skinny nor chubby" in male_anchor.appearance_anchor.lower()
+    assert "athletic" in male_anchor.appearance_anchor.lower()
+    assert "handsome" in male_anchor.appearance_anchor.lower()
+    assert "mid-20s" in male_anchor.appearance_anchor.lower()
+
+    # Scene-contextual outfit in visual prompt overrides static costume
+    scene_prompt = "Standing in pouring rain on Swiss alpine pass wearing waterproof red technical storm jacket"
+    enhanced, _, _ = inject_character_consistency(scene_prompt, female_anchor)
+    assert "waterproof red technical storm jacket" in enhanced
+    assert "Protagonist Sneha" in enhanced
+    # static traditional saree was suppressed in favor of scene context
+    assert "kanchipuram" not in enhanced.lower()
+

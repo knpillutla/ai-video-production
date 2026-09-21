@@ -29,6 +29,11 @@ class FalLivePortraitAdapter:
         img = Path(image_path)
         audio = Path(audio_path)
 
+        # Artifact Caching Guard: Reuse existing lipsync clip if already generated for this project
+        if out.exists() and out.stat().st_size > 10000:
+            logger.info(f"lipsync_avatar_cache_hit: reusing existing avatar clip {out.name} ({out.stat().st_size} bytes)")
+            return out
+
         if is_mock_mode():
             return await self._synthesize_local_avatar_clip(img, audio, out, duration_seconds)
 

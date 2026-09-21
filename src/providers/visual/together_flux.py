@@ -99,6 +99,11 @@ class TogetherFluxAdapter(VisualProviderProtocol):
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 
+        # Artifact Caching Guard: Reuse existing keyframe image if already generated for this project
+        if out.exists() and out.stat().st_size > 10000:
+            logger.info(f"flux_image_cache_hit: reusing existing keyframe {out.name} ({out.stat().st_size} bytes)")
+            return out
+
         if is_mock_mode() and not force_live:
             return self._render_local_canvas(prompt, out, aspect_ratio=aspect_ratio, seed=seed, loras=loras)
 
@@ -108,7 +113,7 @@ class TogetherFluxAdapter(VisualProviderProtocol):
         if self.api_key:
             try:
                 img_url = await self.generate_image(prompt, aspect_ratio=aspect_ratio, loras=loras, seed=seed)
-                if img_url and img_url.startswith("http"):
+                if img_url and img_url.startswith("http") and "cineai.studio" not in img_url:
                     resp = await client.get(img_url, timeout=30.0)
                     if resp.status_code == 200:
                         out.write_bytes(resp.content)

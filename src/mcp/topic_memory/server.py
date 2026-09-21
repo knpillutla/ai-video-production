@@ -40,11 +40,12 @@ def _get_vault() -> List[Dict[str, Any]]:
         try:
             data = json.loads(VAULT_FILE.read_text(encoding="utf-8"))
             if isinstance(data, list):
-                seen = {e["topic"] for e in entries}
+                seen = {(str(e.get("user_id", "")), e["topic"], (e.get("metadata") or {}).get("language", "en").lower()) for e in entries}
                 for item in data:
-                    if item.get("topic") not in seen:
+                    key = (str(item.get("user_id", "")), item.get("topic"), (item.get("metadata") or {}).get("language", "en").lower())
+                    if key not in seen:
                         entries.append(item)
-                        seen.add(item["topic"])
+                        seen.add(key)
         except Exception:
             pass
     return entries
@@ -85,11 +86,13 @@ async def check_topic_duplicate(
     final_story: Optional[str] = None,
     threshold: float = 0.80,
     user_id: Optional[str] = None,
+    language: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Check if proposed video topic duplicates existing productions for this user."""
+    """Check if proposed video topic duplicates existing productions for this user & language."""
     highest_sim = 0.0
     conflicting_entry: Optional[Dict[str, Any]] = None
     candidate_meta_str = _format_metadata_str(metadata)
+    candidate_lang = language or (metadata.get("language") if metadata else None) or "en"
 
     global _TOPIC_VAULT
     _TOPIC_VAULT = _get_vault()
@@ -116,27 +119,32 @@ async def check_topic_duplicate(
             if final_story and entry_story else 0.0
         )
 
-        if candidate_meta_str or final_story:
-            sim = max((topic_sim * 0.6) + (meta_sim * 0.2) + (story_sim * 0.2), topic_sim)
-        else:
-            sim = topic_sim
+        sim = max((topic_sim * 0.6) + (meta_sim * 0.2) + (story_sim * 0.2), topic_sim) if (candidate_meta_str or final_story) else topic_sim
 
-        if sim > highest_sim:
-            highest_sim = sim
-            conflicting_entry = entry
+        entry_meta = entry.get("metadata") or {}
+        entry_lang = entry_meta.get("language") or "en"
+        # Only conflict if the similarity meets threshold AND it is for the SAME language
+        if sim >= threshold and entry_lang.lower() == candidate_lang.lower():
+            if sim > highest_sim:
+                highest_sim = sim
+                conflicting_entry = entry
+        elif sim > highest_sim and not conflicting_entry:
+            # Track overall similarity for telemetry, but do not mark conflicting_entry if language differs
+            pass
 
-    is_duplicate = highest_sim >= threshold
+    is_duplicate = conflicting_entry is not None
     alert_msg = None
     if is_duplicate and conflicting_entry:
         alert_msg = (
             f"DUPLICATE CONTENT ALERT: Video generation blocked! The proposed topic '{topic}' "
-            f"has {highest_sim * 100:.1f}% similarity with your existing episode '{conflicting_entry['topic']}' "
+            f"already exists for language '{candidate_lang}' in episode '{conflicting_entry['topic']}' "
             f"(Episode ID: {conflicting_entry.get('episode_id', 'unknown')}). "
-            f"Creating duplicate content is blocked to avoid demonetization and channel audience cannibalization."
+            f"Creating duplicate content for the same language is blocked to avoid demonetization and channel audience cannibalization."
         )
 
     return {
         "candidate_topic": topic,
+        "language": candidate_lang,
         "max_similarity_score": round(highest_sim, 4),
         "threshold": threshold,
         "is_duplicate": is_duplicate,

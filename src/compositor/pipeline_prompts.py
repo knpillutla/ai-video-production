@@ -78,6 +78,17 @@ def build_storyboard_prompt(
     if camera_language:
         extras.append(f"Camera Cinematography: {camera_language}.")
 
+    # Mandatory Workspace Directives: Physicality & Autonomous Contextual Outfits
+    extras.append(
+        "MANDATORY CAST & WARDROBE DIRECTIVE: All main characters (male and female) must have a balanced, "
+        "naturally fit medium-slender build (neither too skinny/bony nor too chubby, graceful feminine curves with toned midriff for women, "
+        "lean-athletic fit build for men), strikingly beautiful / handsome in their mid-20s (ages 23-27). "
+        "Autonomously derive setting aesthetics, background environment, and lighting directly from narrative context. "
+        "Outfits and wardrobe MUST dynamically and authentically match the context of each scene in the story (e.g. festive village "
+        "jathara -> vibrant traditional festive attire; modern IT office/WFH -> stylish smart-casual; rainy alpine trek -> "
+        "functional stylish waterproof alpine outdoor wear; romantic evening -> elegant evening wear)."
+    )
+
     if extras:
         base += " " + " ".join(extras)
 

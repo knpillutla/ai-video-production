@@ -109,6 +109,11 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 
+        # Artifact Caching Guard: Reuse existing voice stem if already generated for this project
+        if out.exists() and out.stat().st_size > 1000:
+            logger.info(f"tts_voice_cache_hit: reusing existing voice stem {out.name} ({out.stat().st_size} bytes)")
+            return out
+
         if is_mock_mode() and not force_live:
             audio_bytes = self._generate_synthetic_wav(duration_seconds=max(2.0, len(text.split()) * 0.4))
             out.write_bytes(audio_bytes)

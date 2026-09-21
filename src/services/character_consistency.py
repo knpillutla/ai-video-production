@@ -27,12 +27,16 @@ class CharacterVisualAnchor(BaseModel):
     reference_image_path: str | None = None
 
 
-def build_character_prompt_prefix(anchor: CharacterVisualAnchor) -> str:
+def build_character_prompt_prefix(
+    anchor: CharacterVisualAnchor,
+    costume_override: str | None = None,
+) -> str:
     """Construct an identity-locking prompt prefix specifying exact facial, clothing, and jewelry traits."""
+    costume = costume_override if costume_override is not None else anchor.costume_anchor
     elements = [
         f"Protagonist {anchor.name}",
         anchor.appearance_anchor,
-        anchor.costume_anchor,
+        costume,
         anchor.jewelry_anchor,
     ]
     cleaned = [e.strip() for e in elements if e and e.strip()]
@@ -42,8 +46,11 @@ def build_character_prompt_prefix(anchor: CharacterVisualAnchor) -> str:
 def inject_character_consistency(
     visual_prompt: str,
     anchor: CharacterVisualAnchor | None,
+    costume_override: str | None = None,
 ) -> tuple[str, list[dict[str, Any]], int]:
     """Inject persistent character anchors and LoRAs into visual diffusion scene prompts.
+
+    Prioritizes scene-contextual outfits derived from narrative context over static costumes.
 
     Returns:
         tuple[str, list[dict[str, Any]], int]: (enhanced_prompt, scene_loras, deterministic_seed)
@@ -51,7 +58,11 @@ def inject_character_consistency(
     if not anchor:
         return visual_prompt, [], 42819
 
-    prefix = build_character_prompt_prefix(anchor)
+    vp_lower = visual_prompt.lower()
+    has_scene_outfit = any(k in vp_lower for k in ("wearing", "dressed in", "outfit", "attire", "costume", "garb", "saree", "jacket", "suit"))
+    effective_costume = costume_override if costume_override is not None else ("" if has_scene_outfit else anchor.costume_anchor)
+
+    prefix = build_character_prompt_prefix(anchor, costume_override=effective_costume)
     enhanced = f"{prefix}, {visual_prompt}"
     logger.info(
         f"character_consistency_injected: char={anchor.name}, loras={len(anchor.loras)}, "
@@ -97,15 +108,17 @@ def get_or_create_character_anchor(
             reference_image_path=match.face_embedding_path,
         )
 
-    # Initialize new culturally authentic character anchor
+    # Initialize character anchor (Mandatory: balanced fit build, neither too skinny nor chubby, mid-20s)
     if gender.lower() == "female":
         appearance = (
-            "24-year-old South Asian woman, warm golden-dusky glowing complexion, expressive almond dark brown eyes, "
-            "sharp jawline, long thick silky black hair braided with neat jasmine flowers, radiant warm smile"
+            "24-year-old, mid-20s, balanced naturally fit medium-slender build, graceful feminine curves with toned midriff, neither too skinny nor chubby, "
+            "breathtakingly beautiful South Asian woman, warm golden-dusky glowing complexion, expressive big dark brown eyes, "
+            "long thick wavy black hair, radiant charming smile"
         )
     else:
         appearance = (
-            "28-year-old South Asian man, warm wheatish skin tone, well-defined jawline, short neatly styled black hair, "
+            "25-year-old, mid-20s, naturally fit lean-athletic healthy masculine build, neither too skinny nor chubby, "
+            "remarkably handsome South Asian man, warm wheatish skin tone, well-defined sharp jawline, short neatly styled black hair, "
             "clean trimmed light stubble, confident expressive dark eyes"
         )
 

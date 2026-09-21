@@ -1,5 +1,6 @@
 """Suno v3.5 Pro API music adapter for commercially cleared original soundtracks."""
 
+import asyncio
 import math
 import struct
 import wave
@@ -11,19 +12,23 @@ from src.providers.base import HTTPClientPool, MusicProviderProtocol, is_mock_mo
 
 
 class SunoMusicAdapter(MusicProviderProtocol):
-    """Commercially cleared soundtrack generator powered by Suno v3.5 Pro API ($0.08/track)."""
+    """Commercially cleared soundtrack generator powered by Suno v3.5 / sonic-v5 via MusicAPI.ai."""
 
-    def __init__(self, api_key: str | None = None):
+    def __init__(self, api_key: str | None = None, endpoint: str | None = None):
         self.api_key = api_key or settings.media.suno_api_key
-        self.endpoint = "https://api.suno.ai/v1/generate"
+        # Target MusicAPI.ai Sonic / Suno REST API
+        self.endpoint = endpoint or "https://api.musicapi.ai/api/v1/sonic/create"
 
     async def generate_track(
         self,
         genre: str = "cinematic comedy",
         mood: str = "playful energetic",
         duration_seconds: int = 120,
+        lyrics: str = "",
+        title: str = "",
+        vocal_gender: str = "female",
     ) -> str:
-        """Request an original commercial soundtrack from Suno."""
+        """Request an original commercial soundtrack from Suno via MusicAPI.ai."""
         if is_mock_mode():
             return f"https://cdn.cineai.studio/audio/suno_track_{abs(hash(genre)) % 10000}.mp3"
 
@@ -32,22 +37,66 @@ class SunoMusicAdapter(MusicProviderProtocol):
             "Authorization": f"Bearer {self.api_key or ''}",
             "Content-Type": "application/json",
         }
-        body = {
-            "prompt": f"Instrumental {genre}, {mood}, cinematic high-production mix, no vocals",
-            "make_instrumental": True,
-            "wait_audio": False,
-        }
+
+        # Structure payload according to MusicAPI.ai specifications
+        if lyrics:
+            tags_str = f"{genre}, {mood}"
+            if vocal_gender and vocal_gender.lower() in ("female", "male", "duet"):
+                tags_str = f"{tags_str}, {vocal_gender.lower()} vocals"
+            elif vocal_gender and "chorus" in vocal_gender.lower():
+                tags_str = f"{tags_str}, chorus vocals"
+
+            body = {
+                "custom_mode": True,
+                "prompt": lyrics,
+                "tags": tags_str,
+                "title": title or f"{genre} track",
+                "mv": "sonic-v5",
+            }
+        else:
+            body = {
+                "custom_mode": False,
+                "mv": "sonic-v5",
+                "gpt_description_prompt": f"Instrumental {genre}, {mood}, cinematic high-production mix",
+            }
 
         if self.api_key:
             try:
                 resp = await client.post(self.endpoint, headers=headers, json=body, timeout=30.0)
-                if resp.status_code == 200:
+                if resp.status_code in (200, 201):
                     data = resp.json()
-                    return data.get("audio_url", "https://cdn.cineai.studio/audio/suno_track_mock.mp3")
-            except Exception as ex:
-                logger.warning(f"suno_api_call_failed: {ex}. Using local synthetic soundtrack fallback.")
+                    # Immediate audio url check
+                    if "audio_url" in data:
+                        return data["audio_url"]
 
-        return f"https://cdn.cineai.studio/audio/suno_track_{abs(hash(genre)) % 10000}.mp3"
+                    # MusicAPI.ai task-based async polling
+                    task_id = data.get("task_id")
+                    if not task_id and isinstance(data.get("data"), dict):
+                        task_id = data["data"].get("task_id")
+                    elif not task_id and isinstance(data.get("data"), str):
+                        task_id = data["data"]
+                    if task_id:
+                        poll_url = f"https://api.musicapi.ai/api/v1/sonic/task/{task_id}"
+                        for _ in range(15):  # Poll up to ~45 seconds
+                            await asyncio.sleep(3)
+                            task_resp = await client.get(poll_url, headers=headers, timeout=15.0)
+                            if task_resp.status_code == 200:
+                                t_data = task_resp.json()
+                                items = t_data.get("data")
+                                if isinstance(items, list) and items:
+                                    entry = items[0]
+                                    if entry.get("state") in ("succeeded", "success", "completed"):
+                                        if entry.get("audio_url"):
+                                            return entry["audio_url"]
+                                elif isinstance(items, dict):
+                                    if items.get("state") in ("succeeded", "success", "completed") and items.get("audio_url"):
+                                        return items["audio_url"]
+                                if t_data.get("state") in ("succeeded", "success", "completed") and t_data.get("audio_url"):
+                                    return t_data["audio_url"]
+            except Exception as ex:
+                logger.warning(f"musicapi_suno_call_failed: {ex}. Using local synthetic soundtrack fallback.")
+
+        return ""
 
     async def generate_to_file(
         self,
@@ -55,10 +104,50 @@ class SunoMusicAdapter(MusicProviderProtocol):
         genre: str = "cinematic comedy",
         duration_seconds: float = 12.0,
         sample_rate: int = 48000,
+        lyrics: str = "",
+        vocal_gender: str = "female",
+        title: str = "",
+        force_live: bool = False,
     ) -> Path:
         """Generate and save background music to a valid 48kHz stereo WAV file."""
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
+
+        # Song Deduplication Guard: If song already exists for this project, reuse it and never invoke Suno again
+        if out.exists() and out.stat().st_size > 50000:
+            logger.info(f"suno_track_cache_hit: reusing existing soundtrack {out.name} ({out.stat().st_size} bytes)")
+            return out
+
+        if (force_live or lyrics) and self.api_key and not is_mock_mode():
+            try:
+                audio_url = await self.generate_track(
+                    genre=genre,
+                    duration_seconds=int(duration_seconds),
+                    lyrics=lyrics,
+                    title=title,
+                    vocal_gender=vocal_gender,
+                )
+                if audio_url and not is_mock_mode():
+                    client = HTTPClientPool.get_client()
+                    resp = await client.get(audio_url, timeout=60.0)
+                    if resp.status_code == 200:
+                        temp_mp3 = out.with_suffix(".temp.mp3")
+                        temp_mp3.write_bytes(resp.content)
+                        from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary
+                        import subprocess
+                        ffmpeg_bin = get_ffmpeg_binary()
+                        cmd = [
+                            ffmpeg_bin, "-y", "-i", str(temp_mp3),
+                            "-ar", str(sample_rate), "-ac", "2", str(out)
+                        ]
+                        proc = subprocess.run(cmd, capture_output=True)
+                        if temp_mp3.exists():
+                            temp_mp3.unlink()
+                        if proc.returncode == 0 and out.exists() and out.stat().st_size > 1000:
+                            logger.info(f"suno_live_audio_downloaded: {out.name} ({out.stat().st_size} bytes)")
+                            return out
+            except Exception as ex:
+                logger.warning(f"suno_live_download_failed: {ex}. Falling back to local synthesizer.")
 
         total_samples = int(sample_rate * duration_seconds)
         is_nature_rain = any(

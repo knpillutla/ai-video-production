@@ -68,10 +68,8 @@ class ProductionPipelineCoordinator:
         if not episode:
             raise ValueError(f"Episode {episode_id} not found for user {user_id}")
 
-        if enable_bgm is None:
-            enable_bgm = getattr(episode.options, "enable_bgm", True)
-        if enable_lipsync is None:
-            enable_lipsync = getattr(episode.options, "enable_lipsync", False)
+        enable_bgm = getattr(episode.options, "enable_bgm", True) if enable_bgm is None else enable_bgm
+        enable_lipsync = getattr(episode.options, "enable_lipsync", False) if enable_lipsync is None else enable_lipsync
 
         show = repo.get_show(user_id, episode.show_id)
         show_slug = show.slug if show else "default_universe"
@@ -83,10 +81,8 @@ class ProductionPipelineCoordinator:
             d.mkdir(parents=True, exist_ok=True)
 
         fmt_str = str(episode.format.value if hasattr(episode.format, "value") else episode.format).lower()
-        eff_script = custom_script or getattr(episode, "custom_script", None)
-        eff_idea = idea or getattr(episode, "topic_or_idea", None)
-        eff_theme = theme or getattr(getattr(episode, "theme", None), "value", None)
-        yt_url = getattr(episode, "youtube_reference_url", None)
+        eff_script, eff_idea = custom_script or getattr(episode, "custom_script", None), idea or getattr(episode, "topic_or_idea", None)
+        eff_theme, yt_url = theme or getattr(getattr(episode, "theme", None), "value", None), getattr(episode, "youtube_reference_url", None)
 
         from src.scripts.youtube_ingest import extract_reference_video_attributes
         ref_attrs = extract_reference_video_attributes(
@@ -109,7 +105,7 @@ class ProductionPipelineCoordinator:
 
         logger.info(f"starting_production_pipeline: ep={episode.title}, user={user_id}, tier={tier}")
 
-        meta_dict = {"genre": show.genre if show else "general", "show_slug": show_slug, "tier": tier}
+        meta_dict = {"genre": show.genre if show else "general", "show_slug": show_slug, "tier": tier, "language": language}
         topic_check = await check_topic_duplicate(topic=episode.title, metadata=meta_dict, user_id=str(user_id))
         if topic_check.get("is_duplicate"):
             raise ValueError(topic_check.get("alert_message") or "Duplicate content detected.")
@@ -130,15 +126,15 @@ class ProductionPipelineCoordinator:
         storyboard_data = await self.llm.generate_structured(prompt)
         scenes_list = storyboard_data.get("scenes", [])
 
-        full_story_text = " ".join(s.get("dialogue", "") for s in scenes_list)
+        full_story_text = " ".join((" ".join(s.get("dialogue", [])) if isinstance(s.get("dialogue"), list) else str(s.get("dialogue", ""))) for s in scenes_list)
         await remember_topic(topic=episode.title, metadata=meta_dict, final_story=full_story_text, episode_id=str(episode.id), show_slug=show_slug, user_id=str(user_id))
-
+        eff_gender = gender or storyboard_data.get("vocal_gender", "female")
         user_entity = repo.get_user(user_id)
         derived_culture = derive_cultural_context(
             script_text=f"{episode.title} {full_story_text}",
             user_home_country=user_entity.home_country if user_entity else None,
             user_cultural_heritage=culture or (user_entity.cultural_heritage if user_entity else None),
-            language=language, gender=gender, genre=show.genre if show else "comedy",
+            language=language, gender=eff_gender, genre=show.genre if show else "comedy",
             dance_type=dance_type or "", video_format=fmt_str, art_style=effective_art_style or "",
         )
 
@@ -146,20 +142,14 @@ class ProductionPipelineCoordinator:
         char_anchor = None
         effective_culture = culture or derived_culture.culture
         effective_costume = costume_style or derived_culture.clothing_style
-        if character_name or "web_series" in fmt_str or "movie" in fmt_str:
+        if character_name or any(k in fmt_str for k in ("web_series", "movie", "dance", "music")) or any(k in episode.title.lower() for k in ("character", "dancer", "lead", "hero")):
             char_anchor = get_or_create_character_anchor(
-                user_id=user_id,
-                show_id=episode.show_id,
-                character_name=character_name,
-                culture=effective_culture,
-                costume_style=effective_costume,
-                gender=gender,
+                user_id=user_id, show_id=episode.show_id, character_name=character_name,
+                culture=effective_culture, costume_style=effective_costume, gender=eff_gender,
             )
 
         # 2. Synthesize Visual Keyframes and Voice Stems for each scene
-        compiled_scenes = []
-        subtitle_segments = []
-        current_time = 0.0
+        compiled_scenes, subtitle_segments, current_time = [], [], 0.0
         tot_raw = sum(float(s.get("duration_seconds", 4.0)) for s in scenes_list)
         tgt_dur = float(episode.duration_seconds)
         scale = (tgt_dur / tot_raw) if (tgt_dur > 0 and tot_raw > 0 and abs(tgt_dur - tot_raw) > 0.5) else 1.0
@@ -168,7 +158,7 @@ class ProductionPipelineCoordinator:
             idx = sc.get("scene_index", len(compiled_scenes))
             dur = round(float(sc.get("duration_seconds", 4.0)) * scale, 2)
             vis_prompt = sc.get("visual_prompt", f"Scene {idx} for {episode.title}")
-            dialogue = sc.get("dialogue", "")
+            dialogue = " ".join(sc.get("dialogue", [])) if isinstance(sc.get("dialogue"), list) else str(sc.get("dialogue", ""))
 
             # Generate keyframe image with character, art style & LoRA consistency & record rights
             enhanced_vis, scene_loras, scene_seed = inject_character_consistency(vis_prompt, char_anchor)
@@ -178,10 +168,13 @@ class ProductionPipelineCoordinator:
                 if not any(sl.get("path") == lora.get("path") or sl.get("name") == lora.get("name") for sl in scene_loras):
                     scene_loras.append(lora)
             img_path = scenes_dir / f"scene_{idx:02d}.jpg"
-            await self.visual.generate_to_file(
-                enhanced_vis, output_path=img_path, force_live=force_live,
-                loras=scene_loras, seed=scene_seed,
-            )
+            if not (img_path.is_file() and img_path.stat().st_size > 0):
+                await self.visual.generate_to_file(
+                    enhanced_vis, output_path=img_path, force_live=force_live,
+                    loras=scene_loras, seed=scene_seed,
+                )
+            if idx == 0 and char_anchor and not char_anchor.reference_image_path:
+                char_anchor.reference_image_path = str(img_path)
             rights_ledger.record_asset(
                 episode_id=episode.id, asset_type=AssetType.IMAGE, file_path=str(img_path),
                 provider="TogetherAI/Flux", model_name="FLUX.1-schnell",
@@ -192,7 +185,7 @@ class ProductionPipelineCoordinator:
             # Generate voiceover stem & record rights (if voiceover enabled)
             voice_path = None
             if enable_voice_over and episode.options.enable_tts and dialogue:
-                voice_path = stems_dir / f"voice_{idx:02d}.wav"
+                voice_path = stems_dir / f"voice_{idx:02d}_{language}.wav"
                 voice_id = derived_culture.voice_id
                 await self.tts.synthesize_to_file(dialogue, output_path=voice_path, voice_id=voice_id, force_live=force_live)
                 rights_ledger.record_asset(
@@ -222,7 +215,12 @@ class ProductionPipelineCoordinator:
         bgm_path = stems_dir / "bgm_master.wav" if enable_bgm else None
         if enable_bgm and bgm_path:
             bgm_style = ref_attrs.soundtrack_style if (yt_url and ref_attrs.soundtrack_style) else (derived_culture.music_style if enable_voice_over else "Gentle rain drops, distant thunder, and relaxing ambient nature sounds")
-            await self.music.generate_to_file(output_path=bgm_path, genre=bgm_style, duration_seconds=current_time)
+            full_lyrics = " ".join(s.get("dialogue", "") for s in scenes_list if s.get("dialogue"))
+            await self.music.generate_to_file(
+                output_path=bgm_path, genre=bgm_style, duration_seconds=current_time,
+                lyrics=full_lyrics, vocal_gender=gender or episode.options.voice_gender or "female",
+                title=episode.title, force_live=force_live,
+            )
             rights_ledger.record_asset(
                 episode_id=episode.id, asset_type=AssetType.MUSIC, file_path=str(bgm_path),
                 provider="Suno/CineAI", model_name="v3.5-pro",
@@ -234,22 +232,21 @@ class ProductionPipelineCoordinator:
         active_sub_lang = subtitle_language or ("en" if language.lower() != "en" else "en")
         bundle_info = generate_subtitle_bundle(
             base_segments=subtitle_segments if enable_voice_over else [],
-            base_language=language,
-            output_dir=ep_dir / "subtitles",
-            default_subtitle_lang=active_sub_lang,
+            base_language=language, output_dir=ep_dir / "subtitles", default_subtitle_lang=active_sub_lang,
         )
         burned_ass_path = bundle_info["burned_ass_path"] if enable_voice_over else None
 
         # 5. Compile Multi-Track Timeline Layout
         timeline = compile_timeline_from_scenes(
             scene_data=compiled_scenes, bgm_path=bgm_path, subtitle_path=burned_ass_path,
-            target_resolution=(1920, 1080), fps=30,
+            target_resolution=(1920, 1080), fps=int(storyboard_data.get("recommended_fps", 30)),
         )
 
         # 6. Execute Single-Pass FFmpeg Compositing
         render_t0 = time.perf_counter()
+        render_name = f"master_16x9_ep{episode.episode_number:02d}_{language}.mp4" if language and language != "en" else f"master_16x9_ep{episode.episode_number:02d}.mp4"
         final_video = await execute_single_pass_render(
-            timeline=timeline, output_path=renders_dir / f"master_16x9_ep{episode.episode_number:02d}.mp4",
+            timeline=timeline, output_path=renders_dir / render_name,
             dry_run=dry_run,
         )
         render_elapsed = max(0.5, time.perf_counter() - render_t0)

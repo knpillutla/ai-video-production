@@ -132,8 +132,9 @@ def build_single_pass_command(
         "-preset", "fast",
         "-crf", "20",
         "-pix_fmt", "yuv420p",
+        "-r", str(timeline.fps),
         "-c:a", "aac",
-        "-b:a", "192k",
+        "-b:a", "256k",
         "-ar", "48000",
         "-shortest",
         "-t", f"{timeline.total_duration_seconds:.2f}",
@@ -151,6 +152,10 @@ async def execute_single_pass_render(
 ) -> Path:
     """Execute the single-pass FFmpeg rendering command asynchronously."""
     out = Path(output_path)
+    if out.exists() and out.stat().st_size > 50000:
+        logger.info(f"master_render_cache_hit: reusing existing master render {out.name} ({out.stat().st_size} bytes)")
+        return out
+
     cmd = build_single_pass_command(timeline, out)
     cmd_str = " ".join(cmd[:12]) + " ... (single-pass filter_complex)"
     logger.info(f"rendering_single_pass: out={out.name}, duration={timeline.total_duration_seconds}s")

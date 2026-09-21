@@ -4,6 +4,7 @@ Provides deterministic Tier 0 semantic classification with optional Tier 1 LLM f
 supporting automatic detection of Media Format, Visual Style, and Theme with 1-click user override.
 """
 
+from typing import Any
 from src.core.telemetry import logger
 from src.domain.generation import ContentClassification, MediaFormat, ThemeGenre, VisualStyle
 
@@ -29,7 +30,7 @@ STYLE_PATTERNS: list[tuple[VisualStyle, list[str]]] = [
 FORMAT_PATTERNS: list[tuple[MediaFormat, list[str]]] = [
     (MediaFormat.TRAVEL_GUIDE, ["travel guide", "city guide", "tourist attractions", "tourist spots", "places to visit", "sightseeing", "top 10 spots", "things to do in", "monument tour", "guide"]),
     (MediaFormat.VLOG, ["vlog", "travel vlog", "day in the life", "walking tour", "solo travel", "road trip"]),
-    (MediaFormat.DANCE_VIDEO, ["dance video", "hook step", "choreography", "music video", "beat drop", "song dance"]),
+    (MediaFormat.DANCE_VIDEO, ["dance video", "dance", "hook step", "choreography", "music video", "beat drop", "song dance", "mass dance", "mass song", "mass jathara", "jathara", "folk dance", "dancers"]),
     (MediaFormat.NEWS_TABLOID, ["breaking news", "tabloid", "report", "bulletin", "headline", "scandal", "news"]),
     (MediaFormat.PODCAST_EXPLAINER, ["podcast", "explainer", "breakdown", "deep dive", "interview", "discussion", "talk show"]),
     (MediaFormat.MOVIE_CINEMATIC, ["movie", "cinema", "feature film", "short film", "blockbuster", "trailer"]),
@@ -157,7 +158,9 @@ class ClassifierAgent:
             if has_dialogue_tags or has_quoted_speech:
                 return True, True
 
-        # 2. Format-Based Inference: character-driven vs ambient relaxation
+        # 2. Format-Based Inference: character-driven vs ambient relaxation vs dance
+        if any(f in fmt_str for f in ("dance", "music_video", "song")) or any(k in combined for k in ("dance", "jathara", "mass dance", "folk dance", "dancers")):
+            return False, True
         if any(f in fmt_str for f in ("web_series", "sitcom", "movie", "dialogue", "skit", "interview", "podcast")):
             return True, True
         if any(f in fmt_str for f in ("scenic_relaxation", "walking_tour", "scenic_drive", "ambient_lounge", "nature_sanctuary")):
@@ -174,6 +177,92 @@ class ClassifierAgent:
 
         return False, False
 
+    def extract_language_from_text(self, text: str) -> str | None:
+        """Extract explicit or implicit spoken language code from prompt or script text."""
+        lang_map = [
+            ("te", ["telugu", "andhra", "telangana", "sankranthi"]),
+            ("hi", ["hindi", "bollywood"]),
+            ("ta", ["tamil", "kollywood", "chennai"]),
+            ("kn", ["kannada", "sandalwood", "bengaluru"]),
+            ("ml", ["malayalam", "mollywood", "kerala"]),
+            ("mr", ["marathi"]),
+            ("bn", ["bengali", "bangla"]),
+            ("pa", ["punjabi"]),
+            ("gu", ["gujarati"]),
+            ("es", ["spanish", "espanol"]),
+            ("fr", ["french"]),
+            ("de", ["german"]),
+            ("ja", ["japanese"]),
+            ("ko", ["korean"]),
+            ("en", ["english"]),
+        ]
+        t = text.lower()
+        for code, keywords in lang_map:
+            if any(kw in t for kw in keywords):
+                return code
+        return None
+
+    def extract_gender_from_text(self, text: str) -> str | None:
+        """Extract lead character gender cues from prompt or script text."""
+        t = text.lower()
+        male_cues = ["male character", "male dancer", "male lead", "man ", "boy", "guy", "hero", "male"]
+        female_cues = ["female character", "female dancer", "female lead", "woman", "girl", "lady", "heroine", "female", "village belle"]
+        has_male = any(c in t for c in male_cues)
+        has_female = any(c in t for c in female_cues)
+        if has_male and not has_female:
+            return "male"
+        if has_female and not has_male:
+            return "female"
+        if "male character" in t or "male lead" in t or "male dancer" in t:
+            return "male"
+        if "female character" in t or "female lead" in t or "female dancer" in t:
+            return "female"
+        return None
+
+    def extract_duration_from_text(self, text: str) -> int | None:
+        """Extract explicit duration in seconds from prompt strings like 'for 30 min' or '10 seconds'."""
+        import re
+        t = text.lower()
+        m = re.search(r"\b(\d+)\s*(?:hr|hrs|hour|hours)\b", t)
+        if m:
+            return int(m.group(1)) * 3600
+        m = re.search(r"\b(\d+)\s*(?:min|mins|minute|minutes)\b", t)
+        if m:
+            return int(m.group(1)) * 60
+        m = re.search(r"\b(\d+)\s*(?:sec|secs|second|seconds)\b", t)
+        if m:
+            return int(m.group(1))
+        return None
+
+    def extract_prompt_overrides(self, text: str) -> dict[str, Any]:
+        """Synthesize automatic overrides for language, gender, format, duration, and audio modalities from prompt."""
+        overrides: dict[str, Any] = {}
+        t_low = text.lower()
+        lang = self.extract_language_from_text(text)
+        if lang:
+            overrides["language"] = lang
+        gender = self.extract_gender_from_text(text)
+        if gender:
+            overrides["gender"] = gender
+            overrides["voice_gender"] = gender
+        dur = self.extract_duration_from_text(text)
+        if dur:
+            overrides["duration"] = dur
+        if any(k in t_low for k in ("documentary", "mountain", "wildlife", "alps", "nature")):
+            if "documentary" in t_low or "mountain" in t_low:
+                overrides["media_format"] = MediaFormat.MOVIE_CINEMATIC
+                overrides["enable_bgm"] = True
+                overrides["is_voice_over"] = True
+                overrides["enable_lipsync"] = False
+        det = self.detect(text)
+        if "media_format" not in overrides and det.media_format == MediaFormat.DANCE_VIDEO:
+            overrides["media_format"] = MediaFormat.DANCE_VIDEO
+            overrides["enable_bgm"] = True
+            overrides["enable_lipsync"] = True
+            overrides["is_voice_over"] = False
+        return overrides
+
 
 classifier_agent = ClassifierAgent()
 __all__ = ["ClassifierAgent", "classifier_agent"]
+

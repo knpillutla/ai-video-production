@@ -26,6 +26,10 @@ class ScriptOutput(BaseModel):
     hook_thesis: str
     scenes: list[ScenePlanItem]
     target_duration_seconds: int = 480
+    recommended_fps: int = Field(default=30, description="24 for film drama, 30 for dance/music, 60 for walking/action")
+    audio_sample_rate_hz: int = Field(default=48000, description="Broadcast audio sample rate: 48000 Hz 24-bit")
+    vocal_gender: str = Field(default="female", description="'female', 'male', 'duet', 'background_chorus', or 'instrumental'")
+    vocal_delivery_type: str = Field(default="lead_lip_sync", description="'lead_lip_sync', 'background_song', 'voiceover_narration', or 'instrumental_only'")
 
 
 class GeminiLLMAdapter(LLMProviderProtocol):
@@ -33,7 +37,7 @@ class GeminiLLMAdapter(LLMProviderProtocol):
 
     def __init__(self, api_key: str | None = None, strict: bool = False):
         self.api_key = api_key or settings.llm.google_api_key or settings.llm.gemini_api_key or None
-        self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent"
+        self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent"
         self.strict = strict
 
     async def generate_text(self, prompt: str, system_prompt: str = "", temperature: float = 0.7) -> str:
@@ -98,7 +102,10 @@ class GeminiLLMAdapter(LLMProviderProtocol):
                 clean_json = clean_json.rsplit("\n", 1)[0]
 
         try:
-            return json.loads(clean_json)
+            parsed = json.loads(clean_json)
+            if isinstance(parsed, list):
+                return {"scenes": parsed}
+            return parsed
         except Exception as ex:
             if self.strict:
                 raise RuntimeError(f"Production Halted: Gemini returned invalid JSON ({ex}). Fallbacks disabled.")
