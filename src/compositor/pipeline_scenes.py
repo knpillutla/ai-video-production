@@ -161,15 +161,17 @@ async def synthesize_scenes(
     async def _proc_motion(idx: int, sc: dict[str, Any]):
         if not (enable_video_motion and kling_adapter):
             video_results[idx] = None
+            logger.info(f"scene_{idx:02d}_mode: [4K FLUX 2.5D Steadycam Glide] (video motion disabled)")
             return
 
         motion_type = sc.get("motion_type", "kinetic_video")
         # Hybrid Directorial Mode: Vista scenes use 4K FLUX steadycam glides for breathing room
         if motion_type == "steadycam_vista" and len(scenes_list) > 2 and not getattr(episode.options, "force_video_all_scenes", False):
-            logger.info(f"scene_{idx:02d}_hybrid_vista: assigned 4K FLUX steadycam vista glide (pacing breathing space)")
+            logger.info(f"scene_{idx:02d}_mode: [4K FLUX 2.5D Steadycam Glide (Vista)] for scene_{idx:02d}.jpg")
             video_results[idx] = None
             return
 
+        logger.info(f"scene_{idx:02d}_mode: [AI Video Motion (Kling Pro 10s)] for scene_{idx:02d}.jpg")
         img_path, img_was_recreated = img_results.get(idx, (scenes_dir / f"scene_{idx:02d}.jpg", False))
         vid_path = scenes_dir / f"scene_{idx:02d}_motion.mp4"
         if img_was_recreated and vid_path.exists():
