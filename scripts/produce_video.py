@@ -147,23 +147,22 @@ async def run_production(
 
     if not goto_production:
         is_default_title = (title == "IT Employee WFH Confusions" or not title)
-        if prompt:
-            extracted_lang = classifier_agent.extract_language_from_text(prompt)
+        if idea or (theme and is_default_title) or prompt:
+            raw_input = idea or theme or prompt
+            from src.services.creative_director import expand_creative_idea
+            extracted_lang = classifier_agent.extract_language_from_text(raw_input)
             if extracted_lang:
                 language = extracted_lang
-            if is_default_title:
-                first_clause = prompt.split(",")[0].split(".")[0].strip()
-                title = (first_clause[:48].strip() + "...") if len(first_clause) > 48 else first_clause
-            idea = prompt
-        elif theme and is_default_title:
-            extracted_lang = classifier_agent.extract_language_from_text(theme)
-            if extracted_lang:
-                language = extracted_lang
-            title = await get_fresh_original_topic(
-                theme=theme, show_slug="theme-universe",
-                language=language, user_id=str(user.id),
-            )
-            idea = idea or f"{theme} - {title}"
+
+            bp = await expand_creative_idea(idea=raw_input, target_format="walking_tour" if any(k in raw_input.lower() for k in ("walk", "tour", "city", "street", "europe")) else "general", language=language, user_id=str(user.id))
+            title = bp.title
+            idea = f"{bp.destination_name}, {bp.country} - {bp.visual_theme}"
+            if not country:
+                country = bp.country
+            if not culture:
+                culture = bp.culture
+            if not theme:
+                theme = bp.visual_theme
         elif youtube_reference_link and is_default_title:
             from src.scripts.youtube_ingest import fetch_youtube_oembed_title, extract_reference_video_attributes
             yt_title = fetch_youtube_oembed_title(youtube_reference_link)
@@ -172,8 +171,6 @@ async def run_production(
             idea = yt_title or title
             if not theme:
                 theme = ref_info.art_style_display
-        elif idea and is_default_title:
-            title = (idea[:36].strip() + "...") if len(idea) > 36 else idea.strip()
         elif script and is_default_title:
             title = Path(script).stem.replace("_", " ").title() if Path(script).is_file() else "Custom Screenplay"
 

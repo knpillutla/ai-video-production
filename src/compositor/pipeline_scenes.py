@@ -1,5 +1,4 @@
-"""Scene synthesis runner for keyframe generation, TTS, and rights tracking."""
-
+import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -83,16 +82,16 @@ async def synthesize_scenes(
     enable_video_motion: bool = False,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], float]:
     """Synthesize visual keyframes, motion video, and voice stems for each scene."""
-    compiled_scenes: list[dict[str, Any]] = []
-    subtitle_segments: list[dict[str, Any]] = []
-    current_time = 0.0
+    # -------------------------------------------------------------------------
+    # Step 1: Parallel Batch Keyframe & Voiceover Synthesis
+    # -------------------------------------------------------------------------
+    img_results: dict[int, tuple[Path, bool]] = {}
+    voice_results: dict[int, Path | None] = {}
+    motion_sem = asyncio.Semaphore(4)
+    img_sem = asyncio.Semaphore(6)
 
-    for sc in scenes_list:
-        idx = sc.get("scene_index", sc.get("scene_number", len(compiled_scenes)))
-        dur = round(float(sc.get("duration_seconds", sc.get("duration", 4.0))) * scale, 2)
+    async def _proc_keyframe(idx: int, sc: dict[str, Any]):
         vis_prompt = sc.get("visual_prompt") or sc.get("visual_description") or f"Scene {idx} for {episode.title}"
-        dialogue = extract_dialogue_text(sc)
-
         enhanced_vis, scene_loras, scene_seed = inject_character_consistency(vis_prompt, char_anchor)
         env_state = environmental_state_tracker.compute_scene_environmental_state(
             scene_index=idx, total_scenes=len(scenes_list),
@@ -108,14 +107,15 @@ async def synthesize_scenes(
                 scene_loras.append(lora)
 
         img_path = scenes_dir / f"scene_{idx:02d}.jpg"
-        img_was_recreated = False
-        if not (img_path.is_file() and img_path.stat().st_size > 0):
-            _, generated_img_path = await visual_adapter.generate_to_file(
-                enhanced_vis, output_path=img_path, force_live=force_live,
-                loras=scene_loras, seed=scene_seed,
-            )
-            img_path = generated_img_path
-            img_was_recreated = True
+        recreated = False
+        async with img_sem:
+            if not (img_path.is_file() and img_path.stat().st_size > 0):
+                _, generated_img_path = await visual_adapter.generate_to_file(
+                    enhanced_vis, output_path=img_path, force_live=force_live,
+                    loras=scene_loras, seed=scene_seed,
+                )
+                img_path = generated_img_path
+                recreated = True
 
         if idx == 0 and char_anchor and not char_anchor.reference_image_path:
             char_anchor.reference_image_path = str(img_path)
@@ -126,74 +126,115 @@ async def synthesize_scenes(
             license_type=CommercialLicenseType.FULL_COMMERCIAL_OWNERSHIP,
             license_id=f"BFL-COMM-{episode.id}-{idx}", cleared=True,
         )
+        img_results[idx] = (img_path, recreated)
 
-        voice_path = None
-        if enable_voice_over and episode.options.enable_tts and dialogue:
-            target_voice_path = stems_dir / f"voice_{idx:02d}_{language}.wav"
-            if target_voice_path.is_file() and target_voice_path.stat().st_size > 1000:
-                voice_path = target_voice_path
-            else:
-                voice_id = derived_culture.voice_id
-                await tts_adapter.synthesize_to_file(dialogue, output_path=target_voice_path, voice_id=voice_id, force_live=force_live)
-                voice_path = target_voice_path
-            rights_ledger.record_asset(
-                episode_id=episode.id, asset_type=AssetType.VOICE, file_path=str(voice_path),
-                provider="Microsoft/NeuralVoice", model_name=derived_culture.voice_id,
-                license_type=CommercialLicenseType.COMMERCIAL_ROYALTY_FREE,
-                license_id=f"MS-TTS-{episode.id}-{idx}", cleared=True,
-            )
-            if enable_lipsync:
-                rights_ledger.record_asset(
-                    episode_id=episode.id, asset_type=AssetType.VIDEO_MOTION, file_path=str(img_path),
-                    provider="Fal.ai/LivePortrait", model_name="LivePortrait-v1",
-                    license_type=CommercialLicenseType.COMMERCIAL_ROYALTY_FREE,
-                    license_id=f"FAL-LIPSYNC-{episode.id}-{idx}", cleared=True,
+    async def _proc_voice(idx: int, sc: dict[str, Any]):
+        dialogue = extract_dialogue_text(sc)
+        if not (enable_voice_over and episode.options.enable_tts and dialogue):
+            voice_results[idx] = None
+            return
+
+        target_voice_path = stems_dir / f"voice_{idx:02d}_{language}.wav"
+        if target_voice_path.is_file() and target_voice_path.stat().st_size > 1000:
+            voice_results[idx] = target_voice_path
+        else:
+            await tts_adapter.synthesize_to_file(dialogue, output_path=target_voice_path, voice_id=derived_culture.voice_id, force_live=force_live)
+            voice_results[idx] = target_voice_path
+
+        rights_ledger.record_asset(
+            episode_id=episode.id, asset_type=AssetType.VOICE, file_path=str(target_voice_path),
+            provider="Microsoft/NeuralVoice", model_name=derived_culture.voice_id,
+            license_type=CommercialLicenseType.COMMERCIAL_ROYALTY_FREE,
+            license_id=f"MS-TTS-{episode.id}-{idx}", cleared=True,
+        )
+
+    await asyncio.gather(
+        *[_proc_keyframe(sc.get("scene_index", sc.get("scene_number", i)), sc) for i, sc in enumerate(scenes_list)],
+        *[_proc_voice(sc.get("scene_index", sc.get("scene_number", i)), sc) for i, sc in enumerate(scenes_list)],
+    )
+
+    # -------------------------------------------------------------------------
+    # Step 2: Parallel Batch Video Motion Synthesis
+    # -------------------------------------------------------------------------
+    video_results: dict[int, Path | None] = {}
+
+    async def _proc_motion(idx: int, sc: dict[str, Any]):
+        if not (enable_video_motion and kling_adapter):
+            video_results[idx] = None
+            return
+
+        motion_type = sc.get("motion_type", "kinetic_video")
+        # Hybrid Directorial Mode: Vista scenes use 4K FLUX steadycam glides for breathing room
+        if motion_type == "steadycam_vista" and len(scenes_list) > 2 and not getattr(episode.options, "force_video_all_scenes", False):
+            logger.info(f"scene_{idx:02d}_hybrid_vista: assigned 4K FLUX steadycam vista glide (pacing breathing space)")
+            video_results[idx] = None
+            return
+
+        img_path, img_was_recreated = img_results.get(idx, (scenes_dir / f"scene_{idx:02d}.jpg", False))
+        vid_path = scenes_dir / f"scene_{idx:02d}_motion.mp4"
+        if img_was_recreated and vid_path.exists():
+            try: vid_path.unlink()
+            except Exception: pass
+
+        if vid_path.is_file() and vid_path.stat().st_size > 1000 and not img_was_recreated:
+            video_results[idx] = vid_path
+            logger.info(f"scene_motion_cache_hit: reusing existing {vid_path.name}")
+            return
+
+        fmt_val = str(getattr(episode.format, "value", episode.format)).lower()
+        aspect_ratio = "9:16" if "9_16" in fmt_val or "vertical" in fmt_val else "16:9"
+        base_motion = sc.get("motion_prompt") or sc.get("visual_prompt") or sc.get("visual_description") or episode.title
+        combined_cues = f"{episode.title} {sc.get('visual_prompt', '')} {base_motion}"
+        weather_motion = derive_weather_motion_cues(combined_cues)
+        dur = round(float(sc.get("duration_seconds", sc.get("duration", 4.0))) * scale, 2)
+
+        if not char_anchor or "walking" in fmt_val or "scenic" in fmt_val:
+            motion_prompt = f"first-person steadycam forward camera glide, pure scenic environmental perspective, empty unobstructed pathway, {weather_motion}{base_motion}"
+        else:
+            motion_prompt = f"{weather_motion}{base_motion}"
+
+        async with motion_sem:
+            try:
+                _, local_vid = await kling_adapter.generate_video(
+                    image_url=str(img_path), motion_prompt=motion_prompt,
+                    output_path=vid_path, duration=10 if (dur >= 8 or "walking" in fmt_val) else 5,
+                    aspect_ratio=aspect_ratio, force_live=force_live,
                 )
-
-        video_path = None
-        if enable_video_motion and kling_adapter:
-            vid_path = scenes_dir / f"scene_{idx:02d}_motion.mp4"
-            if img_was_recreated and vid_path.exists():
-                try: vid_path.unlink()
-                except Exception: pass
-
-            if vid_path.is_file() and vid_path.stat().st_size > 1000 and not img_was_recreated:
-                video_path = vid_path
-                logger.info(f"scene_motion_cache_hit: reusing existing {vid_path.name}")
-            else:
-                fmt_val = str(getattr(episode.format, "value", episode.format)).lower()
-                aspect_ratio = "9:16" if "9_16" in fmt_val or "vertical" in fmt_val else "16:9"
-                base_motion = sc.get("motion_prompt") or sc.get("visual_prompt") or sc.get("visual_description") or episode.title
-                combined_cues = f"{episode.title} {vis_prompt} {base_motion}"
-                weather_motion = derive_weather_motion_cues(combined_cues)
-
-                if not char_anchor or "walking" in fmt_val or "scenic" in fmt_val:
-                    motion_prompt = f"first-person steadycam forward camera glide, pure scenic environmental perspective, empty unobstructed pathway, {weather_motion}{base_motion}"
-                else:
-                    motion_prompt = f"{weather_motion}{base_motion}"
-                try:
-                    _, local_vid = await kling_adapter.generate_video(
-                        image_url=str(img_path), motion_prompt=motion_prompt,
-                        output_path=vid_path, duration=10 if (dur >= 8 or "walking" in fmt_val) else 5,
-                        aspect_ratio=aspect_ratio, force_live=force_live,
+                if local_vid and Path(local_vid).exists() and Path(local_vid).stat().st_size > 1000:
+                    video_results[idx] = local_vid
+                    rights_ledger.record_asset(
+                        episode_id=episode.id, asset_type=AssetType.VIDEO_MOTION, file_path=str(local_vid),
+                        provider="Fal.ai/Kling", model_name="Kling-v1.5-Pro",
+                        license_type=CommercialLicenseType.FULL_COMMERCIAL_OWNERSHIP,
+                        license_id=f"FAL-KLING-{episode.id}-{idx}", cleared=True,
                     )
-                    if local_vid and Path(local_vid).exists() and Path(local_vid).stat().st_size > 1000:
-                        video_path = local_vid
-                        rights_ledger.record_asset(
-                            episode_id=episode.id, asset_type=AssetType.VIDEO_MOTION, file_path=str(video_path),
-                            provider="Fal.ai/Kling", model_name="Kling-v1.5-Pro",
-                            license_type=CommercialLicenseType.FULL_COMMERCIAL_OWNERSHIP,
-                            license_id=f"FAL-KLING-{episode.id}-{idx}", cleared=True,
-                        )
-                except Exception as ex:
-                    if force_live:
-                        logger.error(f"Video motion synthesis failed for scene {idx} in LIVE mode: {ex}")
-                        raise
-                    logger.warning(f"Video motion synthesis failed for scene {idx}: {ex}")
+            except Exception as ex:
+                if force_live:
+                    logger.error(f"Video motion synthesis failed for scene {idx} in LIVE mode: {ex}")
+                    raise
+                logger.warning(f"Video motion synthesis failed for scene {idx}: {ex}")
+                video_results[idx] = None
+
+    await asyncio.gather(*[_proc_motion(sc.get("scene_index", sc.get("scene_number", i)), sc) for i, sc in enumerate(scenes_list)])
+
+    # -------------------------------------------------------------------------
+    # Step 3: Order Compiled Scenes & Build Timeline Subtitles
+    # -------------------------------------------------------------------------
+    compiled_scenes: list[dict[str, Any]] = []
+    subtitle_segments: list[dict[str, Any]] = []
+    current_time = 0.0
+
+    for i, sc in enumerate(scenes_list):
+        idx = sc.get("scene_index", sc.get("scene_number", i))
+        dur = round(float(sc.get("duration_seconds", sc.get("duration", 4.0))) * scale, 2)
+        dialogue = extract_dialogue_text(sc)
+        img_path, _ = img_results.get(idx, (scenes_dir / f"scene_{idx:02d}.jpg", False))
+        vid_path = video_results.get(idx)
+        voice_path = voice_results.get(idx)
 
         compiled_scenes.append({
             "scene_index": idx, "duration_seconds": dur, "image_path": str(img_path),
-            "video_path": str(video_path) if video_path else None,
+            "video_path": str(vid_path) if vid_path else None,
             "voice_path": str(voice_path) if voice_path else None,
             "shot_type": sc.get("shot_type", "medium"), "dialogue": dialogue,
         })

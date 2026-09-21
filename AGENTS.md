@@ -118,4 +118,9 @@ All AI agents working within this workspace must adhere strictly to the engineer
 * **Procedural Survival Foley & Sparse Melancholic Acoustic Score:** Layer authentic sub-zero wind howling, boots crunching deep snow, and fire embers with sparse traditional acoustic strings (e.g., rubab, mountain flute, low cello drone).
 * **Authoritative Poetic Narration (YPP Anti-Demonetization Guard):** Deliver deliberate measured voiceover (~110–125 wpm) weaving survival tactics, nomadic culture, and geography to provide educational transformation and avoid YouTube's "Repetitive Content" demonetization.
 
+### 19. Mandatory Anti-Hallucination & Physical Grounding Standards (Zero Phantom Particles)
+* **Zero Spontaneous Particle Hallucinations:** AI video motion prompts must strictly prohibit spontaneous particle explosions, phantom snow on sunny days, unnatural flying powder, ground dust eruptions, or floating sparkles in real-world scenic walks and realistic documentaries.
+* **Grounded Environmental Physics:** All environmental textures (roads, stone paths, grass, water surfaces) must remain physically static and grounded. Camera motion must be pure smooth steadycam glide without spontaneous morphing or exploding terrain.
+* **Mandatory Negative Prompt Shield:** All video motion adapters (Kling, Luma, Fal) must inject strict anti-hallucination negative tokens (`"phantom snow, flying powder, floating white particles, spontaneous dust bursts, magical sparkles, floating debris, erupting road powder, unnatural specks, visual hallucinations, morphing ground"`).
+
 Refer to [AGENT_INSTRUCTIONS.md](file:///c:/neel-1/projects/content-generation/AGENT_INSTRUCTIONS.md) for detailed architecture, code patterns, and the pre-commit self-audit checklist.

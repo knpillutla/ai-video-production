@@ -89,12 +89,17 @@ class FalKlingAdapter:
                 "Content-Type": "application/json",
             }
 
+            anti_hallucination = (
+                "phantom snow, flying powder, floating white particles, spontaneous dust bursts, magical sparkles, "
+                "floating debris, erupting road powder, unnatural specks, visual hallucinations, morphing ground, "
+            )
             neg_prompt = (
+                anti_hallucination +
                 "blurry, low quality, distortion, noise, compression artifacts, jitter, flickers, overexposed, oversaturated, "
                 "deformed, cartoon, low resolution, pixelated, soft focus, haze, smear, "
                 "unrealistic person walking in front, pedestrian in front, human back, walking person in frame, uncanny human figure, mannequin, bad anatomy, CGI character"
                 if "scenic" in motion_prompt.lower() or "first-person" in motion_prompt.lower() or "empty" in motion_prompt.lower() or "pov" in motion_prompt.lower()
-                else "blurry, low quality, distortion, noise, compression artifacts, jitter, flickers, overexposed, oversaturated, deformed, cartoon, low resolution, pixelated, soft focus, haze, smear"
+                else anti_hallucination + "blurry, low quality, distortion, noise, compression artifacts, jitter, flickers, overexposed, oversaturated, deformed, cartoon, low resolution, pixelated, soft focus, haze, smear"
             )
             payload = {
                 "prompt": motion_prompt,

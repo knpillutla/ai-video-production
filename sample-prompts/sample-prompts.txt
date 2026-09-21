@@ -1,3 +1,20 @@
+12 min production run - hybrid, some still shots  and some motion, so there is no fatigue
+python scripts/produce_video.py --theme "Vibrant daytime walking tour of Porto Portugal, bustling Ribeira riverfront square with outdoor cafes, colorful azulejo tiled neighborhoods and busy Bolhao market streets" --duration 12m --tier balanced
+
+
+quick 1 min test for hybrid mode
+python scripts/produce_video.py --theme "Vibrant daytime walking tour of Porto Portugal, bustling Ribeira riverfront square with outdoor cafes, colorful azulejo tiled neighborhoods and busy Bolhao market streets" --duration 1m --tier balanced
+
+generic word and it should pick the neighborhoods for you
+-- with theme
+python scripts/produce_video.py --idea "good city in europe with colorful neighborhoods and busy crowded squares" --duration 12m --tier balanced
+
+-- with idea
+python scripts/produce_video.py --idea "good city in europe with colorful neighborhoods"
+
+if i run this multiple times, director and planner will know it picked something earlier and it will pick different everytime
+
+
 confirmed by gemini
 
 category 1::Exact One-Off Directorial Prompts (--prompt)
