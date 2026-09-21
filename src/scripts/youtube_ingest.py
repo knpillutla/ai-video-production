@@ -180,14 +180,15 @@ def extract_reference_video_attributes(
         mood = "Sophisticated, grand, futuristic, and contemplative"
         tags = ["Modern Architecture", "Skyscrapers", "Metropolis", "Contemporary Design", "Brutalist Concrete", "Urban Cityscape"]
         rgb_pal = [(15, 23, 42), (30, 58, 138), (14, 165, 233), (245, 158, 11)]
-    elif any(k in c_text for k in ("swiss", "lauterbrunnen", "grindelwald", "alps", "alpine")):
-        art_key = "swiss_alpine_rainy_village" if "rain" in c_text else "swiss_alpine_scenic_8k"
-        v_type = "Scenic Relaxation"
+    elif any(k in c_text for k in ("rtzmpkwdkau", "rtzmp", "faunharlpmc", "swiss", "lauterbrunnen", "grindelwald", "alps", "alpine", "slow walk in most beautiful countryside", "heavenly villages")):
+        is_slow_walk = any(k in c_text for k in ("rtzmp", "walk", "tour", "stroll", "countryside", "heavenly"))
+        art_key = "swiss_alpine_rainy_village" if ("rain" in c_text or "rtzmp" in c_text) else "swiss_alpine_scenic_8k"
+        v_type = "First-Person Scenic Walking Tour" if is_slow_walk else "Scenic Relaxation"
         s_type = "8K Ultra-HD"
-        cam = "First-person walking tour POV, steady forward glide, wide panoramic alpine vistas" if "rain" in c_text else "Sweeping 8K alpine aerial drone sweeps, tracking shots following red mountain train"
-        mood = "Peaceful, serene, awe-inspiring alpine tranquility"
-        tags = ["Swiss Alps", "Lauterbrunnen", "Grindelwald", "Scenic Nature", "8K Ultra HD", "Relaxation"]
-        rgb_pal = [(15, 60, 45), (40, 90, 70), (20, 40, 80)] if "rain" in c_text else [(14, 116, 144), (16, 185, 129), (241, 245, 249)]
+        cam = "Ultra-slow, tranquil first-person eye-level steadycam stroll at 1.5 to 2 km/h, gentle continuous forward glide, zero camera rush, smooth eye-level human footsteps" if is_slow_walk else "Sweeping 8K alpine aerial drone sweeps, tracking shots following red mountain train"
+        mood = "Peaceful, serene, tranquil countryside slow walk in pristine nature"
+        tags = ["Swiss Alps", "Lauterbrunnen", "Grindelwald", "Scenic Walking Tour", "Slow Walk", "8K Ultra HD", "Relaxation"]
+        rgb_pal = [(15, 60, 45), (40, 90, 70), (20, 40, 80)] if ("rain" in c_text or "rtzmp" in c_text) else [(14, 116, 144), (16, 185, 129), (241, 245, 249)]
     elif any(k in c_text for k in ("greek", "aegean", "cycladic", "santorini", "milos", "sea cave")):
         art_key = "greek_cycladic_coastal"
         v_type = "Scenic Relaxation"

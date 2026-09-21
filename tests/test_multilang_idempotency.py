@@ -86,9 +86,14 @@ async def test_multilang_batch_execution_and_caching(monkeypatch, tmp_path):
     """Test produce_video multi-language batch execution and master filename localization."""
     from scripts.produce_video import run_production
 
+    clear_topic_vault()
+    import uuid
+    unique_title = f"Tokyo Cyberpunk Neon Market {uuid.uuid4().hex[:6]}"
     # Run in local mode with dry_run=True (zero paid API calls)
     res = await run_production(
-        title="Alpine Walking Tour 4K",
+        title=unique_title,
+        genre="travel",
+        media_format="walking_tour",
         language="te,hi",
         duration=10,
         local=True,

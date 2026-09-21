@@ -58,7 +58,7 @@ def build_single_pass_command(
             cmd.extend(["-i", str(sc.video_path)])
             pts_factor = (sc.duration_seconds / 10.0) if sc.duration_seconds > 10.0 else 1.0
             filter_chains.append(
-                f"[{idx}:v]setpts={pts_factor:.4f}*(PTS-STARTPTS),scale={timeline.target_resolution[0]}:{timeline.target_resolution[1]}:flags=lanczos,fps={timeline.fps},setsar=1[v{idx}]"
+                f"[{idx}:v]setpts={pts_factor:.4f}*(PTS-STARTPTS),scale={timeline.target_resolution[0]}:{timeline.target_resolution[1]}:flags=lanczos,unsharp=lx=5:ly=5:la=0.6:cx=5:cy=5:ca=0.3,fps={timeline.fps},setsar=1[v{idx}]"
             )
         else:
             img_file = sc.image_path or Path("placeholder.png")
@@ -126,6 +126,7 @@ def build_single_pass_command(
         current_a = "[a_out]"
     else:
         filter_chains.append(f"anullsrc=channel_layout=stereo:sample_rate=48000:d={timeline.total_duration_seconds:.2f}[a_out]")
+        current_a = "[a_out]"
     # 4b. Broadcast Loudness Normalization (-14.0 LUFS EBU R128 standard)
     filter_chains.append(f"{current_a}loudnorm=I=-14.0:TP=-1.0:LRA=7.0[a_norm]")
     current_a = "[a_norm]"

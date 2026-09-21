@@ -1,0 +1,340 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "profiles": {
+    "local": {
+      "display_name": "Offline Deterministic Local Profile (0 API Cost)",
+      "allow_fallback": true,
+      "scenarios": {
+        "scenic_walking_tour": {
+          "script": { "provider": "Local", "model": "deterministic-mock", "cost_usd": 0.0 },
+          "visual": { "provider": "Local", "model": "pil-procedural-keyframe", "cost_usd": 0.0 },
+          "video_motion": { "provider": "LocalFFmpeg", "model": "optical-pan-zoom-2.5d", "cost_usd": 0.0 },
+          "lipsync": { "provider": "None", "model": "none", "enabled": false },
+          "tts": { "provider": "Local", "model": "synthetic-wav", "cost_usd": 0.0 },
+          "soundtrack": { "provider": "LocalDSP", "model": "procedural-ambient-foley", "cost_usd": 0.0 },
+          "render": { "provider": "FFmpeg", "model": "local-single-pass", "fps": 60 }
+        },
+        "indian_folk_and_mass_dance": {
+          "script": { "provider": "Local", "model": "deterministic-mock", "cost_usd": 0.0 },
+          "visual": { "provider": "Local", "model": "pil-procedural-keyframe", "cost_usd": 0.0 },
+          "video_motion": { "provider": "LocalFFmpeg", "model": "optical-pan-zoom-2.5d", "cost_usd": 0.0 },
+          "lipsync": { "provider": "None", "model": "none", "enabled": false },
+          "tts": { "provider": "Local", "model": "synthetic-wav", "cost_usd": 0.0 },
+          "soundtrack": { "provider": "LocalDSP", "model": "procedural-folk-dholak", "cost_usd": 0.0 },
+          "render": { "provider": "FFmpeg", "model": "local-single-pass", "fps": 30 }
+        },
+        "nature_and_wildlife": {
+          "script": { "provider": "Local", "model": "deterministic-mock", "cost_usd": 0.0 },
+          "visual": { "provider": "Local", "model": "pil-procedural-keyframe", "cost_usd": 0.0 },
+          "video_motion": { "provider": "LocalFFmpeg", "model": "optical-pan-zoom-2.5d", "cost_usd": 0.0 },
+          "lipsync": { "provider": "None", "model": "none", "enabled": false },
+          "tts": { "provider": "Local", "model": "synthetic-wav", "cost_usd": 0.0 },
+          "soundtrack": { "provider": "LocalDSP", "model": "procedural-nature-ambience", "cost_usd": 0.0 },
+          "render": { "provider": "FFmpeg", "model": "local-single-pass", "fps": 24 }
+        },
+        "mountain_survival": {
+          "script": { "provider": "Local", "model": "deterministic-mock", "cost_usd": 0.0 },
+          "visual": { "provider": "Local", "model": "pil-procedural-keyframe", "cost_usd": 0.0 },
+          "video_motion": { "provider": "LocalFFmpeg", "model": "optical-pan-zoom-2.5d", "cost_usd": 0.0 },
+          "lipsync": { "provider": "None", "model": "none", "enabled": false },
+          "tts": { "provider": "Local", "model": "synthetic-wav", "cost_usd": 0.0 },
+          "soundtrack": { "provider": "LocalDSP", "model": "procedural-wind-foley", "cost_usd": 0.0 },
+          "render": { "provider": "FFmpeg", "model": "local-single-pass", "fps": 24 }
+        },
+        "general_default": {
+          "script": { "provider": "Local", "model": "deterministic-mock", "cost_usd": 0.0 },
+          "visual": { "provider": "Local", "model": "pil-procedural-keyframe", "cost_usd": 0.0 },
+          "video_motion": { "provider": "LocalFFmpeg", "model": "optical-pan-zoom-2.5d", "cost_usd": 0.0 },
+          "lipsync": { "provider": "None", "model": "none", "enabled": false },
+          "tts": { "provider": "Local", "model": "synthetic-wav", "cost_usd": 0.0 },
+          "soundtrack": { "provider": "LocalDSP", "model": "procedural-audio", "cost_usd": 0.0 },
+          "render": { "provider": "FFmpeg", "model": "local-single-pass", "fps": 30 }
+        }
+      }
+    },
+    "development": {
+      "display_name": "Development Profile (Live Fal.ai & Cloud Models with Graceful Fallback)",
+      "allow_fallback": true,
+      "scenarios": {
+        "scenic_walking_tour": {
+          "script": { "provider": "Google", "model": "gemini-1.5-pro", "temperature": 0.7 },
+          "visual": {
+            "provider": "Fal.ai",
+            "model": "FLUX.1-dev",
+            "endpoint": "https://queue.fal.run/fal-ai/flux/dev",
+            "resolution": { "width": 1920, "height": 1080 },
+            "num_inference_steps": 30,
+            "guidance_scale": 3.5,
+            "optical_prompt_suffix": "Tack-sharp 8K UHD optical clarity, Sony FX3 24mm prime lens f/4, edge-to-edge sharpness, crisp architectural micro-textures, zero haze, balanced 5500K daylight"
+          },
+          "video_motion": {
+            "provider": "Fal.ai",
+            "model": "Kling 1.5 Pro",
+            "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
+            "duration": 10,
+            "mode": "pro",
+            "cfg_scale": 0.55,
+            "pacing": "ultra_slow_stroll_1_5_kmh",
+            "negative_prompt": "blurry, low quality, distortion, noise, compression artifacts, fast motion, running, drone rushes, sudden turns, jitter, flickers, overexposed, soft focus, haze"
+          },
+          "lipsync": { "provider": "None", "model": "none", "enabled": false },
+          "tts": {
+            "provider": "Microsoft",
+            "model": "Azure Speech Neural HD",
+            "default_voice": "en-US-ChristopherNeural",
+            "pacing_wpm": 125
+          },
+          "soundtrack": {
+            "provider": "Suno / Procedural DSP",
+            "model": "v3.5-pro",
+            "style": "Gentle rain drops, distant water cascades, and relaxing ambient nature sounds"
+          },
+          "render": { "provider": "FFmpeg", "model": "single-pass-4k-unsharp", "fps": 60 }
+        },
+        "indian_folk_and_mass_dance": {
+          "script": { "provider": "Google", "model": "gemini-1.5-pro", "temperature": 0.8 },
+          "visual": {
+            "provider": "Fal.ai",
+            "model": "FLUX.1-dev",
+            "endpoint": "https://queue.fal.run/fal-ai/flux/dev",
+            "resolution": { "width": 1920, "height": 1080 },
+            "num_inference_steps": 28,
+            "guidance_scale": 3.5,
+            "loras": [
+              { "path": "loras/indian_traditional_saree_v1.safetensors", "scale": 0.85 },
+              { "path": "loras/telangana_village_jathara_v1.safetensors", "scale": 0.80 }
+            ],
+            "optical_prompt_suffix": "Authentic regional Indian attire, detailed embroidery and jewelry, balanced fit build mid-20s, vibrant festive daytime lighting 5500K"
+          },
+          "video_motion": {
+            "provider": "Fal.ai",
+            "model": "Kling 1.5 Pro",
+            "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
+            "duration": 10,
+            "mode": "pro",
+            "cfg_scale": 0.55,
+            "pacing": "choreographic_progression_3_phase",
+            "negative_prompt": "blurry, low quality, distortion, noise, deformed limbs, extra fingers, cartoon, soft focus, desaturated"
+          },
+          "lipsync": {
+            "provider": "Fal.ai",
+            "model": "LatentSync",
+            "endpoint": "https://queue.fal.run/fal-ai/latentsync",
+            "enabled": true
+          },
+          "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD", "default_voice": "te-IN-ShrutiNeural" },
+          "soundtrack": { "provider": "MusicAPI.ai / Suno", "model": "Suno Sonic v5", "style": "Telugu mass folk beat, teenmaar dholak" },
+          "render": { "provider": "FFmpeg", "model": "single-pass-4k-unsharp", "fps": 30 }
+        },
+        "nature_and_wildlife": {
+          "script": { "provider": "Google", "model": "gemini-1.5-pro", "temperature": 0.6 },
+          "visual": {
+            "provider": "Fal.ai",
+            "model": "FLUX.1-dev",
+            "endpoint": "https://queue.fal.run/fal-ai/flux/dev",
+            "resolution": { "width": 1920, "height": 1080 },
+            "num_inference_steps": 30,
+            "guidance_scale": 3.5,
+            "optical_prompt_suffix": "BBC Earth cinematography, 400mm f/2.8 telephoto macro details, deep optical depth-of-field, pristine crystal clarity, zero haze"
+          },
+          "video_motion": {
+            "provider": "Fal.ai",
+            "model": "Kling 1.5 Pro",
+            "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
+            "duration": 10,
+            "mode": "pro",
+            "cfg_scale": 0.55,
+            "pacing": "slow_sweeping_aerial_glide",
+            "negative_prompt": "blurry, shaky cam, sudden zooms, distortion, artifacts, noise, cartoon"
+          },
+          "lipsync": { "provider": "None", "model": "none", "enabled": false },
+          "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD", "default_voice": "en-US-ChristopherNeural", "pacing_wpm": 120 },
+          "soundtrack": { "provider": "Suno / Procedural DSP", "model": "v3.5-pro", "style": "Grand orchestral score with sweeping French horns" },
+          "render": { "provider": "FFmpeg", "model": "single-pass-4k-unsharp", "fps": 24 }
+        },
+        "mountain_survival": {
+          "script": { "provider": "Google", "model": "gemini-1.5-pro", "temperature": 0.6 },
+          "visual": {
+            "provider": "Fal.ai",
+            "model": "FLUX.1-dev",
+            "endpoint": "https://queue.fal.run/fal-ai/flux/dev",
+            "resolution": { "width": 1920, "height": 1080 },
+            "num_inference_steps": 30,
+            "guidance_scale": 3.5,
+            "optical_prompt_suffix": "Visceral documentary cinematography, sub-zero snowstorm realism, frost-crusted textures, glowing hearth embers"
+          },
+          "video_motion": {
+            "provider": "Fal.ai",
+            "model": "Kling 1.5 Pro",
+            "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
+            "duration": 10,
+            "mode": "pro",
+            "cfg_scale": 0.55,
+            "pacing": "heavy_monumental_snow_drift",
+            "negative_prompt": "blurry, fast motion, artificial yellow flare, bright neon, cartoon"
+          },
+          "lipsync": { "provider": "None", "model": "none", "enabled": false },
+          "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD", "default_voice": "en-US-ChristopherNeural", "pacing_wpm": 115 },
+          "soundtrack": { "provider": "Suno / Procedural DSP", "model": "v3.5-pro", "style": "Sparse melancholic mountain flute and howling gale wind foley" },
+          "render": { "provider": "FFmpeg", "model": "single-pass-4k-unsharp", "fps": 24 }
+        },
+        "general_default": {
+          "script": { "provider": "Google", "model": "gemini-1.5-pro" },
+          "visual": {
+            "provider": "Fal.ai",
+            "model": "FLUX.1-dev",
+            "endpoint": "https://queue.fal.run/fal-ai/flux/dev",
+            "resolution": { "width": 1920, "height": 1080 },
+            "num_inference_steps": 28
+          },
+          "video_motion": {
+            "provider": "Fal.ai",
+            "model": "Kling 1.5 Pro",
+            "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
+            "duration": 5,
+            "mode": "pro"
+          },
+          "lipsync": {
+            "provider": "Fal.ai",
+            "model": "LatentSync",
+            "endpoint": "https://queue.fal.run/fal-ai/latentsync",
+            "enabled": true
+          },
+          "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD" },
+          "soundtrack": { "provider": "MusicAPI.ai / Suno", "model": "Suno Sonic v5" },
+          "render": { "provider": "FFmpeg", "model": "single-pass-4k-unsharp", "fps": 30 }
+        }
+      }
+    },
+    "production": {
+      "display_name": "Production Live Profile (Strict Zero-Fallback Execution)",
+      "allow_fallback": false,
+      "scenarios": {
+        "scenic_walking_tour": {
+          "script": { "provider": "Google", "model": "gemini-1.5-pro" },
+          "visual": {
+            "provider": "Fal.ai",
+            "model": "FLUX.1-dev",
+            "endpoint": "https://queue.fal.run/fal-ai/flux/dev",
+            "resolution": { "width": 1920, "height": 1080 },
+            "num_inference_steps": 30,
+            "guidance_scale": 3.5,
+            "optical_prompt_suffix": "Tack-sharp 8K UHD optical clarity, Sony FX3 24mm prime lens f/4, edge-to-edge sharpness, zero haze"
+          },
+          "video_motion": {
+            "provider": "Fal.ai",
+            "model": "Kling 1.5 Pro",
+            "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
+            "duration": 10,
+            "mode": "pro",
+            "cfg_scale": 0.55,
+            "negative_prompt": "blurry, low quality, noise, fast motion, distortion, haze, cartoon"
+          },
+          "lipsync": { "provider": "None", "model": "none", "enabled": false },
+          "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD", "default_voice": "en-US-ChristopherNeural" },
+          "soundtrack": { "provider": "Suno / Procedural DSP", "model": "v3.5-pro", "style": "Ambient scenic nature soundscape" },
+          "render": { "provider": "FFmpeg", "model": "single-pass-4k-unsharp", "fps": 60 }
+        },
+        "indian_folk_and_mass_dance": {
+          "script": { "provider": "Google", "model": "gemini-1.5-pro" },
+          "visual": {
+            "provider": "Fal.ai",
+            "model": "FLUX.1-dev",
+            "endpoint": "https://queue.fal.run/fal-ai/flux/dev",
+            "resolution": { "width": 1920, "height": 1080 },
+            "num_inference_steps": 28,
+            "loras": [
+              { "path": "loras/indian_traditional_saree_v1.safetensors", "scale": 0.85 },
+              { "path": "loras/telangana_village_jathara_v1.safetensors", "scale": 0.80 }
+            ]
+          },
+          "video_motion": {
+            "provider": "Fal.ai",
+            "model": "Kling 1.5 Pro",
+            "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
+            "duration": 10,
+            "mode": "pro"
+          },
+          "lipsync": {
+            "provider": "Fal.ai",
+            "model": "LatentSync",
+            "endpoint": "https://queue.fal.run/fal-ai/latentsync",
+            "enabled": true
+          },
+          "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD", "default_voice": "te-IN-ShrutiNeural" },
+          "soundtrack": { "provider": "MusicAPI.ai / Suno", "model": "Suno Sonic v5" },
+          "render": { "provider": "FFmpeg", "model": "single-pass-4k-unsharp", "fps": 30 }
+        },
+        "nature_and_wildlife": {
+          "script": { "provider": "Google", "model": "gemini-1.5-pro" },
+          "visual": {
+            "provider": "Fal.ai",
+            "model": "FLUX.1-dev",
+            "endpoint": "https://queue.fal.run/fal-ai/flux/dev",
+            "resolution": { "width": 1920, "height": 1080 },
+            "num_inference_steps": 30
+          },
+          "video_motion": {
+            "provider": "Fal.ai",
+            "model": "Kling 1.5 Pro",
+            "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
+            "duration": 10,
+            "mode": "pro"
+          },
+          "lipsync": { "provider": "None", "model": "none", "enabled": false },
+          "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD" },
+          "soundtrack": { "provider": "Suno / Procedural DSP", "model": "v3.5-pro" },
+          "render": { "provider": "FFmpeg", "model": "single-pass-4k-unsharp", "fps": 24 }
+        },
+        "mountain_survival": {
+          "script": { "provider": "Google", "model": "gemini-1.5-pro" },
+          "visual": {
+            "provider": "Fal.ai",
+            "model": "FLUX.1-dev",
+            "endpoint": "https://queue.fal.run/fal-ai/flux/dev",
+            "resolution": { "width": 1920, "height": 1080 },
+            "num_inference_steps": 30
+          },
+          "video_motion": {
+            "provider": "Fal.ai",
+            "model": "Kling 1.5 Pro",
+            "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
+            "duration": 10,
+            "mode": "pro"
+          },
+          "lipsync": { "provider": "None", "model": "none", "enabled": false },
+          "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD" },
+          "soundtrack": { "provider": "Suno / Procedural DSP", "model": "v3.5-pro" },
+          "render": { "provider": "FFmpeg", "model": "single-pass-4k-unsharp", "fps": 24 }
+        },
+        "general_default": {
+          "script": { "provider": "Google", "model": "gemini-1.5-pro" },
+          "visual": {
+            "provider": "Fal.ai",
+            "model": "FLUX.1-dev",
+            "endpoint": "https://queue.fal.run/fal-ai/flux/dev",
+            "resolution": { "width": 1920, "height": 1080 },
+            "num_inference_steps": 28
+          },
+          "video_motion": {
+            "provider": "Fal.ai",
+            "model": "Kling 1.5 Pro",
+            "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
+            "duration": 5,
+            "mode": "pro"
+          },
+          "lipsync": {
+            "provider": "Fal.ai",
+            "model": "LatentSync",
+            "endpoint": "https://queue.fal.run/fal-ai/latentsync",
+            "enabled": true
+          },
+          "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD" },
+          "soundtrack": { "provider": "MusicAPI.ai / Suno", "model": "Suno Sonic v5" },
+          "render": { "provider": "FFmpeg", "model": "single-pass-4k-unsharp", "fps": 30 }
+        }
+      }
+    }
+  }
+}

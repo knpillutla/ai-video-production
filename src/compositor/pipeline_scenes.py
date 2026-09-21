@@ -91,7 +91,7 @@ async def synthesize_scenes(
             try:
                 _, local_vid = await kling_adapter.generate_video(
                     image_url=str(img_path), motion_prompt=motion_prompt,
-                    output_path=vid_path, duration=10 if dur >= 8 else 5,
+                    output_path=vid_path, duration=10 if (dur >= 8 or "walking" in fmt_val) else 5,
                     aspect_ratio=aspect_ratio, force_live=force_live,
                 )
                 if local_vid and Path(local_vid).exists() and Path(local_vid).stat().st_size > 1000:

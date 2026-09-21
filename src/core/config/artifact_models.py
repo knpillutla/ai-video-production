@@ -76,14 +76,54 @@ ARTIFACT_PROFILES: dict[ProfileName, ArtifactProfile] = {
 }
 
 
+import json
+from pathlib import Path
+
+_MATRIX_FILE = Path(__file__).parent / "model_routing_matrix.json"
+
+
+def load_model_routing_matrix() -> dict:
+    """Load the declarative model routing matrix JSON."""
+    if _MATRIX_FILE.is_file():
+        try:
+            return json.loads(_MATRIX_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {"profiles": {}}
+
+
+def get_scenario_config(scenario: str = "general_default", profile: str | None = None) -> dict:
+    """Return model and parameter config for a specific genre scenario under an execution profile."""
+    prof_name = (profile or os.getenv("APP_ENV", "development")).lower()
+    if prof_name in ("test", "testing", "dev"): prof_name = "development" if prof_name == "dev" else "local"
+    if prof_name in ("live", "prod"): prof_name = "production"
+
+    matrix = load_model_routing_matrix()
+    p_data = matrix.get("profiles", {}).get(prof_name, {})
+    scenarios = p_data.get("scenarios", {})
+    return scenarios.get(scenario, scenarios.get("general_default", {}))
+
+
 def get_artifact_profile(profile: str | None = None) -> ArtifactProfile:
     """Return the configured profile, defaulting to APP_ENV."""
     selected = (profile or os.getenv("APP_ENV", "development")).lower()
-    if selected in ("test", "testing"):
+    if selected in ("test", "testing", "local"):
         selected = "local"
+    elif selected in ("prod", "live", "production"):
+        selected = "production"
+    else:
+        selected = "development"
+
     if selected not in ARTIFACT_PROFILES:
         raise ValueError(f"Unsupported artifact profile: {selected}")
     return ARTIFACT_PROFILES[selected]  # type: ignore[return-value]
 
 
-__all__ = ["ArtifactModel", "ArtifactProfile", "ARTIFACT_PROFILES", "get_artifact_profile"]
+__all__ = [
+    "ArtifactModel",
+    "ArtifactProfile",
+    "ARTIFACT_PROFILES",
+    "get_artifact_profile",
+    "get_scenario_config",
+    "load_model_routing_matrix",
+]

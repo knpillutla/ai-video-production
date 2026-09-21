@@ -82,9 +82,12 @@ class FalKlingAdapter:
         headers = {"Authorization": f"Key {self.api_key}", "Content-Type": "application/json"}
         payload = {
             "prompt": motion_prompt,
+            "negative_prompt": "blurry, low quality, distortion, noise, compression artifacts, jitter, flickers, overexposed, oversaturated, deformed, cartoon, low resolution, pixelated, soft focus, haze, smear",
             "image_url": actual_url,
             "duration": kling_dur,
             "aspect_ratio": aspect_ratio,
+            "mode": "pro",
+            "cfg_scale": 0.55,
         }
 
         async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=15.0)) as client:

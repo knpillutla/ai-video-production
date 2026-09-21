@@ -66,11 +66,11 @@ class FalFluxDevAdapter:
             return await self._fallback_local(prompt, out, aspect_ratio, loras, seed)
 
         headers = {"Authorization": f"Key {self.api_key}", "Content-Type": "application/json"}
-        image_size = "landscape_16_9" if aspect_ratio == "16:9" else "portrait_16_9"
+        image_size = {"width": 1920, "height": 1080} if aspect_ratio == "16:9" else {"width": 1080, "height": 1920}
         payload: dict[str, Any] = {
             "prompt": prompt,
             "image_size": image_size,
-            "num_inference_steps": 28,
+            "num_inference_steps": 30,
             "guidance_scale": 3.5,
             "num_images": 1,
             "enable_safety_checker": True,

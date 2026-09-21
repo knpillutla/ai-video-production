@@ -33,11 +33,13 @@ class WalkingTourStrategy:
         )
         strict_pov = (
             "\n\nCRITICAL DIRECTIVES FOR WALKING TOURS (Directives 11, 13):\n"
-            "1. STRICT FIRST-PERSON EYE-LEVEL POV (ZERO ON-SCREEN CHARACTERS): The camera IS the viewer walking forward along the trail at 3 km/h. "
+            "1. STRICT FIRST-PERSON EYE-LEVEL POV (ZERO ON-SCREEN CHARACTERS): The camera IS the viewer walking forward along the trail at an ultra-slow, peaceful 1.5–2.0 km/h stroll. "
             "There are ZERO on-screen characters, actors, hosts, or guides in frame. The 'characters' array MUST BE AN EMPTY LIST []. "
             "Every scene's 'visual_prompt' and 'motion_prompt' must describe ONLY the pristine path, trail, water, cliffs, architecture, and scenery viewed forward from an eye-level POV perspective.\n"
             "2. NATURAL OPEN-AIR DAYLIGHT MANDATE (5500K): Outdoor scenes MUST strictly default to crisp, balanced natural open-air daylight (5400K–5600K color temperature, natural blue sky, realistic environmental lighting). Strictly PROHIBIT night, twilight, dusk, blue hour, street lamps, lanterns, or dark lighting.\n"
-            "3. SPOKEN TRAIL NARRATION (AZURE SPEECH): Under YouTube Partner Program monetization standards, every single scene's 'dialogue' field MUST contain engaging, spoken educational trail guide commentary explaining geological history, landscape features, or cultural lore. Off-screen narration voiceover only.\n"
+            "3. ULTRA-SLOW TRANQUIL WALKING CADENCE (1.5–2.0 KM/H): Every scene's 'motion_prompt' MUST strictly enforce ultra-slow, gentle steadycam forward glide at ~1.5–2.0 km/h with subtle natural human footstep sway, unhurriedly lingering over the scenery. Strictly PROHIBIT fast movement, running, drone rushes, or sudden turns.\n"
+            "4. TACK-SHARP OPTICAL CLARITY (5500K / 24MM PRIME): Every scene's 'visual_prompt' must specify edge-to-edge optical clarity, fine architectural textures, crystal reflections, and zero atmospheric haze.\n"
+            "5. SPOKEN TRAIL NARRATION (AZURE SPEECH): Under YouTube Partner Program monetization standards, every single scene's 'dialogue' field MUST contain engaging, spoken educational trail guide commentary explaining geological history, landscape features, or cultural lore. Off-screen narration voiceover only.\n"
         )
         return prompt + strict_pov
 
@@ -74,7 +76,7 @@ class WalkingTourStrategy:
         }
 
     def validate_storyboard(self, storyboard: dict) -> list[str]:
-        issues = default_storyboard_sanity_check(storyboard)
+        issues = [i for i in default_storyboard_sanity_check(storyboard) if "no characters" not in i]
         storyboard["characters"] = []
         scenes = storyboard.get("scenes", [])
         for s in scenes:

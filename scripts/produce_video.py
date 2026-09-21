@@ -41,9 +41,11 @@ async def run_production(
     restart_id: str | None = None, profile: str = "development",
 ):
     """Execute the Phase 2 & 3 end-to-end video production and compliance pipeline."""
+    if local:
+        profile = "local"
     artifact_profile = get_artifact_profile(profile)
     local = artifact_profile.name == "local"
-    force_live = artifact_profile.name in ("development", "production")
+    force_live = artifact_profile.name in ("development", "production") if not local else False
     if artifact_profile.name == "production":
         allow_fallback = False
     user = repo.get_user_by_email("creator@cineai.studio")

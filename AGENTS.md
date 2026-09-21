@@ -71,7 +71,7 @@ All AI agents working within this workspace must adhere strictly to the engineer
 
 ### 13. Natural Daylight Lighting & Realistic Human Walking Cadence Standards
 * **Natural Daylight Over Artificial Yellow Flares:** Outdoor productions (village celebrations, dance, street scenes) MUST default to crisp, balanced natural daylight (5400K–5600K color temperature, natural sky, realistic balanced skin tones). Strictly prohibit artificial golden-hour lens flare blowouts, oversaturated amber tints, or monochromatic yellow washes.
-* **Realistic Walking Tour Cadence (3 km/h):** First-person POV walking tours (e.g., Swiss Alps, city walks) MUST be paced at a gentle, leisurely human walking cadence (~1 m/s / 3 km/h) with subtle steadycam sway. Never generate high-speed forward rushes, aggressive zooms, or drone-velocity translations that disrupt calm viewer immersion.
+* **Ultra-Slow Walking Tour Cadence (1.5–2 km/h):** First-person POV walking tours (e.g., Swiss Alps, heavenly village walks, city strolls) MUST be paced at an ultra-slow, tranquil, leisurely human walking cadence (~0.5 m/s / 1.5–2.0 km/h) with subtle steadycam sway, matching real-world 4K Swiss countryside slow walks. Never generate high-speed forward rushes, aggressive zooms, or drone-velocity translations that disrupt calm viewer immersion.
 
 ### 14. Mandatory Broadcast Video, Audio & Story-Driven Dynamic FPS Standards
 * **Directorial Story-Driven FPS Selection:** Frame rates must never be arbitrary or hardcoded; Gemini MUST autonomously determine `recommended_fps` as part of the story and scene direction:
