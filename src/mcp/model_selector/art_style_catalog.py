@@ -41,6 +41,10 @@ def lookup_art_style(style_query: str | None = None, country: str | None = None)
     if "thailand" in q or "karst" in q or "chiang_mai" in q or "krabi" in q or "phuket" in q or c in ("th", "thailand"):
         return ART_STYLE_INTELLIGENCE_CATALOG["tropical_thailand_karst"]
 
+    # Match Miami Tropical Thunderstorm & Flooded Street Rain Walk
+    if "miami" in q or "flooded" in q or "thunderstorm" in q or "brickell" in q or "44tku" in q or "vubh" in q:
+        return ART_STYLE_INTELLIGENCE_CATALOG["miami_tropical_rain_storm"]
+
     # Match artistic movements
     if "afro" in q or "wakanda" in q or "kente" in q or "ankara" in q:
         return ART_STYLE_INTELLIGENCE_CATALOG["african_afrofuturism"]

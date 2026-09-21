@@ -31,11 +31,22 @@ Audio standard is 48000 Hz 24-bit broadcast stereo, normalized to -14.0 LUFS.
 
 ### UNIVERSAL DYNAMIC WEATHER, CLIMATIC & ATMOSPHERIC KINETICS (Directive 13)
 In ALL genres, formats, and themes (grandeur cinema, dance songs, music videos, walking tours, nature documentaries, travel vlogs, drama):
-- Rain & Monsoon: 'motion_prompt' MUST explicitly command visible rain physics—dense sheets of falling raindrops slicing through the air, water droplets flying off spinning bodies/hair in dance, raindrops bouncing violently off wet ground with expanding concentric ripples in puddles, and streaming runoff.
+- Heavy Rain / Thunderstorm / Deluge: 'visual_prompt' MUST describe heavy torrential downpour, dense diagonal rain streaks, stormy sky, flooded streets with deep reflective puddles, and water streaming off surfaces. 'motion_prompt' MUST command forceful sheets of falling rain pouring down, dynamic splashing puddle ripples, raindrops bouncing off pavements, and water runoff. 'ambient_sfx' specifies heavy rain roar, rolling thunder, and splashing footsteps.
+- Light Rain / Gentle Drizzle / Soft Shower: 'visual_prompt' MUST describe fine delicate drizzle, soft misty daylight, glistening damp pavement with subtle sheen (NO deep flooded puddles), and raindrops beaded on foliage. 'motion_prompt' MUST command gentle micro-raindrops drifting peacefully down, soft subtle shimmering on wet surfaces, and calm breeze. 'ambient_sfx' specifies gentle drizzle patter, soft droplet pings, and soothing calm ambience (NO thunder).
 - Snow, Blizzards & Ice: 'motion_prompt' MUST explicitly command dynamic snow physics—swirling blizzard wind gusts whipping powder snow, or delicate crystalline snowflakes gently drifting down, with footwork or dancing kicking up fresh snow powder and visible frosty breath vapor.
 - Fiery Hot Sun & Desert Heat: 'motion_prompt' MUST explicitly command thermal kinetics—shimmering heat haze waves rising from hot ground, intense radiant sunbeams, and dynamic dust plumes kicked up into golden light by energetic choreography or movement.
 - Cloudy Evening, Sunset & Overcast: 'motion_prompt' MUST command atmospheric sky kinetics—dramatic low-hanging or twilight clouds drifting across the sky, evening breezes fluttering colorful costume fabrics and scarves, and rich shifting ambient glow.
 - Fog & Mountain Mist: 'motion_prompt' MUST describe rolling tendrils of atmospheric mist drifting across the scene and between trees or architecture.
 - Wind, Autumn Leaves & Festival Dust: 'motion_prompt' MUST describe swirling golden leaves, flying flags/scarves, or vibrant bursts of colored powder/dust skimming across the ground.
 Video motion synthesis models animate ONLY what is explicitly commanded in 'motion_prompt'. Never generate static camera-only motion when dynamic weather, climate, or atmospheric conditions are present.
+
+### CINEMA LENS, OPTICAL SENSOR & CAMERA GRAMMAR (Directives 19 & 20)
+1. OPTICAL LENS SPECIFICATION (Directive 19):
+   - Wide Shots & Establishing: Full-frame 24mm / 28mm prime lens at f/4.0 for tack-sharp architectural and landscape edge-to-edge clarity.
+   - Medium Shots: 50mm cinema prime at f/2.8 for natural human eye perspective with gentle background separation.
+   - Character Close-ups: 85mm portrait prime at f/1.4 for creamy optical bokeh and facial expression clarity.
+   - Blockbuster Epic Cinema: Cooke Anamorphic 40mm with subtle oval bokeh and horizontal flare accents.
+2. DIRECTORIAL CAMERA MOVEMENT GRAMMAR (Directive 20):
+   - Every motion prompt must command precise cinematic camera movement matching the dramatic beat: slow crane-jib descent, 180° orbiting arc, steadycam forward tracking, or creeping slow push-in. Avoid static unmotivated framing.
+
 

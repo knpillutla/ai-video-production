@@ -9,3 +9,11 @@ nature snow video: https://www.youtube.com/watch?v=OEM_ZusSK38
 hindi group video song: https://www.youtube.com/watch?v=qUdpbYEVcXU
 
 python scripts/produce_video.py --youtube-reference-link "https://www.youtube.com/watch?v=CkKu0xNjO_o" --title "Surrumantadiro Telangana Village Mass Folk" --type dance --gender female --character "Sunitha" --duration 30s --language te --dev -y
+
+
+python scripts/produce_video.py --title "One Day in London: Cinematic Tour of Historic Streets and Royal Landmarks" --type cinematic --duration 60 --language en --dev -y
+
+heavy rain in Chicago: https://www.youtube.com/watch?v=VUBhZL9Ywig
+
+
+

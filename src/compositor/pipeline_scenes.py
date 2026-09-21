@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Any
 
+from src.cinematics.continuity.environmental_state import environmental_state_tracker
 from src.compliance.rights_ledger import rights_ledger
 from src.compositor.pipeline_prompts import extract_dialogue_text
 from src.core.telemetry import logger
@@ -93,6 +94,13 @@ async def synthesize_scenes(
         dialogue = extract_dialogue_text(sc)
 
         enhanced_vis, scene_loras, scene_seed = inject_character_consistency(vis_prompt, char_anchor)
+        env_state = environmental_state_tracker.compute_scene_environmental_state(
+            scene_index=idx, total_scenes=len(scenes_list),
+            weather=getattr(derived_culture, "weather_condition", "clear_daylight"),
+            space=getattr(derived_culture, "environment_space", "outdoor"),
+        )
+        if env_state.get("environmental_prompt") and env_state["environmental_prompt"] not in enhanced_vis:
+            enhanced_vis = f"{enhanced_vis}, {env_state['environmental_prompt']}"
         if derived_culture.art_style_prompt and derived_culture.art_style_prompt not in enhanced_vis:
             enhanced_vis = f"{enhanced_vis}, {derived_culture.art_style_prompt}"
         for lora in derived_culture.recommended_loras:
@@ -114,9 +122,9 @@ async def synthesize_scenes(
 
         rights_ledger.record_asset(
             episode_id=episode.id, asset_type=AssetType.IMAGE, file_path=str(img_path),
-            provider="Fal.ai/Flux", model_name="FLUX.1-dev (28 steps)",
+            provider="Fal.ai/Z-Image", model_name="Z-Image-Turbo (Tongyi-MAI)",
             license_type=CommercialLicenseType.FULL_COMMERCIAL_OWNERSHIP,
-            license_id=f"BFL-COMM-{episode.id}-{idx}", cleared=True,
+            license_id=f"ZIMG-COMM-{episode.id}-{idx}", cleared=True,
         )
 
         voice_path = None

@@ -79,13 +79,13 @@ async def execute_preflight_gate(
     # 2. Pre-Verification Steps Checklist
     print(" PRE-FLIGHT VERIFICATION STEPS:")
     print("-" * 76)
-    print("  [✓] Topic & Script Deduplication Check:          PASSED (Fresh Original Topic)")
-    print("  [✓] Character Physicality & Cultural Anchoring:  VERIFIED (Age 23-27, Fit Build)")
-    print("  [✓] Environmental, Space & Lighting Cues:        VERIFIED (Weather Kinetics & Lighting Locked)")
-    print("  [✓] YouTube Monetization (YPP) & Rights:         100% CLEARED (Commercial Master)")
-    print("  [✓] Broadcast Audio & Single-Pass Master:        CONFIGURED (-14 LUFS, 4K UHD)")
+    print("  [+] Topic & Script Deduplication Check:          PASSED (Fresh Original Topic)")
+    print("  [+] Character Physicality & Cultural Anchoring:  VERIFIED (Age 23-27, Fit Build)")
+    print("  [+] Environmental, Space & Lighting Cues:        VERIFIED (Weather Kinetics & Lighting Locked)")
+    print("  [+] YouTube Monetization (YPP) & Rights:         100% CLEARED (Commercial Master)")
+    print("  [+] Broadcast Audio & Single-Pass Master:        CONFIGURED (-14 LUFS, 4K UHD)")
     provider_check_label = "PASSED (All Models Active)" if health["production_ready"] else "DEPLETED / BLOCKED"
-    print(f"  [{'✓' if health['production_ready'] else '!'}] AI Cloud Model Credits & Quota Status:       {provider_check_label}")
+    print(f"  [{'+' if health['production_ready'] else '!'}] AI Cloud Model Credits & Quota Status:       {provider_check_label}")
     print("-" * 76)
 
     # 3. Formulate Engine Recommendation

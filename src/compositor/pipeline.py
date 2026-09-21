@@ -9,6 +9,8 @@ import time
 from pathlib import Path
 from uuid import UUID
 
+from src.cinematics.color.film_luts import resolve_film_lut
+from src.cinematics.foley.foley_engine import foley_engine
 from src.compliance.rights_ledger import rights_ledger
 from src.compositor.ffmpeg_pipeline import execute_single_pass_render
 from src.compositor.genre_strategies import resolve_strategy
@@ -27,7 +29,8 @@ from src.providers.lipsync.fal_latentsync import FalLatentSyncAdapter
 from src.providers.llm.gemini_adapter import GeminiLLMAdapter
 from src.providers.music.suno_adapter import SunoMusicAdapter
 from src.providers.tts.azure_speech import AzureSpeechTTSAdapter
-from src.providers.visual.fal_flux_dev import FalFluxDevAdapter
+from src.providers.visual.fal_zimage import FalZImageAdapter
+from src.scripts.cli_presentation import print_storyboard_artifact_manifest
 from src.scripts.local_subtitles import generate_subtitle_bundle
 from src.services.character_consistency import get_or_create_character_anchor
 from src.services.cultural_derivation import derive_cultural_context
@@ -39,7 +42,7 @@ class ProductionPipelineCoordinator:
     def __init__(self, strict: bool = False):
         self.strict = strict
         self.llm = GeminiLLMAdapter(strict=strict)
-        self.visual = FalFluxDevAdapter()
+        self.visual = FalZImageAdapter()
         self.fal_flux = self.visual
         self.fal_kling = FalKlingAdapter()
         self.fal_lipsync = FalLatentSyncAdapter()
@@ -133,19 +136,15 @@ class ProductionPipelineCoordinator:
 
         # 1. Generate Structured Scene Storyboard Plan via Gemini (strategy-configured)
         storyboard_path = ep_dir / "storyboard.json"
+        storyboard_data = None
         if storyboard_path.exists() and storyboard_path.stat().st_size > 0:
-            logger.info(f"storyboard_cache_hit: loading existing storyboard for {episode_id}")
             try:
                 import json
                 storyboard_data = json.loads(storyboard_path.read_text(encoding="utf-8"))
+                logger.info(f"storyboard_cache_hit: loading existing storyboard for {episode_id}")
             except Exception as e:
                 logger.warning(f"storyboard_load_failed: {e}, regenerating...")
-                storyboard_data = await self._generate_storyboard(
-                    strategy, episode, language, eff_genre, eff_idea, eff_script,
-                    eff_theme, effective_art_style, ref_attrs, refine_script, fmt_str,
-                )
-                await storage_service.save_json(storyboard_path, storyboard_data)
-        else:
+        if not storyboard_data:
             storyboard_data = await self._generate_storyboard(
                 strategy, episode, language, eff_genre, eff_idea, eff_script,
                 eff_theme, effective_art_style, ref_attrs, refine_script, fmt_str,
@@ -193,7 +192,13 @@ class ProductionPipelineCoordinator:
             )
 
         # 2. Synthesize Visual Keyframes, Motion Video, and Voice Stems for each scene
-        enable_video_motion = strategy.genre_id in ("walking_tour", "dance") or getattr(episode.options, "enable_video_motion", False)
+        enable_video_motion = force_live or strategy.genre_id in ("walking_tour", "dance", "tourist_guide", "travel_guide", "nature_documentary", "epic_cinematic", "mountain_survival", "music_video") or getattr(episode.options, "enable_video_motion", False)
+        print_storyboard_artifact_manifest(
+            storyboard_data=storyboard_data, fmt_str=fmt_str,
+            enable_voice_over=enable_voice_over, enable_bgm=enable_bgm,
+            enable_video_motion=enable_video_motion, enable_lipsync=bool(enable_lipsync),
+            culture_context=derived_culture,
+        )
         compiled_scenes, subtitle_segments, current_time = await synthesize_scenes(
             scenes_list=scenes_list, scenes_dir=scenes_dir, stems_dir=stems_dir,
             episode=episode, scale=scale, char_anchor=char_anchor,
@@ -207,25 +212,13 @@ class ProductionPipelineCoordinator:
         # 3. Generate Commercially Cleared Soundtrack via Suno & record rights (if BGM enabled)
         bgm_path = stems_dir / "bgm_master.wav" if enable_bgm else None
         if enable_bgm and bgm_path:
-            story_tags = storyboard_data.get("suno_tags")
-            story_lyrics = storyboard_data.get("lyrics")
-            bgm_style = story_tags or (ref_attrs.soundtrack_style if (yt_url and ref_attrs.soundtrack_style) else (derived_culture.music_style or "Gentle rain drops, distant thunder, and relaxing ambient nature sounds"))
-            full_lyrics = story_lyrics or " ".join(extract_dialogue_text(s) for s in scenes_list if extract_dialogue_text(s))
-            story_vocal = storyboard_data.get("vocal_gender")
-            eff_vocal = (gender if gender in ("male", "duet", "female") else None) or (getattr(episode.options, "voice_gender", None) if getattr(episode.options, "voice_gender", None) in ("male", "duet", "female") else None) or story_vocal or "female"
-            await self.music.generate_to_file(
-                output_path=bgm_path, genre=bgm_style, duration_seconds=current_time,
-                lyrics=full_lyrics, vocal_gender=eff_vocal,
-                title=episode.title, force_live=force_live,
-            )
-            rights_ledger.record_asset(
-                episode_id=episode.id, asset_type=AssetType.MUSIC, file_path=str(bgm_path),
-                provider="Suno/CineAI", model_name="v3.5-pro",
-                license_type=CommercialLicenseType.FULL_COMMERCIAL_OWNERSHIP,
-                license_id=f"SUNO-COMM-{episode.id}", cleared=True,
-            )
+            bgm_style = storyboard_data.get("suno_tags") or (ref_attrs.soundtrack_style if (yt_url and ref_attrs.soundtrack_style) else (derived_culture.music_style or "Gentle rain drops, distant thunder, ambient nature"))
+            full_lyrics = storyboard_data.get("lyrics") or " ".join(extract_dialogue_text(s) for s in scenes_list if extract_dialogue_text(s))
+            eff_vocal = (gender if gender in ("male", "duet", "female") else None) or (getattr(episode.options, "voice_gender", None) if getattr(episode.options, "voice_gender", None) in ("male", "duet", "female") else None) or storyboard_data.get("vocal_gender") or "female"
+            await self.music.generate_to_file(output_path=bgm_path, genre=bgm_style, duration_seconds=current_time, lyrics=full_lyrics, vocal_gender=eff_vocal, title=episode.title, force_live=force_live)
+            rights_ledger.record_asset(episode_id=episode.id, asset_type=AssetType.MUSIC, file_path=str(bgm_path), provider="Suno/CineAI", model_name="v3.5-pro", license_type=CommercialLicenseType.FULL_COMMERCIAL_OWNERSHIP, license_id=f"SUNO-COMM-{episode.id}", cleared=True)
 
-        # 4. Generate Multi-Language Subtitle Bundle (English default on regional content)
+        # 4. Generate Multi-Language Subtitle Bundle & Procedural Atmospheric Foley Stem
         active_sub_lang = subtitle_language or ("en" if language.lower() != "en" else "en")
         bundle_info = generate_subtitle_bundle(
             base_segments=subtitle_segments if enable_voice_over else [],
@@ -233,13 +226,24 @@ class ProductionPipelineCoordinator:
         )
         burned_ass_path = bundle_info["burned_ass_path"] if enable_voice_over else None
 
-        # 5. Compile Multi-Track Timeline Layout (4K UHD per Directive 14)
+        foley_path = stems_dir / "foley_master.wav"
+        if not (foley_path.is_file() and foley_path.stat().st_size > 1000):
+            foley_engine.synthesize(
+                weather_type=derived_culture.weather_condition,
+                setting_type=derived_culture.setting_type,
+                space=derived_culture.environment_space,
+                duration_seconds=max(1.0, current_time),
+                output_path=foley_path,
+            )
+
+        # 5. Compile Multi-Track Timeline Layout & Film Color Grade (4K UHD per Directive 14)
         is_vert = "9_16" in fmt_str or "vertical" in fmt_str
         target_res = (2160, 3840) if is_vert else (3840, 2160)
         eff_fps = int(storyboard_data.get("recommended_fps") or getattr(strategy, "default_fps", 30))
+        film_lut = resolve_film_lut(culture=derived_culture.culture, genre=eff_genre, weather=derived_culture.weather_condition)
         timeline = compile_timeline_from_scenes(
-            scene_data=compiled_scenes, bgm_path=bgm_path, subtitle_path=burned_ass_path,
-            target_resolution=target_res, fps=eff_fps,
+            scene_data=compiled_scenes, bgm_path=bgm_path, foley_path=foley_path,
+            subtitle_path=burned_ass_path, target_resolution=target_res, fps=eff_fps, film_lut=film_lut,
         )
 
         # 6. Execute Single-Pass FFmpeg Compositing

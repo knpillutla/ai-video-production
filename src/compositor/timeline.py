@@ -30,7 +30,9 @@ class CompiledTimeline:
     total_duration_seconds: float
     speech_intervals: list[tuple[float, float]] = field(default_factory=list)
     bgm_path: Path | None = None
+    foley_path: Path | None = None
     subtitle_path: Path | None = None
+    film_lut: str | None = None
     target_resolution: tuple[int, int] = (1920, 1080)
     fps: int = 30
 
@@ -38,7 +40,9 @@ class CompiledTimeline:
 def compile_timeline_from_scenes(
     scene_data: list[dict],
     bgm_path: Path | str | None = None,
+    foley_path: Path | str | None = None,
     subtitle_path: Path | str | None = None,
+    film_lut: str | None = None,
     target_resolution: tuple[int, int] = (1920, 1080),
     fps: int = 30,
 ) -> CompiledTimeline:
@@ -77,7 +81,9 @@ def compile_timeline_from_scenes(
         total_duration_seconds=round(current_time, 2),
         speech_intervals=speech_intervals,
         bgm_path=Path(bgm_path) if bgm_path else None,
+        foley_path=Path(foley_path) if foley_path else None,
         subtitle_path=Path(subtitle_path) if subtitle_path else None,
+        film_lut=film_lut,
         target_resolution=target_resolution,
         fps=fps,
     )

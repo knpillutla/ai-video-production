@@ -61,6 +61,7 @@ class DerivedCulturalContext(BaseModel):
     environment_space: str = "outdoor"  # indoor, outdoor, semi_outdoor
     time_period: str = "contemporary"
     weather_climate: str = "clear_daylight"
+    weather_condition: str = "clear_daylight"
     lighting_scheme: str = "natural_open_daylight_5600k"
     props_instruments: str = ""
     venue_architecture: str = ""
@@ -101,7 +102,7 @@ def _derive_environment(cues: str) -> dict[str, str]:
 
     weather = "clear_daylight"
     if any(k in cues for k in ("blizzard", "arctic storm", "heavy snow")): weather = "snow_blizzard"
-    elif any(k in cues for k in ("snow", "subzero", "frost", "ice", "winter")): weather = "snowfall_winter"
+    elif any(k in cues for k in ("snow", "subzero", "frost", "ice", "winter")): weather = "snowy_subzero"
     elif any(k in cues for k in ("heavy rain", "downpour", "torrential", "storm", "deluge")): weather = "heavy_rain"
     elif any(k in cues for k in ("rain", "monsoon", "thunder", "vanammo")): weather = "monsoon_rain"
     elif any(k in cues for k in ("drizzle", "shower", "rainy")): weather = "gentle_drizzle"
@@ -272,6 +273,7 @@ def derive_cultural_context(
     selected_music = audio_info.get(genre.lower().strip(), audio_info.get("default", "Cinematic acoustic score"))
     if style_info.get("music_style") and (art_style or any(k in combined_cues for k in ("scenic", "walk", "drive", "lounge", "forest", "alps", "rain"))):
         selected_music = style_info["music_style"]
+    selected_sfx = audio_info.get("sfx", "procedural_foley")
     env = _derive_environment(combined_cues)
     lighting_scheme = style_info.get("lighting_scheme") or env["lighting_scheme"]
 
@@ -283,8 +285,8 @@ def derive_cultural_context(
         clothing_style=selected_costume, outfit_description=costume_stack.get("prompt_enhancer", ""),
         jewelry_description=costume_stack.get("jewelry_anchor", ""), setting_type=env["setting_type"],
         environment_space=env["environment_space"], time_period=env["time_period"],
-        weather_climate=env["weather_climate"], lighting_scheme=lighting_scheme,
-        props_instruments=env["props_instruments"], venue_architecture=style_info.get("architecture_style", ""),
+        weather_climate=env["weather_climate"], weather_condition=env["weather_climate"],
+        lighting_scheme=lighting_scheme, props_instruments=env["props_instruments"],
         social_context=env["social_context"], art_style=style_info.get("display_name", "photorealistic_cinematic"),
         art_style_display=style_info.get("display_name", "Broadcast 4K Photorealistic Cinematic"),
         art_style_prompt=style_info.get("prompt_decorations", ""), art_style_lighting=lighting_scheme,

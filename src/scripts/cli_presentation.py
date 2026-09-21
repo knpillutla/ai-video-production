@@ -228,7 +228,55 @@ def print_cli_summary(
     dec_log = final_video.parent.parent / "mcp_decision_log.json"
     if dec_log.exists():
         print(f" - MCP Decisions:   {dec_log}")
-    print(f" - Master Render:   {final_video}")
+    print("=" * 72)
+
+
+def print_storyboard_artifact_manifest(
+    storyboard_data: dict[str, Any],
+    fmt_str: str = "walking_tour",
+    enable_voice_over: bool = True,
+    enable_bgm: bool = True,
+    enable_video_motion: bool = True,
+    enable_lipsync: bool = False,
+    culture_context: Any | None = None,
+) -> None:
+    """Print structured table of all artifacts to create along with provider and model for each."""
+    scenes = storyboard_data.get("scenes", [])
+    num_scenes = len(scenes)
+    title = storyboard_data.get("title") or "Episode Storyboard"
+    fps = storyboard_data.get("recommended_fps", 30)
+    total_dur = sum(float(s.get("duration_seconds", s.get("duration", 4.0))) for s in scenes)
+
+    print("=" * 72)
+    print(" GEMINI STORYBOARD SYNTHESIZED - PRODUCTION ARTIFACT MANIFEST")
+    print("=" * 72)
+    print(f" - Storyboard Title:  {title}")
+    print(f" - Breakdown:         {num_scenes} scenes ({total_dur:.1f}s total duration, {fps} fps)")
+    if culture_context:
+        print(f" - Environment Cues:  {getattr(culture_context, 'setting_type', 'urban')} | {getattr(culture_context, 'weather_climate', 'clear')} | {getattr(culture_context, 'environment_space', 'outdoor')}")
+    print("-" * 72)
+    print(f" {'#':<2} {'Artifact Category':<22} {'Target Qty':<12} {'Provider':<16} {'Model / Engine'}")
+    print("-" * 72)
+
+    items = [
+        ("1", "Script & Storyboard", "1 document", "Google DeepMind", "Gemini 1.5 Pro"),
+        ("2", "Visual Keyframes", f"{num_scenes} images", "Fal.ai", "FLUX.1-dev (28 Steps)"),
+    ]
+    if enable_video_motion:
+        items.append(("3", "AI Video Motion", f"{num_scenes} clips", "Fal.ai", "Kling v1.5 Pro (4K)"))
+    if enable_voice_over:
+        v_id = getattr(culture_context, "voice_id", "azure-neural-hd") if culture_context else "azure-neural-hd"
+        items.append(("4", "Voice Dialogue/Narration", f"{num_scenes} stems", "Microsoft", f"Azure Speech HD ({v_id[:16]})"))
+    if enable_lipsync:
+        items.append(("5", "Avatar Lip-Sync", f"{num_scenes} passes", "Fal.ai", "LivePortrait / LatentSync"))
+    items.append(("6", "Procedural Foley Audio", "1 master stem", "Local DSP", "48kHz Kellet Noise & Steps"))
+    if enable_bgm:
+        items.append(("7", "Commercial Soundtrack", "1 master track", "Suno / CineAI", "v3.5-pro Commercial Master"))
+    items.append(("8", "Multilingual Subtitles", "1 bundle", "Local FFmpeg", "Styled ASS / VTT Timed"))
+    items.append(("9", "Broadcast Master Video", "1 MP4 render", "Local FFmpeg", f"Single-Pass 4K UHD @ {fps}fps"))
+
+    for num, cat, qty, prov, model in items:
+        print(f" {num:<2} {cat:<22} {qty:<12} {prov:<16} {model}")
     print("=" * 72)
 
 
@@ -237,4 +285,5 @@ __all__ = [
     "log_and_print_cost_breakdown_summary",
     "log_and_print_live_cost_breakdown",
     "print_cli_summary",
+    "print_storyboard_artifact_manifest",
 ]

@@ -79,6 +79,11 @@ def build_single_pass_command(
 
     current_v = "[v_concat]"
 
+    # 2b. Optional Film Print LUT Color Grading
+    if getattr(timeline, "film_lut", None):
+        filter_chains.append(f"{current_v}{timeline.film_lut}[v_graded]")
+        current_v = "[v_graded]"
+
     # 3. Optional subtitle burning filter
     if timeline.subtitle_path and timeline.subtitle_path.exists():
         # Escape path for FFmpeg filter syntax
@@ -86,14 +91,21 @@ def build_single_pass_command(
         filter_chains.append(f"{current_v}subtitles='{sub_escaped}'[v_final]")
         current_v = "[v_final]"
 
-    # 4. Audio composition: Multi-track Scene Voices + Ducked BGM
+    # 4. Audio composition: Multi-track Scene Voices + Ducked BGM + Foley Stem
     input_cursor = len(timeline.scenes)
     bgm_idx = None
+    foley_idx = None
 
     # Register BGM input loop
     if timeline.bgm_path and timeline.bgm_path.exists():
         bgm_idx = input_cursor
         cmd.extend(["-stream_loop", "-1", "-i", str(timeline.bgm_path)])
+        input_cursor += 1
+
+    # Register Atmospheric Foley Stem
+    if getattr(timeline, "foley_path", None) and timeline.foley_path.exists():
+        foley_idx = input_cursor
+        cmd.extend(["-stream_loop", "-1", "-i", str(timeline.foley_path)])
         input_cursor += 1
 
     # Register all scene voiceover stems
@@ -113,16 +125,35 @@ def build_single_pass_command(
             voice_tags = "".join(f"[{v_idx}:a]" for v_idx in voice_inputs)
             filter_chains.append(f"{voice_tags}concat=n={len(voice_inputs)}:v=0:a=1,volume=1.2[a_speech]")
 
-    # Mix BGM and Speech
-    if bgm_idx is not None and has_speech:
-        duck_expr = build_timeline_volume_expression(timeline.speech_intervals, base_volume=0.35, ducked_volume=0.08)
+    # Mix BGM, Foley, and Speech Stems
+    duck_expr = build_timeline_volume_expression(timeline.speech_intervals, base_volume=0.35, ducked_volume=0.08) if has_speech else "volume=0.35"
+    foley_expr = build_timeline_volume_expression(timeline.speech_intervals, base_volume=0.45, ducked_volume=0.18) if has_speech else "volume=0.45"
+
+    if bgm_idx is not None and foley_idx is not None and has_speech:
+        filter_chains.append(f"[{bgm_idx}:a]{duck_expr}[a_ducked]")
+        filter_chains.append(f"[{foley_idx}:a]{foley_expr}[a_foley_ducked]")
+        filter_chains.append(f"[a_ducked][a_foley_ducked][a_speech]amix=inputs=3:duration=first:dropout_transition=0:weights='0.25 0.35 1.20'[a_out]")
+        current_a = "[a_out]"
+    elif bgm_idx is not None and has_speech:
         filter_chains.append(f"[{bgm_idx}:a]{duck_expr}[a_ducked]")
         filter_chains.append(f"[a_ducked][a_speech]amix=inputs=2:duration=first:dropout_transition=0:weights='0.30 1.20'[a_out]")
         current_a = "[a_out]"
+    elif foley_idx is not None and has_speech:
+        filter_chains.append(f"[{foley_idx}:a]{foley_expr}[a_foley_ducked]")
+        filter_chains.append(f"[a_foley_ducked][a_speech]amix=inputs=2:duration=first:dropout_transition=0:weights='0.40 1.20'[a_out]")
+        current_a = "[a_out]"
     elif has_speech:
         current_a = "[a_speech]"
+    elif bgm_idx is not None and foley_idx is not None:
+        filter_chains.append(f"[{bgm_idx}:a]volume=0.35[a_bgm_plain]")
+        filter_chains.append(f"[{foley_idx}:a]volume=0.45[a_foley_plain]")
+        filter_chains.append(f"[a_bgm_plain][a_foley_plain]amix=inputs=2:duration=first:dropout_transition=0:weights='0.50 0.50'[a_out]")
+        current_a = "[a_out]"
     elif bgm_idx is not None:
         filter_chains.append(f"[{bgm_idx}:a]volume=0.35[a_out]")
+        current_a = "[a_out]"
+    elif foley_idx is not None:
+        filter_chains.append(f"[{foley_idx}:a]volume=0.45[a_out]")
         current_a = "[a_out]"
     else:
         filter_chains.append(f"anullsrc=channel_layout=stereo:sample_rate=48000:d={timeline.total_duration_seconds:.2f}[a_out]")

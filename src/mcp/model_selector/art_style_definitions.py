@@ -257,4 +257,17 @@ ART_STYLE_INTELLIGENCE_CATALOG: dict[str, dict[str, Any]] = {
         "music_style": "Cinematic orchestral score with dynamic emotional pacing",
         "architecture_style": "Contemporary cinematic locations with pristine architectural and environmental authenticity",
     },
+    "miami_tropical_rain_storm": {
+        "display_name": "Downtown Miami Tropical Thunderstorm & Rain Walk",
+        "origin_country": "United States",
+        "origin_region": "North America",
+        "recommended_diffusion_model": "flux-1-dev",
+        "recommended_lora": {"path": "loras/miami_storm_v1.safetensors", "scale": 0.85, "trigger": "miami thunderstorm, flooded streets, palm trees in rain, reflective wet asphalt, neon reflections"},
+        "prompt_decorations": "Downtown Miami and Brickell avenue, torrential tropical thunderstorm rain, swaying palm trees drenched in rain, water-sheeted flooded asphalt streets with brilliant reflections of modern glass high-rises and neon signage, distant lightning flash, 4K walking tour POV",
+        "lighting_scheme": "Atmospheric tropical storm twilight with dramatic lightning flashes, neon storefront glows, and glistening pavement water reflections",
+        "color_palette": "Deep storm teal, palm emerald green, glistening asphalt charcoal, neon amber, lightning white",
+        "directorial_guidance": "Ultra-slow tranquil first-person walking tour, steadycam forward glide at 1.5-2.0 km/h, immersive binaural rain and thunder ASMR.",
+        "music_style": "Atmospheric cinematic chillout with high-fidelity binaural recordings of tropical downpour, rolling thunder, and rain on palm leaves",
+        "architecture_style": "Contemporary Miami glass high-rises, coastal palm boulevards, art deco and modern architectural streetscapes",
+    },
 }

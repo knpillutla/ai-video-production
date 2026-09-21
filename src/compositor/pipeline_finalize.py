@@ -1,6 +1,5 @@
-"""Post-render finalization: QA audit, evidence archival, cost actualization, episode update."""
-
 from src.agents.qa_gate_agent import qa_gate_agent
+from src.billing.benchmark_db import record_production_benchmark
 from src.billing.cost_tracker import actualize_production_cost, calculate_preflight_estimate, save_cost_report
 from src.compliance.evidence_bundle import build_evidence_bundle, save_evidence_bundle
 from src.compositor.pipeline_prompts import extract_dialogue_text
@@ -35,6 +34,31 @@ async def finalize_render(episode, final_video, storyboard_data, scenes_list, ep
     }, duration_seconds=float(episode.duration_seconds))
     episode.actual_spend_usd = episode.cost_record.actual_total_usd
     save_cost_report(episode.cost_record, ep_dir)
+
+    # Record empirical benchmark to SQLite database for dynamic scaling predictions
+    try:
+        record_production_benchmark(
+            episode_id=str(episode.id), title=episode.title,
+            duration_seconds=float(episode.duration_seconds),
+            estimated_total_usd=episode.cost_record.predicted_total_usd,
+            actual_total_usd=episode.cost_record.actual_total_usd,
+            artifact_counts={
+                "scenes": len(scenes_list), "images": len(scenes_list),
+                "motion_clips": len(scenes_list), "voice_characters": actual_chars,
+                "music_tracks": 1 if enable_bgm else 0, "foley_stems": 1,
+                "render_seconds": round(render_elapsed, 2),
+            },
+            model_breakdown={
+                "script": "gemini-1.5-pro", "visuals": "flux-1-dev", "motion": "kling-v1.5-pro",
+                "voice": "azure-speech-hd", "soundtrack": "suno-v3.5-pro", "foley": "procedural-dsp",
+            },
+            theme=str(getattr(episode, "theme", "")),
+            genre=str(getattr(episode, "format", "")),
+            variance_explanation=f"Rendered in {render_elapsed:.1f}s with {actual_chars} voice chars",
+        )
+    except Exception as ex:
+        logger.warning(f"benchmark_db_record_failed: {ex}")
+
     episode.status = "completed" if eligible else "review_required"
     episode.master_video_path, episode.evidence_bundle_path = str(final_video), str(bundle_path)
     repo.save_episode(episode)

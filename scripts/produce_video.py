@@ -164,6 +164,14 @@ async def run_production(
                 language=language, user_id=str(user.id),
             )
             idea = idea or f"{theme} - {title}"
+        elif youtube_reference_link and is_default_title:
+            from src.scripts.youtube_ingest import fetch_youtube_oembed_title, extract_reference_video_attributes
+            yt_title = fetch_youtube_oembed_title(youtube_reference_link)
+            ref_info = extract_reference_video_attributes(url=youtube_reference_link, title=yt_title)
+            title = yt_title or ref_info.art_style_display or "YouTube Reference Walk"
+            idea = yt_title or title
+            if not theme:
+                theme = ref_info.art_style_display
         elif idea and is_default_title:
             title = (idea[:36].strip() + "...") if len(idea) > 36 else idea.strip()
         elif script and is_default_title:
