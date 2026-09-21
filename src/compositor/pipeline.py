@@ -29,7 +29,7 @@ from src.providers.lipsync.fal_latentsync import FalLatentSyncAdapter
 from src.providers.llm.gemini_adapter import GeminiLLMAdapter
 from src.providers.music.suno_adapter import SunoMusicAdapter
 from src.providers.tts.azure_speech import AzureSpeechTTSAdapter
-from src.providers.visual.fal_zimage import FalZImageAdapter
+from src.providers.visual.fal_flux_dev import FalFluxDevAdapter
 from src.scripts.cli_presentation import print_storyboard_artifact_manifest
 from src.scripts.local_subtitles import generate_subtitle_bundle
 from src.services.character_consistency import get_or_create_character_anchor
@@ -42,7 +42,7 @@ class ProductionPipelineCoordinator:
     def __init__(self, strict: bool = False):
         self.strict = strict
         self.llm = GeminiLLMAdapter(strict=strict)
-        self.visual = FalZImageAdapter()
+        self.visual = FalFluxDevAdapter()
         self.fal_flux = self.visual
         self.fal_kling = FalKlingAdapter()
         self.fal_lipsync = FalLatentSyncAdapter()

@@ -122,9 +122,9 @@ async def synthesize_scenes(
 
         rights_ledger.record_asset(
             episode_id=episode.id, asset_type=AssetType.IMAGE, file_path=str(img_path),
-            provider="Fal.ai/Z-Image", model_name="Z-Image-Turbo (Tongyi-MAI)",
+            provider="Fal.ai/Flux", model_name="FLUX.1-dev (28 steps)",
             license_type=CommercialLicenseType.FULL_COMMERCIAL_OWNERSHIP,
-            license_id=f"ZIMG-COMM-{episode.id}-{idx}", cleared=True,
+            license_id=f"BFL-COMM-{episode.id}-{idx}", cleared=True,
         )
 
         voice_path = None

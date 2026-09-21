@@ -7,6 +7,7 @@ production scripts. Falls back to a local placeholder when Fal is unavailable.
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from typing import Any
 
@@ -78,14 +79,27 @@ class FalFluxDevAdapter:
         if seed is not None:
             payload["seed"] = seed
 
+        job_sidecar = out.with_suffix(out.suffix + ".fal_job.json")
+        status_url, response_url = None, None
+        if job_sidecar.exists():
+            try:
+                job_data = json.loads(job_sidecar.read_text(encoding="utf-8"))
+                status_url = job_data.get("status_url")
+                response_url = job_data.get("response_url")
+                logger.info(f"fal_flux_dev_job_resume: found existing queue job for {out.name}, resuming polling...")
+            except Exception:
+                status_url, response_url = None, None
+
         async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=15.0)) as client:
             try:
-                sub_resp = await client.post(_FAL_FLUX_ENDPOINT, headers=headers, json=payload)
-                if sub_resp.status_code not in (200, 201):
-                    raise RuntimeError(f"Fal FLUX submit failed: {sub_resp.text[:200]}")
-                sub_data = sub_resp.json()
-                status_url: str = sub_data["status_url"]
-                response_url: str = sub_data["response_url"]
+                if not status_url or not response_url:
+                    sub_resp = await client.post(_FAL_FLUX_ENDPOINT, headers=headers, json=payload)
+                    if sub_resp.status_code not in (200, 201):
+                        raise RuntimeError(f"Fal FLUX submit failed: {sub_resp.text[:200]}")
+                    sub_data = sub_resp.json()
+                    status_url = sub_data["status_url"]
+                    response_url = sub_data["response_url"]
+                    job_sidecar.write_text(json.dumps({"status_url": status_url, "response_url": response_url}), encoding="utf-8")
 
                 for attempt in range(_POLL_MAX_ATTEMPTS):
                     await asyncio.sleep(_POLL_INTERVAL_S)
@@ -95,16 +109,20 @@ class FalFluxDevAdapter:
                         img_url: str = res["images"][0]["url"]
                         img_bytes = (await client.get(img_url, timeout=60.0)).content
                         out.write_bytes(img_bytes)
+                        job_sidecar.unlink(missing_ok=True)
                         logger.info(f"fal_flux_dev_ok: {out.name} ({out.stat().st_size} B)")
                         return img_url, out
                     if s.get("status") in ("FAILED", "CANCELLED"):
+                        job_sidecar.unlink(missing_ok=True)
                         raise RuntimeError(f"Fal FLUX failed: {s}")
                     if attempt % 5 == 0:
                         logger.info(f"fal_flux_dev_poll: status={s.get('status')} ({attempt * _POLL_INTERVAL_S:.0f}s)")
 
+                job_sidecar.unlink(missing_ok=True)
                 raise TimeoutError("Fal FLUX.1-dev timed out after 100s")
 
             except Exception as ex:
+                job_sidecar.unlink(missing_ok=True)
                 logger.warning(f"fal_flux_dev_failed: {ex} — using local placeholder")
                 return await self._fallback_local(prompt, out, aspect_ratio, loras, seed)
 

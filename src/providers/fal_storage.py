@@ -41,6 +41,14 @@ async def upload_to_fal(file_path: Path, api_key: str = "") -> str:
     if not key:
         raise RuntimeError("FAL_KEY is not set — cannot upload to Fal storage.")
 
+    # Universal Artifact Caching Guard (Directive 3): Check for existing .fal_url sidecar
+    url_sidecar = file_path.with_suffix(file_path.suffix + ".fal_url")
+    if url_sidecar.exists():
+        cached_url = url_sidecar.read_text(encoding="utf-8").strip()
+        if cached_url.startswith("http"):
+            logger.info(f"fal_storage_cache_hit: {file_path.name} → {cached_url}")
+            return cached_url
+
     suffix = file_path.suffix.lower()
     mime_map = {
         ".mp4": "video/mp4",
@@ -82,6 +90,10 @@ async def upload_to_fal(file_path: Path, api_key: str = "") -> str:
                 f"Fal upload PUT failed ({put_resp.status_code}): {put_resp.text[:200]}"
             )
 
+    try:
+        url_sidecar.write_text(file_url, encoding="utf-8")
+    except Exception:
+        pass
     logger.info(f"fal_storage_upload_ok: {file_path.name} → {file_url}")
     return file_url
 

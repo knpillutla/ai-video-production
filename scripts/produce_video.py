@@ -476,7 +476,9 @@ def main():
         ("--dance", None, str, "Dance", "dance_type"), ("--character", None, str, "Char", "character_name"),
         ("--gender", "female", str, "Gender", None), ("--type", "auto", str, "Format", "media_format"),
         ("--art-style", None, str, "Style", "art_style"), ("--voice-gender", None, str, "Voice gender", "voice_gender"),
-        ("--youtube-reference-link", None, str, "YouTube URL", "youtube_reference_link"), ("--languages", None, str, "Languages", "target_languages"),
+        ("--youtube-reference-link", None, str, "YouTube URL", "youtube_reference_link"),
+        ("--languages", None, str, "Target Languages (e.g. en,te,hi)", "target_languages"),
+        ("--target-languages", None, str, "Target Languages alias (e.g. en,te,hi)", "target_languages"),
         ("--prompt", None, str, "Prompt directive", None),
     ]:
         p.add_argument(fl, **{"type": t, "default": d, "help": h, **({"dest": dst} if dst else {})})

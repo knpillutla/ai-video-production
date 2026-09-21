@@ -10,6 +10,7 @@ Falls back to FalMimicMotionAdapter when Fal key is absent or for ≤5s clips.
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 
 import httpx
@@ -105,13 +106,26 @@ class FalKlingAdapter:
                 "cfg_scale": 0.55,
             }
 
+            job_sidecar = out.with_suffix(out.suffix + ".fal_job.json")
+            status_url, response_url = None, None
+            if job_sidecar.exists():
+                try:
+                    job_data = json.loads(job_sidecar.read_text(encoding="utf-8"))
+                    status_url = job_data.get("status_url")
+                    response_url = job_data.get("response_url")
+                    logger.info(f"fal_kling_job_resume: found existing queue job for {out.name}, resuming polling...")
+                except Exception:
+                    status_url, response_url = None, None
+
             async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=15.0)) as client:
-                sub_resp = await client.post(_KLING_ENDPOINT, headers=headers, json=payload)
-                if sub_resp.status_code not in (200, 201):
-                    raise RuntimeError(f"Kling submit failed: {sub_resp.text[:200]}")
-                sub_data = sub_resp.json()
-                status_url: str = sub_data["status_url"]
-                response_url: str = sub_data["response_url"]
+                if not status_url or not response_url:
+                    sub_resp = await client.post(_KLING_ENDPOINT, headers=headers, json=payload)
+                    if sub_resp.status_code not in (200, 201):
+                        raise RuntimeError(f"Kling submit failed: {sub_resp.text[:200]}")
+                    sub_data = sub_resp.json()
+                    status_url = sub_data["status_url"]
+                    response_url = sub_data["response_url"]
+                    job_sidecar.write_text(json.dumps({"status_url": status_url, "response_url": response_url}), encoding="utf-8")
 
                 for attempt in range(_POLL_MAX_ATTEMPTS):
                     await asyncio.sleep(_POLL_INTERVAL_S)
@@ -124,13 +138,16 @@ class FalKlingAdapter:
                             raise RuntimeError(f"Kling response missing video URL: {r}")
                         v_bytes = (await client.get(vid_url, timeout=90.0)).content
                         out.write_bytes(v_bytes)
+                        job_sidecar.unlink(missing_ok=True)
                         logger.info(f"fal_kling_ok: {out.name} ({out.stat().st_size} B)")
                         return vid_url, out
                     if status in ("FAILED", "CANCELLED"):
+                        job_sidecar.unlink(missing_ok=True)
                         raise RuntimeError(f"Kling generation failed: {s}")
                     if attempt % 3 == 0:
                         logger.info(f"fal_kling_poll: status={status} ({attempt * _POLL_INTERVAL_S:.0f}s)")
 
+                job_sidecar.unlink(missing_ok=True)
                 raise TimeoutError("Kling 1.5 Pro timed out after 320s")
 
         except Exception as ex:

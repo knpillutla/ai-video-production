@@ -170,10 +170,11 @@ def build_single_pass_command(
     # Enforce YouTube-optimal broadcast encoding (Directive 14)
     cmd.extend([
         "-c:v", "libx264",
-        "-preset", "fast",
+        "-preset", "ultrafast",
         "-crf", "18",
         "-pix_fmt", "yuv420p",
         "-r", str(timeline.fps),
+        "-threads", "0",
         "-c:a", "aac",
         "-b:a", "256k",
         "-ar", "48000",
@@ -183,6 +184,9 @@ def build_single_pass_command(
     ])
 
     return cmd
+
+
+from src.compositor.ffmpeg_concat import build_fast_concat_command
 
 
 async def execute_single_pass_render(
@@ -196,9 +200,13 @@ async def execute_single_pass_render(
         logger.info(f"master_render_cache_hit: reusing existing master render {out.name} ({out.stat().st_size} bytes)")
         return out
 
-    cmd = build_single_pass_command(timeline, out)
-    cmd_str = " ".join(cmd[:12]) + " ... (single-pass filter_complex)"
-    logger.info(f"rendering_single_pass: out={out.name}, duration={timeline.total_duration_seconds}s")
+    fast_cmd = build_fast_concat_command(timeline, out)
+    if fast_cmd:
+        logger.info(f"fast_stream_copy_concat_active: stitching {len(timeline.scenes)} video clips via -c:v copy (<1.5s)")
+        cmd = fast_cmd
+    else:
+        cmd = build_single_pass_command(timeline, out)
+        logger.info(f"rendering_single_pass: out={out.name}, duration={timeline.total_duration_seconds}s")
 
     if dry_run:
         logger.info("dry_run_enabled: copying minimal valid mp4 container")

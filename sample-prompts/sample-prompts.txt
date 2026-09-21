@@ -38,7 +38,8 @@ Autonomously selects a fresh, distinct landmark or attraction each run, consulti
 python scripts/produce_video.py --theme "norway walking tour" --duration 15 --live -y
 
 # Rotates across Geirangerfjord -> Reinebringen -> Bergen Bryggen -> Preikestolen -> Flåm
-python scripts/produce_video.py --theme "norway walking tour"
+python scripts/produce_video.py --theme "swiss walking tour"
+ python scripts/produce_video.py --theme "swiss walking tour" --target-languages "en,te,hi"
 
 # Rotates across Grand Central -> Brooklyn Bridge -> Central Park Bethesda Terrace -> High Line
 python scripts/produce_video.py --theme "Top 10 places to see in New York"
