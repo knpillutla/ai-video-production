@@ -47,6 +47,7 @@ class WalkingTourStrategy:
             "4. ULTRA-SLOW TRANQUIL WALKING CADENCE & DYNAMIC WEATHER PHYSICS: Every scene's 'motion_prompt' MUST strictly enforce ultra-slow, gentle steadycam forward glide at ~1.5–2.0 km/h with subtle natural human footstep sway. In addition, whenever weather or atmospheric elements are present, 'motion_prompt' MUST explicitly command dynamic environmental physics: for heavy rain, forceful continuous falling rain streaks and splashing puddle ripples; for light rain/drizzle, fine delicate micro-raindrops drifting down with gentle water sheen; for snow blizzard, intense swirling wind gusts and blowing powder snow; for gentle snow, delicate drifting crystalline flakes floating slowly down; for cloudy/overcast, moody low-hanging clouds drifting across the sky; for mist/fog, rolling tendrils of atmospheric mist shifting across the path.\n"
             "5. TACK-SHARP OPTICAL CLARITY (5500K / 24MM PRIME): Every scene's 'visual_prompt' must specify edge-to-edge optical clarity, fine architectural textures, crystal reflections, and zero atmospheric haze.\n"
             "6. SPOKEN TRAIL NARRATION (AZURE SPEECH): Under YouTube Partner Program monetization standards, every single scene's 'dialogue' field MUST contain engaging, spoken educational trail guide commentary explaining geological history, landscape features, or cultural lore. Off-screen narration voiceover only.\n"
+            "7. DIRECTORIAL HYBRID MOTION PACING: Every scene MUST explicitly set 'motion_type'. Assign 'kinetic_video' to 1 or 2 high-energy movement beats (e.g., active bridge crossings, bustling cafe walkways, fountains) and 'steadycam_vista' to 3 or 4 scenic panoramic landscape/architecture beats to create natural viewer breathing spaces.\n"
         )
         return prompt + strict_pov
 
@@ -59,12 +60,13 @@ class WalkingTourStrategy:
                 "duration_seconds": {"type": "NUMBER"},
                 "location": {"type": "STRING"},
                 "pov_perspective": {"type": "STRING"},
+                "motion_type": {"type": "STRING", "description": "'kinetic_video' for active moving shots or 'steadycam_vista' for serene 4K panoramic vista glides"},
                 "visual_prompt": {"type": "STRING"},
                 "motion_prompt": {"type": "STRING"},
                 "dialogue": {"type": "STRING"},
                 "ambient_sfx": {"type": "STRING"},
             },
-            "required": ["scene_index", "duration_seconds", "location",
+            "required": ["scene_index", "duration_seconds", "location", "motion_type",
                          "visual_prompt", "motion_prompt", "dialogue"],
         }
         return {
