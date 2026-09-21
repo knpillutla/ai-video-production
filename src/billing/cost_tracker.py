@@ -34,11 +34,11 @@ def calculate_preflight_estimate(episode: Episode) -> EpisodeCostRecord:
         ),
         ModelCostItem(
             component="4K Keyframe Visual Diffusion",
-            model_name="Together AI (FLUX.1-schnell)",
+            model_name="Fal.ai FLUX.1-dev (28 steps)",
             category="visuals",
-            unit_cost_usd=0.0030,
+            unit_cost_usd=0.0250,
             predicted_units=f"{est_images} keyframes",
-            predicted_cost_usd=round(est_images * 0.0030, 4),
+            predicted_cost_usd=round(est_images * 0.0250, 4),
         ),
         ModelCostItem(
             component="Original Commercial Soundtrack" if getattr(episode.options, "enable_bgm", True) else "Soundtrack / BGM (Disabled)",
@@ -63,7 +63,7 @@ def calculate_preflight_estimate(episode: Episode) -> EpisodeCostRecord:
         items.append(
             ModelCostItem(
                 component="Hero Action Motion Synthesis",
-                model_name="Fal.ai (Minimax Video-01)",
+                model_name="Fal.ai Kling 1.5 Pro",
                 category="motion",
                 unit_cost_usd=0.1500,
                 predicted_units="2 motion clips",
@@ -75,7 +75,7 @@ def calculate_preflight_estimate(episode: Episode) -> EpisodeCostRecord:
         items.append(
             ModelCostItem(
                 component="Talking Avatar Lip-Sync",
-                model_name="Fal.ai (LivePortrait)",
+                model_name="Fal.ai (LatentSync)",
                 category="lipsync",
                 unit_cost_usd=0.0120,
                 predicted_units="45s active speech",

@@ -14,7 +14,7 @@ from src.core.config import settings
 from src.core.telemetry import logger
 from src.providers.music.suno_adapter import SunoMusicAdapter
 from src.providers.tts.azure_speech import AzureSpeechTTSAdapter
-from src.providers.visual.together_flux import TogetherFluxAdapter
+from src.providers.visual.fal_flux_dev import FalFluxDevAdapter
 
 
 class LiveProductionRunner:
@@ -28,25 +28,35 @@ class LiveProductionRunner:
         self.audit_log: list[dict[str, Any]] = []
 
     async def _generate_fal_flux_image(self, prompt: str, aspect_ratio: str = "16:9") -> str:
-        """Call Fal.ai FLUX.1 schnell for 0.8s photoreal keyframe generation."""
+        """Call the same queued Fal FLUX.1-dev configuration used by scratch scripts."""
         key = getattr(settings.video, "fal_key", None) or getattr(settings.video, "fal_api_key", None) or ""
         headers = {"Authorization": f"Key {key}", "Content-Type": "application/json"}
         size = "landscape_16_9" if aspect_ratio == "16:9" else "portrait_16_9"
         body = {
             "prompt": prompt,
             "image_size": size,
-            "num_inference_steps": 4,
+            "num_inference_steps": 28,
+            "guidance_scale": 3.5,
             "num_images": 1,
-            "enable_safety_checker": False,
         }
         try:
             async with httpx.AsyncClient(timeout=35.0) as client:
-                resp = await client.post("https://fal.run/fal-ai/flux/schnell", headers=headers, json=body)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    images = data.get("images", [])
-                    if images and "url" in images[0]:
-                        return images[0]["url"]
+                resp = await client.post("https://queue.fal.run/fal-ai/flux/dev", headers=headers, json=body)
+                if resp.status_code not in (200, 201):
+                    return ""
+                data = resp.json()
+                status_url = data.get("status_url")
+                response_url = data.get("response_url")
+                for _ in range(40):
+                    await asyncio.sleep(2.5)
+                    status = (await client.get(status_url, headers=headers)).json().get("status")
+                    if status == "COMPLETED":
+                        result = (await client.get(response_url, headers=headers)).json()
+                        images = result.get("images", [])
+                        if images and "url" in images[0]:
+                            return images[0]["url"]
+                    if status in ("FAILED", "CANCELLED"):
+                        break
         except Exception as ex:
             logger.warning(f"fal_flux_call_failed: {ex}")
         return ""
@@ -113,7 +123,7 @@ class LiveProductionRunner:
             if img_url:
                 await self._download_file(img_url, out_img)
             if not out_img.exists() or out_img.stat().st_size == 0:
-                TogetherFluxAdapter()._render_local_canvas(prompt, out_img)
+                await FalFluxDevAdapter()._fallback_local(prompt, out_img, "16:9", None, None)
             image_paths.append(out_img)
 
             wav_bytes = await self.tts_adapter.synthesize_speech(sc.get("dialogue", "Walking."), voice_id="en-US-JennyNeural", language_code="en-US")
@@ -229,7 +239,7 @@ class LiveProductionRunner:
             if img_url:
                 await self._download_file(img_url, out_img)
             if not out_img.exists() or out_img.stat().st_size == 0:
-                TogetherFluxAdapter()._render_local_canvas(prompt, out_img)
+                await FalFluxDevAdapter()._fallback_local(prompt, out_img, "16:9", None, None)
             image_paths.append(out_img)
             spend["flux_character_usd"] += 0.0035
             logger.info(f"job_2_scene_{idx + 1}_image_ready: {out_img.name} ({out_img.stat().st_size} bytes)")

@@ -118,10 +118,11 @@ async def test_multilang_batch_execution_and_caching(monkeypatch, tmp_path):
 async def test_duplicate_rerun_preflight_blocked(capsys):
     """Verify that re-running for the same language is blocked by the idempotency duplicate guard."""
     from scripts.produce_video import run_production
+    title = f"Zyq{uuid4().hex[:10]} Qwv{uuid4().hex[:10]}"
 
     # First run for Tamil
     res1 = await run_production(
-        title="Nilgiri Forest Mystery",
+        title=title,
         language="ta",
         duration=10,
         local=True,
@@ -132,7 +133,7 @@ async def test_duplicate_rerun_preflight_blocked(capsys):
 
     # Immediate second run for Tamil with same title
     res2 = await run_production(
-        title="Nilgiri Forest Mystery",
+        title=title,
         language="ta",
         duration=10,
         local=True,
@@ -144,3 +145,36 @@ async def test_duplicate_rerun_preflight_blocked(capsys):
     captured = capsys.readouterr()
     assert "DUPLICATE CONTENT ALERT" in captured.out
     assert "already exists for language 'ta'" in captured.out
+
+
+@pytest.mark.asyncio
+async def test_llm_variation_planner_retries_a_duplicate_premise(monkeypatch):
+    """Recurring briefs get a new LLM premise, with Topic Memory as final guard."""
+    from importlib import import_module
+    from src.services.topic_planner import get_fresh_original_topic
+
+    planner_module = import_module("src.services.topic_planner")
+
+    user_id = f"variation_user_{uuid4().hex[:8]}"
+    first = "Swiss Alps Glacier Valley Expedition"
+    second = "Himalayan High Pass Shepherds Journey"
+    await remember_topic(
+        topic=first, metadata={"genre": "mountains", "language": "en"},
+        episode_id="existing-mountain", user_id=user_id,
+    )
+
+    prompts: list[str] = []
+
+    class FakePlanner:
+        async def generate_text(self, prompt, **_kwargs):
+            prompts.append(prompt)
+            return first if len(prompts) == 1 else second
+
+    monkeypatch.setattr(planner_module, "is_mock_mode", lambda: False)
+    monkeypatch.setattr(planner_module, "GeminiLLMAdapter", FakePlanner)
+    result = await get_fresh_original_topic(
+        "produce videos of mountains", language="en", user_id=user_id,
+    )
+
+    assert result == second
+    assert first in prompts[0]

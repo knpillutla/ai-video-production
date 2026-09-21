@@ -12,8 +12,8 @@ class VideoSettings(BaseSettings):
     kling_api_key: str = ""
 
 
-    default_lipsync_model: str = "fal-ai/live-portrait"
-    default_video_motion_model: str = "fal-ai/minimax/video-01"
+    default_lipsync_model: str = "fal-ai/latentsync"
+    default_video_motion_model: str = "fal-ai/kling-video/v1.5/pro/image-to-video"
     default_dance_model: str = "fal-ai/mimic-motion"
 
     model_config = SettingsConfigDict(

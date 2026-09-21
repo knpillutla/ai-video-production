@@ -10,7 +10,7 @@ class MediaSettings(BaseSettings):
     suno_api_key: str = ""
 
 
-    default_image_model: str = "black-forest-labs/FLUX.1-schnell"
+    default_image_model: str = "fal-ai/flux/dev"
     default_music_model: str = "suno-v3.5-pro"
 
     model_config = SettingsConfigDict(

@@ -249,7 +249,7 @@ ART_STYLE_INTELLIGENCE_CATALOG: dict[str, dict[str, Any]] = {
         "display_name": "Broadcast 4K Photorealistic Cinematic",
         "origin_country": "Global",
         "origin_region": "Global",
-        "recommended_diffusion_model": "flux-1-schnell",
+        "recommended_diffusion_model": "flux-1-dev",
         "prompt_decorations": "4K cinematic photorealism, pristine anamorphic lens optical clarity, natural broadcast lighting, subtle volumetric depth",
         "lighting_scheme": "Cinematic three-point lighting with soft key light, gentle rim light, and natural ambient fill",
         "color_palette": "Natural cinematic grading, true skin tones, deep blacks, high dynamic range",

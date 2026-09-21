@@ -15,8 +15,8 @@ CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
             "reasoning": "Selected Gemini 1.5 Pro for nuanced South Indian cultural ethos, regional Telugu/Tamil comedic timing, dialect idioms, and high context retention.",
         },
         "visual_diffusion": {
-            "model": "flux-1-schnell",
-            "provider": "TogetherAI",
+            "model": "flux-1-dev",
+            "provider": "Fal.ai",
             "recommended_loras": ["south-asian-photoreal-v1", "indian-lighting-warm-v1"],
             "prompt_anchors": "South Asian, warm wheatish and dusky skin tones, authentic Indian facial bone structure, natural dark brown eyes, thick black hair",
             "reasoning": "FLUX.1 with LoRA prompt anchoring renders authentic South Asian skin tones and Dravidian facial features, completely avoiding Western whitewashing.",
@@ -46,8 +46,8 @@ CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
             "reasoning": "Selected Gemini 1.5 Pro for authentic Hindi/Punjabi colloquial dialogue, poetic metaphors, and cultural festivities.",
         },
         "visual_diffusion": {
-            "model": "flux-1-schnell",
-            "provider": "TogetherAI",
+            "model": "flux-1-dev",
+            "provider": "Fal.ai",
             "recommended_loras": ["south-asian-photoreal-v1"],
             "prompt_anchors": "South Asian, olive to wheatish complexion, expressive features, natural black hair",
             "reasoning": "FLUX.1 diffusion captures authentic North Indian ethnic representation with cinematic depth of field.",
@@ -77,8 +77,8 @@ CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
             "reasoning": "Selected Gemini 1.5 Pro for relaxed Australian colloquialisms, Aussie humor, and authentic natural pacing.",
         },
         "visual_diffusion": {
-            "model": "flux-1-schnell",
-            "provider": "TogetherAI",
+            "model": "flux-1-dev",
+            "provider": "Fal.ai",
             "recommended_loras": ["oceanian-coastal-sun-v1"],
             "prompt_anchors": "Sun-kissed complexion, relaxed expressive features, natural Australian coastal lighting",
             "reasoning": "FLUX.1 diffusion captures golden-hour coastal warmth and relaxed Australian demeanor.",
@@ -130,8 +130,8 @@ CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
             "reasoning": "Selected Gemini 1.5 Pro for passionate Italian cadence, comedic operatic expressiveness, and local regional idioms.",
         },
         "visual_diffusion": {
-            "model": "flux-1-schnell",
-            "provider": "TogetherAI",
+            "model": "flux-1-dev",
+            "provider": "Fal.ai",
             "recommended_loras": ["mediterranean-sun-warm-v1"],
             "prompt_anchors": "Warm olive to fair Mediterranean complexion, expressive dark eyes, natural styled hair, golden Italian sunlight",
             "reasoning": "FLUX.1 diffusion captures authentic Italian aesthetic, warm terracotta tones, and scenic Mediterranean vistas.",
@@ -158,8 +158,8 @@ CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
             "reasoning": "Selected Gemini 1.5 Pro for authentic Mexican colloquialisms, warm family warmth, and comedic timing.",
         },
         "visual_diffusion": {
-            "model": "flux-1-schnell",
-            "provider": "TogetherAI",
+            "model": "flux-1-dev",
+            "provider": "Fal.ai",
             "recommended_loras": ["mexican-folklore-festive-v1"],
             "prompt_anchors": "Warm golden brown to wheatish complexion, expressive dark almond eyes, radiant warm smile, festive Mexican light",
             "reasoning": "FLUX.1 diffusion captures authentic Mexican heritage, vibrant festive colors, and colonial architectural backgrounds.",
@@ -181,7 +181,7 @@ CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
         "culture_name": "Western & Global General",
         "primary_ethnicity": "Global Diverse",
         "scriptwriting": {"model": "gemini-1.5-pro", "provider": "Google", "reasoning": "Universal structured 3-act narrative and dialogue delivery."},
-        "visual_diffusion": {"model": "flux-1-schnell", "provider": "TogetherAI", "recommended_loras": [], "prompt_anchors": "Cinematic photorealistic 4K broadcast still"},
+        "visual_diffusion": {"model": "flux-1-dev", "provider": "Fal.ai", "recommended_loras": [], "prompt_anchors": "Cinematic photorealistic 4K broadcast still"},
         "voice_tts": {
             "en": {"male": "en-US-ChristopherNeural", "female": "en-US-JennyNeural"},
             "en_gb": {"male": "en-GB-RyanNeural", "female": "en-GB-SoniaNeural"},

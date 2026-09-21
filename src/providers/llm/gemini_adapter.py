@@ -28,7 +28,7 @@ class ScenePlanItem(BaseModel):
     scene_index: int
     duration_seconds: float = Field(default=4.0, ge=2.0, le=10.0)
     shot_type: str = Field(default="medium", description="close_up, wide, medium, over_shoulder")
-    visual_prompt: str = Field(description="4K Photoreal diffusion prompt for Flux Schnell")
+    visual_prompt: str = Field(description="4K photoreal diffusion prompt for Fal FLUX.1-dev")
     dialogue: str = Field(description="Spoken narration line for Azure Speech HD")
 
 
@@ -51,7 +51,7 @@ class GeminiLLMAdapter(LLMProviderProtocol):
 
     def __init__(self, api_key: str | None = None, strict: bool = False):
         self.api_key = api_key or settings.llm.google_api_key or settings.llm.gemini_api_key or None
-        self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent"
+        self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
         self.strict = strict
 
     async def generate_text(self, prompt: str, system_prompt: str = "", temperature: float = 0.7) -> str:
@@ -101,11 +101,14 @@ class GeminiLLMAdapter(LLMProviderProtocol):
         """Generate structured JSON scene plan obeying Pydantic storyboard contracts."""
         fallback_plan = self._build_storyboard_for_prompt(prompt)
 
-        if is_mock_mode():
+        if is_mock_mode() and not self.strict:
             return fallback_plan
 
         sys_prompt = "You are a broadcast video director. Return ONLY valid JSON adhering to the ScenePlan specification."
-        raw = await self.generate_text(prompt, system_prompt=sys_prompt)
+        if schema is None:
+            raw = await self.generate_text(prompt, system_prompt=sys_prompt)
+        else:
+            raw = await self._generate_structured_json(prompt, schema, sys_prompt)
 
 
         # Clean markdown codeblocks if model returned ```json ... ```
@@ -124,6 +127,35 @@ class GeminiLLMAdapter(LLMProviderProtocol):
             if self.strict:
                 raise RuntimeError(f"Production Halted: Gemini returned invalid JSON ({ex}). Fallbacks disabled.")
             return fallback_plan
+
+    async def _generate_structured_json(
+        self, prompt: str, schema: dict[str, Any], system_prompt: str,
+    ) -> str:
+        """Request Gemini JSON with an API-enforced response schema."""
+        if is_mock_mode() and not self.strict:
+            return json.dumps(self._build_storyboard_for_prompt(prompt))
+        client = HTTPClientPool.get_client()
+        headers = {"Content-Type": "application/json"}
+        params = {"key": self.api_key} if self.api_key else {}
+        body = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "systemInstruction": {"parts": [{"text": system_prompt}]},
+            "generationConfig": {
+                "temperature": 0.7,
+                "responseMimeType": "application/json",
+                "responseSchema": schema,
+            },
+        }
+        try:
+            resp = await client.post(self.base_url, headers=headers, params=params, json=body, timeout=90.0)
+            if resp.status_code == 200:
+                return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+            if self.strict:
+                raise RuntimeError(f"Production Halted: Gemini structured request HTTP {resp.status_code}: {resp.text[:180]}")
+        except Exception:
+            if self.strict:
+                raise
+        return json.dumps(self._build_storyboard_for_prompt(prompt))
 
 
 __all__ = ["GeminiLLMAdapter", "ScenePlanItem", "ScriptOutput"]

@@ -1,4 +1,4 @@
-"""Together AI Flux.1 Schnell 4K visual diffusion adapter."""
+"""Legacy offline visual adapter retained for isolation tests."""
 
 from pathlib import Path
 from typing import Any
@@ -10,7 +10,7 @@ from src.providers.base import HTTPClientPool, VisualProviderProtocol, is_mock_m
 
 
 class TogetherFluxAdapter(VisualProviderProtocol):
-    """Zero-GPU 4K Keyframe Generator powered by Together AI Flux.1 Schnell ($0.003/image)."""
+    """Offline compatibility adapter; production uses Fal FLUX.1-dev."""
 
     def __init__(self, api_key: str | None = None):
         self.api_key = api_key or settings.media.together_api_key
@@ -37,7 +37,7 @@ class TogetherFluxAdapter(VisualProviderProtocol):
         width, height = (1344, 768) if aspect_ratio == "16:9" else (768, 1344)
 
         body: dict[str, Any] = {
-            "model": "black-forest-labs/FLUX.1-schnell",
+            "model": "legacy-disabled",
             "prompt": f"Cinematic 4K broadcast still, photorealistic, shallow depth of field: {prompt}",
             "width": width,
             "height": height,

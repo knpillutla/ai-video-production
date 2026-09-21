@@ -8,6 +8,20 @@ from src.mcp.prompt_director.directorial_router import (
 )
 from src.mcp.prompt_director.server import get_directorial_prompt, prompt_director_server
 from src.agents.script_agent import ScriptAgent
+from src.providers.llm.mock_storyboards import resolve_mock_storyboard
+
+
+def test_telangana_folk_dance_intent_is_preserved():
+    """Folk dance requests must not auto-flip into comedy or Bathukamma-song territory."""
+    plan = resolve_mock_storyboard("telangana folk dance in village setting")
+
+    title = (plan.get("title") or "").lower()
+    hook = (plan.get("hook_thesis") or "").lower()
+    assert "dance" in title or "dance" in hook
+    assert "comedy" not in title.lower()
+    assert "bathukamma" not in title.lower()
+    assert "comedy" not in hook.lower()
+    assert "bathukamma" not in hook.lower()
 
 
 def test_classifier_modes():
@@ -62,6 +76,33 @@ async def test_dance_directorial_prompt_injection():
     # Must NOT contain irrelevant walking tour or tech explainer directives
     assert "walking cadence (~1 m/s / 3 km/h)" not in prompt
     assert "PROBLEM THESIS HOOK" not in prompt
+
+
+@pytest.mark.asyncio
+async def test_cinematic_lighting_and_context_lock():
+    """Prompts must default to readable daylight for village scenes and bright premium light for hotel events."""
+    village = await get_directorial_prompt(
+        topic="Telangana folk dance in village setting",
+        genre="music",
+        video_format="Dance Video",
+        target_duration_seconds=10,
+        language="te",
+    )
+    hotel = await get_directorial_prompt(
+        topic="Hindi family party dance in hotel setting",
+        genre="music",
+        video_format="Dance Video",
+        target_duration_seconds=10,
+        language="te",
+    )
+
+    village_prompt = village["prompt"]
+    hotel_prompt = hotel["prompt"]
+
+    assert "5400K–5600K" in village_prompt or "5400K-5600K" in village_prompt
+    assert "visible faces" in village_prompt.lower() or "visible facial detail" in village_prompt.lower()
+    assert "bright polished event lighting" in hotel_prompt.lower() or "well-lit event lighting" in hotel_prompt.lower()
+    assert "no dark under-lit" in hotel_prompt.lower() or "no muddy dark frames" in hotel_prompt.lower()
 
 
 @pytest.mark.asyncio

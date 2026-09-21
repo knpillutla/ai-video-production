@@ -52,19 +52,26 @@ def build_single_pass_command(
     cmd: list[str] = [get_ffmpeg_binary(), "-y"]
     filter_chains: list[str] = []
 
-    # 1. Register image inputs and build visual zoompan streams
+    # 1. Register visual inputs (true video motion or zoompan over keyframe)
     for idx, sc in enumerate(timeline.scenes):
-        img_file = sc.image_path or Path("placeholder.png")
-        cmd.extend(["-loop", "1", "-t", f"{sc.duration_seconds:.2f}", "-i", str(img_file)])
+        if sc.video_path and sc.video_path.exists():
+            cmd.extend(["-i", str(sc.video_path)])
+            pts_factor = (sc.duration_seconds / 10.0) if sc.duration_seconds > 10.0 else 1.0
+            filter_chains.append(
+                f"[{idx}:v]setpts={pts_factor:.4f}*(PTS-STARTPTS),scale={timeline.target_resolution[0]}:{timeline.target_resolution[1]}:flags=lanczos,fps={timeline.fps},setsar=1[v{idx}]"
+            )
+        else:
+            img_file = sc.image_path or Path("placeholder.png")
+            cmd.extend(["-loop", "1", "-t", f"{sc.duration_seconds:.2f}", "-i", str(img_file)])
 
-        # Apply 2.5D camera pan-zoom motion over static keyframe
-        zp_filter = build_zoompan_expression(
-            movement=sc.camera_movement,
-            duration_seconds=sc.duration_seconds,
-            fps=timeline.fps,
-            target_res=timeline.target_resolution,
-        )
-        filter_chains.append(f"[{idx}:v]{zp_filter},setsar=1[v{idx}]")
+            # Apply 2.5D camera pan-zoom motion over static keyframe
+            zp_filter = build_zoompan_expression(
+                movement=sc.camera_movement,
+                duration_seconds=sc.duration_seconds,
+                fps=timeline.fps,
+                target_res=timeline.target_resolution,
+            )
+            filter_chains.append(f"[{idx}:v]{zp_filter},setsar=1[v{idx}]")
 
     # 2. Concatenate visual scenes sequentially into [v_concat]
     concat_inputs = "".join(f"[v{i}]" for i in range(len(timeline.scenes)))
@@ -119,24 +126,25 @@ def build_single_pass_command(
         current_a = "[a_out]"
     else:
         filter_chains.append(f"anullsrc=channel_layout=stereo:sample_rate=48000:d={timeline.total_duration_seconds:.2f}[a_out]")
-        current_a = "[a_out]"
+    # 4b. Broadcast Loudness Normalization (-14.0 LUFS EBU R128 standard)
+    filter_chains.append(f"{current_a}loudnorm=I=-14.0:TP=-1.0:LRA=7.0[a_norm]")
+    current_a = "[a_norm]"
 
     # 5. Assemble -filter_complex and final encoding parameters
     full_filter_str = ";".join(filter_chains)
     cmd.extend(["-filter_complex", full_filter_str])
     cmd.extend(["-map", current_v, "-map", current_a])
 
-    # Enforce YouTube-optimal broadcast encoding
+    # Enforce YouTube-optimal broadcast encoding (Directive 14)
     cmd.extend([
         "-c:v", "libx264",
         "-preset", "fast",
-        "-crf", "20",
+        "-crf", "18",
         "-pix_fmt", "yuv420p",
         "-r", str(timeline.fps),
         "-c:a", "aac",
         "-b:a", "256k",
         "-ar", "48000",
-        "-shortest",
         "-t", f"{timeline.total_duration_seconds:.2f}",
         "-movflags", "+faststart",
         str(out),

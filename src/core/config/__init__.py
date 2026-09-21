@@ -8,6 +8,7 @@ from src.core.config.media_config import MediaSettings
 from src.core.config.storage_config import StorageSettings
 from src.core.config.video_config import VideoSettings
 from src.core.config.voice_config import VoiceSettings
+from src.core.config.artifact_models import ArtifactProfile, get_artifact_profile
 
 
 @dataclass(frozen=True)
@@ -20,9 +21,10 @@ class Settings:
     media: MediaSettings = field(default_factory=MediaSettings)
     video: VideoSettings = field(default_factory=VideoSettings)
     storage: StorageSettings = field(default_factory=StorageSettings)
+    artifacts: ArtifactProfile = field(default_factory=get_artifact_profile)
 
 
 # Authoritative singleton settings instance
 settings = Settings()
 
-__all__ = ["settings", "Settings"]
+__all__ = ["settings", "Settings", "ArtifactProfile", "get_artifact_profile"]

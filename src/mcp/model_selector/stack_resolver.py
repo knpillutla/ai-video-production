@@ -77,13 +77,21 @@ def resolve_production_stack(metadata: dict[str, Any]) -> dict[str, Any]:
             "art_style": art_info["display_name"],
             "reasoning": f"Selected {art_info['display_name']} ({art_info['origin_country']}) with authentic lighting and palette.",
         }
-    else:  # Default Realistic
+    elif "faceless" in v_format or meta.budget_tier == "low_cost":
         visual = {
             "model": "flux-1-schnell",
             "provider": "TogetherAI",
             "unit_cost_usd": 0.0030,
             "unit_name": "image",
-            "reasoning": "Selected Together AI FLUX.1-schnell for sub-second 4K cinematic photorealism and typographic prompt fidelity at $0.003/image.",
+            "reasoning": "Selected Together AI FLUX.1-schnell for sub-second 4K cinematic photorealism at $0.003/image.",
+        }
+    else:  # Default Realistic
+        visual = {
+            "model": "flux-1-dev",
+            "provider": "Fal.ai",
+            "unit_cost_usd": 0.0250,
+            "unit_name": "image",
+            "reasoning": "Selected Fal.ai FLUX.1-dev at 28 steps for high-fidelity cinematic photorealism, matching the scratch production scripts.",
         }
 
     # 2. Character Animation, Motion & Dance Model Selection

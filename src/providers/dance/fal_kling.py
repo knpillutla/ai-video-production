@@ -74,10 +74,15 @@ class FalKlingAdapter:
 
         # Kling only accepts 5 or 10; clamp to nearest valid value
         kling_dur = "10" if duration >= 8 else "5"
+        actual_url = image_url
+        if not (image_url.startswith("http://") or image_url.startswith("https://")):
+            from src.providers.fal_storage import upload_to_fal
+            actual_url = await upload_to_fal(Path(image_url), api_key=self.api_key)
+
         headers = {"Authorization": f"Key {self.api_key}", "Content-Type": "application/json"}
         payload = {
             "prompt": motion_prompt,
-            "image_url": image_url,
+            "image_url": actual_url,
             "duration": kling_dur,
             "aspect_ratio": aspect_ratio,
         }

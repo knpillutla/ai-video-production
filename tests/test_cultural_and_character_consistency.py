@@ -223,7 +223,7 @@ def test_character_physicality_and_scene_contextual_outfits():
         user_id=uid, show_id=sid, character_name="Varun", gender="male"
     )
     assert "neither too skinny nor chubby" in male_anchor.appearance_anchor.lower()
-    assert "athletic" in male_anchor.appearance_anchor.lower()
+    assert "medium build" in male_anchor.appearance_anchor.lower()
     assert "handsome" in male_anchor.appearance_anchor.lower()
     assert "mid-20s" in male_anchor.appearance_anchor.lower()
 
@@ -235,3 +235,18 @@ def test_character_physicality_and_scene_contextual_outfits():
     # static traditional saree was suppressed in favor of scene context
     assert "kanchipuram" not in enhanced.lower()
 
+
+def test_body_composition_defaults_unless_the_user_explicitly_overrides_it():
+    repo.clear()
+    uid, sid = uuid4(), uuid4()
+    default_anchor = get_or_create_character_anchor(
+        user_id=uid, show_id=sid, character_name="Default", gender="female",
+        body_composition="skinny", appearance_summary="skinny elegant dancer",
+    )
+    assert "neither too skinny nor chubby" in default_anchor.appearance_anchor.lower()
+
+    requested_anchor = get_or_create_character_anchor(
+        user_id=uid, show_id=sid, character_name="Requested", gender="male",
+        source_text="A chubby village baker leads the story",
+    )
+    assert "chubby" in requested_anchor.appearance_anchor.lower()

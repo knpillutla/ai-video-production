@@ -15,6 +15,7 @@ class SceneTrackItem:
     start_time: float
     end_time: float
     image_path: Path | None = None
+    video_path: Path | None = None
     voice_path: Path | None = None
     shot_type: str = "medium"
     camera_movement: CameraMovement = CameraMovement.SLOW_ZOOM_IN
@@ -57,6 +58,7 @@ def compile_timeline_from_scenes(
             start_time=current_time,
             end_time=current_time + dur,
             image_path=Path(sc["image_path"]) if "image_path" in sc and sc["image_path"] else None,
+            video_path=Path(sc["video_path"]) if "video_path" in sc and sc.get("video_path") else None,
             voice_path=Path(sc["voice_path"]) if "voice_path" in sc and sc["voice_path"] else None,
             shot_type=shot_type,
             camera_movement=movement,

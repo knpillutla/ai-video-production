@@ -80,6 +80,17 @@ def _format_metadata_str(meta: Optional[Dict[str, Any]]) -> str:
     return f"{genre} {tags} {target}".strip()
 
 
+def recent_topic_context(user_id: Optional[str], language: str, limit: int = 12) -> List[str]:
+    """Return recent same-language premises for concise creative-planner exclusions."""
+    entries = _get_vault()
+    scoped = [
+        entry for entry in entries
+        if (not user_id or str(entry.get("user_id", "")) == str(user_id))
+        and (entry.get("metadata") or {}).get("language", "en").lower() == language.lower()
+    ]
+    return [str(entry.get("topic", "")) for entry in scoped[-limit:] if entry.get("topic")]
+
+
 async def check_topic_duplicate(
     topic: str,
     metadata: Optional[Dict[str, Any]] = None,

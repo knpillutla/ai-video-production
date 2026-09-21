@@ -94,7 +94,7 @@ def recommend_production_tiers(
         desc="Commercial broadcast YouTube standard with studio neural voiceover and cleared soundtrack.",
         use_case="Default for public YouTube / Reels release with optimal ROI.",
         script_cfg=("gemini-1.5-pro", "Google", 0.00000125, 14000),
-        visual_cfg=("flux-1-schnell", "TogetherAI", 0.003, scenes_count),
+        visual_cfg=("flux-1-dev", "Fal.ai", 0.025, scenes_count),
         voice_cfg=("azure-speech-neural-hd", "Microsoft", 0.000016, chars),
         motion_cfg=("camera-pan-zoom-2.5d", "LocalFFmpeg", 0.0000, duration_seconds),
         music_cfg=("suno-v3.5-instrumental", "Suno", 0.0800, 1),

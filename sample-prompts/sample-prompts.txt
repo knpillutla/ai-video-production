@@ -1,0 +1,57 @@
+confirmed by gemini
+
+category 1::Exact One-Off Directorial Prompts (--prompt)
+Preserves 100% of your exact landmarks, cast, and actions without topic planner replacement.
+
+# Paris Itinerary Guide (30 fps, educational VO, b-roll montage)
+python scripts/produce_video.py --prompt "3-day travel itinerary guide in Paris covering the Louvre, Montmartre artists square, and an evening Seine cruise" --duration 60 --live -y
+
+# Medieval Epic Battle (24 fps cinematic motion blur, Alistair in chainmail, orchestral battle score)
+python scripts/produce_video.py --prompt "Epic medieval fantasy battle outside an ancient Scottish castle with armored knights, war horns, and storm clouds" --duration 30 --live -y
+
+# Telugu Mass Folk Dance (30 fps, hero Rudra in festive red dhoti, Medaram Jathara, male dappu vocals, musical lip-sync)
+python scripts/produce_video.py --prompt "High energy Telugu mass folk dance featuring Rudra in festive red dhoti at Medaram Jathara with 8 male dancers and thavil drums" --duration 10 --live -y
+
+# Geirangerfjord POV Walking Tour (60 fps fluid motion, 3 km/h leisurely cadence, natural daylight, waterfall mist)
+python scripts/produce_video.py --prompt "First-person POV walking tour along Geirangerfjord cliffside trail with waterfall mist and rustic wooden railings" --duration 15 --live -y
+
+category 2::Explicit Directorial Control (--type, --genre, --theme, --title)
+When you want to explicitly pin down the format and genre.
+ 
+ # Tourist Guide for Paris
+python scripts/produce_video.py --type tourist_guide --theme "Paris in 3 days"
+
+# Walking Tour in Milan (60 fps, leisurely walking cadence)
+python scripts/produce_video.py --type walking_tour --genre scenic --theme "Milan"
+
+# Telugu Mass Folk Dance Video (30 fps, Suno Telugu song track)
+python scripts/produce_video.py --type dance_video --genre mass_folk --language te
+
+# Fantasy Feature Film
+python scripts/produce_video.py --type movie --genre fantasy --title "Kingdom of Shadows"
+
+
+
+Category 3: Rotating Universe Series (--theme)
+Autonomously selects a fresh, distinct landmark or attraction each run, consulting Topic Memory exclusions to prevent duplicate locations.
+
+python scripts/produce_video.py --theme "norway walking tour" --duration 15 --live -y
+
+# Rotates across Geirangerfjord -> Reinebringen -> Bergen Bryggen -> Preikestolen -> Flåm
+python scripts/produce_video.py --theme "norway walking tour"
+
+# Rotates across Grand Central -> Brooklyn Bridge -> Central Park Bethesda Terrace -> High Line
+python scripts/produce_video.py --theme "Top 10 places to see in New York"
+
+# Rotates across Medaram Jathara -> Tirupati Gangamma Jathara -> Sankranthi Village -> Bonalu
+python scripts/produce_video.py --theme "Telugu mass dance song with male lead"
+
+# Rotates across Highland citadel sieges -> ancient forest clashes -> royal feuds
+python scripts/produce_video.py --theme "Fantasy movie: War for a kingdom in UK"
+
+# By theme:
+python scripts/produce_video.py --theme "norway walking tour" --duration 15 --live -y
+
+# By specific prompt:
+python scripts/produce_video.py --prompt "First-person POV walking tour along Geirangerfjord cliffside trail with waterfall mist and rustic wooden railings" --duration 15 --live -y
+

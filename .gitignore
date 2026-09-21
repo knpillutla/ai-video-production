@@ -24,6 +24,7 @@ ENV/
 
 # Local Storage, SQLite Databases & Generated Media Renders
 storage/*
+!storage/.gitignore
 !storage/.gitkeep
 *.db
 *.sqlite

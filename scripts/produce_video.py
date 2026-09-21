@@ -16,11 +16,12 @@ from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary, has_ffmpeg
 from src.compositor.pipeline import pipeline_coordinator
 from src.compositor.pipeline_prompts import build_storyboard_prompt
 from src.core.storage import storage_service; from src.core.telemetry import logger
+from src.core.config.artifact_models import get_artifact_profile
 from src.domain.creative import Episode, Show; from src.domain.generation import MediaFormat, ThemeGenre
 from src.domain.repo import repo; from src.domain.user import User
 from src.mcp.model_selector.tier_resolver import recommend_production_tiers
 from src.mcp.topic_memory.server import check_topic_duplicate
-from src.scheduling.daily_scheduler import daily_scheduler
+from src.services.topic_planner import get_fresh_original_topic
 from src.scripts.cli_presentation import print_cli_header, print_cli_summary
 from src.scripts.local_thumbnail import EpisodicBadgeConfig, generate_episodic_thumbnail
 from src.scripts.preflight_gate import execute_preflight_gate; from src.services.cultural_derivation import derive_cultural_context
@@ -37,9 +38,14 @@ async def run_production(
     refine_script: bool = False, voice_gender: str | None = None, target_languages: str | None = None,
     voice_over: bool = False, narration_male: bool = False, narration_female: bool = False,
     bgm: bool = False, tts: bool = False, youtube_reference_link: str | None = None, prompt: str | None = None,
-    restart_id: str | None = None,
+    restart_id: str | None = None, profile: str = "development",
 ):
     """Execute the Phase 2 & 3 end-to-end video production and compliance pipeline."""
+    artifact_profile = get_artifact_profile(profile)
+    local = artifact_profile.name == "local"
+    force_live = artifact_profile.name in ("development", "production")
+    if artifact_profile.name == "production":
+        allow_fallback = False
     user = repo.get_user_by_email("creator@cineai.studio")
     if not user:
         user = User(email="creator@cineai.studio", display_name="Studio Director", google_sub="cli_local_user", storage_container_name="user-cli-director", api_credit_balance_usd=50.00, home_country=country, cultural_heritage=culture)
@@ -117,7 +123,7 @@ async def run_production(
                     theme=theme, idea=idea, script=script, refine_script=refine_script, voice_gender=voice_gender,
                     target_languages=None, voice_over=voice_over, narration_male=narration_male,
                     narration_female=narration_female, bgm=bgm, tts=tts,
-                    youtube_reference_link=youtube_reference_link, prompt=prompt,
+                    youtube_reference_link=youtube_reference_link, prompt=prompt, profile=profile,
                 )
                 results.append(res)
             return results
@@ -125,14 +131,22 @@ async def run_production(
     if not goto_production:
         is_default_title = (title == "IT Employee WFH Confusions" or not title)
         if prompt:
+            extracted_lang = classifier_agent.extract_language_from_text(prompt)
+            if extracted_lang:
+                language = extracted_lang
             if is_default_title:
-                # Use the user's prompt as the title seed — NOT the random theme pool.
-                # The scheduler pool is for automated scheduled jobs, not user-directed prompts.
-                # Gemini's storyboard will refine a creative title from this context.
-                title = prompt.strip()
-            idea = idea or prompt
+                first_clause = prompt.split(",")[0].split(".")[0].strip()
+                title = (first_clause[:48].strip() + "...") if len(first_clause) > 48 else first_clause
+            idea = prompt
         elif theme and is_default_title:
-            title = await daily_scheduler.get_fresh_original_topic(theme=theme, show_slug="theme-universe", language=language)
+            extracted_lang = classifier_agent.extract_language_from_text(theme)
+            if extracted_lang:
+                language = extracted_lang
+            title = await get_fresh_original_topic(
+                theme=theme, show_slug="theme-universe",
+                language=language, user_id=str(user.id),
+            )
+            idea = idea or f"{theme} - {title}"
         elif idea and is_default_title:
             title = (idea[:36].strip() + "...") if len(idea) > 36 else idea.strip()
         elif script and is_default_title:
@@ -151,17 +165,34 @@ async def run_production(
                 if theme.lower().replace("-", "_") in (tg.value.lower(), tg.name.lower()):
                     resolved_theme = tg; break
 
-        creative_context = " ".join(filter(None, [genre, theme, idea, title, prompt, youtube_reference_link, script_text[:200] if script_text else None]))
+        effective_genre_cue = genre if (genre != "comedy" or not theme) else None
+        creative_context = " ".join(filter(None, [effective_genre_cue, theme, idea, title, prompt, youtube_reference_link, script_text[:200] if script_text else None]))
         if not media_format or media_format.lower() == "auto":
             detected = classifier_agent.detect(text=creative_context, title=title)
             resolved_format = detected.media_format
             if resolved_theme == ThemeGenre.AUTO and detected.theme != ThemeGenre.AUTO:
                 resolved_theme = detected.theme
+            if genre == "comedy" and detected.theme != ThemeGenre.TELUGU_COMEDY:
+                genre = "travel_tourism" if detected.theme == ThemeGenre.TRAVEL_TOURISM else (
+                    "nature_documentary" if detected.theme == ThemeGenre.NATURE_WILDLIFE else (
+                        "dance" if detected.theme == ThemeGenre.BOLLYWOOD_DANCE else detected.theme.value
+                    )
+                )
         else:
-            try:
-                resolved_format = MediaFormat(media_format.lower().replace("-", "_"))
-            except ValueError:
-                resolved_format = MediaFormat.WEB_SERIES
+            fmt_raw = media_format.lower().replace("-", "_")
+            if fmt_raw in ("movie", "film", "cinema"):
+                resolved_format = MediaFormat.MOVIE_CINEMATIC
+            elif fmt_raw in ("tourist_guide", "travel_guide", "tourist_attractions", "city_guide"):
+                resolved_format = MediaFormat.TRAVEL_GUIDE
+            elif fmt_raw in ("dance", "dance_song", "mass_dance"):
+                resolved_format = MediaFormat.DANCE_VIDEO
+            elif fmt_raw in ("walk", "walking", "walk_tour"):
+                resolved_format = MediaFormat.WALKING_TOUR
+            else:
+                try:
+                    resolved_format = MediaFormat(fmt_raw)
+                except ValueError:
+                    resolved_format = MediaFormat.WEB_SERIES
 
         fmt_str = resolved_format.value
         prompt_overrides = classifier_agent.extract_prompt_overrides(creative_context)
@@ -204,9 +235,12 @@ async def run_production(
                 episode_number = 1
                 fmt_labels = {
                     MediaFormat.TRAVEL_GUIDE: ("TRAVEL GUIDE", f"{title} - Travel Guide" if "guide" not in title.lower() else title, f"{title} GUIDE!"),
+                    MediaFormat.TOURIST_GUIDE: ("TRAVEL GUIDE", f"{title} - Travel Guide" if "guide" not in title.lower() else title, f"{title} GUIDE!"),
                     MediaFormat.VLOG: ("VLOG", f"{title} - Travel Vlog" if "vlog" not in title.lower() else title, f"{title} VLOG!"),
                     MediaFormat.MOVIE_CINEMATIC: ("FILM", title, title),
+                    MediaFormat.EPIC_CINEMATIC: ("EPIC FILM", title, title),
                     MediaFormat.DANCE_VIDEO: ("DANCE", title, f"{title}!"),
+                    MediaFormat.MUSIC_VIDEO: ("MUSIC VIDEO", title, f"{title}!"),
                 }
                 badge_label, ep_title, headline = fmt_labels.get(resolved_format, (resolved_format.value.upper().replace("_", " "), title, f"{title} 4K!"))
                 existing_ep = next((e for e in existing_eps if e.title == ep_title), None)
@@ -218,9 +252,9 @@ async def run_production(
             if not topic_dup.get("is_duplicate"):
                 break  # Fresh title found — proceed
 
-            if _attempt < _MAX_DUP_RETRIES:
+            if _attempt < _MAX_DUP_RETRIES and (prompt or theme):
                 print(f"\n[~] Attempt {_attempt}: Title '{ep_title}' already exists. Requesting a new original title from the scheduler (attempt {_attempt + 1}/{_MAX_DUP_RETRIES})...")
-                title = await daily_scheduler.get_fresh_original_topic(
+                title = await get_fresh_original_topic(
                     theme=_t_hint or genre, show_slug=show_slug,
                     language=language, user_id=str(user.id),
                 )
@@ -247,11 +281,11 @@ async def run_production(
             enable_lipsync = bool(tts)
     else:
         is_voice_over, enable_lipsync = classifier_agent.infer_audio_modalities(theme=theme or (resolved_theme.value if resolved_theme != ThemeGenre.AUTO else None), idea=idea, script=script_text, media_format=resolved_format)
-        effective_voice_gender = voice_gender or gender or "female"
+        effective_voice_gender = voice_gender or ("male" if resolved_format in (MediaFormat.WALKING_TOUR, MediaFormat.MOVIE_CINEMATIC, MediaFormat.EPIC_CINEMATIC) and gender == "female" else (gender or "female"))
 
-    if resolved_format == MediaFormat.DANCE_VIDEO:
+    if resolved_format in (MediaFormat.DANCE_VIDEO, MediaFormat.MUSIC_VIDEO):
         enable_bgm, enable_lipsync, is_voice_over = True, True, False
-    elif resolved_format in (MediaFormat.SCENIC_RELAXATION, MediaFormat.WALKING_TOUR, MediaFormat.SCENIC_DRIVE, MediaFormat.AMBIENT_LOUNGE, MediaFormat.NATURE_SANCTUARY):
+    elif resolved_format in (MediaFormat.SCENIC_RELAXATION, MediaFormat.WALKING_TOUR, MediaFormat.SCENIC_DRIVE, MediaFormat.AMBIENT_LOUNGE, MediaFormat.NATURE_SANCTUARY, MediaFormat.TRAVEL_GUIDE, MediaFormat.TOURIST_GUIDE):
         enable_bgm = True
     else:
         enable_bgm = bool(bgm)
@@ -276,7 +310,7 @@ async def run_production(
     user_inputs = {
         "user_id": str(user.id), "episode_id": str(episode.id), "title": ep_title, "duration_seconds": duration, "format": fmt_str, "genre": genre,
         "theme": theme or (resolved_theme.value if resolved_theme != ThemeGenre.AUTO else None), "idea": idea, "script": script_text, "youtube_reference_url": youtube_reference_link,
-        "tier": tier, "language": language, "subtitle_language": active_sub, "gender": effective_voice_gender, "character_name": character_name, "art_style": art_style,
+        "tier": tier, "profile": profile, "language": language, "subtitle_language": active_sub, "gender": effective_voice_gender, "character_name": character_name, "art_style": art_style,
         "enable_voice_over": is_voice_over, "enable_bgm": enable_bgm, "enable_lipsync": enable_lipsync, "reference_attributes": ref_attrs.model_dump(mode="json") if ref_attrs else None,
         "target_languages": episode.options.target_languages, "created_at": time.time(),
     }
@@ -297,25 +331,38 @@ async def run_production(
             from src.scripts.youtube_ingest import extract_reference_video_attributes
             ref_attrs = extract_reference_video_attributes(url=youtube_reference_link, title=title, text=f"{idea or ''} {theme or ''}", default_genre=genre, user_format=fmt_str)
 
-        prompt = build_storyboard_prompt(
-            title=ep_title, duration_seconds=duration,
-            language=language, fmt_str=fmt_str, genre=genre,
-            custom_script=script_text, idea=idea, theme=theme or (resolved_theme.value if resolved_theme != ThemeGenre.AUTO else None),
-            refine_script=refine_script,
-            art_style=art_style or (ref_attrs.art_style if ref_attrs else ""),
-            architecture_style=ref_attrs.architecture_style if ref_attrs else None,
-            camera_language=ref_attrs.camera_language if ref_attrs else None,
-        )
-        # Use LLM directly to get the structured storyboard including localized titles
+        from src.compositor.genre_strategies import resolve_strategy
+        strategy = resolve_strategy(media_format=fmt_str, genre=genre, idea=idea or title)
+        culture_ctx = derive_cultural_context(script_text=script_text or idea or title, language=language, genre=genre, user_cultural_heritage=culture)
+        if script_text:
+            prompt = build_storyboard_prompt(
+                title=ep_title, duration_seconds=duration,
+                language=language, fmt_str=fmt_str, genre=genre,
+                custom_script=script_text, idea=idea, theme=theme or (resolved_theme.value if resolved_theme != ThemeGenre.AUTO else None),
+                refine_script=refine_script,
+                art_style=art_style or (ref_attrs.art_style if ref_attrs else ""),
+                architecture_style=ref_attrs.architecture_style if ref_attrs else None,
+                camera_language=ref_attrs.camera_language if ref_attrs else None,
+            )
+            schema = None
+        else:
+            prompt = strategy.build_gemini_prompt(
+                title=ep_title, duration_seconds=duration, language=language,
+                genre=genre, idea=idea, art_style=art_style or (ref_attrs.art_style if ref_attrs else ""),
+                culture_ctx=culture_ctx,
+            )
+            schema = strategy.build_gemini_schema()
         from src.providers.llm.gemini_adapter import GeminiLLMAdapter
         llm = GeminiLLMAdapter()
-        storyboard_data = await llm.generate_structured(prompt)
+        storyboard_data = await llm.generate_structured(prompt, schema=schema) if schema else await llm.generate_structured(prompt)
+        strategy.validate_storyboard(storyboard_data)
         with open(storyboard_path, "w", encoding="utf-8") as f:
             json.dump(storyboard_data, f, indent=2)
 
-    # Update titles from storyboard if available
-    if storyboard_data.get("title_localized"):
-        ep_title = storyboard_data["title_localized"]
+    # The canonical project title and storage identity stay English. Localized
+    # titles remain inside the storyboard/script artifact for audience-facing use.
+    if storyboard_data.get("title_en"):
+        ep_title = storyboard_data["title_en"]
         episode.title = ep_title
 
     episode.cost_record = calculate_preflight_estimate(episode)
@@ -334,7 +381,7 @@ async def run_production(
         repo.save_episode(episode)
         print(f"[i] Active Production Tier: {tier_spec['display_name']} (${episode.estimated_cost_usd:.4f})")
 
-    print(f"\n[1/4] Confirmed Episode Project: {episode.id} (Tier: {selected_tier.upper()}, Mode: {decision_mode.upper()}, Budget: ${episode.estimated_cost_usd:.4f})")
+    print(f"\n[1/4] Confirmed Episode Project: {episode.id} (Profile: {profile.upper()}, Tier: {selected_tier.upper()}, Mode: {decision_mode.upper()}, Budget: ${episode.estimated_cost_usd:.4f})")
     thumb_dir = ep_ws / "thumbnails"
     thumb_dir.mkdir(parents=True, exist_ok=True)
     generate_episodic_thumbnail(
@@ -382,15 +429,26 @@ def main():
     ]:
         p.add_argument(fl, **{"type": t, "default": d, "help": h, **({"dest": dst} if dst else {})})
     for fls, h, dst in [
-        (["--live"], "Live synthesis", "force_live"), (["--dry-run"], "Dry run", "dry_run"),
+        (["--dry-run"], "Dry run", "dry_run"),
         (["-y", "--yes"], "Auto confirm", "auto_confirm"), (["--allow-fallback"], "Fallback", "allow_fallback"),
-        (["--local"], "Local mode", "local"), (["--voice-over"], "Voiceover", "voice_over"),
+        (["--voice-over"], "Voiceover", "voice_over"),
         (["--narration-male"], "Male voice", "narration_male"), (["--narration-female"], "Female voice", "narration_female"),
         (["--tts"], "Conversational TTS", "tts"), (["--bgm"], "Background music", "bgm"),
         (["--refine", "--refine-script"], "Refine screenplay", "refine_script"),
     ]:
         p.add_argument(*fls, action="store_true", default=False, help=h, dest=dst)
-    asyncio.run(run_production(**vars(p.parse_args())))
+    profile_group = p.add_mutually_exclusive_group()
+    profile_group.add_argument("--local", dest="profile", action="store_const", const="local", help="Offline deterministic production")
+    profile_group.add_argument("--dev", dest="profile", action="store_const", const="development", help="Live providers with development fallbacks")
+    profile_group.add_argument("--live", dest="profile", action="store_const", const="production", help="Live production providers, strict fallback policy")
+    args = vars(p.parse_args())
+    profile = args.pop("profile") or "development"
+    args["profile"] = profile
+    args["local"] = profile == "local"
+    args["force_live"] = profile in ("development", "production")
+    if profile == "production":
+        args["allow_fallback"] = False
+    asyncio.run(run_production(**args))
 
 if __name__ == "__main__":
     main()

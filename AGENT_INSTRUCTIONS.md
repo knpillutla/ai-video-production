@@ -290,7 +290,19 @@ Before completing any task, every agent must verify:
 
 ---
 
-## 14. Mandatory Blue-Chip Nature & Extreme Climate Survival Standards (BBC / NatGeo Style)
+## 14. Mandatory Dance Video Fast-Path Prompt Enrichment Parity
+
+The dance video fast-path (`_produce_dance_video`) in `pipeline.py` must apply the **exact same prompt enrichment pipeline** as the non-dance path and scratch production scripts. Without these enrichments, Fal FLUX.1-dev produces significantly lower quality keyframes despite using identical model parameters.
+
+* **Character Consistency Injection (Mandatory):** Before sending any `visual_prompt` to FLUX.1-dev, the dance path MUST call `inject_character_consistency(vis_prompt, char_anchor)` to prepend the character anchor prefix (name, age, gender, face, body, wardrobe) — identical to how non-dance scenes and scratch scripts operate. The dance path must create/resolve a `CharacterVisualAnchor` from the storyboard's character metadata before generating keyframes.
+* **Deterministic Seed Locking (Mandatory):** Pass the character anchor's deterministic `seed` value to `fal_flux.generate_to_file()` to ensure consistent character appearance across all scenes in multi-scene productions.
+* **Cultural LoRA Injection (Mandatory):** Derive cultural context via `derive_cultural_context()` and inject `recommended_loras` (costume LoRAs, jewelry LoRAs) into every keyframe generation call, matching the non-dance path behavior.
+* **Art Style Prompt Enrichment (Mandatory):** Append `derived_culture.art_style_prompt` to the enhanced visual prompt when present, ensuring culturally authentic visual rendering.
+* **Minimum 130-Word Visual Prompt Validation:** Raise the dance storyboard quality gate minimum from 90 words to **130 words** per `visual_prompt` to match the detail level of hand-crafted scratch script prompts (130–180 words). The prompt must be a fully self-contained cinematic image description including: character identity, face/hair/body description, exact wardrobe and accessories, background dancer description, location setting, props, pose/choreography, shot type and lens, lighting, skin-tone fidelity, and negative constraints.
+
+---
+
+## 15. Mandatory Blue-Chip Nature & Extreme Climate Survival Standards (BBC / NatGeo Style)
 
 * **Cinematic 24.0 fps Film Cadence:** Blue-chip wildlife and mountain blizzard survival productions must strictly default to **24.0 fps** with natural motion blur to convey monumental timelessness and heavy blizzard drifts.
 * **Visceral Survival Realism & Contrast:** Contrast sub-zero blizzard gales, drifting powder snow, and stone huts with interior hearth embers and steaming tea kettles. Layer authentic procedural foley (howling wind, snow crunching) with sparse acoustic instruments (rubab, mountain flute, low cello drone).

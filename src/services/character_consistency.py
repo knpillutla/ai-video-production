@@ -1,5 +1,6 @@
 """Character Consistency Engine with LoRA, Clothing, Jewelry, and Visual Anchoring."""
 
+import re
 from typing import Any
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
@@ -8,6 +9,30 @@ from src.core.telemetry import logger
 from src.domain.creative import Character
 from src.domain.repo import repo
 from src.mcp.model_selector.cultural_catalog import lookup_costume_stack, lookup_cultural_stack
+
+
+DEFAULT_BODY_COMPOSITION = "balanced naturally fit medium build, neither too skinny nor chubby"
+_BODY_OVERRIDE_PATTERNS = (
+    ("skinny", ("skinny", "very thin", "bony")),
+    ("chubby", ("chubby", "plus-size", "plus size", "overweight")),
+)
+
+
+def _body_composition_from_user_text(text: str | None) -> str | None:
+    """Accept non-default body types only when the user's own brief states one."""
+    normalized = (text or "").lower()
+    for composition, cues in _BODY_OVERRIDE_PATTERNS:
+        if any(cue in normalized for cue in cues):
+            return composition
+    return None
+
+
+def _safe_appearance_summary(summary: str | None, body: str) -> str:
+    """Keep useful model-provided traits without letting it override body defaults."""
+    cleaned = summary or ""
+    if body == DEFAULT_BODY_COMPOSITION:
+        cleaned = re.sub(r"\b(skinny|very thin|bony|chubby|plus[- ]size|overweight)\b", "", cleaned, flags=re.IGNORECASE)
+    return ", ".join(part.strip(" ,") for part in (body, cleaned) if part.strip(" ,"))
 
 
 class CharacterVisualAnchor(BaseModel):
@@ -84,6 +109,7 @@ def get_or_create_character_anchor(
     height: str | None = None,
     role: str | None = None,
     appearance_summary: str | None = None,
+    source_text: str | None = None,
 ) -> CharacterVisualAnchor:
     """Retrieve existing character anchor from universe repo or initialize a culturally authentic anchor."""
     from src.mcp.model_selector.cultural_names import resolve_cultural_character_name
@@ -120,9 +146,11 @@ def get_or_create_character_anchor(
 
     # Initialize character anchor (Mandatory: balanced fit build, neither too skinny nor chubby, mid-20s)
     eff_age = age or 24
-    eff_body = body_composition or "balanced naturally fit medium-slender build"
+    # The storyboard may suggest a body type, but only an explicit user prompt can
+    # override the universal healthy medium-build default.
+    eff_body = _body_composition_from_user_text(source_text) or DEFAULT_BODY_COMPOSITION
     if appearance_summary:
-        appearance = appearance_summary
+        appearance = _safe_appearance_summary(appearance_summary, eff_body)
     elif gender.lower() == "female":
         appearance = (
             f"{eff_age}-year-old, mid-20s, {eff_body}, graceful feminine curves with toned midriff, neither too skinny nor chubby, "

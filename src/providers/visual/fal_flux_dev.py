@@ -1,7 +1,7 @@
 """Fal.ai FLUX.1-dev high-quality 4K keyframe generator (28-step, photorealistic).
 
 Uses the Fal queue system (submit → poll → download) identical to the scratch
-production scripts. Falls back to TogetherFluxAdapter when Fal key is absent.
+production scripts. Falls back to a local placeholder when Fal is unavailable.
 """
 
 from __future__ import annotations
@@ -26,8 +26,8 @@ _POLL_MAX_ATTEMPTS = 50   # 100 seconds max
 class FalFluxDevAdapter:
     """28-step FLUX.1-dev photorealistic 4K keyframe generator via Fal queue.
 
-    Quality vs cost vs TogetherFluxAdapter (4-step schnell):
-    - Steps: 28 (vs 4) → dramatically higher photorealism
+    Quality and cost:
+    - Steps: 28 → high photorealism for broadcast keyframes
     - Cost: ~$0.015/image (vs $0.003) — acceptable for broadcast masters
     - Resolution: landscape_16_9 (1344×768 native, upscaled to 4K in FFmpeg)
     """
@@ -59,11 +59,11 @@ class FalFluxDevAdapter:
             return fal_url, out
 
         if is_mock_mode() and not force_live:
-            return await self._fallback_together(prompt, out, aspect_ratio, loras, seed)
+            return await self._fallback_local(prompt, out, aspect_ratio, loras, seed)
 
         if not self.api_key:
-            logger.warning("fal_flux_dev: no FAL_KEY — falling back to TogetherFlux")
-            return await self._fallback_together(prompt, out, aspect_ratio, loras, seed)
+            logger.warning("fal_flux_dev: no FAL_KEY — using local placeholder")
+            return await self._fallback_local(prompt, out, aspect_ratio, loras, seed)
 
         headers = {"Authorization": f"Key {self.api_key}", "Content-Type": "application/json"}
         image_size = "landscape_16_9" if aspect_ratio == "16:9" else "portrait_16_9"
@@ -105,10 +105,10 @@ class FalFluxDevAdapter:
                 raise TimeoutError("Fal FLUX.1-dev timed out after 100s")
 
             except Exception as ex:
-                logger.warning(f"fal_flux_dev_failed: {ex} — falling back to TogetherFlux")
-                return await self._fallback_together(prompt, out, aspect_ratio, loras, seed)
+                logger.warning(f"fal_flux_dev_failed: {ex} — using local placeholder")
+                return await self._fallback_local(prompt, out, aspect_ratio, loras, seed)
 
-    async def _fallback_together(
+    async def _fallback_local(
         self,
         prompt: str,
         out: Path,
@@ -116,12 +116,14 @@ class FalFluxDevAdapter:
         loras: list[dict[str, Any]] | None,
         seed: int | None,
     ) -> tuple[str, Path]:
-        """Fallback: use TogetherFluxAdapter and return (mock_url, path)."""
-        from src.providers.visual.together_flux import TogetherFluxAdapter
-        adapter = TogetherFluxAdapter()
-        result_path = await adapter.generate_to_file(
-            prompt, out, aspect_ratio=aspect_ratio, loras=loras, seed=seed
-        )
+        """Fallback to a deterministic local placeholder without switching models."""
+        from PIL import Image, ImageDraw
+        target_size = (1920, 1080) if aspect_ratio == "16:9" else (1080, 1920)
+        image = Image.new("RGB", target_size, (15, 23, 42))
+        draw = ImageDraw.Draw(image)
+        draw.text((60, target_size[1] // 2 - 20), f"[FLUX Dev unavailable] {prompt[:70]}...", fill=(240, 240, 250))
+        image.save(out, format="JPEG", quality=90)
+        result_path = out
         return f"file://{result_path}", result_path
 
 

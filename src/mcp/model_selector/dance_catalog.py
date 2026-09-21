@@ -30,7 +30,7 @@ DANCE_MODEL_MATRIX: dict[str, dict[str, Any]] = {
         "dance_name": "Indian Commercial Mass & Folk (Tollywood Mass, Bollywood, Bhangra, Garba)",
         "motion_model": "fal-mimic-motion",
         "motion_provider": "Fal.ai",
-        "visual_model": "flux-1-schnell",
+        "visual_model": "flux-1-dev",
         "costume_lora": {
             "path": "loras/indian_festive_mass_v1.safetensors",
             "scale": 0.85,
@@ -48,7 +48,7 @@ DANCE_MODEL_MATRIX: dict[str, dict[str, Any]] = {
         "dance_name": "Contemporary / Hip-Hop / Pop",
         "motion_model": "fal-mimic-motion",
         "motion_provider": "Fal.ai",
-        "visual_model": "flux-1-schnell",
+        "visual_model": "flux-1-dev",
         "costume_style": "western_modern",
         "music_engine": "suno-v3.5-vocal-pro",
         "music_style": "120 BPM upbeat commercial pop/electronic rhythm",
@@ -59,7 +59,7 @@ DANCE_MODEL_MATRIX: dict[str, dict[str, Any]] = {
         "dance_name": "Italian Tarantella & Pizzica Folk Dance",
         "motion_model": "fal-mimic-motion",
         "motion_provider": "Fal.ai",
-        "visual_model": "flux-1-schnell",
+        "visual_model": "flux-1-dev",
         "costume_style": "italian_tarantella_folk",
         "costume_lora": {
             "path": "loras/italian_tarantella_costume_v1.safetensors",
@@ -75,7 +75,7 @@ DANCE_MODEL_MATRIX: dict[str, dict[str, Any]] = {
         "dance_name": "Mexican Ballet Folklórico & Jarabe Tapatío",
         "motion_model": "fal-mimic-motion",
         "motion_provider": "Fal.ai",
-        "visual_model": "flux-1-schnell",
+        "visual_model": "flux-1-dev",
         "costume_style": "mexican_jalisco_charro",
         "costume_lora": {
             "path": "loras/mexican_folklore_jalisco_v1.safetensors",
@@ -91,7 +91,7 @@ DANCE_MODEL_MATRIX: dict[str, dict[str, Any]] = {
         "dance_name": "American Country Line Dance & Western Swing",
         "motion_model": "fal-mimic-motion",
         "motion_provider": "Fal.ai",
-        "visual_model": "flux-1-schnell",
+        "visual_model": "flux-1-dev",
         "costume_style": "american_western_country",
         "costume_lora": {
             "path": "loras/american_western_country_v1.safetensors",

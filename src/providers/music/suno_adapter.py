@@ -110,7 +110,11 @@ class SunoMusicAdapter(MusicProviderProtocol):
         title: str = "",
         force_live: bool = False,
     ) -> Path:
-        """Generate and save background music to a valid 48kHz stereo WAV file."""
+        """Generate and save background music to a valid 48kHz stereo WAV file.
+
+        Temporary testing fallback: if the external Suno/MusicAPI call fails, we keep the
+        pipeline alive by reusing a local MP3 artifact instead of crashing the render.
+        """
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 

@@ -113,7 +113,7 @@ async def check_together_health() -> ProviderHealthStatus:
         return ProviderHealthStatus(
             provider_name="Together AI",
             category="Visual Diffusion",
-            model="FLUX.1-schnell",
+            model="FLUX.1-dev (28 steps)",
             key_env_var="TOGETHER_API_KEY",
             is_configured=False,
             has_credits=False,
@@ -125,7 +125,7 @@ async def check_together_health() -> ProviderHealthStatus:
         return ProviderHealthStatus(
             provider_name="Together AI",
             category="Visual Diffusion",
-            model="FLUX.1-schnell",
+            model="FLUX.1-dev (28 steps)",
             key_env_var="TOGETHER_API_KEY",
             is_configured=True,
             has_credits=True,
@@ -143,7 +143,7 @@ async def check_together_health() -> ProviderHealthStatus:
                 return ProviderHealthStatus(
                     provider_name="Together AI",
                     category="Visual Diffusion",
-                    model="FLUX.1-schnell",
+                    model="FLUX.1-dev (28 steps)",
                     key_env_var="TOGETHER_API_KEY",
                     is_configured=True,
                     has_credits=True,
@@ -153,7 +153,7 @@ async def check_together_health() -> ProviderHealthStatus:
             return ProviderHealthStatus(
                 provider_name="Together AI",
                 category="Visual Diffusion",
-                model="FLUX.1-schnell",
+                model="FLUX.1-dev (28 steps)",
                 key_env_var="TOGETHER_API_KEY",
                 is_configured=True,
                 has_credits=False,
@@ -164,7 +164,7 @@ async def check_together_health() -> ProviderHealthStatus:
         return ProviderHealthStatus(
             provider_name="Together AI",
             category="Visual Diffusion",
-            model="FLUX.1-schnell",
+            model="FLUX.1-dev (28 steps)",
             key_env_var="TOGETHER_API_KEY",
             is_configured=True,
             has_credits=False,

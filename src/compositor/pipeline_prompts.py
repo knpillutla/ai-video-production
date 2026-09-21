@@ -8,6 +8,7 @@ def build_dance_storyboard_prompt(
     genre: str = "romantic_dance",
     idea: str | None = None,
     art_style: str | None = None,
+    lead_gender: str | None = None,
 ) -> str:
     """Build a Gemini Tier-2 prompt for broadcast dance video storyboards.
 
@@ -16,11 +17,16 @@ def build_dance_storyboard_prompt(
     """
     idea_line = f"\nPRIMARY CREATIVE DIRECTION (USER REQUEST — this is the most important input): {idea}" if idea else ""
     art_line = f"\nVisual Art Style: {art_style}." if art_style else ""
+    gender_line = (
+        "\nCAST INFERENCE: Infer the lead cast from the user's creative direction and cultural context. "
+        "Decide whether this is a male lead, female lead, or romantic production with both male and female co-leads. "
+        "Return that decision explicitly in character metadata and every scene's gender fields. Do not assume a default gender."
+    )
     return (
         f"You are a Gemini Tier-2 cinematic dance director, lyricist, and cultural expert. "
         f"Create a broadcast-grade {duration_seconds}-second {genre} dance video storyboard "
         f"in the {language} language/dialect."
-        f"{idea_line}{art_line}\n\n"
+        f"{idea_line}{art_line}{gender_line}\n\n"
         "CRITICAL: The title, lyrics, wardrobe, locations, instruments, and ALL visual details "
         "MUST be authentically derived from the user's creative direction above. "
         "If the user says 'Telangana village atmosphere', every scene must be set in a Telangana village — "
@@ -38,6 +44,7 @@ def build_dance_storyboard_prompt(
         "- 'characters': list of character metadata objects\n"
         "- 'location_hubs': 3–4 distinct location hub names derived from the user's setting\n"
         "- 'scenes': list of 2–4 scene objects\n"
+        "- Every scene MUST include 'lead_character_gender' and 'background_dancer_gender' fields.\n"
         "  MANDATORY: At least one scene MUST use 'close_up' or 'medium_shot' with the lead character's "
         "face clearly visible and prominent in frame (required for lip-sync face detection).\n\n"
         "SCENE OBJECT FIELDS:\n"
@@ -51,6 +58,7 @@ def build_dance_storyboard_prompt(
         "- 'motion_prompt': (SEE EXAMPLE BELOW — must be this level of detail)\n"
         "- 'dialogue': empty string (zero spoken TTS in dance videos)\n\n"
         "VISUAL PROMPT QUALITY STANDARD (every visual_prompt MUST match this level of detail):\n"
+        "Each visual_prompt is the exact prompt sent to Fal FLUX.1-dev. It must be a self-contained, richly detailed cinematic image prompt matching the quality baseline example below — not a summary or reference to another field. It MUST explicitly contain: lead character name, age and gender; face, hair and body description; exact culturally appropriate wardrobe and accessories; background dancer gender and count or group; location and regional setting; visible props and instruments; pose or choreography; shot type and lens/depth of field; time of day and lighting color; skin-tone/color fidelity; and negative constraints preventing substitutions. Never return only visual_description, action, wardrobe, or a short fragment.\n"
         "EXAMPLE: 'Ultra-photorealistic 4K cinematic medium shot, 24-year-old South Indian Telugu woman, "
         "balanced naturally fit medium-slender build with graceful feminine curves, strikingly beautiful, "
         "big expressive almond eyes, gentle smiling dimples, thick dark wavy braid with fresh jasmine flowers. "
@@ -61,6 +69,7 @@ def build_dance_storyboard_prompt(
         "Crisp balanced 5500K natural open-air daylight, soft morning sunlight, realistic natural skin tones, "
         "zero artificial yellow lens flare, 50mm f/2.0 cinematic lens, moderate depth-of-field.'\n\n"
         "MOTION PROMPT QUALITY STANDARD (every motion_prompt MUST match this level):\n"
+        "Each motion_prompt must be a self-contained 60–140 word motion direction naming the lead gender, troupe gender, dance actions, camera movement, fabric/body physics, environment movement, frame rate, and lighting.\n"
         "EXAMPLE: 'Ultra-photorealistic 4K cinematic, 24-year-old South Indian woman with balanced naturally fit build "
         "performing graceful romantic folk dance, playful hip sway, delicate hand mudras, joyful teasing expressions, "
         "spinning half-turn with flared lehenga skirt, village courtyard with festive garlands swaying in breeze, "

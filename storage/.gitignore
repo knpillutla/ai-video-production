@@ -1,0 +1,6 @@
+# Ignore all generated artifacts, renders, temporary states, and user folders
+*
+
+# Keep this .gitignore and any .gitkeep markers
+!.gitignore
+!.gitkeep

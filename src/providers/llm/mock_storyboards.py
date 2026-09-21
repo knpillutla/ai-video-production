@@ -87,21 +87,48 @@ def _resolve_nature_storyboard(p_lower: str, is_te: bool) -> dict[str, Any] | No
 
 
 def resolve_mock_storyboard(prompt: str) -> dict[str, Any]:
-    """Return topic-accurate storyboard plan adhering to ScenePlan contracts."""
+    """Return topic-accurate storyboard plan adhering to ScenePlan contracts.
+
+    Dance prompts must remain dance prompts. Comedy and Bathukamma song defaults are
+    only allowed when the user explicitly asks for them.
+    """
     p_lower = prompt.lower()
-    is_te = any(k in p_lower for k in ("telugu", "te-in", "te_in", "in te", "language: te", "te language"))
+    is_te = any(k in p_lower for k in ("telugu", "te-in", "te_in", "in te", "language: te", "te language", "telangana"))
+    dance_keywords = ("dance", "folk dance", "village dance", "dappu", "jathara", "mass dance", "traditional dance", "dance video", "folk festival")
+    comedy_keywords = ("comedy", "standup", "satire", "joke", "funny", "wfh", "office")
+    is_dance_request = any(k in p_lower for k in dance_keywords)
+    is_comedy_request = any(k in p_lower for k in comedy_keywords)
 
     # 1. Custom user script execution (verbatim dialogue preservation)
     custom_plan = _parse_custom_script_scenes(prompt, is_te)
     if custom_plan:
         return custom_plan
 
-    # 2. Multi-element global nature & wildlife resolution
+    # 2. Explicit dance intent must stay dance-centered
+    if is_dance_request and not is_comedy_request:
+        title = "Telangana Village Folk Dance"
+        title_localized = "తెలంగాణ గ్రామీణ జానపద నృత్యం" if is_te else title
+        return {
+            "title": title,
+            "title_localized": title_localized,
+            "titles_multilingual": {"en": title, "te": title_localized},
+            "hook_thesis": "A joyful Telangana village folk dance performance rooted in community rhythm, celebration, and cultural movement.",
+            "target_duration_seconds": 30,
+            "recommended_fps": 30,
+            "vocal_gender": "female",
+            "scenes": [
+                {"scene_index": 0, "duration_seconds": 8.0, "location_hub": "Village common ground", "shot_type": "wide_shot", "choreography_phase": "intro_groove", "choreography_steps": "Traditional Telangana folk walk, graceful shoulder sways, synchronized group claps, and stepping pattern in a circle.", "visual_prompt": "Ultra-photorealistic 4K cinematic wide shot of a Telangana village dance circle at golden morning light, colorful traditional attire, paddy fields and terracotta homes in the background, authentic natural daylight, realistic skin tones, vibrant festive energy, no artificial yellow wash.", "motion_prompt": "Slow revealing cinematic entrance, villagers gathering in a lively circle, symmetric folk movements, natural foot taps and hand claps with genuine village celebration energy.", "dialogue": ""},
+                {"scene_index": 1, "duration_seconds": 8.0, "location_hub": "Village courtyard", "shot_type": "medium_shot", "choreography_phase": "verse_acting", "choreography_steps": "Hip sways, expressive hand gestures, gentle spins, and rhythmic group response movements matching the folk beat.", "visual_prompt": "Ultra-photorealistic 4K cinematic medium shot of Telangana folk dancers in bright silk traditional attires, vibrant jewelry, jasmine flowers, green landscape backdrop, natural open-air daylight, strong festive composition, culturally authentic village setting.", "motion_prompt": "Fluid folk choreography with hand mudras, side steps, and playful turns, realistic human motion never exaggerated or slapstick, festive village mood.", "dialogue": ""},
+                {"scene_index": 2, "duration_seconds": 8.0, "location_hub": "Village street", "shot_type": "close_up", "choreography_phase": "beat_drop_hook", "choreography_steps": "Quick foot stomps, turning spins, synchronized waist shifts, and confident energetic finishes with group formation.", "visual_prompt": "Ultra-photorealistic 4K cinematic close-up of a lead dancer with expressive smile, traditional Telangana costume, silver anklets, glass bangles, natural sunlight, festival decorations, authentic cultural detail, balanced composition.", "motion_prompt": "High-energy local folk hook sequence, synchronized footwork, celebratory faces, bright village backdrop, crisp 30fps motion, natural movement and joyful energy.", "dialogue": ""},
+            ],
+        }
+
+    # 3. Multi-element global nature & wildlife resolution
     nature_plan = _resolve_nature_storyboard(p_lower, is_te)
     if nature_plan:
         return nature_plan
 
-    # 3. Hyderabad cultural & travel guide
+    # 4. Hyderabad cultural & travel guide
     if any(k in p_lower for k in ("hyderabad", "hyd", "charminar", "golconda")):
         return {
             "title": "Top Tourist Spots in Hyderabad",
@@ -116,22 +143,36 @@ def resolve_mock_storyboard(prompt: str) -> dict[str, Any]:
             ],
         }
 
-    # 4. Destination & travel catalogs
+    # 5. Destination & travel catalogs
     dest = lookup_destination_preset(p_lower)
     if dest:
         return dest
 
-    # 5. Fallback comedy storyboard
+    # 6. Fallback comedy storyboard only when explicitly asked
+    if is_comedy_request:
+        return {
+            "title": "IT Employee Remote Work Confusions",
+            "hook_thesis": "Why working from home turned into a 24-hour standup call",
+            "target_duration_seconds": 30,
+            "scenes": [
+                {"scene_index": 0, "duration_seconds": 6.0, "shot_type": "close_up", "visual_prompt": "Cinematic close-up of tired software engineer looking at dual 4K monitors in dark room", "dialogue": "వర్క్ ఫ్రమ్ హోమ్ అని చెప్పి రోజుకి 18 గంటలు లాగిన్ లోనే ఉంటే... జీతం ఏమో నెలకి 30 వేలు!" if is_te else "Working from home means logging in for 18 hours a day, all for a modest monthly salary!"},
+                {"scene_index": 1, "duration_seconds": 6.0, "shot_type": "medium", "visual_prompt": "Modern apartment desk with cold coffee cup and laptop displaying chat windows", "dialogue": "మేనేజర్ కాల్ వచ్చిన ప్రతిసారీ వైఫై కట్ అయిందని అబద్ధం చెప్పే కళ లో మనం డాక్టరేట్ చేసాం." if is_te else "We earned a doctorate in the fine art of claiming the Wi-Fi dropped every time our manager calls."},
+                {"scene_index": 2, "duration_seconds": 6.0, "shot_type": "wide", "visual_prompt": "Sun rising through high-rise window as engineer stares into distance laughing", "dialogue": "కానీ ఆఫీస్ కి వెళ్లి ట్రాఫిక్ లో గంటలు నిలబడటం కంటే ఇంట్లోనే బెస్ట్ కదా!" if is_te else "Still, working from home beats standing in city traffic for hours every day!"},
+                {"scene_index": 3, "duration_seconds": 6.0, "shot_type": "medium", "visual_prompt": "Kitchen counter with burnt toast as Slack notification dings repeatedly on phone", "dialogue": "లంచ్ చేద్దామనుకునే లోపే క్లయింట్ ఎమర్జెన్సీ మీటింగ్ పెట్టేస్తారు." if is_te else "Just as you sit down for lunch, an urgent client ping suddenly arrives."},
+                {"scene_index": 4, "duration_seconds": 6.0, "shot_type": "wide", "visual_prompt": "Evening sunset from balcony holding cup of chai smiling peacefully", "dialogue": "ఏది ఏమైనా సాయంత్రం వేడి వేడి చాయ్ తాగితే అన్ని కష్టాలు మాయం!" if is_te else "No matter what happens, a hot cup of evening chai makes all the stress melt away!"},
+            ],
+        }
+
+    # 7. Explicit fallback for ambiguous prompts: keep generic but dance-safe and non-comedic.
     return {
-        "title": "IT Employee Remote Work Confusions",
-        "hook_thesis": "Why working from home turned into a 24-hour standup call",
+        "title": "Village Festival Rhythm",
+        "hook_thesis": "A vibrant community performance celebrating regional folk movement, music, and unity.",
         "target_duration_seconds": 30,
         "scenes": [
-            {"scene_index": 0, "duration_seconds": 6.0, "shot_type": "close_up", "visual_prompt": "Cinematic close-up of tired software engineer looking at dual 4K monitors in dark room", "dialogue": "వర్క్ ఫ్రమ్ హోమ్ అని చెప్పి రోజుకి 18 గంటలు లాగిన్ లోనే ఉంటే... జీతం ఏమో నెలకి 30 వేలు!" if is_te else "Working from home means logging in for 18 hours a day, all for a modest monthly salary!"},
-            {"scene_index": 1, "duration_seconds": 6.0, "shot_type": "medium", "visual_prompt": "Modern apartment desk with cold coffee cup and laptop displaying chat windows", "dialogue": "మేనేజర్ కాల్ వచ్చిన ప్రతిసారీ వైఫై కట్ అయిందని అబద్ధం చెప్పే కళ లో మనం డాక్టరేట్ చేసాం." if is_te else "We earned a doctorate in the fine art of claiming the Wi-Fi dropped every time our manager calls."},
-            {"scene_index": 2, "duration_seconds": 6.0, "shot_type": "wide", "visual_prompt": "Sun rising through high-rise window as engineer stares into distance laughing", "dialogue": "కానీ ఆఫీస్ కి వెళ్లి ట్రాఫిక్ లో గంటలు నిలబడటం కంటే ఇంట్లోనే బెస్ట్ కదా!" if is_te else "Still, working from home beats standing in city traffic for hours every day!"},
-            {"scene_index": 3, "duration_seconds": 6.0, "shot_type": "medium", "visual_prompt": "Kitchen counter with burnt toast as Slack notification dings repeatedly on phone", "dialogue": "లంచ్ చేద్దామనుకునే లోపే క్లయింట్ ఎమర్జెన్సీ మీటింగ్ పెట్టేస్తారు." if is_te else "Just as you sit down for lunch, an urgent client ping suddenly arrives."},
-            {"scene_index": 4, "duration_seconds": 6.0, "shot_type": "wide", "visual_prompt": "Evening sunset from balcony holding cup of chai smiling peacefully", "dialogue": "ఏది ఏమైనా సాయంత్రం వేడి వేడి చాయ్ తాగితే అన్ని కష్టాలు మాయం!" if is_te else "No matter what happens, a hot cup of evening chai makes all the stress melt away!"},
+            {"scene_index": 0, "duration_seconds": 6.0, "shot_type": "wide", "visual_prompt": "Authentic village festival square with colorful cloth banners, natural daylight, warm community energy, and dancers gathering for a traditional folk performance.", "dialogue": ""},
+            {"scene_index": 1, "duration_seconds": 6.0, "shot_type": "medium", "visual_prompt": "Traditional folk dancers in rhythmic motion, candid smiles, realistic movement, local attire, vibrant natural setting.", "dialogue": ""},
+            {"scene_index": 2, "duration_seconds": 6.0, "shot_type": "close_up", "visual_prompt": "Close-up of lead dancer stepping in time with the beat, jewelry catching light, warm natural skin tones, culturally authentic village setting.", "dialogue": ""},
+            {"scene_index": 3, "duration_seconds": 6.0, "shot_type": "wide", "visual_prompt": "Final group formation with joyful expressions, bright festival colors, natural daylight, community celebration atmosphere.", "dialogue": ""},
         ],
     }
 

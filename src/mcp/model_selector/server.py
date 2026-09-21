@@ -28,7 +28,7 @@ MODEL_CATALOG: dict[str, dict[str, Any]] = {
         "factors": {"audio_fidelity": "24kHz Broadcast Neural", "accent_authenticity": "High", "cost_per_char": "$0.000016"},
     },
     "visual_image": {
-        "primary": {"provider": "TogetherAI", "model": "flux-1-schnell", "unit_cost": 0.003, "unit_name": "image"},
+        "primary": {"provider": "Fal.ai", "model": "flux-1-dev", "unit_cost": 0.025, "unit_name": "image"},
         "fallback": {"provider": "Stability", "model": "sdxl-turbo", "unit_cost": 0.004, "unit_name": "image"},
         "rationale_template": "Selected for sub-second photorealism, accurate typographic prompt rendering, and 25% lower cost ($0.003 vs $0.004/image).",
         "alternatives": {"Stability/sdxl-turbo": "Higher cost and noticeable artifacting on complex architectural/historical monuments."},

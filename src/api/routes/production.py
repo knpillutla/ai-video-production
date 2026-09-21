@@ -105,9 +105,9 @@ async def estimate_production_cost(
     items: list[CostItem] = [
         CostItem(component="Creative Script & Retention Loop", provider="Gemini 1.5 Pro (Tier 2)", units_measured="~14,000 tokens", unit_cost_usd=0.00000125, total_cost_usd=0.0200),
         CostItem(component=f"Multilingual Neural Voiceovers ({stems_count} Stems)", provider="Azure Speech HD (Neural)", units_measured=f"~{duration_mins * 600} characters", unit_cost_usd=0.000016, total_cost_usd=round(0.0700 * max(1, stems_count), 4) if has_speech else 0.0),
-        CostItem(component="4K Keyframe Visual Diffusion", provider="Together AI (Flux.1 Schnell)", units_measured=f"{duration_mins * 5} keyframe images", unit_cost_usd=0.003, total_cost_usd=round(duration_mins * 5 * 0.003, 4)),
-        CostItem(component="Hero Action Motion Synthesis", provider="Fal.ai (Minimax Video-01)", units_measured="2 cinematic motion clips", unit_cost_usd=0.15, total_cost_usd=0.3000),
-        CostItem(component="Talking Avatar Lip-Sync", provider="Fal.ai (LivePortrait)", units_measured="45 seconds active speech", unit_cost_usd=0.012, total_cost_usd=0.5400 if enable_lipsync else 0.0),
+        CostItem(component="4K Keyframe Visual Diffusion", provider="Fal.ai (FLUX.1-dev, 28 steps)", units_measured=f"{duration_mins * 5} keyframe images", unit_cost_usd=0.025, total_cost_usd=round(duration_mins * 5 * 0.025, 4)),
+        CostItem(component="Hero Action Motion Synthesis", provider="Fal.ai (Kling 1.5 Pro)", units_measured="2 cinematic motion clips", unit_cost_usd=0.15, total_cost_usd=0.3000),
+        CostItem(component="Beat-Synchronized Lip-Sync", provider="Fal.ai (LatentSync)", units_measured="45 seconds active speech", unit_cost_usd=0.05, total_cost_usd=2.2500 if enable_lipsync else 0.0),
         CostItem(component="Original Commercial Soundtrack", provider="Suno v3.5 Pro API", units_measured="1 full master track", unit_cost_usd=0.08, total_cost_usd=0.0800 if enable_bgm else 0.0),
         CostItem(component="Python Single-Pass FFmpeg Compositor", provider="Azure ACA / Cloud Run (0-GPU CPU)", units_measured="~210 seconds render time", unit_cost_usd=0.00028, total_cost_usd=0.0600),
     ]

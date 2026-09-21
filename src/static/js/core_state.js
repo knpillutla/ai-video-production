@@ -5,7 +5,7 @@ const PRODUCTION_TIERS = {
     name: "Low-Cost Test",
     priceUsd: 0.02,
     priceStr: "$0.02 USD",
-    models: "FLUX Schnell • 10s Draft Test • Azure TTS",
+    models: "Fal FLUX.1-dev • 10s Draft Test • Azure TTS",
     targetDuration: 10
   },
   balanced: {

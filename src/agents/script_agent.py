@@ -21,6 +21,68 @@ class ScriptAgent:
         from src.mcp.prompt_director.directorial_router import build_directorial_prompt
         return build_directorial_prompt(**kwargs)
 
+    def _collect_storyboard_text(self, storyboard: dict[str, Any]) -> str:
+        """Flatten key fields into searchable prompt text for validation."""
+        chunks: list[str] = []
+        chunks.append(str(storyboard.get("title") or ""))
+        chunks.append(str(storyboard.get("hook_thesis") or ""))
+        for scene in storyboard.get("scenes", []) or []:
+            if isinstance(scene, dict):
+                chunks.append(str(scene.get("visual_prompt") or ""))
+                chunks.append(str(scene.get("motion_prompt") or ""))
+                chunks.append(str(scene.get("location_hub") or ""))
+                chunks.append(str(scene.get("dialogue") or ""))
+        return " ".join(chunks).lower()
+
+    def _validate_storyboard_context(self, prompt: str, storyboard: dict[str, Any]) -> list[str]:
+        """Check whether the generated script is drifting away from the original prompt context."""
+        issues: list[str] = []
+        p = prompt.lower()
+        text = self._collect_storyboard_text(storyboard)
+
+        if "telangana" in p or "telugu" in p or "village" in p:
+            if any(k in text for k in ("hotel", "banquet", "wedding hall", "nightclub", "party hall", "ballroom")):
+                issues.append("Venue mismatch: village folk prompt drifted into hotel/banquet environment.")
+            if any(k in text for k in ("dark", "dim lit", "low light", "shadowy", "nightclub")):
+                issues.append("Lighting mismatch: village context is using dark or under-lit scenes instead of daylight readability.")
+        if "hotel" in p or "party" in p or "family" in p:
+            if any(k in text for k in ("village courtyard", "paddy field", "terracotta homes", "tamarind trees")) and "hotel" in p:
+                issues.append("Venue mismatch: hotel celebration prompt drifted into a village setting.")
+            if any(k in text for k in ("dark", "dim lit", "low light", "shadowy")):
+                issues.append("Lighting mismatch: hotel event scene is too dark and faces/costumes are not readable.")
+
+        if any(k in p for k in ("male lead", "male dancer", "male background")):
+            if any(k in text for k in ("female lead", "woman", "girl", "heroine")):
+                issues.append("Character mismatch: prompt asked for male lead/background dancers but script uses female lead cues.")
+
+        if any(k in p for k in ("daylight", "natural daylight", "sunlight", "open air")):
+            if any(k in text for k in ("dark room", "dim room", "nightclub", "underlit", "low light")):
+                issues.append("Time-of-day mismatch: prompt implies daylight but script uses dim indoor lighting.")
+
+        if "village" in p and not any(k in text for k in ("village", "courtyard", "paddy field", "tamarind", "terracotta", "festival ground")):
+            issues.append("Setting mismatch: village context is not reflected in the generated scene backgrounds.")
+
+        if "hotel" in p and not any(k in text for k in ("hotel", "ballroom", "banquet", "lobby", "reception", "luxury venue")):
+            issues.append("Setting mismatch: hotel context is not reflected in the generated environment.")
+
+        return issues
+
+    def _build_regeneration_prompt(self, prompt: str, issues: list[str]) -> str:
+        """Build a corrective instruction prompt to fix context drift and lighting issues."""
+        issue_text = "\n- ".join(issues)
+        return (
+            f"Rewrite the storyboard to match the original user prompt exactly. "
+            f"Fix all of the following issues before producing the final script:\n- {issue_text}\n\n"
+            "Strict requirements:\n"
+            "- Preserve the exact region, culture, language, setting, and event context from the prompt.\n"
+            "- Keep the venue and background consistent with the prompt, never mixing village and hotel scenes.\n"
+            "- Use proper lighting based on the prompt: daylight for village/open-air and bright premium event lighting for hotel/family celebrations.\n"
+            "- Keep all faces and costumes readable and visible; avoid dark under-lit frames.\n"
+            "- Preserve character gender/lead composition as specified in the prompt.\n"
+            "- Return valid JSON with title, hook_thesis, scenes, characters, and recommended_fps.\n\n"
+            f"Original prompt: {prompt}"
+        )
+
     async def draft_episode_storyboard(
         self,
         topic: str,
@@ -72,7 +134,18 @@ class ScriptAgent:
 
         storyboard = await self.llm.generate_structured(prompt)
 
-        # 5. Automated Pre-Flight Monetization & AdSense Audit
+        # 5. Context / Cultural / Lighting validation guard
+        context_issues = self._validate_storyboard_context(topic, storyboard)
+        if context_issues:
+            logger.warning(f"script_context_validation_failed: issues={context_issues}")
+            corrective_prompt = self._build_regeneration_prompt(topic, context_issues)
+            corrected_storyboard = await self.llm.generate_structured(corrective_prompt)
+            if self._validate_storyboard_context(topic, corrected_storyboard):
+                logger.warning("script_context_validation_still_failed_after_regeneration: preserving original draft for review")
+            else:
+                storyboard = corrected_storyboard
+
+        # 6. Automated Pre-Flight Monetization & AdSense Audit
         scenes = storyboard.get("scenes", [])
         full_dialogue = " ".join(s.get("dialogue", "") for s in scenes)
         opening_dialogue = scenes[0].get("dialogue", "") if scenes else ""

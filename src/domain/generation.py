@@ -20,6 +20,10 @@ class MediaFormat(str, Enum):
     SCENIC_DRIVE = "scenic_drive"
     AMBIENT_LOUNGE = "ambient_lounge"
     NATURE_SANCTUARY = "nature_sanctuary"
+    EPIC_CINEMATIC = "epic_cinematic"
+    MOUNTAIN_SURVIVAL = "mountain_survival"
+    MUSIC_VIDEO = "music_video"
+    TOURIST_GUIDE = "tourist_guide"
 
 
 class VisualStyle(str, Enum):
@@ -51,6 +55,9 @@ class ThemeGenre(str, Enum):
     TRAVEL_TOURISM = "travel_tourism"
     ROMANTIC_DRAMA = "romantic_drama"
     TECH_SCIFI = "tech_scifi"
+    FANTASY = "fantasy"
+    HISTORICAL_EPIC = "historical_epic"
+    CULTURAL_FOLK = "cultural_folk"
 
 
 class ContentClassification(BaseModel):

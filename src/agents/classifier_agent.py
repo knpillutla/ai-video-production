@@ -9,33 +9,7 @@ from src.core.telemetry import logger
 from src.domain.generation import ContentClassification, MediaFormat, ThemeGenre, VisualStyle
 
 
-# Tier 0 Deterministic Keyword & Semantic Pattern Tables
-THEME_PATTERNS: list[tuple[ThemeGenre, list[str]]] = [
-    (ThemeGenre.TELUGU_COMEDY, ["comedy", "confusions", "wfh", "standup", "office", "prank", "satire", "fun", "joke", "telugu", "hyderabad"]),
-    (ThemeGenre.EPIC_ACTION, ["action", "battle", "sword", "warrior", "elevation", "interval", "mass", "clash", "fight", "revenge", "dynasty", "rebel"]),
-    (ThemeGenre.BOLLYWOOD_DANCE, ["dance", "hook step", "choreography", "beat drop", "song", "celebration", "sangeet", "musical", "bollywood", "rhythm"]),
-    (ThemeGenre.NATURE_WILDLIFE, ["tiger", "leopard", "wildlife", "safari", "nature", "forest", "predator", "ocean", "jungle", "himalayas", "fauna"]),
-    (ThemeGenre.TRAVEL_TOURISM, ["travel", "tourism", "destination", "vlog", "explore", "journey", "backpacking", "resort", "monument", "itinerary", "attractions", "tourist", "sightseeing", "places to visit", "heritage", "guide"]),
-    (ThemeGenre.ROMANTIC_DRAMA, ["romance", "love", "heartbreak", "wedding", "relationship", "couple", "emotional", "crush", "dating", "lover"]),
-    (ThemeGenre.TECH_SCIFI, ["cyberpunk", "ai", "robot", "future", "matrix", "neural", "sci-fi", "quantum", "cyborg", "dystopia", "silicon", "metaverse"]),
-]
-
-STYLE_PATTERNS: list[tuple[VisualStyle, list[str]]] = [
-    (VisualStyle.ANIME, ["anime", "manga", "shonen", "toonify", "chibi", "otaku", "makoto", "ghibli", "cel shaded"]),
-    (VisualStyle.ANIMATION_3D, ["3d", "cgi", "pixar", "disney", "animated 3d", "render", "character rig"]),
-    (VisualStyle.STYLIZED_COMIC, ["comic", "graphic novel", "noir", "sketch", "comicbook", "illustrated"]),
-    (VisualStyle.REALISTIC, ["realistic", "cinematic", "photorealistic", "4k", "8k", "live action", "portrait", "documentary"]),
-]
-
-FORMAT_PATTERNS: list[tuple[MediaFormat, list[str]]] = [
-    (MediaFormat.TRAVEL_GUIDE, ["travel guide", "city guide", "tourist attractions", "tourist spots", "places to visit", "sightseeing", "top 10 spots", "things to do in", "monument tour", "guide"]),
-    (MediaFormat.VLOG, ["vlog", "travel vlog", "day in the life", "walking tour", "solo travel", "road trip"]),
-    (MediaFormat.DANCE_VIDEO, ["dance video", "dance", "hook step", "choreography", "music video", "beat drop", "song dance", "mass dance", "mass song", "mass jathara", "jathara", "folk dance", "dancers"]),
-    (MediaFormat.NEWS_TABLOID, ["breaking news", "tabloid", "report", "bulletin", "headline", "scandal", "news"]),
-    (MediaFormat.PODCAST_EXPLAINER, ["podcast", "explainer", "breakdown", "deep dive", "interview", "discussion", "talk show"]),
-    (MediaFormat.MOVIE_CINEMATIC, ["movie", "cinema", "feature film", "short film", "blockbuster", "trailer"]),
-    (MediaFormat.WEB_SERIES, ["episode", "ep ", "series", "wfh confusions", "sitcom", "part 1", "season"]),
-]
+from src.agents.classifier_patterns import FORMAT_PATTERNS, STYLE_PATTERNS, THEME_PATTERNS
 
 
 class ClassifierAgent:
@@ -47,13 +21,20 @@ class ClassifierAgent:
         logger.info(f"classifier_agent_detect: input_len={len(combined)}")
 
         # 1. Detect Theme
+        dance_intent = any(k in combined for k in ("dance", "folk dance", "village dance", "jathara", "dappu", "mass dance", "traditional dance"))
+        comedy_intent = any(k in combined for k in ("comedy", "standup", "joke", "satire", "funny", "wfh", "office"))
+
         detected_theme = ThemeGenre.TELUGU_COMEDY  # Default fallback
         theme_score = 0
-        for theme, keywords in THEME_PATTERNS:
-            matches = sum(1 for kw in keywords if kw in combined)
-            if matches > theme_score:
-                theme_score = matches
-                detected_theme = theme
+        if dance_intent and not comedy_intent:
+            detected_theme = ThemeGenre.BOLLYWOOD_DANCE
+            theme_score = 99
+        else:
+            for theme, keywords in THEME_PATTERNS:
+                matches = sum(1 for kw in keywords if kw in combined)
+                if matches > theme_score:
+                    theme_score = matches
+                    detected_theme = theme
 
         # 2. Detect Visual Style
         detected_style = VisualStyle.REALISTIC
@@ -163,7 +144,9 @@ class ClassifierAgent:
             return False, True
         if any(f in fmt_str for f in ("web_series", "sitcom", "movie", "dialogue", "skit", "interview", "podcast")):
             return True, True
-        if any(f in fmt_str for f in ("scenic_relaxation", "walking_tour", "scenic_drive", "ambient_lounge", "nature_sanctuary")):
+        if any(f in fmt_str for f in ("walking_tour", "tourist_guide", "travel_guide", "nature_documentary", "nature_sanctuary", "mountain_survival", "documentary")):
+            return True, False
+        if any(f in fmt_str for f in ("scenic_relaxation", "scenic_drive", "ambient_lounge")):
             return False, False
 
         # 3. Theme & Idea Cue Detection
@@ -266,18 +249,14 @@ class ClassifierAgent:
         dur = self.extract_duration_from_text(text)
         if dur:
             overrides["duration"] = dur
-        if any(k in t_low for k in ("documentary", "mountain", "wildlife", "alps", "nature")):
-            if "documentary" in t_low or "mountain" in t_low:
-                overrides["media_format"] = MediaFormat.MOVIE_CINEMATIC
-                overrides["enable_bgm"] = True
-                overrides["is_voice_over"] = True
-                overrides["enable_lipsync"] = False
+        if any(k in t_low for k in ("documentary", "mountain", "wildlife", "alps", "nature", "survival")):
+            if "survival" in t_low or "blizzard" in t_low:
+                overrides.update({"media_format": MediaFormat.MOUNTAIN_SURVIVAL, "enable_bgm": True, "is_voice_over": True, "enable_lipsync": False})
+            elif "documentary" in t_low or "mountain" in t_low or "wildlife" in t_low:
+                overrides.update({"media_format": MediaFormat.MOVIE_CINEMATIC, "enable_bgm": True, "is_voice_over": True, "enable_lipsync": False})
         det = self.detect(text)
         if "media_format" not in overrides and det.media_format == MediaFormat.DANCE_VIDEO:
-            overrides["media_format"] = MediaFormat.DANCE_VIDEO
-            overrides["enable_bgm"] = True
-            overrides["enable_lipsync"] = True
-            overrides["is_voice_over"] = False
+            overrides.update({"media_format": MediaFormat.DANCE_VIDEO, "enable_bgm": True, "enable_lipsync": True, "is_voice_over": False})
         return overrides
 
 
