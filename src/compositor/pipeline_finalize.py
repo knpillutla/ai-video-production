@@ -32,7 +32,7 @@ async def finalize_render(episode, final_video, storyboard_data, scenes_list, ep
     actualize_production_cost(episode.cost_record, {
         "tokens_used": est_tokens, "voice_characters": actual_chars, "images_generated": len(scenes_list),
         "music_tracks": 1 if enable_bgm else 0, "render_seconds": round(render_elapsed, 2), "lipsync_seconds": lipsync_sec,
-    })
+    }, duration_seconds=float(episode.duration_seconds))
     episode.actual_spend_usd = episode.cost_record.actual_total_usd
     save_cost_report(episode.cost_record, ep_dir)
     episode.status = "completed" if eligible else "review_required"

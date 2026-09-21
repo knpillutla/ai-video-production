@@ -24,7 +24,7 @@ class WalkingTourStrategy:
     def build_gemini_prompt(
         self, title: str, duration_seconds: int, language: str,
         genre: str, idea: str | None, art_style: str | None,
-        culture_ctx: Any | None,
+        culture_ctx: Any | None, **kwargs: Any,
     ) -> str:
         prompt, _ = build_directorial_prompt(
             topic=idea or title, genre=genre or "scenic_walking_tour",
@@ -33,13 +33,16 @@ class WalkingTourStrategy:
         )
         strict_pov = (
             "\n\nCRITICAL DIRECTIVES FOR WALKING TOURS (Directives 11, 13):\n"
-            "1. STRICT FIRST-PERSON EYE-LEVEL POV (ZERO ON-SCREEN CHARACTERS): The camera IS the viewer walking forward along the trail at an ultra-slow, peaceful 1.5–2.0 km/h stroll. "
-            "There are ZERO on-screen characters, actors, hosts, or guides in frame. The 'characters' array MUST BE AN EMPTY LIST []. "
-            "Every scene's 'visual_prompt' and 'motion_prompt' must describe ONLY the pristine path, trail, water, cliffs, architecture, and scenery viewed forward from an eye-level POV perspective.\n"
-            "2. NATURAL OPEN-AIR DAYLIGHT MANDATE (5500K): Outdoor scenes MUST strictly default to crisp, balanced natural open-air daylight (5400K–5600K color temperature, natural blue sky, realistic environmental lighting). Strictly PROHIBIT night, twilight, dusk, blue hour, street lamps, lanterns, or dark lighting.\n"
-            "3. ULTRA-SLOW TRANQUIL WALKING CADENCE (1.5–2.0 KM/H): Every scene's 'motion_prompt' MUST strictly enforce ultra-slow, gentle steadycam forward glide at ~1.5–2.0 km/h with subtle natural human footstep sway, unhurriedly lingering over the scenery. Strictly PROHIBIT fast movement, running, drone rushes, or sudden turns.\n"
-            "4. TACK-SHARP OPTICAL CLARITY (5500K / 24MM PRIME): Every scene's 'visual_prompt' must specify edge-to-edge optical clarity, fine architectural textures, crystal reflections, and zero atmospheric haze.\n"
-            "5. SPOKEN TRAIL NARRATION (AZURE SPEECH): Under YouTube Partner Program monetization standards, every single scene's 'dialogue' field MUST contain engaging, spoken educational trail guide commentary explaining geological history, landscape features, or cultural lore. Off-screen narration voiceover only.\n"
+            "1. STRICT FIRST-PERSON EYE-LEVEL POV (ZERO FOREGROUND AVATAR OBSTRUCTION): The camera IS the viewer walking forward at an ultra-slow, peaceful 1.5–2.0 km/h cadence. "
+            "Never place a single synthetic character or avatar directly in front of the camera lens. The 'characters' array MUST BE AN EMPTY LIST []. "
+            "All shots are viewed from the direct eye-level perspective of the viewer exploring the environment.\n"
+            "2. AUTHENTIC URBAN BACKGROUND PEDESTRIANS VS NATURE SETTINGS: "
+            "When the tour takes place in an URBAN or DOWNTOWN setting (e.g., city shopping streets, historic avenues, bustling promenades), the environment MUST feel organically alive with natural background pedestrians, shoppers, and locals walking on sidewalks, holding umbrellas in the rain, browsing cafes, and crossing streets naturally in the background depth. "
+            "In wilderness, mountain, or alpine settings, the trail remains pristine and tranquil.\n"
+            "3. NATURAL DAYLIGHT & AUTHENTIC WEATHER MANDATE: Outdoor scenes MUST default to crisp, balanced natural open-air daylight (5400K–5600K color temperature, natural balanced lighting). If the brief specifies rain, downpour, snow, or mist, dynamically render authentic precipitation (sheets of falling rain, wet asphalt reflections, glistening cobblestones, puddle ripples, rain patter) in crisp natural daylight. Strictly PROHIBIT artificial yellow lens flares or dark muddy lighting.\n"
+            "4. ULTRA-SLOW TRANQUIL WALKING CADENCE & DYNAMIC WEATHER PHYSICS: Every scene's 'motion_prompt' MUST strictly enforce ultra-slow, gentle steadycam forward glide at ~1.5–2.0 km/h with subtle natural human footstep sway. In addition, whenever weather or atmospheric elements are present, 'motion_prompt' MUST explicitly command dynamic environmental physics: for rain, continuous falling rain streaks and splashing puddle ripples; for snow blizzard, intense swirling wind gusts and blowing powder snow; for gentle snow, delicate drifting crystalline flakes floating slowly down; for cloudy/overcast, moody low-hanging clouds drifting across the sky; for mist/fog, rolling tendrils of atmospheric mist shifting across the path.\n"
+            "5. TACK-SHARP OPTICAL CLARITY (5500K / 24MM PRIME): Every scene's 'visual_prompt' must specify edge-to-edge optical clarity, fine architectural textures, crystal reflections, and zero atmospheric haze.\n"
+            "6. SPOKEN TRAIL NARRATION (AZURE SPEECH): Under YouTube Partner Program monetization standards, every single scene's 'dialogue' field MUST contain engaging, spoken educational trail guide commentary explaining geological history, landscape features, or cultural lore. Off-screen narration voiceover only.\n"
         )
         return prompt + strict_pov
 

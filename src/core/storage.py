@@ -38,8 +38,10 @@ class MultiTenantStorageService:
 
     def get_creative_vault_path(self, user_id: str, show_slug: str) -> Path:
         """Return path for a user's specific show universe in the creative vault."""
+        clean_slug = re.sub(r"[^a-zA-Z0-9_-]", "_", str(show_slug).lower()).strip("_") or "default_show"
+        clean_slug = re.sub(r"_+", "_", clean_slug)[:64]
         base = self.get_user_container_path(user_id)
-        vault_path = base / "creative_vault" / "shows_and_titles" / show_slug
+        vault_path = base / "creative_vault" / "shows_and_titles" / clean_slug
         vault_path.mkdir(parents=True, exist_ok=True)
         return vault_path
 

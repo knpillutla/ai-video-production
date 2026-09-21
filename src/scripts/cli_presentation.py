@@ -49,6 +49,10 @@ def print_cli_header(
     if culture_context:
         print(f" - Culture / Region:  {culture_context.culture_name} ({culture_context.culture})")
         print(f" - Primary Ethnicity: {culture_context.primary_ethnicity}")
+        print(f" - Setting / Space:   {culture_context.setting_type} [{getattr(culture_context, 'environment_space', 'outdoor').upper()}]")
+        print(f" - Weather / Climate: {getattr(culture_context, 'weather_climate', 'clear_daylight')}")
+        lighting_val = getattr(culture_context, "lighting_scheme", "") or getattr(culture_context, "art_style_lighting", "") or "natural_open_daylight_5600k"
+        print(f" - Lighting Scheme:   {lighting_val}")
         if getattr(culture_context, "art_style_display", "") and culture_context.art_style_display != "Broadcast 4K Photorealistic Cinematic":
             print(f" - Art Aesthetic:     {culture_context.art_style_display}")
             if getattr(culture_context, "art_style_palette", ""):
@@ -60,7 +64,7 @@ def print_cli_header(
         else:
             print(f" - Voice Neural:      Disabled (No Speech Audio)")
         if bgm:
-            bgm_desc = culture_context.music_style if voice_over else "Gentle rain drops, distant thunder, and relaxing ambient nature sounds"
+            bgm_desc = culture_context.music_style or "Gentle rain drops, distant thunder, and relaxing ambient nature sounds"
             print(f" - Music Soundtrack:  {bgm_desc}")
         else:
             print(f" - Music Soundtrack:  Disabled (No Background Music)")
@@ -79,6 +83,7 @@ def log_and_print_cost_breakdown_summary(
     title: str,
     cost_rec: EpisodeCostRecord | None,
     user_balance: float = 0.0,
+    start_balance: float | None = None,
 ) -> None:
     """Log structured telemetry and print model-by-model cost governance to terminal."""
     if not cost_rec or not cost_rec.items:
@@ -86,15 +91,15 @@ def log_and_print_cost_breakdown_summary(
 
     items_audit = []
     print("-" * 72)
-    print(" MODEL-BY-MODEL COST GOVERNANCE (ESTIMATED VS ACTUALS):")
-    print(f" {'Model / Component':<32} {'Estimated':<11} {'Actual':<11} {'Variance':<12}")
+    print(" MODEL-BY-MODEL COST GOVERNANCE (ESTIMATED VS ACTUAL SPEND):")
+    print(f" {'Model / Component':<34} {'Estimated':<11} {'Actual':<11} {'Delta / Diff':<12}")
 
     for item in cost_rec.items:
         act_val = item.actual_cost_usd if item.actual_cost_usd is not None else 0.0
         act_str = f"${item.actual_cost_usd:.4f}" if item.actual_cost_usd is not None else "N/A"
         var_val = item.variance_usd if item.variance_usd is not None else round(act_val - item.predicted_cost_usd, 4)
-        var_str = f"{var_val:+.4f}"
-        print(f" - {item.model_name[:30]:<30} ${item.predicted_cost_usd:<10.4f} {act_str:<11} {var_str:<12}")
+        var_str = f"{var_val:+.4f}" if var_val != 0 else "$0.0000 (Exact)"
+        print(f" - {item.model_name[:32]:<32} ${item.predicted_cost_usd:<10.4f} {act_str:<11} {var_str:<12}")
         items_audit.append({
             "model_name": item.model_name,
             "component": item.component,
@@ -106,13 +111,14 @@ def log_and_print_cost_breakdown_summary(
     net_var = cost_rec.total_variance_usd or round((cost_rec.actual_total_usd or 0.0) - cost_rec.predicted_total_usd, 4)
     acc = cost_rec.accuracy_pct or 100.0
     actual_total = cost_rec.actual_total_usd or 0.0
-    rem_balance = max(0.0, user_balance - actual_total)
+    init_balance = start_balance if start_balance is not None else user_balance
+    rem_balance = max(0.0, init_balance - actual_total)
 
     print("-" * 72)
     print(f" TOTAL ESTIMATED SPEND:    ${cost_rec.predicted_total_usd:.4f} USD")
-    print(f" TOTAL ACTUAL SPEND:       ${actual_total:.4f} USD")
+    print(f" TOTAL ACTUAL BILLED SPEND: ${actual_total:.4f} USD")
     print(f" NET VARIANCE / SAVINGS:   {net_var:+.4f} USD (Forecast Accuracy: {acc:.1f}%)")
-    print(f" REMAINING CREDIT BALANCE: ${rem_balance:.4f} USD")
+    print(f" STUDIO CREDIT BALANCE:    ${init_balance:.4f} -> ${rem_balance:.4f} USD (-${actual_total:.4f} USD)")
 
     # Telemetry Log
     logger.info(
@@ -139,7 +145,6 @@ def log_and_print_live_cost_breakdown(
         "motion_dance_usd": ("Rhythmic Beat-Cuts (FFmpeg)", 0.0000),
     }
 
-    # Billed actuals adjustments based on real API pricing
     actual_pricing = {
         "flux_images_usd": 0.0090,     # 3 images * $0.0030/MP
         "flux_character_usd": 0.0090,  # 3 images * $0.0030/MP
@@ -189,11 +194,24 @@ def print_cli_summary(
     final_video: Path,
     rights_records: list[Any],
     cleared: bool,
+    provider_statuses: list[Any] | None = None,
+    start_user_balance: float | None = None,
 ) -> None:
     """Print complete post-production cost governance, rights audit, and artifacts report."""
+    if provider_statuses:
+        print("-" * 72)
+        print(" AI MODEL PROVIDER AVAILABILITY & QUOTA STATUS (POST-PRODUCTION):")
+        for p in provider_statuses:
+            p_name = getattr(p, "provider_name", p.get("provider_name") if isinstance(p, dict) else str(p))
+            p_status = getattr(p, "status", p.get("status", "ACTIVE") if isinstance(p, dict) else "ACTIVE")
+            p_quota = getattr(p, "quota_details", p.get("quota_details", "") if isinstance(p, dict) else "")
+            print(f" - {p_name:<26} [{p_status:<7}] {p_quota}")
+
     cost_rec: EpisodeCostRecord | None = episode.cost_record if episode else None
     title = episode.title if episode else "Episode Master"
-    log_and_print_cost_breakdown_summary(title=title, cost_rec=cost_rec, user_balance=user.api_credit_balance_usd)
+    log_and_print_cost_breakdown_summary(
+        title=title, cost_rec=cost_rec, user_balance=user.api_credit_balance_usd, start_balance=start_user_balance,
+    )
 
     print("-" * 72)
     print(" PHASE 3 RIGHTS & MONETIZATION SAFETY AUDIT:")

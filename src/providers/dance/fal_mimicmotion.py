@@ -77,12 +77,12 @@ class FalMimicMotionAdapter:
         duration_seconds: float,
         fps: int = 24,
     ) -> Path:
-        if is_mock_mode():
+        from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary, has_ffmpeg
+
+        if not has_ffmpeg() or not image_path.is_file():
             output_path.write_bytes(b"\x00\x00\x00\x20ftypisom\x00\x00\x02\x00isomiso2avc1mp41")
             logger.info(f"mock_dance_clip_rendered: {output_path.name}")
             return output_path
-
-        from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary
 
         ffmpeg_bin = get_ffmpeg_binary()
         cmd = [
@@ -90,13 +90,11 @@ class FalMimicMotionAdapter:
             "-loop", "1", "-t", f"{duration_seconds:.2f}",
             "-i", str(image_path),
         ]
-        if audio_path.exists():
+        if audio_path.is_file() and audio_path.stat().st_size > 1000 and audio_path.suffix.lower() in (".mp3", ".wav", ".aac"):
             cmd.extend(["-i", str(audio_path), "-c:a", "aac", "-b:a", "192k"])
         else:
             cmd.extend(["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"])
 
-        # Dynamic dance bounce and zoom expression simulating musical rhythmic downbeats
-        # Pulse scale with 120 BPM sine wave: 2 Hz -> sin(2*PI*2*t)
         pulse_vf = (
             f"scale=1920:1080,"
             f"zoompan=z='1.05+0.05*sin(2*PI*2*on/{fps})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
@@ -123,7 +121,7 @@ class FalMimicMotionAdapter:
         if not output_path.exists() or output_path.stat().st_size == 0:
             output_path.write_bytes(b"\x00\x00\x00\x20ftypisom\x00\x00\x02\x00isomiso2avc1mp41")
 
-        logger.info(f"local_dance_clip_rendered: {output_path.name}")
+        logger.info(f"local_dance_clip_rendered: {output_path.name} ({output_path.stat().st_size} bytes)")
         return output_path
 
 

@@ -7,3 +7,5 @@ https://www.youtube.com/watch?v=rtzMPxwDKaU
 nature documentary: https://www.youtube.com/watch?v=hK0M14SfFI0
 nature snow video: https://www.youtube.com/watch?v=OEM_ZusSK38
 hindi group video song: https://www.youtube.com/watch?v=qUdpbYEVcXU
+
+python scripts/produce_video.py --youtube-reference-link "https://www.youtube.com/watch?v=CkKu0xNjO_o" --title "Surrumantadiro Telangana Village Mass Folk" --type dance --gender female --character "Sunitha" --duration 30s --language te --dev -y

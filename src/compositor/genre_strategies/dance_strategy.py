@@ -24,11 +24,12 @@ class DanceStrategy:
     def build_gemini_prompt(
         self, title: str, duration_seconds: int, language: str,
         genre: str, idea: str | None, art_style: str | None,
-        culture_ctx: Any | None,
+        culture_ctx: Any | None, character_name: str | None = None, **kwargs: Any,
     ) -> str:
         return build_dance_storyboard_prompt(
             title=title, duration_seconds=duration_seconds,
             language=language, genre=genre, idea=idea, art_style=art_style,
+            character_name=character_name,
         )
 
     def build_gemini_schema(self) -> dict:

@@ -6,9 +6,18 @@ Target Duration: {target_duration_seconds}s. Language: {language}.
 Under YouTube Partner Program policies, silent or uncurated ambient video loops are REJECTED as 'Repetitive / Reused Content'.
 To guarantee full monetization eligibility, every single scene's 'dialogue' field MUST contain engaging spoken narration providing educational trail guidance, geographical lore, botanical trivia, or cultural history. Never leave dialogue blank.
 
-### NATURAL DAYLIGHT & ULTRA-SLOW WALKING CADENCE STANDARDS (Directive 13)
+### NATURAL DAYLIGHT, ULTRA-SLOW WALKING CADENCE & DYNAMIC WEATHER KINETICS (Directive 13)
 1. NATURAL DAYLIGHT OVER ARTIFICIAL FLARES & NIGHT: Outdoor scenes MUST strictly default to crisp, balanced natural open-air daylight (5400K–5600K color temperature, natural sky, realistic balanced color grading). Strictly prohibit night, twilight, dusk, blue hour, street lanterns, golden-hour lens flare blowouts, oversaturated amber tints, or monochromatic yellow washes. All scenes take place in bright, natural daytime.
-2. ULTRA-SLOW, TRANQUIL WALKING CADENCE (1.5–2.0 km/h): First-person POV walking tours MUST be paced at an ultra-slow, peaceful, leisurely human stroll (~0.5 m/s / 1.5–2.0 km/h) with subtle steadycam sway, matching world-class 4K Swiss countryside and village slow walks. Strictly prohibit fast forward movement, running, drone velocity, quick camera panning, or rapid zooms. Every motion prompt must explicitly emphasize: 'Ultra-slow, unhurried, gentle steadycam forward glide at a tranquil 1.5–2 km/h stroll, lingering eye-level view of scenery, smooth footstep cadence'.
+2. ULTRA-SLOW, TRANQUIL WALKING CADENCE (1.5–2.0 km/h): First-person POV walking tours MUST be paced at an ultra-slow, peaceful, leisurely human stroll (~0.5 m/s / 1.5–2.0 km/h) with subtle steadycam sway, matching world-class 4K Swiss countryside and village slow walks. Strictly prohibit fast forward movement, running, drone velocity, quick camera panning, or rapid zooms.
+3. DYNAMIC WEATHER & ATMOSPHERIC KINETICS: Whenever weather or atmospheric elements are present in the theme or scene, 'motion_prompt' MUST explicitly command visible environmental physics alongside the ultra-slow steadycam stroll:
+   - Heavy Rain / Downpour: Continuous sheets of heavy falling rain slicing through the air, water droplets bouncing violently off pavements, dynamic expanding ripples on reflective puddles, and streaming curb runoff.
+   - Gentle Rain / Drizzle: Fine delicate raindrops drifting through the air, soft ripples on glistening wet stones.
+   - Snow Blizzard / Winter Storm: Intense swirling blizzard gusts, dense clouds of white powder snow blowing across the frame, drifting snow flurries.
+   - Gentle Snowfall: Delicate crystalline snowflakes floating and drifting slowly downward in tranquil air, gathering softly on roofs and paths.
+   - Cloudy / Overcast: Low-hanging moody cloud layers drifting across the sky, diffuse soft daylight filtering through shifting cloud formations.
+   - Fog / Mist: Rolling tendrils of atmospheric morning mist or mountain fog drifting slowly between buildings and trees.
+   Never generate camera-only motion in dynamic weather or atmospheric scenes.
+
 
 ### STRICT FIRST-PERSON EYE-LEVEL POV (ZERO ON-SCREEN CHARACTERS)
 1. ZERO ON-SCREEN HOSTS OR CHARACTERS: The camera IS the eyes of the viewer walking along the path. Strictly PROHIBIT any on-screen characters, actors, hosts, guides, or walkers in frame. The 'characters' array MUST BE an empty list `[]`.

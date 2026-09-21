@@ -22,7 +22,7 @@ class GenreStrategy(Protocol):
     def build_gemini_prompt(
         self, title: str, duration_seconds: int, language: str,
         genre: str, idea: str | None, art_style: str | None,
-        culture_ctx: Any | None,
+        culture_ctx: Any | None, **kwargs: Any,
     ) -> str:
         """Build the Gemini Tier-2 prompt for this genre's storyboard."""
         ...

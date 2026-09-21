@@ -13,30 +13,38 @@ from src.mcp.model_selector.cultural_catalog import (
 )
 
 _IN = {"culture": "indian_south", "ethnicity": "south_asian", "female_costume": "indian_traditional_saree", "male_costume": "indian_traditional_dhoti"}
+_IN_NORTH = {"culture": "indian_north", "ethnicity": "south_asian", "female_costume": "indian_traditional_saree", "male_costume": "indian_royal_sherwani"}
 _AU = {"culture": "australian", "ethnicity": "australian", "female_costume": "western_modern", "male_costume": "western_modern"}
 _IT = {"culture": "italian", "ethnicity": "italian", "female_costume": "italian_tarantella_folk", "male_costume": "italian_tarantella_folk"}
 _MX = {"culture": "mexican", "ethnicity": "mexican", "female_costume": "mexican_jalisco_charro", "male_costume": "mexican_jalisco_charro"}
 _EA = {"culture": "east_asian", "ethnicity": "east_asian", "female_costume": "chinese_hanfu_water_sleeves", "male_costume": "chinese_hanfu_water_sleeves"}
+_NORDIC = {"culture": "nordic", "ethnicity": "nordic", "female_costume": "western_modern", "male_costume": "western_modern"}
+_UK = {"culture": "british_uk", "ethnicity": "british", "female_costume": "western_modern", "male_costume": "western_modern"}
 _WEST = {"culture": "western_global", "ethnicity": "caucasian", "female_costume": "western_modern", "male_costume": "western_modern"}
+_MID_EAST = {"culture": "egyptian", "ethnicity": "middle_eastern", "female_costume": "western_modern", "male_costume": "western_modern"}
 
 COUNTRY_CULTURE_MAP: dict[str, dict[str, str]] = {
     "in": _IN, "india": _IN, "bharat": _IN, "au": _AU, "australia": _AU, "aus": _AU,
     "it": _IT, "italy": _IT, "mx": _MX, "mexico": _MX, "jp": _EA, "japan": _EA,
     "kr": _EA, "korea": _EA, "south korea": _EA, "cn": _EA, "china": _EA,
-    "us": _WEST, "usa": _WEST, "united states": _WEST, "uk": _WEST, "gb": _WEST,
-    "united kingdom": _WEST, "fr": _WEST, "france": _WEST, "de": _WEST, "germany": _WEST,
+    "is": _NORDIC, "iceland": _NORDIC, "se": _NORDIC, "sweden": _NORDIC, "no": _NORDIC, "norway": _NORDIC, "dk": _NORDIC, "denmark": _NORDIC, "fi": _NORDIC, "finland": _NORDIC,
+    "uk": _UK, "gb": _UK, "united kingdom": _UK, "england": _UK, "scotland": _UK, "wales": _UK, "britain": _UK,
+    "us": _WEST, "usa": _WEST, "united states": _WEST, "fr": _WEST, "france": _WEST, "de": _WEST, "germany": _WEST,
+    "ae": _MID_EAST, "uae": _MID_EAST, "dubai": _MID_EAST, "eg": _MID_EAST, "egypt": _MID_EAST, "sa": _MID_EAST, "saudi": _MID_EAST,
 }
 
 SCRIPT_CULTURE_KEYWORDS: list[tuple[list[str], dict[str, str]]] = [
+    (["iceland", "reykjavik", "sweden", "stockholm", "norway", "oslo", "denmark", "copenhagen", "finland", "helsinki", "nordic", "scandinavia", "fjord", "geysir"], _NORDIC),
+    (["london", "england", "scotland", "edinburgh", "britain", "british", "westminster", "thames", "buckingham", "uk"], _UK),
     (["hyderabad", "hyd", "charminar", "chennai", "bengaluru", "bangalore", "kerala", "tirupati", "kanchipuram", "telugu", "tamil", "kannada", "malayalam", "saree", "pattu", "pelli", "lungi", "panche", "kuchipudi", "bharatanatyam", "tollywood", "gongura", "biryani", "dosa", "idli", "andhra", "telangana", "rayalaseema", "vizag", "vijayawada"], _IN),
-    (["delhi", "mumbai", "punjab", "bhangra", "garba", "gujarat", "kolkata", "bengal", "varanasi", "ghats", "kathak", "bollywood", "sherwani", "kurta", "lehenga", "anarkali", "dupatta", "taj mahal", "jaipur", "rajasthan", "diwali", "holi"], {"culture": "indian_north", "ethnicity": "south_asian", "female_costume": "indian_traditional_saree", "male_costume": "indian_royal_sherwani"}),
+    (["delhi", "mumbai", "punjab", "bhangra", "garba", "gujarat", "kolkata", "bengal", "varanasi", "ghats", "kathak", "bollywood", "sherwani", "kurta", "lehenga", "anarkali", "dupatta", "taj mahal", "jaipur", "rajasthan", "diwali", "holi"], _IN_NORTH),
     (["italy", "italian", "rome", "tarantella", "pizzica", "florence", "venice", "naples", "sicily"], _IT),
     (["mexico", "mexican", "mariachi", "tapatio", "jarabe", "zapateado", "guadalajara", "oaxaca", "sombrero", "charro", "folklore"], _MX),
     (["water sleeves", "shuixiu", "hanfu", "guzheng", "erhu", "beijing", "shanghai", "china", "chinese"], _EA),
     (["tokyo", "kyoto", "japan", "japanese", "kimono", "yukata", "seoul", "korea", "korean", "hanbok", "anime", "manga", "k-pop"], _EA),
-    (["country line dance", "western swing", "line dance", "cowboy", "nashville", "texas"], {"culture": "western_global", "ethnicity": "caucasian", "female_costume": "american_western_country", "male_costume": "american_western_country"}),
+    (["dubai", "uae", "abu dhabi", "egypt", "cairo", "nile", "pyramid", "arab", "arabic", "middle east"], _MID_EAST),
     (["australia", "sydney", "melbourne", "brisbane", "perth", "adelaide", "bondi", "outback", "great barrier reef", "gold coast", "koala", "kangaroo", "aussie"], _AU),
-    (["paris", "louvre", "eiffel", "london", "new york", "hollywood", "suit", "tuxedo", "blazer", "cocktail dress", "jeans", "casual"], _WEST),
+    (["paris", "louvre", "eiffel", "france", "french", "new york", "hollywood", "suit", "tuxedo", "blazer", "cocktail dress", "jeans", "casual"], _WEST),
 ]
 
 
@@ -50,8 +58,10 @@ class DerivedCulturalContext(BaseModel):
     outfit_description: str
     jewelry_description: str
     setting_type: str = "urban_city"
+    environment_space: str = "outdoor"  # indoor, outdoor, semi_outdoor
     time_period: str = "contemporary"
     weather_climate: str = "clear_daylight"
+    lighting_scheme: str = "natural_open_daylight_5600k"
     props_instruments: str = ""
     venue_architecture: str = ""
     social_context: str = "solo"
@@ -71,7 +81,7 @@ class DerivedCulturalContext(BaseModel):
 
 
 def _derive_environment(cues: str) -> dict[str, str]:
-    """Derive setting, period, climate, props, and social context from textual cues."""
+    """Derive setting, spatial environment (indoor/outdoor), period, climate, lighting, and props."""
     setting = "urban_city"
     if any(k in cues for k in ("alpine", "mountain", "glacier", "everest", "peak", "himalaya")): setting = "alpine_wilderness"
     elif any(k in cues for k in ("forest", "jungle", "savanna", "safari", "wildlife", "rainforest")): setting = "nature_wilderness"
@@ -79,16 +89,42 @@ def _derive_environment(cues: str) -> dict[str, str]:
     elif any(k in cues for k in ("palace", "fort", "kingdom", "dynasty", "monumental", "bahubali")): setting = "historical_palace"
     elif any(k in cues for k in ("beach", "coast", "ocean", "tropical", "island", "sea")): setting = "tropical_coastal"
 
+    space = "outdoor"
+    if any(k in cues for k in ("indoor", "inside", "hotel", "ballroom", "living room", "bedroom", "kitchen", "office", "studio", "cafe", "restaurant", "banquet", "interior", "classroom", "gym", "museum", "mansion", "auditorium")):
+        space = "indoor"
+    elif any(k in cues for k in ("balcony", "veranda", "porch", "patio", "terrace", "gazebo", "courtyard", "awning")):
+        space = "semi_outdoor"
+
     period = "contemporary"
     if any(k in cues for k in ("ancient", "myth", "purana", "dynasty", "kingdom", "vedic", "medieval")): period = "ancient_mythological"
     elif any(k in cues for k in ("scifi", "cyberpunk", "future", "futuristic", "2050")): period = "futuristic_scifi"
 
     weather = "clear_daylight"
-    if any(k in cues for k in ("snow", "blizzard", "subzero", "frost", "ice")): weather = "snowy_subzero"
-    elif any(k in cues for k in ("rain", "monsoon", "thunder", "storm", "vanammo")): weather = "monsoon_rain"
-    elif any(k in cues for k in ("fog", "mist", "overcast", "cloudy")): weather = "misty_fog"
-    elif any(k in cues for k in ("sunset", "dusk", "golden hour")): weather = "golden_hour"
-    elif any(k in cues for k in ("night", "midnight", "twilight")): weather = "night_ambient"
+    if any(k in cues for k in ("blizzard", "arctic storm", "heavy snow")): weather = "snow_blizzard"
+    elif any(k in cues for k in ("snow", "subzero", "frost", "ice", "winter")): weather = "snowfall_winter"
+    elif any(k in cues for k in ("heavy rain", "downpour", "torrential", "storm", "deluge")): weather = "heavy_rain"
+    elif any(k in cues for k in ("rain", "monsoon", "thunder", "vanammo")): weather = "monsoon_rain"
+    elif any(k in cues for k in ("drizzle", "shower", "rainy")): weather = "gentle_drizzle"
+    elif any(k in cues for k in ("hot sun", "fiery sun", "scorching", "heatwave", "desert heat")): weather = "scorching_hot_sun"
+    elif any(k in cues for k in ("cloudy evening", "evening clouds", "sunset", "dusk", "twilight")): weather = "cloudy_evening"
+    elif any(k in cues for k in ("cloudy", "overcast", "grey sky", "gray sky")): weather = "cloudy_overcast"
+    elif any(k in cues for k in ("fog", "mist", "haze")): weather = "misty_fog"
+    elif any(k in cues for k in ("golden hour", "warm sunset")): weather = "golden_hour"
+    elif any(k in cues for k in ("night", "midnight")): weather = "night_ambient"
+
+    lighting = "natural_open_daylight_5600k"
+    if space == "indoor":
+        if any(k in cues for k in ("stadium", "arena", "floodlight", "sports")): lighting = "bright_indoor_stadium_lighting"
+        elif any(k in cues for k in ("hotel", "ballroom", "banquet", "reception", "wedding", "chandelier")): lighting = "warm_indoor_event_lighting"
+        elif any(k in cues for k in ("hearth", "fireplace", "cabin", "shelter", "ember")): lighting = "cozy_hearth_fireplace_lighting"
+        elif any(k in cues for k in ("neon", "club", "party", "bar", "cyber")): lighting = "moody_neon_ambient_lighting"
+        else: lighting = "soft_indoor_ambient_lighting"
+    else:
+        if any(k in cues for k in ("stadium", "floodlight", "concert stage", "arena")): lighting = "bright_outdoor_stadium_lighting"
+        elif any(k in cues for k in ("sunset", "golden hour", "dusk", "twilight")): lighting = "golden_hour_sunset_lighting"
+        elif any(k in cues for k in ("night", "midnight", "neon", "cyberpunk")): lighting = "moody_neon_night_lighting"
+        elif any(k in cues for k in ("rain", "storm", "downpour", "monsoon", "cloudy", "overcast", "fog", "snow")): lighting = "diffuse_overcast_daylight_5600k"
+        elif any(k in cues for k in ("hot sun", "fiery sun", "scorching", "desert")): lighting = "bright_direct_sunlight_5800k"
 
     props = ""
     if any(k in cues for k in ("teenmaar", "mass", "dhol", "drum")): props = "dholak, dappu, brass cymbals"
@@ -101,7 +137,7 @@ def _derive_environment(cues: str) -> dict[str, str]:
     elif any(k in cues for k in ("duet", "romantic", "couple")): social = "intimate_pair"
     elif "walk" in cues or "tour" in cues: social = "solo_walk"
 
-    return {"setting_type": setting, "time_period": period, "weather_climate": weather, "props_instruments": props, "social_context": social}
+    return {"setting_type": setting, "environment_space": space, "time_period": period, "weather_climate": weather, "lighting_scheme": lighting, "props_instruments": props, "social_context": social}
 
 
 def derive_cultural_context(
@@ -120,35 +156,48 @@ def derive_cultural_context(
     source = "western_global_fallback"
     confidence = 0.50
 
-    if user_cultural_heritage:
-        heritage_key = user_cultural_heritage.lower().strip()
-        if "south" in heritage_key or heritage_key in ("telugu", "tamil", "kannada", "malayalam"):
-            profile = {"culture": "indian_south", "ethnicity": "south_asian", "female_costume": "indian_traditional_saree", "male_costume": "indian_traditional_dhoti"}
-            source, confidence = "user_cultural_heritage", 0.98
-        elif "north" in heritage_key or heritage_key in ("hindi", "punjabi", "bengali", "gujarati"):
-            profile = {"culture": "indian_north", "ethnicity": "south_asian", "female_costume": "indian_traditional_saree", "male_costume": "indian_royal_sherwani"}
-            source, confidence = "user_cultural_heritage", 0.98
-        elif "east_asian" in heritage_key:
-            profile = {"culture": "east_asian", "ethnicity": "east_asian", "female_costume": "western_modern", "male_costume": "western_modern"}
-            source, confidence = "user_cultural_heritage", 0.98
-
-    if not profile and script_text:
+    # 1. Match country/cultural keywords directly in script_text / topic / theme / idea FIRST
+    if script_text:
         text_lower = script_text.lower()
         for keywords, candidate_profile in SCRIPT_CULTURE_KEYWORDS:
             for kw in keywords:
                 if re.search(r"\b" + re.escape(kw) + r"\b", text_lower):
-                    profile, source, confidence = candidate_profile, f"script_keyword:{kw}", 0.95
+                    profile, source, confidence = candidate_profile, f"script_keyword:{kw}", 0.98
                     break
-            if profile: break
+            if profile:
+                break
 
+    # 2. If no location keyword in script_text, check explicit user cultural heritage
+    if not profile and user_cultural_heritage:
+        heritage_key = user_cultural_heritage.lower().strip()
+        if "south" in heritage_key or heritage_key in ("telugu", "tamil", "kannada", "malayalam"):
+            profile = {"culture": "indian_south", "ethnicity": "south_asian", "female_costume": "indian_traditional_saree", "male_costume": "indian_traditional_dhoti"}
+            source, confidence = "user_cultural_heritage", 0.90
+        elif "north" in heritage_key or heritage_key in ("hindi", "punjabi", "bengali", "gujarati"):
+            profile = {"culture": "indian_north", "ethnicity": "south_asian", "female_costume": "indian_traditional_saree", "male_costume": "indian_royal_sherwani"}
+            source, confidence = "user_cultural_heritage", 0.90
+        elif "nordic" in heritage_key or heritage_key in ("iceland", "sweden", "norway"):
+            profile = {"culture": "nordic", "ethnicity": "nordic", "female_costume": "western_modern", "male_costume": "western_modern"}
+            source, confidence = "user_cultural_heritage", 0.90
+        elif "british" in heritage_key or heritage_key in ("uk", "london", "england"):
+            profile = {"culture": "british_uk", "ethnicity": "british", "female_costume": "western_modern", "male_costume": "western_modern"}
+            source, confidence = "user_cultural_heritage", 0.90
+        elif "east_asian" in heritage_key:
+            profile = {"culture": "east_asian", "ethnicity": "east_asian", "female_costume": "western_modern", "male_costume": "western_modern"}
+            source, confidence = "user_cultural_heritage", 0.90
+
+    # 3. Check user home country
     if not profile and user_home_country:
         cleaned_country = user_home_country.lower().strip()
         if cleaned_country in COUNTRY_CULTURE_MAP:
-            profile, source, confidence = COUNTRY_CULTURE_MAP[cleaned_country], f"user_home_country:{cleaned_country}", 0.90
+            profile, source, confidence = COUNTRY_CULTURE_MAP[cleaned_country], f"user_home_country:{cleaned_country}", 0.85
 
+    # 4. Spoken language code
     if not profile:
         lang_code = language.lower().strip().replace("_", "-").split("-")[0]
-        if lang_code in ("te", "ta", "kn", "ml"):
+        if lang_code in ("is", "sv", "no", "nb", "da", "fi"):
+            profile, source, confidence = {"culture": "nordic", "ethnicity": "nordic", "female_costume": "western_modern", "male_costume": "western_modern"}, f"language_code:{lang_code}", 0.85
+        elif lang_code in ("te", "ta", "kn", "ml"):
             profile, source, confidence = {"culture": "indian_south", "ethnicity": "south_asian", "female_costume": "indian_traditional_saree", "male_costume": "indian_traditional_dhoti"}, f"language_code:{lang_code}", 0.85
         elif lang_code in ("hi", "pa", "gu", "bn"):
             profile, source, confidence = {"culture": "indian_north", "ethnicity": "south_asian", "female_costume": "indian_traditional_saree", "male_costume": "indian_royal_sherwani"}, f"language_code:{lang_code}", 0.85
@@ -160,10 +209,22 @@ def derive_cultural_context(
     combined_cues = f"{genre} {video_format} {dance_type} {script_text}".lower()
     ethnicity = profile["ethnicity"]
     primary_ethnicity = None
+    is_indian = "indian" in profile.get("culture", "") or "telugu" in combined_cues or language in ("te", "ta", "kn", "hi")
 
-    if "rain" in combined_cues or "monsoon" in combined_cues or "vanammo" in combined_cues:
+    # Explicit outfit/cultural overrides in prompt (e.g., "Indian in saree in Norway")
+    if any(k in combined_cues for k in ("saree", "pattu", "lehenga", "anarkali")):
+        selected_costume, ethnicity, primary_ethnicity = "indian_traditional_saree", "south_asian", "South Asian / Indian"
+    elif any(k in combined_cues for k in ("dhoti", "pancha")):
+        selected_costume, ethnicity, primary_ethnicity = "indian_traditional_dhoti", "south_asian", "South Asian / Indian"
+    elif any(k in combined_cues for k in ("sherwani", "kurta")):
+        selected_costume, ethnicity, primary_ethnicity = "indian_royal_sherwani", "south_asian", "South Asian / Indian"
+    elif any(k in combined_cues for k in ("hanfu", "water_sleeve", "shuixiu")):
+        selected_costume, ethnicity, primary_ethnicity = "chinese_hanfu_water_sleeves", "east_asian", "East Asian"
+    elif any(k in combined_cues for k in ("charro", "sombrero")):
+        selected_costume, ethnicity, primary_ethnicity = "mexican_jalisco_charro", "mexican", "Mexican"
+    elif is_indian and ("rain" in combined_cues or "monsoon" in combined_cues or "vanammo" in combined_cues):
         selected_costume = "telugu_rain_folk_saree"
-    elif "mass" in combined_cues or "jathara" in combined_cues or "teenmaar" in combined_cues or "dj" in combined_cues:
+    elif is_indian and any(re.search(rf"\b{re.escape(k)}\b", combined_cues) for k in ("mass", "jathara", "teenmaar", "dj", "folk")):
         selected_costume = "telugu_mass_festive"
     elif "hip_hop" in combined_cues or "rap" in combined_cues or "trap" in combined_cues:
         selected_costume, ethnicity, primary_ethnicity = "american_hiphop_streetwear", "african_american", "African American / Urban Streetwear"
@@ -211,39 +272,25 @@ def derive_cultural_context(
     selected_music = audio_info.get(genre.lower().strip(), audio_info.get("default", "Cinematic acoustic score"))
     if style_info.get("music_style") and (art_style or any(k in combined_cues for k in ("scenic", "walk", "drive", "lounge", "forest", "alps", "rain"))):
         selected_music = style_info["music_style"]
-    selected_sfx = f"Culturally authentic foley and sound design for {profile['culture']}"
-
     env = _derive_environment(combined_cues)
+    lighting_scheme = style_info.get("lighting_scheme") or env["lighting_scheme"]
 
-    logger.info(f"cultural_context_derived: culture={profile['culture']}, costume={selected_costume}, setting={env['setting_type']}")
+    logger.info(f"cultural_context_derived: culture={profile['culture']}, costume={selected_costume}, setting={env['setting_type']}, space={env['environment_space']}, weather={env['weather_climate']}, lighting={lighting_scheme}")
 
     return DerivedCulturalContext(
-        culture=profile["culture"],
-        culture_name=cultural_stack.get("culture_name", profile["culture"]),
-        ethnicity=ethnicity,
-        primary_ethnicity=primary_ethnicity or cultural_stack.get("primary_ethnicity", ethnicity),
-        clothing_style=selected_costume,
-        outfit_description=costume_stack.get("prompt_enhancer", ""),
-        jewelry_description=costume_stack.get("jewelry_anchor", ""),
-        setting_type=env["setting_type"],
-        time_period=env["time_period"],
-        weather_climate=env["weather_climate"],
-        props_instruments=env["props_instruments"],
-        venue_architecture=style_info.get("architecture_style", ""),
-        social_context=env["social_context"],
-        art_style=style_info.get("display_name", "photorealistic_cinematic"),
+        culture=profile["culture"], culture_name=cultural_stack.get("culture_name", profile["culture"]),
+        ethnicity=ethnicity, primary_ethnicity=primary_ethnicity or cultural_stack.get("primary_ethnicity", ethnicity),
+        clothing_style=selected_costume, outfit_description=costume_stack.get("prompt_enhancer", ""),
+        jewelry_description=costume_stack.get("jewelry_anchor", ""), setting_type=env["setting_type"],
+        environment_space=env["environment_space"], time_period=env["time_period"],
+        weather_climate=env["weather_climate"], lighting_scheme=lighting_scheme,
+        props_instruments=env["props_instruments"], venue_architecture=style_info.get("architecture_style", ""),
+        social_context=env["social_context"], art_style=style_info.get("display_name", "photorealistic_cinematic"),
         art_style_display=style_info.get("display_name", "Broadcast 4K Photorealistic Cinematic"),
-        art_style_prompt=style_info.get("prompt_decorations", ""),
-        art_style_lighting=style_info.get("lighting_scheme", ""),
-        art_style_palette=style_info.get("color_palette", ""),
-        architecture_style=style_info.get("architecture_style", ""),
-        recommended_loras=active_loras,
-        voice_id=selected_voice,
-        voice_provider=voice_provider,
-        music_style=selected_music,
-        sfx_style=selected_sfx,
-        derivation_source=source,
-        confidence_score=confidence,
+        art_style_prompt=style_info.get("prompt_decorations", ""), art_style_lighting=lighting_scheme,
+        art_style_palette=style_info.get("color_palette", ""), architecture_style=style_info.get("architecture_style", ""),
+        recommended_loras=active_loras, voice_id=selected_voice, voice_provider=voice_provider,
+        music_style=selected_music, sfx_style=selected_sfx, derivation_source=source, confidence_score=confidence,
     )
 
 

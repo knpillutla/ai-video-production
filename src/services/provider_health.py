@@ -215,11 +215,53 @@ async def check_suno_health() -> ProviderHealthStatus:
     )
 
 
+async def check_fal_health() -> ProviderHealthStatus:
+    """Audit Fal.ai key and credit balance for FLUX.1-dev, Kling, MimicMotion, LivePortrait, LatentSync."""
+    import os
+    key = getattr(settings.video, "fal_key", None) or getattr(settings.video, "fal_api_key", None) or os.getenv("FAL_KEY") or os.getenv("FAL_API_KEY") or ""
+    if not key:
+        return ProviderHealthStatus(
+            provider_name="Fal.ai", category="Visual & Motion AI", model="FLUX.1-dev / Kling / LivePortrait",
+            key_env_var="FAL_KEY", is_configured=False, has_credits=False, status="UNCONFIGURED", quota_details="Key missing in .env",
+        )
+    if is_mock_mode():
+        return ProviderHealthStatus(
+            provider_name="Fal.ai", category="Visual & Motion AI", model="FLUX.1-dev / Kling / LivePortrait",
+            key_env_var="FAL_KEY", is_configured=True, has_credits=True, status="ACTIVE", quota_details="Mock / Offline Mode Active",
+        )
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                "https://rest.alpha.fal.ai/storage/upload/initiate",
+                headers={"Authorization": f"Key {key}", "Content-Type": "application/json"},
+                json={"file_name": "health_probe.jpg", "content_type": "image/jpeg"},
+            )
+            if resp.status_code == 200:
+                return ProviderHealthStatus(
+                    provider_name="Fal.ai", category="Visual & Motion AI", model="FLUX.1-dev / Kling / LivePortrait",
+                    key_env_var="FAL_KEY", is_configured=True, has_credits=True, status="ACTIVE", quota_details="Quota available & active",
+                )
+            err_text = resp.text
+            is_locked = "exhausted balance" in err_text.lower() or "user is locked" in err_text.lower()
+            return ProviderHealthStatus(
+                provider_name="Fal.ai", category="Visual & Motion AI", model="FLUX.1-dev / Kling / LivePortrait",
+                key_env_var="FAL_KEY", is_configured=True, has_credits=False,
+                status="DEPLETED" if (is_locked or resp.status_code == 429) else "INVALID_KEY",
+                quota_details="User is locked: Exhausted balance (top up at fal.ai)" if is_locked else f"HTTP {resp.status_code}",
+            )
+    except Exception as ex:
+        return ProviderHealthStatus(
+            provider_name="Fal.ai", category="Visual & Motion AI", model="FLUX.1-dev / Kling / LivePortrait",
+            key_env_var="FAL_KEY", is_configured=True, has_credits=False, status="ERROR", quota_details=f"Network error: {str(ex)[:60]}",
+        )
+
+
 async def audit_all_providers_health(force_probe: bool = True) -> list[ProviderHealthStatus]:
     """Audit all AI providers and return comprehensive health and credit status."""
     statuses = [
         await check_gemini_health(),
         await check_together_health(),
+        await check_fal_health(),
         await check_azure_speech_health(),
         await check_suno_health(),
     ]
@@ -236,19 +278,19 @@ def evaluate_production_readiness(
     strict_production: bool = True,
 ) -> tuple[bool, list[str]]:
     """Determine if video generation can proceed without falling back to local mocks."""
-    blockers = []
-    for p in health_list:
-        if strict_production and not p.has_credits:
-            blockers.append(f"{p.provider_name} ({p.category}): {p.status} - {p.quota_details}")
-
-    can_proceed = len(blockers) == 0
-    return can_proceed, blockers
+    blockers = [
+        f"{p.provider_name} ({p.category}): {p.status} - {p.quota_details}"
+        for p in health_list
+        if strict_production and not p.has_credits
+    ]
+    return len(blockers) == 0, blockers
 
 
 __all__ = [
     "ProviderHealthStatus",
     "check_gemini_health",
     "check_together_health",
+    "check_fal_health",
     "check_azure_speech_health",
     "check_suno_health",
     "audit_all_providers_health",

@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import json
 from pathlib import Path
+import re
 import sys
 import time
 
@@ -22,14 +23,16 @@ from src.domain.repo import repo; from src.domain.user import User
 from src.mcp.model_selector.tier_resolver import recommend_production_tiers
 from src.mcp.topic_memory.server import check_topic_duplicate
 from src.services.topic_planner import get_fresh_original_topic
+from src.core.utils.duration_parser import parse_duration
 from src.scripts.cli_presentation import print_cli_header, print_cli_summary
 from src.scripts.local_thumbnail import EpisodicBadgeConfig, generate_episodic_thumbnail
 from src.scripts.preflight_gate import execute_preflight_gate; from src.services.cultural_derivation import derive_cultural_context
+from src.services.provider_health import audit_all_providers_health
 
 
 async def run_production(
     title: str = "IT Employee WFH Confusions", episode_number: int = 1, genre: str = "comedy",
-    duration: int = 480, language: str = "en", dry_run: bool = False, subtitle_language: str | None = None,
+    duration: int | str = 10, language: str = "en", dry_run: bool = False, subtitle_language: str | None = None,
     force_live: bool = False, auto_confirm: bool = False, allow_fallback: bool = False,
     local: bool = False, tier: str | None = None, media_format: str = "auto", country: str | None = None,
     culture: str | None = None, costume_style: str | None = None, dance_type: str | None = None,
@@ -41,6 +44,7 @@ async def run_production(
     restart_id: str | None = None, profile: str = "development",
 ):
     """Execute the Phase 2 & 3 end-to-end video production and compliance pipeline."""
+    duration = parse_duration(duration)
     if local:
         profile = "local"
     artifact_profile = get_artifact_profile(profile)
@@ -48,6 +52,8 @@ async def run_production(
     force_live = artifact_profile.name in ("development", "production") if not local else False
     if artifact_profile.name == "production":
         allow_fallback = False
+        if not tier:
+            tier = "cinematic"
     user = repo.get_user_by_email("creator@cineai.studio")
     if not user:
         user = User(email="creator@cineai.studio", display_name="Studio Director", google_sub="cli_local_user", storage_container_name="user-cli-director", api_credit_balance_usd=50.00, home_country=country, cultural_heritage=culture)
@@ -99,6 +105,15 @@ async def run_production(
                     active_sub = stored_inputs.get("subtitle_language", "en")
                 except Exception: pass
             
+            # Clean stale master renders on resume to guarantee fresh recompilation with repaired/new assets
+            renders_dir = ep_ws / "master_renders"
+            if renders_dir.exists():
+                for old_master in renders_dir.glob("master_*.mp4"):
+                    try:
+                        old_master.unlink()
+                        logger.info(f"stale_master_cleared_for_recomposition: {old_master.name}")
+                    except Exception: pass
+
             # Skip metadata derivation and duplication checks if resuming
             goto_production = True
         except ValueError:
@@ -182,14 +197,18 @@ async def run_production(
                 )
         else:
             fmt_raw = media_format.lower().replace("-", "_")
-            if fmt_raw in ("movie", "film", "cinema"):
+            if fmt_raw in ("movie", "film", "cinema", "cinematic", "epic_cinematic"):
                 resolved_format = MediaFormat.MOVIE_CINEMATIC
+                if genre == "comedy": genre = "cinematic"
             elif fmt_raw in ("tourist_guide", "travel_guide", "tourist_attractions", "city_guide"):
                 resolved_format = MediaFormat.TRAVEL_GUIDE
+                if genre == "comedy": genre = "travel_tourism"
             elif fmt_raw in ("dance", "dance_song", "mass_dance"):
                 resolved_format = MediaFormat.DANCE_VIDEO
-            elif fmt_raw in ("walk", "walking", "walk_tour"):
+                if genre == "comedy": genre = "dance"
+            elif fmt_raw in ("walk", "walking", "walk_tour", "walking_tour"):
                 resolved_format = MediaFormat.WALKING_TOUR
+                if genre == "comedy": genre = "walking_tour"
             else:
                 try:
                     resolved_format = MediaFormat(fmt_raw)
@@ -220,7 +239,8 @@ async def run_production(
         _t_hint = "dance" if prompt and "dance" in prompt.lower() else ("nature" if prompt and any(k in (prompt or "").lower() for k in ("mountain", "nature", "wildlife", "alps")) else ("comedy" if prompt and "comedy" in (prompt or "").lower() else None))
 
         for _attempt in range(1, _MAX_DUP_RETRIES + 1):
-            show_slug = title.lower().replace(" ", "_").replace("-", "_")[:24]
+            show_slug = re.sub(r"[^a-zA-Z0-9_-]", "_", title.lower()).strip("_")[:32] or "default_show"
+            show_slug = re.sub(r"_+", "_", show_slug)
             show = next((s for s in repo.list_shows(user.id) if s.slug == show_slug), None)
             if not show:
                 show = Show(user_id=user.id, title=title, slug=show_slug, genre=genre)
@@ -351,7 +371,7 @@ async def run_production(
             prompt = strategy.build_gemini_prompt(
                 title=ep_title, duration_seconds=duration, language=language,
                 genre=genre, idea=idea, art_style=art_style or (ref_attrs.art_style if ref_attrs else ""),
-                culture_ctx=culture_ctx,
+                culture_ctx=culture_ctx, character_name=character_name,
             )
             schema = strategy.build_gemini_schema()
         from src.providers.llm.gemini_adapter import GeminiLLMAdapter
@@ -367,6 +387,7 @@ async def run_production(
         ep_title = storyboard_data["title_en"]
         episode.title = ep_title
 
+    start_user_balance = float(user.api_credit_balance_usd)
     episode.cost_record = calculate_preflight_estimate(episode)
     episode.estimated_cost_usd = episode.cost_record.predicted_total_usd; repo.save_episode(episode)
 
@@ -386,8 +407,11 @@ async def run_production(
     print(f"\n[1/4] Confirmed Episode Project: {episode.id} (Profile: {profile.upper()}, Tier: {selected_tier.upper()}, Mode: {decision_mode.upper()}, Budget: ${episode.estimated_cost_usd:.4f})")
     thumb_dir = ep_ws / "thumbnails"
     thumb_dir.mkdir(parents=True, exist_ok=True)
+    candidate_keyframes = [ep_ws / "scenes" / "scene_01.jpg", ep_ws / "scenes" / "scene_00.jpg"]
+    base_keyframe = next((p for p in candidate_keyframes if p.is_file() and p.stat().st_size > 1000), None)
     generate_episodic_thumbnail(
         output_path=thumb_dir / f"thumb_ep{episode_number:02d}_{language}.jpg",
+        base_image_path=base_keyframe,
         badge_config=EpisodicBadgeConfig(episode_number=episode_number, language=language, style="pill", position="top_left", custom_label=badge_label),
         headline=headline,
     )
@@ -406,11 +430,29 @@ async def run_production(
         gender=effective_voice_gender, art_style=art_style, custom_script=script_text, idea=idea, theme=theme,
         refine_script=refine_script, enable_voice_over=is_voice_over, enable_bgm=enable_bgm, enable_lipsync=enable_lipsync,
     )
+    # Refresh episodic thumbnail using the newly synthesized scene keyframe as the high-res background canvas
+    base_keyframe = next((p for p in candidate_keyframes if p.is_file() and p.stat().st_size > 1000), None)
+    if not base_keyframe:
+        all_imgs = sorted((ep_ws / "scenes").glob("scene_*.jpg"))
+        base_keyframe = all_imgs[0] if all_imgs else None
+    if base_keyframe:
+        generate_episodic_thumbnail(
+            output_path=thumb_dir / f"thumb_ep{episode_number:02d}_{language}.jpg",
+            base_image_path=base_keyframe,
+            badge_config=EpisodicBadgeConfig(episode_number=episode_number, language=language, style="pill", position="top_left", custom_label=badge_label),
+            headline=headline,
+        )
     print(f"[4/4] Master Video Generated: {final_video}")
 
     saved_episode = repo.get_episode(user.id, episode.id)
     cleared, _ = rights_ledger.verify_episode_rights(episode.id)
-    print_cli_summary(saved_episode, user, final_video, rights_ledger.get_records_for_episode(episode.id), cleared)
+    postflight_health = await audit_all_providers_health(force_probe=False)
+    print_cli_summary(
+        saved_episode, user, final_video,
+        rights_ledger.get_records_for_episode(episode.id), cleared,
+        provider_statuses=postflight_health,
+        start_user_balance=start_user_balance,
+    )
     return final_video
 
 
@@ -420,7 +462,7 @@ def main():
         ("--title", "IT Employee WFH Confusions", str, "Title", None), ("--episode", None, int, "Episode #", "episode_number"),
         ("--id", None, str, "Restart/Resume from specific Episode ID", "restart_id"),
         ("--genre", "comedy", str, "Genre", None), ("--theme", None, str, "Theme", None), ("--idea", None, str, "Idea", None),
-        ("--script", None, str, "Script", None), ("--duration", 480, int, "Duration", None), ("--language", "en", str, "Lang", None),
+        ("--script", None, str, "Script", None), ("--duration", "10s", parse_duration, "Duration (e.g. 10s, 30m, 1h, 20)", None), ("--language", "en", str, "Lang", None),
         ("--subtitle-language", None, str, "Sub", None), ("--tier", None, str, "Tier", None), ("--country", None, str, "Country", None),
         ("--culture", None, str, "Culture", None), ("--costume", None, str, "Costume", "costume_style"),
         ("--dance", None, str, "Dance", "dance_type"), ("--character", None, str, "Char", "character_name"),

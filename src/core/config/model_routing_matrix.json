@@ -105,7 +105,7 @@
               { "path": "loras/indian_traditional_saree_v1.safetensors", "scale": 0.85 },
               { "path": "loras/telangana_village_jathara_v1.safetensors", "scale": 0.80 }
             ],
-            "optical_prompt_suffix": "Authentic regional Indian attire, detailed embroidery and jewelry, balanced fit build mid-20s, vibrant festive daytime lighting 5500K"
+            "optical_prompt_suffix": "Raw 35mm film photograph, Arri Alexa 35mm Master Prime, visible skin pores and natural micro-textures, authentic South Asian skin tones, dynamic mass dance pose, handloom cotton textures, zero plastic skin, zero CGI sheen, balanced 5400K natural daylight"
           },
           "video_motion": {
             "provider": "Fal.ai",
@@ -115,7 +115,7 @@
             "mode": "pro",
             "cfg_scale": 0.55,
             "pacing": "choreographic_progression_3_phase",
-            "negative_prompt": "blurry, low quality, distortion, noise, deformed limbs, extra fingers, cartoon, soft focus, desaturated"
+            "negative_prompt": "blurry, low quality, distortion, noise, deformed limbs, extra fingers, cartoon, 3d render, cgi, plastic skin, airbrushed, wax doll, synthetic sheen, soft focus, static portrait headshot, unnatural smooth skin"
           },
           "lipsync": {
             "provider": "Fal.ai",

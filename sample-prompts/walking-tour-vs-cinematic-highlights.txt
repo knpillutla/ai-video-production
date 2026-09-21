@@ -1,0 +1,17 @@
+First-Person 4K Scenic Walking Tour (Recommended)
+(Ultra-slow 1.5–2.0 km/h steadycam eye-level stroll through Westminster, Big Ben, Tower Bridge, and Covent Garden with educational voiceover commentary)
+
+powershell
+python scripts/produce_video.py `
+  --title "One Day in London: Iconic Landmarks & Historic Streets" `
+  --type walking_tour `
+  --duration 60 `
+  --language en `
+  --dev -y
+
+
+Cinematic Travel Guide & Highlights Tour
+(Sweeping cinematic views, architectural details, and cultural highlights with voiceover guide)
+
+python scripts/produce_video.py --title "One Day in London: Cinematic Tour of Historic Streets and Royal Landmarks" --type cinematic --duration 60 --language en --dev -y
+

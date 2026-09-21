@@ -36,3 +36,8 @@ Before writing any scene, first explicitly identify and preserve the exact creat
 
 ### LIPSYNC & SONG TRACK MANDATE (Zero Spoken Narration in Dance Videos)
 In dance videos and musical productions, the character must NEVER speak descriptive text, narrator explanations, or song titles. Lip-sync synchronization MUST be driven directly by the musical song track and sung lyrics (Suno track), preserving 100% of the instrumentation, rhythm, and festive singing. Spoken dialogue TTS is strictly prohibited in musical dance tracks.
+
+### DYNAMIC RAIN DANCE, FESTIVAL DUST & PARTICLE KINETICS
+- RAIN DANCE / MONSOON SCENES: When the dance or song theme features rain/monsoon, 'motion_prompt' MUST explicitly command dynamic water physics: dense sheets of visible rain pouring down, water droplets flying off spinning wet hair, splashing footsteps vigorously kicking up water from puddles on beat drops, glistening wet fabric in fluid choreographic motion, and concentric ripples in reflective water.
+- FESTIVAL DUST & CELEBRATION PARTICLES: For mass folk, holi, or village jathara dances, 'motion_prompt' MUST describe swirling golden dust clouds kicked up by stomping feet or vibrant airborne colored powder bursts exploding in sync with hook steps.
+

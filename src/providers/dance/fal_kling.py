@@ -69,29 +69,43 @@ class FalKlingAdapter:
             return await self._fallback_mimic(image_url, motion_prompt, out, duration)
 
         if not self.api_key:
+            if force_live:
+                raise ValueError("FAL_KEY is required for LIVE video motion generation")
             logger.warning("fal_kling: no FAL_KEY — falling back to FalMimicMotion")
             return await self._fallback_mimic(image_url, motion_prompt, out, duration)
 
         # Kling only accepts 5 or 10; clamp to nearest valid value
         kling_dur = "10" if duration >= 8 else "5"
-        actual_url = image_url
-        if not (image_url.startswith("http://") or image_url.startswith("https://")):
-            from src.providers.fal_storage import upload_to_fal
-            actual_url = await upload_to_fal(Path(image_url), api_key=self.api_key)
 
-        headers = {"Authorization": f"Key {self.api_key}", "Content-Type": "application/json"}
-        payload = {
-            "prompt": motion_prompt,
-            "negative_prompt": "blurry, low quality, distortion, noise, compression artifacts, jitter, flickers, overexposed, oversaturated, deformed, cartoon, low resolution, pixelated, soft focus, haze, smear",
-            "image_url": actual_url,
-            "duration": kling_dur,
-            "aspect_ratio": aspect_ratio,
-            "mode": "pro",
-            "cfg_scale": 0.55,
-        }
+        try:
+            actual_url = image_url
+            if not (image_url.startswith("http://") or image_url.startswith("https://")):
+                from src.providers.fal_storage import upload_to_fal
+                actual_url = await upload_to_fal(Path(image_url), api_key=self.api_key)
 
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=15.0)) as client:
-            try:
+            headers = {
+                "Authorization": f"Key {self.api_key}",
+                "Content-Type": "application/json",
+            }
+
+            neg_prompt = (
+                "blurry, low quality, distortion, noise, compression artifacts, jitter, flickers, overexposed, oversaturated, "
+                "deformed, cartoon, low resolution, pixelated, soft focus, haze, smear, "
+                "unrealistic person walking in front, pedestrian in front, human back, walking person in frame, uncanny human figure, mannequin, bad anatomy, CGI character"
+                if "scenic" in motion_prompt.lower() or "first-person" in motion_prompt.lower() or "empty" in motion_prompt.lower() or "pov" in motion_prompt.lower()
+                else "blurry, low quality, distortion, noise, compression artifacts, jitter, flickers, overexposed, oversaturated, deformed, cartoon, low resolution, pixelated, soft focus, haze, smear"
+            )
+            payload = {
+                "prompt": motion_prompt,
+                "negative_prompt": neg_prompt,
+                "image_url": actual_url,
+                "duration": kling_dur,
+                "aspect_ratio": aspect_ratio,
+                "mode": "pro",
+                "cfg_scale": 0.55,
+            }
+
+            async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=15.0)) as client:
                 sub_resp = await client.post(_KLING_ENDPOINT, headers=headers, json=payload)
                 if sub_resp.status_code not in (200, 201):
                     raise RuntimeError(f"Kling submit failed: {sub_resp.text[:200]}")
@@ -119,9 +133,12 @@ class FalKlingAdapter:
 
                 raise TimeoutError("Kling 1.5 Pro timed out after 320s")
 
-            except Exception as ex:
-                logger.warning(f"fal_kling_failed: {ex} — falling back to FalMimicMotion")
-                return await self._fallback_mimic(image_url, motion_prompt, out, duration)
+        except Exception as ex:
+            if force_live:
+                logger.error(f"fal_kling_live_failed: {ex}")
+                raise RuntimeError(f"Kling video motion generation failed in LIVE mode: {ex}") from ex
+            logger.warning(f"fal_kling_failed: {ex} — falling back to FalMimicMotion")
+            return await self._fallback_mimic(image_url, motion_prompt, out, duration)
 
     async def _fallback_mimic(
         self,
@@ -136,6 +153,10 @@ class FalKlingAdapter:
         # MimicMotion accepts image path; download if remote URL
         if image_url.startswith("file://"):
             img_path = Path(image_url[7:])
+        elif Path(image_url).is_file():
+            img_path = Path(image_url)
+        elif (out.parent / "scene_00.jpg").is_file():
+            img_path = out.parent / "scene_00.jpg"
         else:
             img_path = out.parent / "keyframe_fallback.jpg"
             if not img_path.exists():

@@ -178,24 +178,19 @@ class ProductionPipelineCoordinator:
         scale = (tgt_dur / tot_raw) if (tgt_dur > 0 and tot_raw > 0 and abs(tgt_dur - tot_raw) > 0.5) else 1.0
 
         char_anchor = None
-        if strategy.genre_id != "walking_tour":
+        is_scenic_strategy = strategy.genre_id in ("walking_tour", "nature_documentary", "tourist_guide", "epic_cinematic", "mountain_survival")
+        wants_character = bool(character_name or lead_c.get("name") or (not is_scenic_strategy and any(k in fmt_str for k in ("web_series", "movie", "dance", "music"))))
+        if wants_character:
             effective_culture = culture or derived_culture.culture
             effective_costume = costume_style or derived_culture.clothing_style
-            if character_name or lead_c.get("name"):
-                c_name = character_name or lead_c.get("name")
-                existing_chars = repo.list_characters(user_id, episode.show_id)
-                char_anchor = next((c for c in existing_chars if c.name == c_name), None)
-                if char_anchor:
-                    logger.info(f"char_anchor_cache_hit: reusing existing character {c_name}")
-
-            if not char_anchor and (character_name or lead_c.get("name") or any(k in fmt_str for k in ("web_series", "movie", "dance", "music")) or any(k in episode.title.lower() for k in ("character", "dancer", "lead", "hero"))):
-                char_anchor = get_or_create_character_anchor(
-                    user_id=user_id, show_id=episode.show_id, character_name=character_name or lead_c.get("name"),
-                    culture=effective_culture, costume_style=effective_costume, gender=eff_gender,
-                    language=language, age=lead_c.get("age"), body_composition=lead_c.get("body_composition"),
-                    height=lead_c.get("height"), role=lead_c.get("role"), appearance_summary=lead_c.get("appearance_summary"),
-                    source_text=" ".join(filter(None, [episode.title, eff_idea, eff_script])),
-                )
+            c_name = character_name or lead_c.get("name")
+            char_anchor = get_or_create_character_anchor(
+                user_id=user_id, show_id=episode.show_id, character_name=c_name,
+                culture=effective_culture, costume_style=effective_costume, gender=eff_gender,
+                language=language, age=lead_c.get("age"), body_composition=lead_c.get("body_composition"),
+                height=lead_c.get("height"), role=lead_c.get("role"), appearance_summary=lead_c.get("appearance_summary"),
+                source_text=" ".join(filter(None, [episode.title, eff_idea, eff_script])),
+            )
 
         # 2. Synthesize Visual Keyframes, Motion Video, and Voice Stems for each scene
         enable_video_motion = strategy.genre_id in ("walking_tour", "dance") or getattr(episode.options, "enable_video_motion", False)
@@ -214,7 +209,7 @@ class ProductionPipelineCoordinator:
         if enable_bgm and bgm_path:
             story_tags = storyboard_data.get("suno_tags")
             story_lyrics = storyboard_data.get("lyrics")
-            bgm_style = story_tags or (ref_attrs.soundtrack_style if (yt_url and ref_attrs.soundtrack_style) else (derived_culture.music_style if enable_voice_over else "Gentle rain drops, distant thunder, and relaxing ambient nature sounds"))
+            bgm_style = story_tags or (ref_attrs.soundtrack_style if (yt_url and ref_attrs.soundtrack_style) else (derived_culture.music_style or "Gentle rain drops, distant thunder, and relaxing ambient nature sounds"))
             full_lyrics = story_lyrics or " ".join(extract_dialogue_text(s) for s in scenes_list if extract_dialogue_text(s))
             story_vocal = storyboard_data.get("vocal_gender")
             eff_vocal = (gender if gender in ("male", "duet", "female") else None) or (getattr(episode.options, "voice_gender", None) if getattr(episode.options, "voice_gender", None) in ("male", "duet", "female") else None) or story_vocal or "female"

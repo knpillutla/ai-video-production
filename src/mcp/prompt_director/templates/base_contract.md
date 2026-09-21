@@ -28,3 +28,14 @@ Autonomously select the optimal 'recommended_fps' matching the story dynamics:
 - 30 fps: Music videos, mass folk dance, upbeat choreography, stage comedy.
 - 24 fps: Cinematic drama, narrative shorts, emotional dialogues, slow romance.
 Audio standard is 48000 Hz 24-bit broadcast stereo, normalized to -14.0 LUFS.
+
+### UNIVERSAL DYNAMIC WEATHER, CLIMATIC & ATMOSPHERIC KINETICS (Directive 13)
+In ALL genres, formats, and themes (grandeur cinema, dance songs, music videos, walking tours, nature documentaries, travel vlogs, drama):
+- Rain & Monsoon: 'motion_prompt' MUST explicitly command visible rain physics—dense sheets of falling raindrops slicing through the air, water droplets flying off spinning bodies/hair in dance, raindrops bouncing violently off wet ground with expanding concentric ripples in puddles, and streaming runoff.
+- Snow, Blizzards & Ice: 'motion_prompt' MUST explicitly command dynamic snow physics—swirling blizzard wind gusts whipping powder snow, or delicate crystalline snowflakes gently drifting down, with footwork or dancing kicking up fresh snow powder and visible frosty breath vapor.
+- Fiery Hot Sun & Desert Heat: 'motion_prompt' MUST explicitly command thermal kinetics—shimmering heat haze waves rising from hot ground, intense radiant sunbeams, and dynamic dust plumes kicked up into golden light by energetic choreography or movement.
+- Cloudy Evening, Sunset & Overcast: 'motion_prompt' MUST command atmospheric sky kinetics—dramatic low-hanging or twilight clouds drifting across the sky, evening breezes fluttering colorful costume fabrics and scarves, and rich shifting ambient glow.
+- Fog & Mountain Mist: 'motion_prompt' MUST describe rolling tendrils of atmospheric mist drifting across the scene and between trees or architecture.
+- Wind, Autumn Leaves & Festival Dust: 'motion_prompt' MUST describe swirling golden leaves, flying flags/scarves, or vibrant bursts of colored powder/dust skimming across the ground.
+Video motion synthesis models animate ONLY what is explicitly commanded in 'motion_prompt'. Never generate static camera-only motion when dynamic weather, climate, or atmospheric conditions are present.
+

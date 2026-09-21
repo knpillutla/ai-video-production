@@ -217,6 +217,43 @@ CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
             "dance": "Hypnotic Middle Eastern bellydance rhythm with energetic darbuka and qanun melody",
         },
     },
+    "nordic": {
+        "culture_name": "Nordic & Scandinavian (Iceland, Sweden, Norway, Denmark, Finland)",
+        "primary_ethnicity": "Nordic / Scandinavian",
+        "scriptwriting": {"model": "gemini-1.5-pro", "provider": "Google", "reasoning": "Atmospheric Nordic storytelling and folklore."},
+        "visual_diffusion": {"model": "flux-1-dev", "provider": "Fal.ai", "recommended_loras": [], "prompt_anchors": "Nordic landscape, crisp Scandinavian architecture, natural cool daylight"},
+        "voice_tts": {
+            "is": {"male": "is-IS-GunnarNeural", "female": "is-IS-GudrunNeural"},
+            "sv": {"male": "sv-SE-MattiasNeural", "female": "sv-SE-SofieNeural"},
+            "no": {"male": "nb-NO-FinnNeural", "female": "nb-NO-PernilleNeural"},
+            "da": {"male": "da-DK-JeppeNeural", "female": "da-DK-ChristelNeural"},
+            "fi": {"male": "fi-FI-HarriNeural", "female": "fi-FI-NooraNeural"},
+            "en": {"male": "en-US-ChristopherNeural", "female": "en-US-JennyNeural"},
+            "provider": "Microsoft Azure Speech HD", "reasoning": "Clear Nordic/Scandinavian neural voices.",
+        },
+        "audio_soundtrack": {
+            "default": "Atmospheric Nordic acoustic folk with acoustic guitar, ambient cello, and soft piano",
+            "comedy": "Lighthearted Scandinavian acoustic score with upbeat guitar and marimba",
+            "drama": "Cinematic Nordic noir strings with deep cello drones and ambient piano",
+            "dance": "Nordic folk dance rhythm with hardanger fiddle and steady percussion",
+        },
+    },
+    "british_uk": {
+        "culture_name": "British & United Kingdom (London, England, Scotland, Wales)",
+        "primary_ethnicity": "British / European",
+        "scriptwriting": {"model": "gemini-1.5-pro", "provider": "Google", "reasoning": "British wit, regal historical lore, and refined cadence."},
+        "visual_diffusion": {"model": "flux-1-dev", "provider": "Fal.ai", "recommended_loras": [], "prompt_anchors": "British architecture, historic London limestone, Victorian streetscape, natural daylight"},
+        "voice_tts": {
+            "en": {"male": "en-GB-RyanNeural", "female": "en-GB-SoniaNeural"},
+            "provider": "Microsoft Azure Speech HD", "reasoning": "Refined British RP neural voice.",
+        },
+        "audio_soundtrack": {
+            "default": "Refined British orchestral strings with classical piano and acoustic guitar",
+            "comedy": "Playful British comedy score with pizzicato strings and light woodwinds",
+            "drama": "Stately cinematic British royal orchestral score with majestic brass and strings",
+            "dance": "Modern British indie rock and dance groove",
+        },
+    },
 }
 
 
@@ -224,6 +261,10 @@ def lookup_cultural_stack(culture: str | None = None, language: str = "en") -> d
     """Retrieve optimal AI model stack and cultural rationale for a culture and language."""
     key = (culture or "western_global").lower().replace("-", "_")
     lang = (language or "en").lower().strip().replace("-", "_").split("_")[0]
+    if any(k in key for k in ("nordic", "iceland", "sweden", "norway", "denmark", "finland")) or lang in ("is", "sv", "no", "nb", "da", "fi"):
+        return CULTURAL_MODEL_MATRIX["nordic"]
+    if any(k in key for k in ("british", "uk", "london", "england", "scotland", "britain")):
+        return CULTURAL_MODEL_MATRIX["british_uk"]
     if "egypt" in key or "arab" in key or lang == "ar":
         return CULTURAL_MODEL_MATRIX["egyptian"]
     if "ital" in key or lang == "it":
@@ -258,7 +299,10 @@ def resolve_cultural_voice(culture: str | None = None, language: str = "en", gen
             if isinstance(val, str):
                 return val
 
-    # Fallbacks based on culture and gender
+    if "nordic" in cult_safe or "iceland" in cult_safe:
+        return "is-IS-GunnarNeural" if g_key == "male" else "is-IS-GudrunNeural"
+    if "british" in cult_safe or "uk" in cult_safe:
+        return "en-GB-RyanNeural" if g_key == "male" else "en-GB-SoniaNeural"
     if "egypt" in cult_safe or "arab" in cult_safe:
         return "ar-EG-ShakirNeural" if g_key == "male" else "ar-EG-SalmaNeural"
     if "ital" in cult_safe:

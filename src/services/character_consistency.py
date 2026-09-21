@@ -53,16 +53,16 @@ class CharacterVisualAnchor(BaseModel):
 
 
 def build_character_prompt_prefix(
-    anchor: CharacterVisualAnchor,
+    anchor: Any,
     costume_override: str | None = None,
 ) -> str:
     """Construct an identity-locking prompt prefix specifying exact facial, clothing, and jewelry traits."""
-    costume = costume_override if costume_override is not None else anchor.costume_anchor
+    costume = costume_override if costume_override is not None else getattr(anchor, "costume_anchor", "")
     elements = [
-        f"Protagonist {anchor.name}",
-        anchor.appearance_anchor,
+        f"Protagonist {getattr(anchor, 'name', '')}",
+        getattr(anchor, "appearance_anchor", ""),
         costume,
-        anchor.jewelry_anchor,
+        getattr(anchor, "jewelry_anchor", ""),
     ]
     cleaned = [e.strip() for e in elements if e and e.strip()]
     return ", ".join(cleaned)
@@ -151,18 +151,52 @@ def get_or_create_character_anchor(
     eff_body = _body_composition_from_user_text(source_text) or DEFAULT_BODY_COMPOSITION
     if appearance_summary:
         appearance = _safe_appearance_summary(appearance_summary, eff_body)
-    elif gender.lower() == "female":
-        appearance = (
-            f"{eff_age}-year-old, mid-20s, {eff_body}, graceful feminine curves with toned midriff, neither too skinny nor chubby, "
-            f"breathtakingly beautiful South Asian woman, warm golden-dusky glowing complexion, expressive big dark brown eyes, "
-            f"long thick wavy black hair, radiant charming smile"
-        )
+    elif "indian" in culture or "south_asian" in culture:
+        if gender.lower() == "female":
+            appearance = (
+                f"{eff_age}-year-old, mid-20s, {eff_body}, graceful feminine curves with toned midriff, neither too skinny nor chubby, "
+                f"breathtakingly beautiful South Asian woman, warm golden-dusky glowing complexion, expressive big dark brown eyes, "
+                f"long thick wavy black hair, radiant charming smile"
+            )
+        else:
+            appearance = (
+                f"{eff_age}-year-old, mid-20s, {eff_body}, healthy masculine build, neither too skinny nor chubby, "
+                f"remarkably handsome South Asian man, warm wheatish skin tone, well-defined sharp jawline, short neatly styled black hair, "
+                f"clean trimmed light stubble, confident expressive dark eyes"
+            )
+    elif any(k in culture for k in ("east_asian", "japanese", "korean", "chinese")):
+        if gender.lower() == "female":
+            appearance = (
+                f"{eff_age}-year-old, mid-20s, {eff_body}, graceful feminine curves, neither too skinny nor chubby, "
+                f"strikingly beautiful East Asian woman, fair radiant complexion, sleek dark hair, expressive eyes, elegant smile"
+            )
+        else:
+            appearance = (
+                f"{eff_age}-year-old, mid-20s, {eff_body}, athletic fit build, neither too skinny nor chubby, "
+                f"handsome East Asian man, clean skin, sharp styled dark hair, expressive eyes, charismatic poise"
+            )
+    elif any(k in culture for k in ("mexican", "latino", "hispanic")):
+        if gender.lower() == "female":
+            appearance = (
+                f"{eff_age}-year-old, mid-20s, {eff_body}, graceful curves, neither too skinny nor chubby, "
+                f"strikingly beautiful Hispanic/Latina woman, warm honey skin, dark wavy hair, expressive warm eyes, vibrant smile"
+            )
+        else:
+            appearance = (
+                f"{eff_age}-year-old, mid-20s, {eff_body}, lean athletic build, neither too skinny nor chubby, "
+                f"handsome Hispanic/Latino man, warm skin tone, styled dark hair, expressive dark eyes"
+            )
     else:
-        appearance = (
-            f"{eff_age}-year-old, mid-20s, {eff_body}, healthy masculine build, neither too skinny nor chubby, "
-            f"remarkably handsome South Asian man, warm wheatish skin tone, well-defined sharp jawline, short neatly styled black hair, "
-            f"clean trimmed light stubble, confident expressive dark eyes"
-        )
+        if gender.lower() == "female":
+            appearance = (
+                f"{eff_age}-year-old, mid-20s, {eff_body}, graceful feminine curves, neither too skinny nor chubby, "
+                f"strikingly attractive young woman, natural balanced skin tones, expressive clear eyes, styled hair, elegant modern presence"
+            )
+        else:
+            appearance = (
+                f"{eff_age}-year-old, mid-20s, {eff_body}, lean athletic fit build, neither too skinny nor chubby, "
+                f"handsome young man, well-groomed hair, sharp jawline, expressive eyes, confident poise"
+            )
 
     char_entity = Character(
         id=uuid4(),
