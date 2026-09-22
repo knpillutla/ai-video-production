@@ -53,7 +53,7 @@ class ProductionPipelineCoordinator:
         gender: str = "female", art_style: str | None = None, custom_script: str | None = None,
         idea: str | None = None, theme: str | None = None, refine_script: bool = False,
         enable_voice_over: bool = True, enable_bgm: bool | None = None, enable_lipsync: bool | None = None,
-        auto_confirm: bool = False, custom_gate_input_fn: Any = None,
+        auto_confirm: bool = False, custom_gate_input_fn: Any = None, profile: str = "development",
     ) -> Path | None:
         """Produce a complete broadcast-grade master video for an episode project."""
         self.llm.strict = strict
@@ -94,7 +94,7 @@ class ProductionPipelineCoordinator:
             "refine_script": refine_script, "dry_run": dry_run, "created_at": time.time(),
         }
         await storage_service.save_json(ep_dir / "user_inputs.json", user_inputs)
-        logger.info(f"starting_production_pipeline: ep={episode.title}, user={user_id}, tier={tier}")
+        logger.info(f"starting_production_pipeline: ep={episode.title}, user={user_id}, tier={tier}, profile={profile}")
 
         meta_dict = {"genre": show.genre if show else "general", "show_slug": show_slug, "tier": tier, "language": language}
         if not episode_id:
@@ -107,6 +107,9 @@ class ProductionPipelineCoordinator:
         eff_genre = show.genre if show else "comedy"
         strategy = resolve_strategy(media_format=fmt_str, genre=eff_genre, idea=eff_idea)
         logger.info(f"genre_strategy_resolved: {strategy.genre_id} (audio={strategy.audio_mode}, lipsync={strategy.lipsync_mode})")
+
+        from src.providers.dance.fal_video_factory import resolve_video_motion_adapter
+        video_motion_adapter = resolve_video_motion_adapter(profile=profile, scenario=strategy.genre_id)
 
         # Storyboard & Scene Synthesis with Image Quality Gate loop
         storyboard_path = ep_dir / "storyboard.json"
@@ -142,7 +145,7 @@ class ProductionPipelineCoordinator:
 
             char_anchor = None
             is_scenic_strategy = strategy.genre_id in ("walking_tour", "nature_documentary", "tourist_guide", "epic_cinematic", "mountain_survival")
-            wants_character = bool(character_name or lead_c.get("name") or (not is_scenic_strategy and any(k in fmt_str for k in ("web_series", "movie", "dance", "music"))))
+            wants_character = bool(character_name or (not is_scenic_strategy and (lead_c.get("name") or any(k in fmt_str for k in ("web_series", "movie", "dance", "music")))))
             if wants_character:
                 char_anchor = get_or_create_character_anchor(
                     user_id=user_id, show_id=episode.show_id, character_name=character_name or lead_c.get("name"),
@@ -153,7 +156,7 @@ class ProductionPipelineCoordinator:
                 )
 
             enable_video_motion = force_live or strategy.genre_id in ("walking_tour", "dance", "tourist_guide", "travel_guide", "nature_documentary", "epic_cinematic", "mountain_survival", "music_video") or getattr(episode.options, "enable_video_motion", False)
-            print_storyboard_artifact_manifest(storyboard_data=storyboard_data, fmt_str=fmt_str, enable_voice_over=enable_voice_over, enable_bgm=enable_bgm, enable_video_motion=enable_video_motion, enable_lipsync=bool(enable_lipsync), culture_context=derived_culture)
+            print_storyboard_artifact_manifest(storyboard_data=storyboard_data, fmt_str=fmt_str, enable_voice_over=enable_voice_over, enable_bgm=enable_bgm, enable_video_motion=enable_video_motion, enable_lipsync=bool(enable_lipsync), culture_context=derived_culture, profile=profile)
 
             try:
                 compiled_scenes, subtitle_segments, current_time = await synthesize_scenes(
@@ -161,7 +164,7 @@ class ProductionPipelineCoordinator:
                     episode=episode, scale=scale, char_anchor=char_anchor,
                     derived_culture=derived_culture, visual_adapter=self.visual,
                     tts_adapter=self.tts, language=language, enable_voice_over=enable_voice_over,
-                    enable_lipsync=bool(enable_lipsync), force_live=force_live, kling_adapter=self.fal_kling,
+                    enable_lipsync=bool(enable_lipsync), force_live=force_live, kling_adapter=video_motion_adapter,
                     enable_video_motion=enable_video_motion, auto_confirm=auto_confirm, custom_gate_input_fn=custom_gate_input_fn,
                 )
                 break
@@ -198,9 +201,11 @@ class ProductionPipelineCoordinator:
 
         # 5. Timeline & Single-Pass Render
         is_vert = "9_16" in fmt_str or "vertical" in fmt_str
-        eff_fps = int(storyboard_data.get("recommended_fps") or getattr(strategy, "default_fps", 30))
+        is_dev = profile in ("development", "local")
+        eff_fps = min(30, int(storyboard_data.get("recommended_fps") or 30)) if is_dev else int(storyboard_data.get("recommended_fps") or getattr(strategy, "default_fps", 30))
+        target_res = (1080, 1920) if (is_vert and is_dev) else ((1920, 1080) if is_dev else ((2160, 3840) if is_vert else (3840, 2160)))
         film_lut = resolve_film_lut(culture=derived_culture.culture, genre=eff_genre, weather=derived_culture.weather_condition)
-        timeline = compile_timeline_from_scenes(scene_data=compiled_scenes, bgm_path=bgm_path, foley_path=foley_path, subtitle_path=burned_ass_path, target_resolution=(2160, 3840) if is_vert else (3840, 2160), fps=eff_fps, film_lut=film_lut)
+        timeline = compile_timeline_from_scenes(scene_data=compiled_scenes, bgm_path=bgm_path, foley_path=foley_path, subtitle_path=burned_ass_path, target_resolution=target_res, fps=eff_fps, film_lut=film_lut)
 
         render_t0 = time.perf_counter()
         render_name = f"master_16x9_ep{episode.episode_number:02d}_{language}.mp4" if language and language != "en" else f"master_16x9_ep{episode.episode_number:02d}.mp4"

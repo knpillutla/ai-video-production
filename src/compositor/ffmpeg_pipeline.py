@@ -58,7 +58,7 @@ def build_single_pass_command(
             cmd.extend(["-i", str(sc.video_path)])
             pts_factor = (sc.duration_seconds / 10.0) if sc.duration_seconds > 10.0 else 1.0
             filter_chains.append(
-                f"[{idx}:v]setpts={pts_factor:.4f}*(PTS-STARTPTS),scale={timeline.target_resolution[0]}:{timeline.target_resolution[1]}:flags=lanczos,unsharp=lx=5:ly=5:la=0.6:cx=5:cy=5:ca=0.3,fps={timeline.fps},setsar=1[v{idx}]"
+                f"[{idx}:v]setpts={pts_factor:.4f}*(PTS-STARTPTS),scale={timeline.target_resolution[0]}:{timeline.target_resolution[1]}:flags=bicubic,fps={timeline.fps},setsar=1[v{idx}]"
             )
         else:
             img_file = sc.image_path or Path("placeholder.png")
@@ -108,7 +108,7 @@ def build_single_pass_command(
         cmd.extend(["-stream_loop", "-1", "-i", str(timeline.foley_path)])
         input_cursor += 1
 
-    # Register all scene voiceover stems with exact timeline start-time delays (adelay)
+    # Register all scene voiceover stems with exact timeline start-time delays (adelay) and duration trim
     speech_tags: list[str] = []
     for sc in timeline.scenes:
         if sc.voice_path and sc.voice_path.exists():
@@ -116,8 +116,12 @@ def build_single_pass_command(
             cmd.extend(["-i", str(sc.voice_path)])
             input_cursor += 1
             delay_ms = max(0, int(sc.start_time * 1000))
+            max_voice_dur = max(0.5, sc.duration_seconds - 0.25)
+            fade_start = max(0.1, max_voice_dur - 0.25)
             tag = f"sp_{sc.scene_index}"
-            filter_chains.append(f"[{v_idx}:a]adelay={delay_ms}|{delay_ms},volume=1.2[{tag}]")
+            filter_chains.append(
+                f"[{v_idx}:a]atrim=0:{max_voice_dur:.2f},asetpts=PTS-STARTPTS,afade=t=out:st={fade_start:.2f}:d=0.25,adelay={delay_ms}|{delay_ms},volume=1.2[{tag}]"
+            )
             speech_tags.append(f"[{tag}]")
 
     # Build synchronized multi-track speech stream across all scenes

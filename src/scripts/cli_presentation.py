@@ -239,8 +239,11 @@ def print_storyboard_artifact_manifest(
     enable_video_motion: bool = True,
     enable_lipsync: bool = False,
     culture_context: Any | None = None,
+    profile: str = "development",
 ) -> None:
     """Print structured table of all artifacts to create along with provider and model for each."""
+    from src.core.config.artifact_models import get_artifact_profile
+    prof = get_artifact_profile(profile)
     scenes = storyboard_data.get("scenes", [])
     num_scenes = len(scenes)
     title = storyboard_data.get("title") or "Episode Storyboard"
@@ -259,19 +262,19 @@ def print_storyboard_artifact_manifest(
     print("-" * 72)
 
     items = [
-        ("1", "Script & Storyboard", "1 document", "Google DeepMind", "Gemini 1.5 Pro"),
-        ("2", "Visual Keyframes", f"{num_scenes} images", "Fal.ai", "FLUX.1-dev (28 Steps)"),
+        ("1", "Script & Storyboard", "1 document", prof.script.provider, prof.script.model),
+        ("2", "Visual Keyframes", f"{num_scenes} images", prof.image.provider, prof.image.model),
     ]
     if enable_video_motion:
-        items.append(("3", "AI Video Motion", f"{num_scenes} clips", "Fal.ai", "Kling v1.5 Pro (4K)"))
+        items.append(("3", "AI Video Motion", f"{num_scenes} clips", prof.motion_video.provider, prof.motion_video.model))
     if enable_voice_over:
-        v_id = getattr(culture_context, "voice_id", "azure-neural-hd") if culture_context else "azure-neural-hd"
-        items.append(("4", "Voice Dialogue/Narration", f"{num_scenes} stems", "Microsoft", f"Azure Speech HD ({v_id[:16]})"))
+        v_id = getattr(culture_context, "voice_id", prof.tts.model) if culture_context else prof.tts.model
+        items.append(("4", "Voice Dialogue/Narration", f"{num_scenes} stems", prof.tts.provider, f"{prof.tts.model} ({v_id[:16]})" if v_id != prof.tts.model else prof.tts.model))
     if enable_lipsync:
-        items.append(("5", "Avatar Lip-Sync", f"{num_scenes} passes", "Fal.ai", "LivePortrait / LatentSync"))
+        items.append(("5", "Avatar Lip-Sync", f"{num_scenes} passes", prof.lipsync.provider, prof.lipsync.model))
     items.append(("6", "Procedural Foley Audio", "1 master stem", "Local DSP", "48kHz Kellet Noise & Steps"))
     if enable_bgm:
-        items.append(("7", "Commercial Soundtrack", "1 master track", "Suno / CineAI", "v3.5-pro Commercial Master"))
+        items.append(("7", "Commercial Soundtrack", "1 master track", prof.music.provider, prof.music.model))
     items.append(("8", "Multilingual Subtitles", "1 bundle", "Local FFmpeg", "Styled ASS / VTT Timed"))
     items.append(("9", "Broadcast Master Video", "1 MP4 render", "Local FFmpeg", f"Single-Pass 4K UHD @ {fps}fps"))
 

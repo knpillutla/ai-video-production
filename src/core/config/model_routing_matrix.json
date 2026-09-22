@@ -54,7 +54,7 @@
       }
     },
     "development": {
-      "display_name": "Development Profile (Live Fal.ai & Cloud Models with Graceful Fallback)",
+      "display_name": "Development Profile (The Real-Time Prototype: H3 Max Turbo & Fast Iteration)",
       "allow_fallback": true,
       "scenarios": {
         "scenic_walking_tour": {
@@ -68,7 +68,7 @@
             "guidance_scale": 3.5,
             "optical_prompt_suffix": "Tack-sharp 8K UHD optical clarity, Sony FX3 24mm prime lens f/4, edge-to-edge sharpness, crisp architectural micro-textures, zero haze, balanced 5500K daylight"
           },
-          "video_motion": { "provider": "Fal.ai", "model": "Kling 1.5 Pro", "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video", "duration": 10, "mode": "pro", "cfg_scale": 0.55, "pacing": "ultra_slow_stroll_1_5_kmh", "negative_prompt": "blurry, low quality, distortion, noise, compression artifacts, fast motion, running, drone rushes, sudden turns, jitter, flickers, overexposed, soft focus, haze" },
+          "video_motion": { "provider": "Fal.ai", "model": "H3 Max Turbo", "endpoint": "https://queue.fal.run/fal-ai/minimax/h3-max-turbo/image-to-video", "duration": 5, "mode": "turbo", "cost_usd": 0.05, "pacing": "rapid_camera_movement_prototype", "negative_prompt": "phantom snow, flying powder, floating white particles, spontaneous dust bursts, magical sparkles, floating debris, blurry, low quality, distortion, noise, fast motion" },
           "lipsync": { "provider": "None", "model": "none", "enabled": false },
           "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD", "default_voice": "en-US-ChristopherNeural", "pacing_wpm": 125 },
           "soundtrack": { "provider": "Suno / Procedural DSP", "model": "v3.5-pro", "style": "Gentle rain drops, distant water cascades, and relaxing ambient nature sounds" },
@@ -89,7 +89,7 @@
             ],
             "optical_prompt_suffix": "Raw 35mm film photograph, Arri Alexa 35mm Master Prime, visible skin pores and natural micro-textures, authentic South Asian skin tones, dynamic mass dance pose, handloom cotton textures, zero plastic skin, zero CGI sheen, balanced 5400K natural daylight"
           },
-          "video_motion": { "provider": "Fal.ai", "model": "Kling 1.5 Pro", "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video", "duration": 10, "mode": "pro", "cfg_scale": 0.55, "pacing": "choreographic_progression_3_phase", "negative_prompt": "blurry, low quality, distortion, noise, deformed limbs, extra fingers, cartoon, 3d render, cgi, plastic skin, airbrushed, wax doll, synthetic sheen, soft focus, static portrait headshot, unnatural smooth skin" },
+          "video_motion": { "provider": "Fal.ai", "model": "H3 Max Turbo", "endpoint": "https://queue.fal.run/fal-ai/minimax/h3-max-turbo/image-to-video", "duration": 5, "mode": "turbo", "cost_usd": 0.05, "pacing": "rapid_camera_movement_prototype", "negative_prompt": "phantom snow, flying powder, floating white particles, spontaneous dust bursts, magical sparkles, deformed limbs, cartoon, 3d render, cgi, plastic skin" },
           "lipsync": { "provider": "Fal.ai", "model": "LatentSync", "endpoint": "https://queue.fal.run/fal-ai/latentsync", "enabled": true },
           "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD", "default_voice": "te-IN-ShrutiNeural" },
           "soundtrack": { "provider": "MusicAPI.ai / Suno", "model": "Suno Sonic v5", "style": "Telugu mass folk beat, teenmaar dholak" },
@@ -106,7 +106,7 @@
             "guidance_scale": 3.5,
             "optical_prompt_suffix": "BBC Earth cinematography, 400mm f/2.8 telephoto macro details, deep optical depth-of-field, pristine crystal clarity, zero haze"
           },
-          "video_motion": { "provider": "Fal.ai", "model": "Kling 1.5 Pro", "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video", "duration": 10, "mode": "pro", "cfg_scale": 0.55, "pacing": "slow_sweeping_aerial_glide", "negative_prompt": "blurry, shaky cam, sudden zooms, distortion, artifacts, noise, cartoon" },
+          "video_motion": { "provider": "Fal.ai", "model": "H3 Max Turbo", "endpoint": "https://queue.fal.run/fal-ai/minimax/h3-max-turbo/image-to-video", "duration": 5, "mode": "turbo", "cost_usd": 0.05, "pacing": "rapid_camera_movement_prototype", "negative_prompt": "phantom snow, flying powder, floating white particles, spontaneous dust bursts, magical sparkles, blurry, shaky cam, sudden zooms, distortion" },
           "lipsync": { "provider": "None", "model": "none", "enabled": false },
           "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD", "default_voice": "en-US-ChristopherNeural", "pacing_wpm": 120 },
           "soundtrack": { "provider": "Suno / Procedural DSP", "model": "v3.5-pro", "style": "Grand orchestral score with sweeping French horns" },
@@ -123,7 +123,7 @@
             "guidance_scale": 3.5,
             "optical_prompt_suffix": "Visceral documentary cinematography, sub-zero snowstorm realism, frost-crusted textures, glowing hearth embers"
           },
-          "video_motion": { "provider": "Fal.ai", "model": "Kling 1.5 Pro", "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video", "duration": 10, "mode": "pro", "cfg_scale": 0.55, "pacing": "heavy_monumental_snow_drift", "negative_prompt": "blurry, fast motion, artificial yellow flare, bright neon, cartoon" },
+          "video_motion": { "provider": "Fal.ai", "model": "H3 Max Turbo", "endpoint": "https://queue.fal.run/fal-ai/minimax/h3-max-turbo/image-to-video", "duration": 5, "mode": "turbo", "cost_usd": 0.05, "pacing": "rapid_camera_movement_prototype", "negative_prompt": "phantom snow, flying powder, floating white particles, spontaneous dust bursts, magical sparkles, blurry, fast motion, artificial yellow flare" },
           "lipsync": { "provider": "None", "model": "none", "enabled": false },
           "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD", "default_voice": "en-US-ChristopherNeural", "pacing_wpm": 115 },
           "soundtrack": { "provider": "Suno / Procedural DSP", "model": "v3.5-pro", "style": "Sparse melancholic mountain flute and howling gale wind foley" },
@@ -138,7 +138,7 @@
             "resolution": { "width": 1920, "height": 1080 },
             "num_inference_steps": 28
           },
-          "video_motion": { "provider": "Fal.ai", "model": "Kling 1.5 Pro", "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video", "duration": 5, "mode": "pro" },
+          "video_motion": { "provider": "Fal.ai", "model": "H3 Max Turbo", "endpoint": "https://queue.fal.run/fal-ai/minimax/h3-max-turbo/image-to-video", "duration": 5, "mode": "turbo", "cost_usd": 0.05 },
           "lipsync": { "provider": "Fal.ai", "model": "LatentSync", "endpoint": "https://queue.fal.run/fal-ai/latentsync", "enabled": true },
           "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD" },
           "soundtrack": { "provider": "MusicAPI.ai / Suno", "model": "Suno Sonic v5" },

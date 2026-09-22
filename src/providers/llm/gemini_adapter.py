@@ -104,7 +104,15 @@ class GeminiLLMAdapter(LLMProviderProtocol):
         if is_mock_mode() and not self.strict:
             return fallback_plan
 
-        sys_prompt = "You are a broadcast video director. Return ONLY valid JSON adhering to the ScenePlan specification."
+        # sys_prompt = "You are a broadcast video director. Return ONLY valid JSON adhering to the ScenePlan specification."
+        sys_prompt = (
+            "You are a broadcast video director. Return ONLY valid JSON adhering to the ScenePlan specification.\n\n"
+            "CRITICAL VISUAL QUALITY DIRECTIVES FOR ALL SCENES:\n"
+            "- Mandate rich, elegant, deep color palettes. Strictly avoid pale, washed-out, or flat backgrounds.\n"
+            "- Enforce high contrast and detailed background textures (e.g., stone, wood grains, architecture).\n"
+            "- Ensure environments are physically dense to allow smooth, stable camera tracking.\n"
+            "- Do NOT mention floating dust, sudden ambient smoke, mist, or loose debris to prevent video model artifacts."
+        )
         if schema is None:
             raw = await self.generate_text(prompt, system_prompt=sys_prompt)
         else:

@@ -56,19 +56,23 @@ def resolve_strategy(
     """Resolve the right genre strategy from format, genre, and idea text.
 
     Precedence:
-    1. Exact media_format match in _STRATEGIES
-    2. Keyword fallback from genre + idea text
-    3. Default comedy/web_series strategy
+    1. Explicit specialized media_format match in _STRATEGIES (non-generic)
+    2. Strong keyword match from genre + idea text
+    3. Exact media_format match in _STRATEGIES
+    4. Default comedy/web_series strategy
     """
     fmt = media_format.lower().strip()
-    if fmt in _STRATEGIES:
+    if fmt in _STRATEGIES and fmt not in ("web_series", "comedy", "auto", ""):
         return _STRATEGIES[fmt]
 
-    # Keyword fallback — scan genre + idea for cues
+    # Keyword check — scan genre + idea for cues
     combined = f"{genre} {idea or ''}".lower()
     for keywords, strategy_key in _KEYWORD_FALLBACKS:
         if any(kw in combined for kw in keywords):
             return _STRATEGIES[strategy_key]
+
+    if fmt in _STRATEGIES:
+        return _STRATEGIES[fmt]
 
     return _DEFAULT
 
