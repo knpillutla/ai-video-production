@@ -197,6 +197,12 @@ def build_storyboard_prompt(
         "off dancing bodies/faces, raindrops bouncing upward off wet ground with expanding ripples in puddles, swirling snowflakes, or dust plumes. "
         "Never output camera-only motion when dynamic weather is present."
     )
+    extras.append(
+        "MANDATORY AUDIO-VISUAL DURATION SYNCHRONIZATION: The spoken commentary or dialogue in each scene MUST "
+        "match the scene's 'duration_seconds'. At standard articulate pacing (~115–125 wpm / ~1.8–2.0 words/sec), "
+        "write 12–16 words for a 10.0s scene, 6–8 words for a 5.0s scene, and 18–24 words for a 15.0s scene. "
+        "Never exceed (duration_seconds * 1.8) words to ensure audio speech never spills over or rushes."
+    )
 
     if extras:
         base += " " + " ".join(extras)

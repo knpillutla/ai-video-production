@@ -59,6 +59,7 @@ class WalkingTourStrategy:
             "   - 'slow_zoom_in': For deep vanishing-point corridors, narrow cobblestone alleys, or archway portals.\n"
             "   - 'slow_zoom_out': For grand opening reveals and expansive courtyard vistas.\n"
             "10. CINEMATIC SCENE ORDERING & SHOT PROGRESSION: Always open Scene 0 with the Tier 1 Anchor shot. Alternate cyclically between Tier 2 Transitions (kinetic glides) and Tier 3 Cutaways (macro detail pans), culminating in a grand closing reveal.\n"
+            "11. MEASURED NARRATION PACING & WORD BUDGET: Narration commentary must be calm, poetic, and deliberately paced (~110–125 words per minute, max 12–16 words per 10-second scene). Never write rushed or lengthy dialogue. Each scene must leave 2–3 seconds of pure atmospheric silence so viewers can hear the soothing rain foley and absorb the scenery.\n"
         )
         return prompt + strict_pov
 

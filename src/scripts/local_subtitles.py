@@ -80,14 +80,14 @@ def generate_kinetic_ass(
     segments: list[dict],
     output_path: Path | str,
     language: str = "en",
-    font_size: int = 42,
+    font_size: int = 34,
 ) -> Path:
-    """Generate Hormozi-style kinetic typography ASS subtitle file with yellow highlight boxes."""
+    """Generate Hollywood cinematic broadcast-standard ASS subtitle file with clean typography and optical letter spacing."""
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    # Unicode font selection per regional language
-    font_name = "Arial Black"
+    # Professional unicode font selection per regional language
+    font_name = "Arial"
     if language == "te":
         font_name = "Suranna"
     elif language == "hi":
@@ -96,7 +96,7 @@ def generate_kinetic_ass(
         font_name = "Segoe UI"
 
     ass_header = f"""[Script Info]
-Title: CineAI Studio Kinetic Subtitles ({language})
+Title: CineAI Studio Hollywood Cinematic Subtitles ({language})
 ScriptType: v4.00+
 WrapStyle: 0
 ScaledBorderAndShadow: yes
@@ -106,7 +106,7 @@ PlayResY: 1080
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: KineticDefault,{font_name},{font_size},&H0000FFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3.5,2.0,2,40,40,90,1
+Style: CinematicDefault,{font_name},{font_size},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,1.2,0,1,1.8,1.0,2,80,80,65,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -117,9 +117,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         start_ts = format_timestamp_ass(seg["start"])
         end_ts = format_timestamp_ass(seg["end"])
         raw_text = seg["text"].strip().replace("\n", " ")
-        animated_text = f"{{\\fscx108\\fscy108}}{raw_text}"
         dialogue_lines.append(
-            f"Dialogue: 0,{start_ts},{end_ts},KineticDefault,,0,0,0,,{animated_text}"
+            f"Dialogue: 0,{start_ts},{end_ts},CinematicDefault,,0,0,0,,{raw_text}"
         )
 
     full_content = ass_header + "\n".join(dialogue_lines) + "\n"

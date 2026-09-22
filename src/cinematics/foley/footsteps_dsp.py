@@ -20,15 +20,15 @@ def synthesize_footstep_layer(
 
     for start_idx in range(int(sample_rate * 0.3), num_samples - step_len, step_interval):
         side = rng.choice(["left", "right"])
-        decay_rate = sample_rate * (0.035 if is_snow else (0.025 if has_water else 0.015))
+        decay_rate = sample_rate * (0.025 if is_snow else (0.018 if has_water else 0.012))
         for j in range(step_len):
             idx = start_idx + j
             decay = math.exp(-j / decay_rate)
-            impact = rng.uniform(-0.25, 0.25) * decay
+            impact = rng.uniform(-0.08, 0.08) * decay
             if has_water:
-                impact *= 1.35  # Puddle splash accent
+                impact *= 1.15  # Soft subtle splash
             elif is_snow:
-                impact = (impact + rng.uniform(-0.1, 0.1)) * 0.8  # Soft crunch
+                impact = (impact + rng.uniform(-0.03, 0.03)) * 0.7
 
             if side == "left":
                 left[idx] += impact * 0.70

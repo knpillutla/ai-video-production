@@ -43,11 +43,11 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
             voice_id = "te-IN-ShrutiNeural"
             language_code = "te-IN"
 
-        # Construct SSML with standard broadcast rate & pitch
+        # Construct SSML with deliberate, articulate broadcast rate & pitch (-12% rate for clear comprehension)
         ssml = (
             f"<speak version='1.0' xml:lang='{language_code}'>"
             f"<voice name='{voice_id}'>"
-            f"<prosody rate='0%' pitch='0%'>{text}</prosody>"
+            f"<prosody rate='-12%' pitch='0%'>{text}</prosody>"
             f"</voice></speak>"
         )
 
@@ -63,7 +63,7 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
         try:
             import edge_tts
 
-            comm = edge_tts.Communicate(text, voice=voice_id)
+            comm = edge_tts.Communicate(text, voice=voice_id, rate="-12%")
             chunks = []
             async for chunk in comm.stream():
                 if chunk.get("type") == "audio":
@@ -131,7 +131,7 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
                 import tempfile
                 from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary, has_ffmpeg
 
-                comm = edge_tts.Communicate(text, voice=voice_id)
+                comm = edge_tts.Communicate(text, voice=voice_id, rate="-12%")
                 with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp_mp3:
                     tmp_name = tmp_mp3.name
                 await comm.save(tmp_name)

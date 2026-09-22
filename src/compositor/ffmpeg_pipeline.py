@@ -134,21 +134,14 @@ def build_single_pass_command(
             input_cursor += 1
             delay_ms = max(0, int(sc.start_time * 1000))
             v_dur = get_audio_duration(sc.voice_path)
-            avail_dur = max(0.5, sc.duration_seconds - 0.35)
+            avail_dur = max(0.5, sc.duration_seconds - 0.20)
+            eff_dur = v_dur if (v_dur > 0 and v_dur <= avail_dur) else avail_dur
 
-            # If TTS speech naturally took longer than available scene time, apply gentle tempo adjustment
-            filter_ops = []
-            if v_dur > avail_dur and avail_dur > 0:
-                tempo = min(1.35, max(1.0, v_dur / avail_dur))
-                filter_ops.append(f"atempo={tempo:.3f}")
-                eff_dur = v_dur / tempo
-            else:
-                eff_dur = v_dur if v_dur > 0 else avail_dur
-
-            fade_st = max(0.1, min(eff_dur, avail_dur))
-            filter_ops.append(f"afade=t=out:st={fade_st:.2f}:d=0.20")
-            filter_ops.append(f"adelay={delay_ms}|{delay_ms}")
-            filter_ops.append("volume=1.2")
+            filter_ops = [
+                f"afade=t=out:st={max(0.1, eff_dur):.2f}:d=0.20",
+                f"adelay={delay_ms}|{delay_ms}",
+                "volume=1.2",
+            ]
             tag = f"sp_{sc.scene_index}"
             filter_chains.append(f"[{v_idx}:a]{','.join(filter_ops)}[{tag}]")
             speech_tags.append(f"[{tag}]")
@@ -162,14 +155,14 @@ def build_single_pass_command(
             all_sp = "".join(speech_tags)
             filter_chains.append(f"{all_sp}amix=inputs={len(speech_tags)}:dropout_transition=0:normalize=0[a_speech]")
 
-    # Mix BGM, Foley, and Speech Stems
-    duck_expr = build_timeline_volume_expression(timeline.speech_intervals, base_volume=0.35, ducked_volume=0.08) if has_speech else "volume=0.35"
-    foley_expr = build_timeline_volume_expression(timeline.speech_intervals, base_volume=0.45, ducked_volume=0.18) if has_speech else "volume=0.45"
+    # Mix BGM, Foley, and Speech Stems with warm broadcast ducking
+    duck_expr = build_timeline_volume_expression(timeline.speech_intervals, base_volume=0.30, ducked_volume=0.08) if has_speech else "volume=0.30"
+    foley_expr = build_timeline_volume_expression(timeline.speech_intervals, base_volume=0.18, ducked_volume=0.05) if has_speech else "volume=0.18"
 
     if bgm_idx is not None and foley_idx is not None and has_speech:
         filter_chains.append(f"[{bgm_idx}:a]{duck_expr}[a_ducked]")
         filter_chains.append(f"[{foley_idx}:a]{foley_expr}[a_foley_ducked]")
-        filter_chains.append(f"[a_ducked][a_foley_ducked][a_speech]amix=inputs=3:duration=first:dropout_transition=0:weights='0.25 0.35 1.20'[a_out]")
+        filter_chains.append(f"[a_ducked][a_foley_ducked][a_speech]amix=inputs=3:duration=first:dropout_transition=0:weights='0.25 0.15 1.20'[a_out]")
         current_a = "[a_out]"
     elif bgm_idx is not None and has_speech:
         filter_chains.append(f"[{bgm_idx}:a]{duck_expr}[a_ducked]")
@@ -177,20 +170,20 @@ def build_single_pass_command(
         current_a = "[a_out]"
     elif foley_idx is not None and has_speech:
         filter_chains.append(f"[{foley_idx}:a]{foley_expr}[a_foley_ducked]")
-        filter_chains.append(f"[a_foley_ducked][a_speech]amix=inputs=2:duration=first:dropout_transition=0:weights='0.40 1.20'[a_out]")
+        filter_chains.append(f"[a_foley_ducked][a_speech]amix=inputs=2:duration=first:dropout_transition=0:weights='0.20 1.20'[a_out]")
         current_a = "[a_out]"
     elif has_speech:
         current_a = "[a_speech]"
     elif bgm_idx is not None and foley_idx is not None:
-        filter_chains.append(f"[{bgm_idx}:a]volume=0.35[a_bgm_plain]")
-        filter_chains.append(f"[{foley_idx}:a]volume=0.45[a_foley_plain]")
-        filter_chains.append(f"[a_bgm_plain][a_foley_plain]amix=inputs=2:duration=first:dropout_transition=0:weights='0.50 0.50'[a_out]")
+        filter_chains.append(f"[{bgm_idx}:a]volume=0.30[a_bgm_plain]")
+        filter_chains.append(f"[{foley_idx}:a]volume=0.18[a_foley_plain]")
+        filter_chains.append(f"[a_bgm_plain][a_foley_plain]amix=inputs=2:duration=first:dropout_transition=0:weights='0.60 0.40'[a_out]")
         current_a = "[a_out]"
     elif bgm_idx is not None:
-        filter_chains.append(f"[{bgm_idx}:a]volume=0.35[a_out]")
+        filter_chains.append(f"[{bgm_idx}:a]volume=0.30[a_out]")
         current_a = "[a_out]"
     elif foley_idx is not None:
-        filter_chains.append(f"[{foley_idx}:a]volume=0.45[a_out]")
+        filter_chains.append(f"[{foley_idx}:a]volume=0.18[a_out]")
         current_a = "[a_out]"
     else:
         filter_chains.append(f"anullsrc=channel_layout=stereo:sample_rate=48000:d={timeline.total_duration_seconds:.2f}[a_out]")

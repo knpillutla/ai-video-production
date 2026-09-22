@@ -34,3 +34,4 @@ To guarantee full monetization eligibility, every single scene's 'dialogue' fiel
    - Deep cobblestone corridors & alleys: `slow_zoom_in`
    - Grand closing reveal: `slow_zoom_out`
 4. DYNAMIC AMBIENT CROWD LIFE: In populated scenes, include fully clothed neighborhood pedestrians with umbrellas and bistro patrons in background depth to bring authentic regional culture to life. Keep the immediate forward camera path open for smooth tracking.
+5. AUDIO-VISUAL DURATION SYNCHRONIZATION: The spoken commentary in 'dialogue' MUST strictly match the scene's 'duration_seconds'. Write concise, articulate commentary (12–16 words for a 10.0s scene, pacing ~115–125 wpm) so spoken audio takes ~6.5–7.5s, allowing a natural 2.5–3.5s silent ambient tail before the next scene transition. Never exceed (duration_seconds * 1.8) words.
