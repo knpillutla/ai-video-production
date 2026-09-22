@@ -464,7 +464,12 @@ async def run_production(
         character_name=character_name, culture=culture, costume_style=costume_style, dance_type=dance_type,
         gender=effective_voice_gender, art_style=art_style, custom_script=script_text, idea=idea, theme=theme,
         refine_script=refine_script, enable_voice_over=is_voice_over, enable_bgm=enable_bgm, enable_lipsync=enable_lipsync,
+        auto_confirm=auto_confirm,
     )
+    if not final_video:
+        print("[!] Production stopped at Image Quality Gate. No video rendered.\n")
+        return None
+
     # Refresh episodic thumbnail using the newly synthesized scene keyframe as the high-res background canvas
     base_keyframe = next((p for p in candidate_keyframes if p.is_file() and p.stat().st_size > 1000), None)
     if not base_keyframe:

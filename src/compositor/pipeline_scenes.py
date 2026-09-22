@@ -8,62 +8,87 @@ from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary
 from src.compositor.pipeline_prompts import extract_dialogue_text
 from src.core.telemetry import logger
 from src.domain.rights import AssetType, CommercialLicenseType
+from src.scripts.image_quality_gate import ImageQualityGateDecision, execute_image_quality_gate
 from src.scripts.local_pan_zoom import assign_scene_camera_movement, render_steadycam_clip
 from src.services.character_consistency import inject_character_consistency
+
+
+class RecreateScriptRequested(Exception):
+    """Signal indicating user requested full script & storyboard recreation at image gate."""
+    pass
+
+
+class PipelineCancelled(Exception):
+    """Signal indicating user cancelled production at the image quality gate."""
+    pass
 
 
 def derive_weather_motion_cues(cues: str) -> str:
     """Extract and synthesize kinetic atmospheric, thermal, and precipitation physics prompts."""
     c = cues.lower()
-    is_dance = any(k in c for k in ("dance", "step", "choreograph", "troupe", "hero", "heroine", "jump", "spin"))
-
-    # 1. Snow & Winter Conditions
     if any(k in c for k in ("blizzard", "snowstorm", "heavy snow", "gale", "arctic storm")):
-        if is_dance:
-            return "intense swirling blizzard gusts, blowing powder snow whipping past dancing troupe, foot-stomps kicking up snow drifts, visible breath vapor, "
-        return "intense swirling blizzard gusts, dense clouds of blowing white powder snow whipping across the frame, visible snow flurries and dynamic wind drift, "
+        return "intense swirling blizzard gusts, blowing powder snow whipping past, foot-stomps kicking up snow drifts, "
     if any(k in c for k in ("snow", "snowing", "snowfall", "flurry", "flurries", "winter", "frost")):
-        if is_dance:
-            return "delicate crystalline snowflakes floating and swirling around dancers, energetic foot-stomps kicking up fresh white snow powder, subtle frosty breath vapor, "
-        return "soft delicate crystalline snowflakes drifting and floating gently down through the air, peaceful tranquil snowfall with drifting flakes, "
-
-    # 2. Rain & Monsoon Conditions
-    if any(k in c for k in ("heavy rain", "downpour", "torrential", "storm", "monsoon", "deluge", "drench")):
-        if is_dance:
-            return "sheets of heavy rain actively pouring down, visible raindrops slicing through frame, splashing water droplets flying off spinning bodies and hair, heavy foot-stomps violently splashing water from reflective puddles with expanding ripples, "
-        return "sheets of heavy rainfall actively pouring down through the air, visible rain streaks slicing through frame, splashing raindrops bouncing off wet pavement and puddles with expanding ripples, streaming water runoff, "
+        return "soft delicate crystalline snowflakes drifting and floating gently down through the air, "
+    if any(k in c for k in ("heavy rain", "downpour", "torrential", "storm", "monsoon", "deluge")):
+        return "sheets of heavy rainfall actively pouring down through the air, visible rain streaks, "
     if any(k in c for k in ("rain", "drizzle", "shower", "rainy", "wet street", "puddle")):
-        if is_dance:
-            return "fine raindrops gently falling through frame, glistening wet stage, splashes of water kicked up by dance steps with expanding puddle ripples, "
-        return "fine delicate raindrops gently falling through the air, visible rain streaks, soft water droplets creating ripples on glistening wet surfaces, "
-
-    # 3. Fiery Hot Sun, Desert Heat & Summer
-    if any(k in c for k in ("hot sun", "fiery sun", "scorching", "heatwave", "desert heat", "blazing sun", "midday sun", "summer heat")):
-        if is_dance:
-            return "shimmering atmospheric heat haze waves rising from the ground, intense radiant sunbeams illuminating dancing performers, golden dust clouds vigorously kicked up by energetic footwork, "
-        return "shimmering atmospheric heat waves rising from the ground, intense radiant sunbeams, subtle heat distortion, "
-
-    # 4. Fog, Mist & Atmospheric Haze
+        return "fine delicate raindrops gently falling through the air, visible rain streaks, "
+    if any(k in c for k in ("hot sun", "fiery sun", "scorching", "heatwave", "desert heat", "blazing sun")):
+        return "shimmering atmospheric heat waves rising from the ground, intense radiant sunbeams, "
     if any(k in c for k in ("fog", "foggy", "mist", "misty", "haze")):
-        return "rolling tendrils of atmospheric mist and fog drifting slowly across the path and between trees and buildings, ethereal shifting atmospheric depth, "
-
-    # 5. Cloudy Evening, Sunset & Overcast Skies
-    if any(k in c for k in ("cloudy evening", "evening clouds", "sunset", "twilight", "dusk")):
-        if is_dance:
-            return "dramatic evening clouds drifting across twilight sky, warm ambient sunset light, evening breeze fluttering vibrant costumes and flying scarves during dance turns, "
-        return "dramatic shifting evening clouds across the colorful twilight sky, soft sunset breeze, shifting ambient golden-hour radiance, "
-    if any(k in c for k in ("cloudy", "overcast", "grey sky", "gray sky", "clouds")):
-        if is_dance:
-            return "dynamic low-hanging moody clouds shifting across the sky, cool breeze fluttering dancer costumes and hair, diffuse natural daylight, "
-        return "dynamic low-hanging clouds slowly shifting and drifting across the overcast sky, subtle shifting diffuse daylight filtering through rolling grey cloud layers, "
-
-    # 6. Autumn leaves, Dust & Wind
-    if any(k in c for k in ("autumn", "falling leaves", "foliage", "windy", "breeze", "breezy")):
-        return "crisp breeze causing golden leaves to swirl and flutter down through the air, gentle wind rustling branches and swaying foliage, "
-    if any(k in c for k in ("dust", "sandstorm", "desert wind", "gulal", "kumkum", "powder")):
-        return "swirling airborne dust clouds skimming across the ground, dynamic wind-blown particle currents, "
-
+        return "rolling tendrils of atmospheric mist and fog drifting slowly across the path, "
+    if any(k in c for k in ("cloudy evening", "sunset", "twilight", "dusk")):
+        return "dramatic shifting evening clouds across the colorful twilight sky, soft sunset breeze, "
+    if any(k in c for k in ("cloudy", "overcast", "grey sky", "clouds")):
+        return "dynamic low-hanging clouds slowly shifting and drifting across the overcast sky, "
+    if any(k in c for k in ("autumn", "falling leaves", "foliage", "windy", "breeze")):
+        return "crisp breeze causing golden leaves to swirl and flutter down through the air, "
     return ""
+
+
+async def _generate_single_keyframe(
+    idx: int, sc: dict[str, Any], scenes_dir: Path, episode: Any,
+    char_anchor: Any, derived_culture: Any, visual_adapter: Any,
+    force_live: bool, total_scenes: int, img_sem: asyncio.Semaphore,
+) -> tuple[Path, bool]:
+    """Synthesize or load a single keyframe image for a scene."""
+    vis_prompt = sc.get("visual_prompt") or sc.get("visual_description") or f"Scene {idx} for {episode.title}"
+    enhanced_vis, scene_loras, scene_seed = inject_character_consistency(vis_prompt, char_anchor)
+    env_state = environmental_state_tracker.compute_scene_environmental_state(
+        scene_index=idx, total_scenes=total_scenes,
+        weather=getattr(derived_culture, "weather_condition", "clear_daylight"),
+        space=getattr(derived_culture, "environment_space", "outdoor"),
+    )
+    if env_state.get("environmental_prompt") and env_state["environmental_prompt"] not in enhanced_vis:
+        enhanced_vis = f"{enhanced_vis}, {env_state['environmental_prompt']}"
+    if derived_culture.art_style_prompt and derived_culture.art_style_prompt not in enhanced_vis:
+        enhanced_vis = f"{enhanced_vis}, {derived_culture.art_style_prompt}"
+    for lora in getattr(derived_culture, "recommended_loras", []):
+        if not any(sl.get("path") == lora.get("path") or sl.get("name") == lora.get("name") for sl in scene_loras):
+            scene_loras.append(lora)
+
+    img_path = scenes_dir / f"scene_{idx:02d}.jpg"
+    recreated = False
+    async with img_sem:
+        if not (img_path.is_file() and img_path.stat().st_size > 0):
+            _, generated_img_path = await visual_adapter.generate_to_file(
+                enhanced_vis, output_path=img_path, force_live=force_live,
+                loras=scene_loras, seed=scene_seed,
+            )
+            img_path = generated_img_path
+            recreated = True
+
+    if idx == 0 and char_anchor and not getattr(char_anchor, "reference_image_path", None):
+        char_anchor.reference_image_path = str(img_path)
+
+    rights_ledger.record_asset(
+        episode_id=episode.id, asset_type=AssetType.IMAGE, file_path=str(img_path),
+        provider="Fal.ai/Flux", model_name="FLUX.1-dev (28 steps)",
+        license_type=CommercialLicenseType.FULL_COMMERCIAL_OWNERSHIP,
+        license_id=f"BFL-COMM-{episode.id}-{idx}", cleared=True,
+    )
+    return img_path, recreated
 
 
 async def synthesize_scenes(
@@ -82,68 +107,80 @@ async def synthesize_scenes(
     force_live: bool = False,
     kling_adapter: Any | None = None,
     enable_video_motion: bool = False,
+    auto_confirm: bool = False,
+    custom_gate_input_fn: Any = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], float]:
-    """Synthesize visual keyframes, motion video, and voice stems for each scene."""
-    # -------------------------------------------------------------------------
-    # Step 1: Parallel Batch Keyframe & Voiceover Synthesis
-    # -------------------------------------------------------------------------
+    """Synthesize visual keyframes with interactive quality gate review before motion & stems."""
     img_results: dict[int, tuple[Path, bool]] = {}
     voice_results: dict[int, Path | None] = {}
     motion_sem = asyncio.Semaphore(4)
     img_sem = asyncio.Semaphore(6)
 
-    async def _proc_keyframe(idx: int, sc: dict[str, Any]):
-        vis_prompt = sc.get("visual_prompt") or sc.get("visual_description") or f"Scene {idx} for {episode.title}"
-        enhanced_vis, scene_loras, scene_seed = inject_character_consistency(vis_prompt, char_anchor)
-        env_state = environmental_state_tracker.compute_scene_environmental_state(
-            scene_index=idx, total_scenes=len(scenes_list),
-            weather=getattr(derived_culture, "weather_condition", "clear_daylight"),
-            space=getattr(derived_culture, "environment_space", "outdoor"),
+    # 1. Initial Keyframe Generation for All Scenes
+    async def _run_kf(i: int, sc: dict[str, Any]):
+        idx = sc.get("scene_index", sc.get("scene_number", i))
+        res = await _generate_single_keyframe(
+            idx=idx, sc=sc, scenes_dir=scenes_dir, episode=episode,
+            char_anchor=char_anchor, derived_culture=derived_culture,
+            visual_adapter=visual_adapter, force_live=force_live,
+            total_scenes=len(scenes_list), img_sem=img_sem,
         )
-        if env_state.get("environmental_prompt") and env_state["environmental_prompt"] not in enhanced_vis:
-            enhanced_vis = f"{enhanced_vis}, {env_state['environmental_prompt']}"
-        if derived_culture.art_style_prompt and derived_culture.art_style_prompt not in enhanced_vis:
-            enhanced_vis = f"{enhanced_vis}, {derived_culture.art_style_prompt}"
-        for lora in derived_culture.recommended_loras:
-            if not any(sl.get("path") == lora.get("path") or sl.get("name") == lora.get("name") for sl in scene_loras):
-                scene_loras.append(lora)
+        img_results[idx] = res
 
-        fmt_val = str(getattr(episode.format, "value", episode.format)).lower()
-        motion_type = sc.get("motion_type", "kinetic_video")
-        if not char_anchor or "walking" in fmt_val or "scenic" in fmt_val or motion_type == "steadycam_vista":
-            stationary_prompt = (
-                "open empty center pathway directly ahead, clear unobstructed cobblestone street, eye-level POV, "
-                "all pedestrians and bystanders on sidewalks are standing completely still admiring historic architecture, "
-                "patrons seated still at outdoor cafe tables, strictly zero people walking, zero walking poses, zero mid-stride poses, zero lifted feet"
-            )
-            if "standing completely still" not in enhanced_vis:
-                enhanced_vis = f"{enhanced_vis}, {stationary_prompt}"
+    await asyncio.gather(*[_run_kf(i, sc) for i, sc in enumerate(scenes_list)])
 
-        img_path = scenes_dir / f"scene_{idx:02d}.jpg"
-        recreated = False
-        async with img_sem:
-            if not (img_path.is_file() and img_path.stat().st_size > 0):
-                _, generated_img_path = await visual_adapter.generate_to_file(
-                    enhanced_vis, output_path=img_path, force_live=force_live,
-                    loras=scene_loras, seed=scene_seed,
-                )
-                img_path = generated_img_path
-                recreated = True
-
-        if idx == 0 and char_anchor and not char_anchor.reference_image_path:
-            char_anchor.reference_image_path = str(img_path)
-
-        rights_ledger.record_asset(
-            episode_id=episode.id, asset_type=AssetType.IMAGE, file_path=str(img_path),
-            provider="Fal.ai/Flux", model_name="FLUX.1-dev (28 steps)",
-            license_type=CommercialLicenseType.FULL_COMMERCIAL_OWNERSHIP,
-            license_id=f"BFL-COMM-{episode.id}-{idx}", cleared=True,
+    # 2. Quality Gate Review Loop (Approve, Recreate Specific/All, Script, Cancel)
+    while True:
+        decision = execute_image_quality_gate(
+            scenes_list=scenes_list, scenes_dir=scenes_dir,
+            auto_confirm=auto_confirm, custom_input_fn=custom_gate_input_fn,
         )
-        img_results[idx] = (img_path, recreated)
 
+        if decision.action == "proceed":
+            logger.info("image_quality_gate_approved: proceeding to motion video & audio synthesis")
+            break
+        if decision.action == "cancel":
+            raise PipelineCancelled("Production cancelled by user at Image Quality Gate.")
+        if decision.action == "recreate_script":
+            raise RecreateScriptRequested("User requested full script and keyframe recreation.")
+        if decision.action == "recreate_all":
+            logger.info("image_quality_gate: recreating all scene keyframe images")
+            for p in scenes_dir.glob("scene_*.jpg"):
+                try: p.unlink()
+                except Exception: pass
+            for p in scenes_dir.glob("scene_*_motion.mp4"):
+                try: p.unlink()
+                except Exception: pass
+            img_results.clear()
+            await asyncio.gather(*[_run_kf(i, sc) for i, sc in enumerate(scenes_list)])
+            continue
+        if decision.action == "recreate_specific":
+            target_set = set(decision.target_scene_indices)
+            logger.info(f"image_quality_gate: recreating specific scene keyframes: {target_set}")
+            for s_idx in target_set:
+                img_file = scenes_dir / f"scene_{s_idx:02d}.jpg"
+                motion_file = scenes_dir / f"scene_{s_idx:02d}_motion.mp4"
+                if img_file.exists():
+                    try: img_file.unlink()
+                    except Exception: pass
+                if motion_file.exists():
+                    try: motion_file.unlink()
+                    except Exception: pass
+                if s_idx in decision.prompt_overrides:
+                    for sc in scenes_list:
+                        if sc.get("scene_index", sc.get("scene_number")) == s_idx:
+                            sc["visual_prompt"] = decision.prompt_overrides[s_idx]
+
+            await asyncio.gather(*[
+                _run_kf(i, sc) for i, sc in enumerate(scenes_list)
+                if sc.get("scene_index", sc.get("scene_number", i)) in target_set
+            ])
+            continue
+
+    # 3. Voiceover Synthesis (TTS)
     async def _proc_voice(idx: int, sc: dict[str, Any]):
         dialogue = extract_dialogue_text(sc)
-        if not (enable_voice_over and episode.options.enable_tts and dialogue):
+        if not (enable_voice_over and getattr(episode.options, "enable_tts", True) and dialogue):
             voice_results[idx] = None
             return
 
@@ -161,14 +198,9 @@ async def synthesize_scenes(
             license_id=f"MS-TTS-{episode.id}-{idx}", cleared=True,
         )
 
-    await asyncio.gather(
-        *[_proc_keyframe(sc.get("scene_index", sc.get("scene_number", i)), sc) for i, sc in enumerate(scenes_list)],
-        *[_proc_voice(sc.get("scene_index", sc.get("scene_number", i)), sc) for i, sc in enumerate(scenes_list)],
-    )
+    await asyncio.gather(*[_proc_voice(sc.get("scene_index", sc.get("scene_number", i)), sc) for i, sc in enumerate(scenes_list)])
 
-    # -------------------------------------------------------------------------
-    # Step 2: Parallel Batch Video Motion Synthesis
-    # -------------------------------------------------------------------------
+    # 4. Video Motion Synthesis (Kling / Optical Steadycam)
     video_results: dict[int, Path | None] = {}
 
     async def _proc_motion(idx: int, sc: dict[str, Any]):
@@ -180,7 +212,6 @@ async def synthesize_scenes(
 
         if vid_path.is_file() and vid_path.stat().st_size > 1000 and not img_was_recreated:
             video_results[idx] = vid_path
-            logger.info(f"scene_motion_cache_hit: reusing existing {vid_path.name}")
             return
 
         fmt_val = str(getattr(episode.format, "value", episode.format)).lower()
@@ -189,10 +220,8 @@ async def synthesize_scenes(
         dur = round(float(sc.get("duration_seconds", sc.get("duration", 4.0))) * scale, 2)
         motion_type = sc.get("motion_type", "kinetic_video")
 
-        # Hybrid Directorial Mode / Local Steadycam: Vista scenes use 4K FLUX steadycam glides for breathing room
         if (not (enable_video_motion and kling_adapter)) or (motion_type == "steadycam_vista" and len(scenes_list) > 2 and not getattr(episode.options, "force_video_all_scenes", False)):
             mov = sc.get("camera_movement") or assign_scene_camera_movement(idx, sc.get("shot_type", "medium"))
-            logger.info(f"scene_{idx:02d}_mode: [4K FLUX 2.5D Steadycam Glide ({mov})] generating {vid_path.name} locally")
             try:
                 await render_steadycam_clip(
                     image_path=img_path, output_path=vid_path,
@@ -207,19 +236,13 @@ async def synthesize_scenes(
                     license_id=f"LOCAL-GLIDE-{episode.id}-{idx}", cleared=True,
                 )
             except Exception as ex:
-                logger.warning(f"Local steadycam rendering failed for scene {idx}: {ex}")
+                logger.warning(f"Steadycam render failed for scene {idx}: {ex}")
                 video_results[idx] = None
             return
 
-        logger.info(f"scene_{idx:02d}_mode: [AI Video Motion (Kling Pro 10s)] for scene_{idx:02d}.jpg")
-        base_motion = sc.get("motion_prompt") or sc.get("visual_prompt") or sc.get("visual_description") or episode.title
-        combined_cues = f"{episode.title} {sc.get('visual_prompt', '')} {base_motion}"
-        weather_motion = derive_weather_motion_cues(combined_cues)
-
-        if not char_anchor or "walking" in fmt_val or "scenic" in fmt_val:
-            motion_prompt = f"first-person steadycam forward camera glide, pure scenic environmental perspective, empty unobstructed pathway, {weather_motion}{base_motion}"
-        else:
-            motion_prompt = f"{weather_motion}{base_motion}"
+        base_motion = sc.get("motion_prompt") or sc.get("visual_prompt") or episode.title
+        weather_motion = derive_weather_motion_cues(f"{episode.title} {sc.get('visual_prompt', '')} {base_motion}")
+        motion_prompt = f"first-person steadycam forward camera glide, {weather_motion}{base_motion}" if (not char_anchor or "walking" in fmt_val) else f"{weather_motion}{base_motion}"
 
         async with motion_sem:
             try:
@@ -237,17 +260,13 @@ async def synthesize_scenes(
                         license_id=f"FAL-KLING-{episode.id}-{idx}", cleared=True,
                     )
             except Exception as ex:
-                if force_live:
-                    logger.error(f"Video motion synthesis failed for scene {idx} in LIVE mode: {ex}")
-                    raise
+                if force_live: raise
                 logger.warning(f"Video motion synthesis failed for scene {idx}: {ex}")
                 video_results[idx] = None
 
     await asyncio.gather(*[_proc_motion(sc.get("scene_index", sc.get("scene_number", i)), sc) for i, sc in enumerate(scenes_list)])
 
-    # -------------------------------------------------------------------------
-    # Step 3: Order Compiled Scenes & Build Timeline Subtitles
-    # -------------------------------------------------------------------------
+    # 5. Order Compiled Scenes & Build Timeline Subtitles
     compiled_scenes: list[dict[str, Any]] = []
     subtitle_segments: list[dict[str, Any]] = []
     current_time = 0.0

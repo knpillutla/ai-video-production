@@ -185,6 +185,12 @@ def build_storyboard_prompt(
         "functional stylish waterproof alpine outdoor wear; romantic evening -> elegant evening wear)."
     )
     extras.append(
+        "MANDATORY RICH, DELIGHTFUL & LUXURIOUS VISUAL AESTHETICS (Zero Pale / Drab Buildings Guard): "
+        "Prompts must depict rich, delightful, picturesque, and opulent visuals — ornate architectural facades, blooming floral balconies, "
+        "glistening pathways, warm terracotta and polished wood tones, pristine waterways with sparkling reflections, and sun-drenched "
+        "5400K–5600K bright open-air daylight. Strictly PROHIBIT pale, drab, lifeless grey concrete buildings, flat washed-out walls, or dreary overcast gloom."
+    )
+    extras.append(
         "MANDATORY DYNAMIC WEATHER & ENVIRONMENTAL KINETICS: In ALL genres (movies, music videos, rain dance, walking tours, documentaries), "
         "if rain, downpour, storm, monsoon, snow, blizzard, dust, or mist is present in the theme or scene, 'motion_prompt' MUST explicitly "
         "mandate visible dynamic weather physics: continuous sheets of heavy falling raindrops slicing through the frame, water droplets splashing "
