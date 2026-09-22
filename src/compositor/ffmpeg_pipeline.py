@@ -108,22 +108,26 @@ def build_single_pass_command(
         cmd.extend(["-stream_loop", "-1", "-i", str(timeline.foley_path)])
         input_cursor += 1
 
-    # Register all scene voiceover stems
-    voice_inputs: list[int] = []
+    # Register all scene voiceover stems with exact timeline start-time delays (adelay)
+    speech_tags: list[str] = []
     for sc in timeline.scenes:
         if sc.voice_path and sc.voice_path.exists():
-            voice_inputs.append(input_cursor)
+            v_idx = input_cursor
             cmd.extend(["-i", str(sc.voice_path)])
             input_cursor += 1
+            delay_ms = max(0, int(sc.start_time * 1000))
+            tag = f"sp_{sc.scene_index}"
+            filter_chains.append(f"[{v_idx}:a]adelay={delay_ms}|{delay_ms},volume=1.2[{tag}]")
+            speech_tags.append(f"[{tag}]")
 
-    # Build speech stream
-    has_speech = len(voice_inputs) > 0
+    # Build synchronized multi-track speech stream across all scenes
+    has_speech = len(speech_tags) > 0
     if has_speech:
-        if len(voice_inputs) == 1:
-            filter_chains.append(f"[{voice_inputs[0]}:a]volume=1.2[a_speech]")
+        if len(speech_tags) == 1:
+            filter_chains.append(f"{speech_tags[0]}volume=1.0[a_speech]")
         else:
-            voice_tags = "".join(f"[{v_idx}:a]" for v_idx in voice_inputs)
-            filter_chains.append(f"{voice_tags}concat=n={len(voice_inputs)}:v=0:a=1,volume=1.2[a_speech]")
+            all_sp = "".join(speech_tags)
+            filter_chains.append(f"{all_sp}amix=inputs={len(speech_tags)}:dropout_transition=0:normalize=0[a_speech]")
 
     # Mix BGM, Foley, and Speech Stems
     duck_expr = build_timeline_volume_expression(timeline.speech_intervals, base_volume=0.35, ducked_volume=0.08) if has_speech else "volume=0.35"
@@ -200,13 +204,8 @@ async def execute_single_pass_render(
         logger.info(f"master_render_cache_hit: reusing existing master render {out.name} ({out.stat().st_size} bytes)")
         return out
 
-    fast_cmd = build_fast_concat_command(timeline, out, ffmpeg_bin=get_ffmpeg_binary())
-    if fast_cmd:
-        logger.info(f"fast_stream_copy_concat_active: stitching {len(timeline.scenes)} video clips via -c:v copy (<1.5s)")
-        cmd = fast_cmd
-    else:
-        cmd = build_single_pass_command(timeline, out)
-        logger.info(f"rendering_single_pass: out={out.name}, duration={timeline.total_duration_seconds}s")
+    cmd = build_single_pass_command(timeline, out)
+    logger.info(f"rendering_single_pass: out={out.name}, duration={timeline.total_duration_seconds}s, fps={timeline.fps}")
 
     if dry_run:
         logger.info("dry_run_enabled: copying minimal valid mp4 container")

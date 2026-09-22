@@ -173,6 +173,7 @@ def build_storyboard_prompt(
         "- 'characters': list of character metadata objects\n"
         "- 'scenes': list of scene objects\n"
         "  * Each scene MUST include 'motion_type': 'kinetic_video' (for dynamic kinetic scenes with moving crowds, vehicles, fountains, rain, or active walking) or 'steadycam_vista' (for serene panoramic landscapes, architectural viewpoints, and calm atmosphere)\n"
+        "  * Each scene MUST include 'camera_movement': 'slow_zoom_in', 'slow_zoom_out', 'pan_left', 'pan_right', 'tilt_up', or 'tilt_down' autonomously chosen by analyzing the scene's architectural lines, vanishing points, spires, and framing\n"
     )
     extras.append(
         "MANDATORY CAST & WARDROBE DIRECTIVE: All main characters (male and female) must have a balanced, "

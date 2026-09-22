@@ -38,16 +38,28 @@ class WalkingTourStrategy:
             "1. STRICT FIRST-PERSON EYE-LEVEL POV (ZERO FOREGROUND AVATAR OBSTRUCTION): The camera IS the viewer walking forward at an ultra-slow, peaceful 1.5–2.0 km/h cadence. "
             "Never place a single synthetic character or avatar directly in front of the camera lens. The 'characters' array MUST BE AN EMPTY LIST []. "
             "All shots are viewed from the direct eye-level perspective of the viewer exploring the environment.\n"
-            "2. AUTHENTIC URBAN BACKGROUND PEDESTRIANS VS NATURE SETTINGS: "
-            "When the tour takes place in an URBAN or DOWNTOWN setting (e.g., city shopping streets, historic avenues, bustling promenades), the environment MUST feel organically alive with natural background pedestrians, shoppers, and locals walking on sidewalks, holding umbrellas in the rain, browsing cafes, and crossing streets naturally in the background depth. "
-            "In wilderness, mountain, or alpine settings, the trail remains pristine and tranquil.\n"
+            "2. AUTHENTIC URBAN BACKGROUND LIFE & UNOBSTRUCTED WALKING PATH: "
+            "The center walking path directly ahead of the camera MUST remain open, clear, and unobstructed for smooth steadycam exploration. "
+            "In urban settings, place natural background life along the perimeter: locals seated at sidewalk cafe terraces, people standing under shop awnings, browsing store windows, or seated on benches in the distant background depth. "
+            "Strictly prohibit pedestrians walking directly into the camera lens or crossing the immediate center path, preventing AI motion ghosting and transparent human diffusion artifacts. "
+            "In wilderness/alpine settings, the trail remains pristine and tranquil.\n"
             "3. NATURAL DAYLIGHT & AUTHENTIC PRECIPITATION INTENSITY: Outdoor scenes MUST default to crisp, balanced natural open-air daylight (5400K–5600K color temperature, natural balanced lighting). "
             "For HEAVY RAIN / THUNDERSTORM: render torrential diagonal rain downpour, stormy clouds, flooded streets with deep reflective puddles, raindrops bouncing off pavements, and heavy splashing foley. "
             "For LIGHT RAIN / GENTLE DRIZZLE: render fine delicate micro-raindrops, soft overcast daylight, glistening damp pavement with subtle sheen (NO deep flooded sheets), and soothing drizzle pitter-patter. Strictly PROHIBIT artificial yellow lens flares or muddy lighting.\n"
-            "4. ULTRA-SLOW TRANQUIL WALKING CADENCE & DYNAMIC WEATHER PHYSICS: Every scene's 'motion_prompt' MUST strictly enforce ultra-slow, gentle steadycam forward glide at ~1.5–2.0 km/h with subtle natural human footstep sway. In addition, whenever weather or atmospheric elements are present, 'motion_prompt' MUST explicitly command dynamic environmental physics: for heavy rain, forceful continuous falling rain streaks and splashing puddle ripples; for light rain/drizzle, fine delicate micro-raindrops drifting down with gentle water sheen; for snow blizzard, intense swirling wind gusts and blowing powder snow; for gentle snow, delicate drifting crystalline flakes floating slowly down; for cloudy/overcast, moody low-hanging clouds drifting across the sky; for mist/fog, rolling tendrils of atmospheric mist shifting across the path.\n"
+            "4. ULTRA-SLOW TRANQUIL WALKING CADENCE & DYNAMIC WEATHER PHYSICS: Every scene's 'motion_prompt' MUST strictly enforce ultra-slow, gentle steadycam forward glide at ~1.5–2.0 km/h with subtle natural human footstep sway, clear unobstructed walkway ahead, tack-sharp background architecture. In addition, whenever weather or atmospheric elements are present, 'motion_prompt' MUST explicitly command dynamic environmental physics: for heavy rain, forceful continuous falling rain streaks and splashing puddle ripples; for light rain/drizzle, fine delicate micro-raindrops drifting down with gentle water sheen; for snow blizzard, intense swirling wind gusts and blowing powder snow; for gentle snow, delicate drifting crystalline flakes floating slowly down; for cloudy/overcast, moody low-hanging clouds drifting across the sky; for mist/fog, rolling tendrils of atmospheric mist shifting across the path.\n"
             "5. TACK-SHARP OPTICAL CLARITY (5500K / 24MM PRIME): Every scene's 'visual_prompt' must specify edge-to-edge optical clarity, fine architectural textures, crystal reflections, and zero atmospheric haze.\n"
             "6. SPOKEN TRAIL NARRATION (AZURE SPEECH): Under YouTube Partner Program monetization standards, every single scene's 'dialogue' field MUST contain engaging, spoken educational trail guide commentary explaining geological history, landscape features, or cultural lore. Off-screen narration voiceover only.\n"
-            "7. DIRECTORIAL HYBRID MOTION PACING: Every scene MUST explicitly set 'motion_type'. Assign 'kinetic_video' to 1 or 2 high-energy movement beats (e.g., active bridge crossings, bustling cafe walkways, fountains) and 'steadycam_vista' to 3 or 4 scenic panoramic landscape/architecture beats to create natural viewer breathing spaces.\n"
+            "7. DIRECTORIAL 3-TIER PACING BLUEPRINT (ANCHOR, TRANSITION, CUTAWAY):\n"
+            "   - TIER 1 THE ANCHOR (STATIC + SUBTLE ZOOM): Flawless 4K wide establishing shot of a landmark ('steadycam_vista', 'slow_zoom_in' scale 100% to 105%), mimicking a steady camera operator on a tripod.\n"
+            "   - TIER 2 THE TRANSITION (BALANCED AI MOTION): Dynamic image-to-video motion clip ('kinetic_video') with gentle forward movement, walking cadence, and live atmosphere.\n"
+            "   - TIER 3 THE CUTAWAY (MACRO DETAIL REST FRAME): Tightly cropped macro shot of local architectural details, historical statues, street cafes, or clock towers ('steadycam_vista', 'pan_left', 'pan_right', or 'tilt_up') to give the viewer's eyes a complete rest from forward traveling motion.\n"
+            "8. CRISP STATIONARY BACKGROUND PEDESTRIAN POSTURES (NO MID-STRIDE MOTION BLUR): Background pedestrians in both 'steadycam_vista' and 'kinetic_video' scenes MUST be rendered in crisp, grounded postures—standing admiring architecture, seated at cafe tables, or resting on benches in deep background depth. NEVER generate motion-blurred, mid-stride, or transparent human figures.\n"
+            "9. ARCHITECTURAL GEOMETRY & KEN BURNS CAMERA MOVEMENT SELECTION: For every scene, analyze the architectural geometry and spatial framing to command the ideal 'camera_movement':\n"
+            "   - 'pan_left' or 'pan_right': For wide horizontal facades, panoramic town squares, riverfronts, and market streets.\n"
+            "   - 'tilt_up' or 'tilt_down': For tall vertical architecture (Gothic cathedral spires, high clock towers, monument pillars).\n"
+            "   - 'slow_zoom_in': For deep vanishing-point corridors, narrow cobblestone alleys, or archway portals.\n"
+            "   - 'slow_zoom_out': For grand opening reveals and expansive courtyard vistas.\n"
+            "10. CINEMATIC SCENE ORDERING & SHOT PROGRESSION: Always open Scene 0 with the Tier 1 Anchor shot. Alternate cyclically between Tier 2 Transitions (kinetic glides) and Tier 3 Cutaways (macro detail pans), culminating in a grand closing reveal.\n"
         )
         return prompt + strict_pov
 
@@ -61,13 +73,14 @@ class WalkingTourStrategy:
                 "location": {"type": "STRING"},
                 "pov_perspective": {"type": "STRING"},
                 "motion_type": {"type": "STRING", "description": "'kinetic_video' for active moving shots or 'steadycam_vista' for serene 4K panoramic vista glides"},
+                "camera_movement": {"type": "STRING", "description": "'slow_zoom_in', 'slow_zoom_out', 'pan_left', 'pan_right', 'tilt_up', or 'tilt_down' based on architectural composition"},
                 "visual_prompt": {"type": "STRING"},
                 "motion_prompt": {"type": "STRING"},
                 "dialogue": {"type": "STRING"},
                 "ambient_sfx": {"type": "STRING"},
             },
             "required": ["scene_index", "duration_seconds", "location", "motion_type",
-                         "visual_prompt", "motion_prompt", "dialogue"],
+                         "camera_movement", "visual_prompt", "motion_prompt", "dialogue"],
         }
         return {
             "type": "OBJECT",

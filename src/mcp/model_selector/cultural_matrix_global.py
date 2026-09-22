@@ -20,9 +20,9 @@ GLOBAL_CULTURAL_MODELS: dict[str, dict[str, Any]] = {
         },
         "voice_tts": {
             "es": {"male": "es-MX-JorgeNeural", "female": "es-MX-DaliaNeural"},
-            "en": {"male": "es-MX-JorgeNeural", "female": "es-MX-DaliaNeural"},
+            "en": {"male": "en-US-ChristopherNeural", "female": "en-US-JennyNeural"},
             "provider": "Microsoft Azure Speech HD",
-            "reasoning": "Native Mexican Spanish neural voices with warm, clear, melodic prosody.",
+            "reasoning": "Native Mexican Spanish neural voices for Spanish, and Western narrator for English.",
         },
         "audio_soundtrack": {
             "default": "Traditional Mexican Mariachi with acoustic vihuela, guitarrón, trumpets, and violins",

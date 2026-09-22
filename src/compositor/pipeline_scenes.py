@@ -4,9 +4,11 @@ from typing import Any
 
 from src.cinematics.continuity.environmental_state import environmental_state_tracker
 from src.compliance.rights_ledger import rights_ledger
+from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary
 from src.compositor.pipeline_prompts import extract_dialogue_text
 from src.core.telemetry import logger
 from src.domain.rights import AssetType, CommercialLicenseType
+from src.scripts.local_pan_zoom import assign_scene_camera_movement, render_steadycam_clip
 from src.services.character_consistency import inject_character_consistency
 
 
@@ -106,6 +108,17 @@ async def synthesize_scenes(
             if not any(sl.get("path") == lora.get("path") or sl.get("name") == lora.get("name") for sl in scene_loras):
                 scene_loras.append(lora)
 
+        fmt_val = str(getattr(episode.format, "value", episode.format)).lower()
+        motion_type = sc.get("motion_type", "kinetic_video")
+        if not char_anchor or "walking" in fmt_val or "scenic" in fmt_val or motion_type == "steadycam_vista":
+            stationary_prompt = (
+                "open empty center pathway directly ahead, clear unobstructed cobblestone street, eye-level POV, "
+                "all pedestrians and bystanders on sidewalks are standing completely still admiring historic architecture, "
+                "patrons seated still at outdoor cafe tables, strictly zero people walking, zero walking poses, zero mid-stride poses, zero lifted feet"
+            )
+            if "standing completely still" not in enhanced_vis:
+                enhanced_vis = f"{enhanced_vis}, {stationary_prompt}"
+
         img_path = scenes_dir / f"scene_{idx:02d}.jpg"
         recreated = False
         async with img_sem:
@@ -159,19 +172,6 @@ async def synthesize_scenes(
     video_results: dict[int, Path | None] = {}
 
     async def _proc_motion(idx: int, sc: dict[str, Any]):
-        if not (enable_video_motion and kling_adapter):
-            video_results[idx] = None
-            logger.info(f"scene_{idx:02d}_mode: [4K FLUX 2.5D Steadycam Glide] (video motion disabled)")
-            return
-
-        motion_type = sc.get("motion_type", "kinetic_video")
-        # Hybrid Directorial Mode: Vista scenes use 4K FLUX steadycam glides for breathing room
-        if motion_type == "steadycam_vista" and len(scenes_list) > 2 and not getattr(episode.options, "force_video_all_scenes", False):
-            logger.info(f"scene_{idx:02d}_mode: [4K FLUX 2.5D Steadycam Glide (Vista)] for scene_{idx:02d}.jpg")
-            video_results[idx] = None
-            return
-
-        logger.info(f"scene_{idx:02d}_mode: [AI Video Motion (Kling Pro 10s)] for scene_{idx:02d}.jpg")
         img_path, img_was_recreated = img_results.get(idx, (scenes_dir / f"scene_{idx:02d}.jpg", False))
         vid_path = scenes_dir / f"scene_{idx:02d}_motion.mp4"
         if img_was_recreated and vid_path.exists():
@@ -185,10 +185,36 @@ async def synthesize_scenes(
 
         fmt_val = str(getattr(episode.format, "value", episode.format)).lower()
         aspect_ratio = "9:16" if "9_16" in fmt_val or "vertical" in fmt_val else "16:9"
+        target_res = (1080, 1920) if "9:16" in aspect_ratio else (1920, 1080)
+        dur = round(float(sc.get("duration_seconds", sc.get("duration", 4.0))) * scale, 2)
+        motion_type = sc.get("motion_type", "kinetic_video")
+
+        # Hybrid Directorial Mode / Local Steadycam: Vista scenes use 4K FLUX steadycam glides for breathing room
+        if (not (enable_video_motion and kling_adapter)) or (motion_type == "steadycam_vista" and len(scenes_list) > 2 and not getattr(episode.options, "force_video_all_scenes", False)):
+            mov = sc.get("camera_movement") or assign_scene_camera_movement(idx, sc.get("shot_type", "medium"))
+            logger.info(f"scene_{idx:02d}_mode: [4K FLUX 2.5D Steadycam Glide ({mov})] generating {vid_path.name} locally")
+            try:
+                await render_steadycam_clip(
+                    image_path=img_path, output_path=vid_path,
+                    duration_seconds=dur, fps=30, target_res=target_res,
+                    movement=mov, ffmpeg_bin=get_ffmpeg_binary(),
+                )
+                video_results[idx] = vid_path
+                rights_ledger.record_asset(
+                    episode_id=episode.id, asset_type=AssetType.VIDEO_MOTION, file_path=str(vid_path),
+                    provider="Local/FFmpeg-2.5D", model_name="Optical-Steadycam-Glide",
+                    license_type=CommercialLicenseType.FULL_COMMERCIAL_OWNERSHIP,
+                    license_id=f"LOCAL-GLIDE-{episode.id}-{idx}", cleared=True,
+                )
+            except Exception as ex:
+                logger.warning(f"Local steadycam rendering failed for scene {idx}: {ex}")
+                video_results[idx] = None
+            return
+
+        logger.info(f"scene_{idx:02d}_mode: [AI Video Motion (Kling Pro 10s)] for scene_{idx:02d}.jpg")
         base_motion = sc.get("motion_prompt") or sc.get("visual_prompt") or sc.get("visual_description") or episode.title
         combined_cues = f"{episode.title} {sc.get('visual_prompt', '')} {base_motion}"
         weather_motion = derive_weather_motion_cues(combined_cues)
-        dur = round(float(sc.get("duration_seconds", sc.get("duration", 4.0))) * scale, 2)
 
         if not char_anchor or "walking" in fmt_val or "scenic" in fmt_val:
             motion_prompt = f"first-person steadycam forward camera glide, pure scenic environmental perspective, empty unobstructed pathway, {weather_motion}{base_motion}"

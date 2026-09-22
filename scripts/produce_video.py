@@ -9,6 +9,12 @@ import sys
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if hasattr(sys.stdout, "reconfigure"):
+    try: sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception: pass
+if hasattr(sys.stderr, "reconfigure"):
+    try: sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception: pass
 
 from src.agents.classifier_agent import classifier_agent
 from src.billing.cost_tracker import calculate_preflight_estimate
@@ -17,8 +23,9 @@ from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary, has_ffmpeg
 from src.compositor.pipeline import pipeline_coordinator
 from src.compositor.pipeline_prompts import build_storyboard_prompt
 from src.core.storage import storage_service; from src.core.telemetry import logger
+from src.core.config import settings
 from src.core.config.artifact_models import get_artifact_profile
-from src.domain.creative import Episode, Show; from src.domain.generation import MediaFormat, ThemeGenre
+from src.domain.creative import Episode, Show; from src.domain.generation import MediaFormat, ThemeGenre, VisualStyle
 from src.domain.repo import repo; from src.domain.user import User
 from src.mcp.model_selector.tier_resolver import recommend_production_tiers
 from src.mcp.topic_memory.server import check_topic_duplicate
@@ -71,11 +78,34 @@ async def run_production(
         try:
             from uuid import UUID
             rid = UUID(restart_id)
-            existing_ep = repo.get_episode(user.id, rid)
+            existing_ep = repo.get_episode(user.id, rid) or repo.episodes.get(rid)
             if not existing_ep:
-                print(f"[!] Error: Episode ID {restart_id} not found in repository.")
-                return None
-            show = repo.get_show(user.id, existing_ep.show_id)
+                # Disk fallback search across storage directory
+                disk_matches = list(Path(settings.storage.local_storage_root).glob(f"**/episodes/{restart_id}/user_inputs.json"))
+                if disk_matches:
+                    stored = json.loads(disk_matches[0].read_text(encoding="utf-8"))
+                    u_id = UUID(stored.get("user_id", str(user.id)))
+                    user = repo.users.get(u_id) or User(id=u_id, email="creator@cineai.studio", display_name="Studio Director", google_sub="cli_local_user", storage_container_name="user-cli-director")
+                    repo.save_user(user)
+                    raw_theme = str(stored.get("theme", "")).lower()
+                    t_genre = next((tg for tg in ThemeGenre if tg.value in raw_theme), ThemeGenre.TRAVEL_TOURISM)
+                    show = Show(user_id=user.id, title=stored.get("title", "Walking Tour Show"), slug=disk_matches[0].parent.parent.parent.name, genre=t_genre)
+                    repo.save_show(show)
+                    raw_style = str(stored.get("art_style", "")).lower()
+                    v_style = next((vs for vs in VisualStyle if vs.value in raw_style), VisualStyle.REALISTIC)
+                    raw_theme = str(stored.get("theme", "")).lower()
+                    t_genre = next((tg for tg in ThemeGenre if tg.value in raw_theme), ThemeGenre.TRAVEL_TOURISM)
+                    existing_ep = Episode(
+                        id=rid, user_id=user.id, show_id=show.id, title=stored.get("title", "Episode"),
+                        duration_seconds=stored.get("duration_seconds", 60), format=MediaFormat(stored.get("format", "walking_tour")),
+                        visual_style=v_style, theme=t_genre, topic_or_idea=stored.get("idea", ""),
+                    )
+                    repo.save_episode(existing_ep)
+                else:
+                    print(f"[!] Error: Episode ID {restart_id} not found in repository or storage.")
+                    return None
+            show = repo.get_show(existing_ep.user_id, existing_ep.show_id) or repo.shows.get(existing_ep.show_id)
+            user = repo.users.get(existing_ep.user_id, user)
             print(f"[i] Restarting production for existing Episode ID: {restart_id}")
             print(f"    Title: {existing_ep.title} | Format: {existing_ep.format}")
             # Overlay saved attributes for continuity
@@ -116,8 +146,8 @@ async def run_production(
 
             # Skip metadata derivation and duplication checks if resuming
             goto_production = True
-        except ValueError:
-            print(f"[!] Error: Invalid UUID format for --id {restart_id}")
+        except ValueError as ex:
+            print(f"[!] Error: Failed to resume episode {restart_id}: {ex}")
             return None
     else:
         goto_production = False

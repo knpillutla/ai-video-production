@@ -27,9 +27,9 @@ CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
             "ta": {"male": "ta-IN-ValluvarNeural", "female": "ta-IN-PallaviNeural"},
             "kn": {"male": "kn-IN-GaganNeural", "female": "kn-IN-SapnaNeural"},
             "ml": {"male": "ml-IN-MidhunNeural", "female": "ml-IN-SobhanaNeural"},
-            "en": {"male": "en-IN-PrabhatNeural", "female": "en-IN-NeerjaNeural"},
+            "en": {"male": "en-US-ChristopherNeural", "female": "en-US-JennyNeural"},
             "provider": "Microsoft Azure Speech HD",
-            "reasoning": "Native South Indian neural voices with authentic regional intonation, gender expression, and Indian English cadence.",
+            "reasoning": "Native South Indian neural voices with authentic regional intonation for Telugu/Tamil/Kannada/Malayalam, and crisp Western narrator for English.",
         },
         "audio_soundtrack": {
             "default": "South Indian cinematic fusion with Carnatic acoustic flute, veena, and subtle mridangam rhythm",
@@ -58,9 +58,9 @@ CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
             "pa": {"male": "pa-IN-GurpreetNeural", "female": "pa-IN-OjasNeural"},
             "gu": {"male": "gu-IN-NiranjanNeural", "female": "gu-IN-DhwaniNeural"},
             "bn": {"male": "bn-IN-BashkarNeural", "female": "bn-IN-TanishaaNeural"},
-            "en": {"male": "en-IN-PrabhatNeural", "female": "en-IN-NeerjaNeural"},
+            "en": {"male": "en-US-ChristopherNeural", "female": "en-US-JennyNeural"},
             "provider": "Microsoft Azure Speech HD",
-            "reasoning": "Clear Hindi/Punjabi neural prosody, regional dialect cadence, and Indian English accent.",
+            "reasoning": "Clear Hindi/Punjabi neural prosody for regional languages, and Western narrator for English.",
         },
         "audio_soundtrack": {
             "default": "North Indian classical fusion with sitar, bansuri flute, and tabla rhythm",
@@ -113,7 +113,7 @@ CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
             "zh": {"male": "zh-CN-YunxiNeural", "female": "zh-CN-XiaoxiaoNeural"},
             "en": {"male": "en-US-ChristopherNeural", "female": "en-US-JennyNeural"},
             "provider": "Microsoft Azure Speech HD",
-            "reasoning": "Native East Asian neural voices with authentic phonemes and gender-matched expressiveness.",
+            "reasoning": "Native East Asian neural voices with authentic phonemes, and Western narrator for English.",
         },
         "audio_soundtrack": {
             "default": "East Asian ambient acoustic score with traditional shamisen, koto, and shakuhachi flute",
@@ -139,9 +139,9 @@ CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
         },
         "voice_tts": {
             "it": {"male": "it-IT-DiegoNeural", "female": "it-IT-ElsaNeural"},
-            "en": {"male": "it-IT-DiegoNeural", "female": "it-IT-ElsaNeural"},
+            "en": {"male": "en-US-ChristopherNeural", "female": "en-US-JennyNeural"},
             "provider": "Microsoft Azure Speech HD",
-            "reasoning": "Native Italian neural voices with authentic melodic cadence, rolled r's, and expressive theatrical prosody.",
+            "reasoning": "Native Italian neural voices for Italian language, and Western narrator for English.",
         },
         "audio_soundtrack": {
             "default": "Authentic Italian folk score with lively accordion, mandolin, acoustic guitar, and tambourine rhythm",
@@ -180,13 +180,28 @@ def lookup_cultural_stack(culture: str | None = None, language: str = "en") -> d
 
 
 def resolve_cultural_voice(culture: str | None = None, language: str = "en", gender: str = "female") -> str:
-    """Resolve culturally authentic, gender-matched neural voice ID."""
-    cult_safe = culture or "western_global"
-    stack = lookup_cultural_stack(culture=cult_safe, language=language)
-    v_map = stack.get("voice_tts", {})
+    """Resolve culturally authentic, gender-matched neural voice ID.
+
+    Directives:
+    - English Audio ('en', 'en-US', 'en-GB', 'en-AU'): ALWAYS Western narrator voice.
+    - Language-specific Audio ('te', 'hi', 'ta', 'es', 'it', 'ja', etc.): ALWAYS native language narrator voice.
+    """
     raw_lang = (language or "en").lower().strip().replace("-", "_")
     base_lang = raw_lang.split("_")[0]
     g_key = "male" if (gender or "female").lower() == "male" else "female"
+    cult_safe = (culture or "western_global").lower().replace("-", "_")
+
+    # 1. English Audio: Always use Western narrator voices
+    if base_lang == "en":
+        if "british" in cult_safe or "uk" in cult_safe or raw_lang in ("en_gb", "en_uk"):
+            return "en-GB-RyanNeural" if g_key == "male" else "en-GB-SoniaNeural"
+        if "aust" in cult_safe or raw_lang in ("en_au", "en_nz"):
+            return "en-AU-WilliamNeural" if g_key == "male" else "en-AU-NatashaNeural"
+        return "en-US-ChristopherNeural" if g_key == "male" else "en-US-JennyNeural"
+
+    # 2. Language-Specific Audio: Resolve native language voice
+    stack = lookup_cultural_stack(culture=cult_safe, language=language)
+    v_map = stack.get("voice_tts", {})
 
     for cand in (raw_lang, base_lang):
         if cand in v_map:
@@ -196,20 +211,19 @@ def resolve_cultural_voice(culture: str | None = None, language: str = "en", gen
             if isinstance(val, str):
                 return val
 
-    if "nordic" in cult_safe or "iceland" in cult_safe:
-        return "is-IS-GunnarNeural" if g_key == "male" else "is-IS-GudrunNeural"
-    if "british" in cult_safe or "uk" in cult_safe:
-        return "en-GB-RyanNeural" if g_key == "male" else "en-GB-SoniaNeural"
-    if "egypt" in cult_safe or "arab" in cult_safe:
-        return "ar-EG-ShakirNeural" if g_key == "male" else "ar-EG-SalmaNeural"
-    if "ital" in cult_safe:
-        return "it-IT-DiegoNeural" if g_key == "male" else "it-IT-ElsaNeural"
-    if "mexic" in cult_safe:
-        return "es-MX-JorgeNeural" if g_key == "male" else "es-MX-DaliaNeural"
-    if "south" in cult_safe:
-        return "te-IN-MohanNeural" if g_key == "male" else "te-IN-ShrutiNeural"
-    if "aust" in cult_safe:
-        return "en-AU-WilliamNeural" if g_key == "male" else "en-AU-NatashaNeural"
+    if base_lang == "te": return "te-IN-MohanNeural" if g_key == "male" else "te-IN-ShrutiNeural"
+    if base_lang == "hi": return "hi-IN-MadhurNeural" if g_key == "male" else "hi-IN-SwaraNeural"
+    if base_lang == "ta": return "ta-IN-ValluvarNeural" if g_key == "male" else "ta-IN-PallaviNeural"
+    if base_lang == "kn": return "kn-IN-GaganNeural" if g_key == "male" else "kn-IN-SapnaNeural"
+    if base_lang == "ml": return "ml-IN-MidhunNeural" if g_key == "male" else "ml-IN-SobhanaNeural"
+    if base_lang == "it": return "it-IT-DiegoNeural" if g_key == "male" else "it-IT-ElsaNeural"
+    if base_lang in ("es", "es_es", "es_mx"): return "es-MX-JorgeNeural" if g_key == "male" else "es-MX-DaliaNeural"
+    if base_lang == "ja": return "ja-JP-KeitaNeural" if g_key == "male" else "ja-JP-NanamiNeural"
+    if base_lang == "ko": return "ko-KR-InJoonNeural" if g_key == "male" else "ko-KR-SunHiNeural"
+    if base_lang == "zh": return "zh-CN-YunxiNeural" if g_key == "male" else "zh-CN-XiaoxiaoNeural"
+    if base_lang == "ar": return "ar-EG-ShakirNeural" if g_key == "male" else "ar-EG-SalmaNeural"
+    if base_lang in ("is", "sv", "no", "nb", "da", "fi"): return "is-IS-GunnarNeural" if g_key == "male" else "is-IS-GudrunNeural"
+
     return "en-US-ChristopherNeural" if g_key == "male" else "en-US-JennyNeural"
 
 

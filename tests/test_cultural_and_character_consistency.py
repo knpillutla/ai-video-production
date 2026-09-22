@@ -36,9 +36,12 @@ def test_gender_matched_regional_voices():
     assert resolve_cultural_voice("mexican", "es", gender="male") == "es-MX-JorgeNeural"
     assert resolve_cultural_voice("mexican", "es", gender="female") == "es-MX-DaliaNeural"
 
-    # Indian English
-    assert resolve_cultural_voice("indian_north", "en", gender="male") == "en-IN-PrabhatNeural"
-    assert resolve_cultural_voice("indian_north", "en", gender="female") == "en-IN-NeerjaNeural"
+    # English Audio -> Always Western narrator voice (en-US / en-AU / en-GB)
+    assert resolve_cultural_voice("indian_north", "en", gender="male") == "en-US-ChristopherNeural"
+    assert resolve_cultural_voice("indian_north", "en", gender="female") == "en-US-JennyNeural"
+    assert resolve_cultural_voice("indian_south", "en", gender="male") == "en-US-ChristopherNeural"
+    assert resolve_cultural_voice("italian", "en", gender="male") == "en-US-ChristopherNeural"
+    assert resolve_cultural_voice("mexican", "en", gender="female") == "en-US-JennyNeural"
 
 
 def test_dance_and_traditional_costume_stacks():

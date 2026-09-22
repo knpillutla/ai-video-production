@@ -24,3 +24,13 @@ To guarantee full monetization eligibility, every single scene's 'dialogue' fiel
 2. PURE ENVIRONMENTAL VISUALS: Every scene's 'visual_prompt' and 'motion_prompt' must describe ONLY the pristine trail, path, rocks, trees, water, mountains, mist, architecture, and landscape viewed forward at eye-level. Never place a person in front of the camera walking or turning around.
 3. SPOKEN NARRATION IS OFF-SCREEN: The trail guide dialogue is delivered as an off-screen voiceover commentary only.
 4. TACK-SHARP OPTICAL CLARITY (Directive 14): Every visual prompt MUST explicitly demand tack-sharp 8K UHD optical clarity, shot on full-frame cinema sensor with 24mm prime lens at f/4 for edge-to-edge sharpness, crisp architectural and nature micro-textures, crystal-clear water reflections, and zero atmospheric haze.
+
+### CINEMATIC SCENE ORDERING, PACING & KEN BURNS TRANSITION CONTINUITY
+1. SCENE 0 (WIDE ESTABLISHING SHOT): Always open with a wide, stable architectural establishing shot (`motion_type: steadycam_vista`, `camera_movement: pan_right` or `slow_zoom_in`) to anchor the viewer in the geography before transitioning into movement.
+2. PACING & REST FRAMES: Alternate between kinetic forward walking (`kinetic_video`) and architectural breathers (`steadycam_vista`) to eliminate viewer motion fatigue and highlight fine building textures.
+3. ARCHITECTURAL CAMERA MOVEMENTS: Select `camera_movement` based on structural geometry:
+   - Wide facades & town squares: `pan_left` or `pan_right`
+   - High cathedral spires & clock towers: `tilt_up` or `tilt_down`
+   - Deep cobblestone corridors & alleys: `slow_zoom_in`
+   - Grand closing reveal: `slow_zoom_out`
+4. STATIONARY BYSTANDER POSTURES: In all `steadycam_vista` scenes, background pedestrians must be standing still admiring architecture or seated at cafes—strictly zero walking poses.

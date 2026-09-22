@@ -43,6 +43,7 @@ class FalKlingAdapter:
         output_path: Path | str,
         duration: int = 10,
         aspect_ratio: str = "16:9",
+        mode: str = "pro",
         force_live: bool = False,
     ) -> tuple[str, Path]:
         """Synthesize video motion from a reference image URL.
@@ -53,6 +54,7 @@ class FalKlingAdapter:
             output_path:   Local path to save the rendered MP4.
             duration:      Clip duration in seconds — 5 or 10 (Kling constraint).
             aspect_ratio:  ``"16:9"`` or ``"9:16"``.
+            mode:          ``"standard"`` (low-cost ~$0.05) or ``"pro"`` (~$0.14–$0.28).
             force_live:    Bypass mock mode.
 
         Returns:
@@ -77,6 +79,11 @@ class FalKlingAdapter:
 
         # Kling only accepts 5 or 10; clamp to nearest valid value
         kling_dur = "10" if duration >= 8 else "5"
+        eff_mode = "standard" if mode.lower() in ("standard", "fast", "low_cost") else "pro"
+        if eff_mode == "standard":
+            endpoint = "https://queue.fal.run/fal-ai/kling-video/v1/standard/image-to-video"
+        else:
+            endpoint = "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video"
 
         try:
             actual_url = image_url
@@ -93,13 +100,18 @@ class FalKlingAdapter:
                 "phantom snow, flying powder, floating white particles, spontaneous dust bursts, magical sparkles, "
                 "floating debris, erupting road powder, unnatural specks, visual hallucinations, morphing ground, "
             )
+            anti_ghosting = (
+                "ghosting humans, transparent people, translucent bodies, smeared pedestrians, disappearing limbs, "
+                "morphing faces, melting bodies, dissolving people, double exposure, ghostly silhouettes, motion blur on people, "
+                "see-through bodies, blurry faces, deformed walkers, "
+            )
             neg_prompt = (
-                anti_hallucination +
+                anti_hallucination + anti_ghosting +
                 "blurry, low quality, distortion, noise, compression artifacts, jitter, flickers, overexposed, oversaturated, "
                 "deformed, cartoon, low resolution, pixelated, soft focus, haze, smear, "
                 "unrealistic person walking in front, pedestrian in front, human back, walking person in frame, uncanny human figure, mannequin, bad anatomy, CGI character"
                 if "scenic" in motion_prompt.lower() or "first-person" in motion_prompt.lower() or "empty" in motion_prompt.lower() or "pov" in motion_prompt.lower()
-                else anti_hallucination + "blurry, low quality, distortion, noise, compression artifacts, jitter, flickers, overexposed, oversaturated, deformed, cartoon, low resolution, pixelated, soft focus, haze, smear"
+                else anti_hallucination + anti_ghosting + "blurry, low quality, distortion, noise, compression artifacts, jitter, flickers, overexposed, oversaturated, deformed, cartoon, low resolution, pixelated, soft focus, haze, smear"
             )
             payload = {
                 "prompt": motion_prompt,
@@ -107,7 +119,7 @@ class FalKlingAdapter:
                 "image_url": actual_url,
                 "duration": kling_dur,
                 "aspect_ratio": aspect_ratio,
-                "mode": "pro",
+                "mode": eff_mode,
                 "cfg_scale": 0.55,
             }
 
@@ -124,7 +136,7 @@ class FalKlingAdapter:
 
             async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=15.0)) as client:
                 if not status_url or not response_url:
-                    sub_resp = await client.post(_KLING_ENDPOINT, headers=headers, json=payload)
+                    sub_resp = await client.post(endpoint, headers=headers, json=payload)
                     if sub_resp.status_code not in (200, 201):
                         raise RuntimeError(f"Kling submit failed: {sub_resp.text[:200]}")
                     sub_data = sub_resp.json()
@@ -134,7 +146,25 @@ class FalKlingAdapter:
 
                 for attempt in range(_POLL_MAX_ATTEMPTS):
                     await asyncio.sleep(_POLL_INTERVAL_S)
-                    s = (await client.get(status_url, headers=headers)).json()
+                    poll_resp = await client.get(status_url, headers=headers)
+                    try:
+                        s = poll_resp.json()
+                    except Exception:
+                        s = {}
+
+                    # Fal queue returns 200 or 202 (Accepted) while queued/in-progress
+                    if poll_resp.status_code not in (200, 202) or (isinstance(s, dict) and s.get("detail") and not s.get("status")):
+                        logger.warning(f"fal_kling_stale_job: queue status failed ({poll_resp.text[:100]}), discarding sidecar and resubmitting...")
+                        job_sidecar.unlink(missing_ok=True)
+                        sub_resp = await client.post(endpoint, headers=headers, json=payload)
+                        if sub_resp.status_code not in (200, 201, 202):
+                            raise RuntimeError(f"Kling submit failed: {sub_resp.text[:200]}")
+                        sub_data = sub_resp.json()
+                        status_url = sub_data["status_url"]
+                        response_url = sub_data["response_url"]
+                        job_sidecar.write_text(json.dumps({"status_url": status_url, "response_url": response_url}), encoding="utf-8")
+                        continue
+
                     status = s.get("status")
                     if status == "COMPLETED":
                         r = (await client.get(response_url, headers=headers)).json()
