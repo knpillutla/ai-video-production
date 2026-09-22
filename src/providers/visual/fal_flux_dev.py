@@ -66,10 +66,15 @@ class FalFluxDevAdapter:
             logger.warning("fal_flux_dev: no FAL_KEY — using local placeholder")
             return await self._fallback_local(prompt, out, aspect_ratio, loras, seed)
 
+        # Strict family-friendly modesty & unpopulated/anti-nudity sanitization (Directive 11)
+        clean_prompt = prompt
+        for bad_tok in ("perspiration", "micro-pores", "subtle perspiration", "bare skin", "shirtless", "naked", "half naked", "unclothed", "provocative"):
+            clean_prompt = clean_prompt.replace(bad_tok, "authentic texture")
+
         headers = {"Authorization": f"Key {self.api_key}", "Content-Type": "application/json"}
         image_size = {"width": 1920, "height": 1080} if aspect_ratio == "16:9" else {"width": 1080, "height": 1920}
         payload: dict[str, Any] = {
-            "prompt": prompt,
+            "prompt": f"{clean_prompt}, fully clothed modest attire, zero nudity, family-friendly advertiser-safe standard",
             "image_size": image_size,
             "num_inference_steps": 30,
             "guidance_scale": 3.5,

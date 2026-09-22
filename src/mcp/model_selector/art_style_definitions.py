@@ -250,7 +250,7 @@ ART_STYLE_INTELLIGENCE_CATALOG: dict[str, dict[str, Any]] = {
         "origin_country": "Global",
         "origin_region": "Global",
         "recommended_diffusion_model": "flux-1-dev",
-        "prompt_decorations": "Raw 35mm film photograph, Arri Alexa 35mm Master Prime lens, natural human skin texture with visible micro-pores and subtle perspiration, authentic skin tones, organic film grain, natural daylight, zero airbrushed plastic, zero CGI sheen",
+        "prompt_decorations": "Raw 35mm film photograph, Arri Alexa 35mm Master Prime lens, crisp authentic optical texture, natural daylight, organic film grain, zero airbrushed plastic, zero CGI sheen",
         "lighting_scheme": "Cinematic balanced daylight with natural ambient fill, realistic specular highlights, and true skin tones",
         "color_palette": "Natural organic film grading, true-to-life skin tones, rich earthy tones, high dynamic range",
         "directorial_guidance": "Engaging broadcast storytelling, crisp narrative arc, clear emotional beats, and authentic visual fidelity.",

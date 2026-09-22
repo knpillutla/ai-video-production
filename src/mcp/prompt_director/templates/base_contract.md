@@ -49,4 +49,10 @@ Video motion synthesis models animate ONLY what is explicitly commanded in 'moti
 2. DIRECTORIAL CAMERA MOVEMENT GRAMMAR (Directive 20):
    - Every motion prompt must command precise cinematic camera movement matching the dramatic beat: slow crane-jib descent, 180° orbiting arc, steadycam forward tracking, or creeping slow push-in. Avoid static unmotivated framing.
 
+### MANDATORY DYNAMIC MIX OF POPULATED URBAN LIFE & SERENE SCENIC FRAMES
+1. BALANCED STORYBOARD RHYTHM: Every production MUST orchestrate a curated, natural mix of scenes (approx. 50% populated neighborhood street life and 50% serene unpopulated architectural/nature focus):
+   - POPULATED NEIGHBORHOOD LIFE (primarily in dynamic video motion scenes): Include authentic background locals, pedestrians with umbrellas, and cafe patrons seated at bistros to give the environment authentic, lively culture and energy. Keep the central forward path clear for camera tracking.
+   - SERENE ARCHITECTURAL / NATURE FRAMES (primarily in establishing vistas and pan/zoom rest frames): Focus on pure architectural craftsmanship, historic facades, wet glistening cobblestone reflections, and tranquil natural beauty.
+2. FAMILY-FRIENDLY MODESTY MANDATE: All people or background figures depicted MUST be fully, modestly clothed in complete seasonal attire (raincoats, wool jackets, stylish sweaters, trousers). Strictly prohibit any unclothed, bare-chested, or revealing figures.
+
 

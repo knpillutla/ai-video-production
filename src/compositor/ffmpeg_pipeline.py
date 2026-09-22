@@ -41,6 +41,23 @@ def has_ffmpeg() -> bool:
     return bool(shutil.which(bin_path) or Path(bin_path).exists())
 
 
+def get_audio_duration(path: Path | str) -> float:
+    """Deterministically read WAV audio duration in seconds using standard library wave module."""
+    try:
+        import wave
+        p = Path(path)
+        if not p.exists() or p.stat().st_size < 100:
+            return 0.0
+        if p.suffix.lower() == ".wav":
+            with wave.open(str(p), "rb") as wf:
+                frames, rate = wf.getnframes(), wf.getframerate()
+                if rate > 0:
+                    return frames / float(rate)
+    except Exception:
+        pass
+    return 0.0
+
+
 def build_single_pass_command(
     timeline: CompiledTimeline,
     output_path: Path | str,
@@ -108,7 +125,7 @@ def build_single_pass_command(
         cmd.extend(["-stream_loop", "-1", "-i", str(timeline.foley_path)])
         input_cursor += 1
 
-    # Register all scene voiceover stems with exact timeline start-time delays (adelay) and duration trim
+    # Register all scene voiceover stems with exact timeline start-time delays (adelay) and natural pacing
     speech_tags: list[str] = []
     for sc in timeline.scenes:
         if sc.voice_path and sc.voice_path.exists():
@@ -116,12 +133,24 @@ def build_single_pass_command(
             cmd.extend(["-i", str(sc.voice_path)])
             input_cursor += 1
             delay_ms = max(0, int(sc.start_time * 1000))
-            max_voice_dur = max(0.5, sc.duration_seconds - 0.25)
-            fade_start = max(0.1, max_voice_dur - 0.25)
+            v_dur = get_audio_duration(sc.voice_path)
+            avail_dur = max(0.5, sc.duration_seconds - 0.35)
+
+            # If TTS speech naturally took longer than available scene time, apply gentle tempo adjustment
+            filter_ops = []
+            if v_dur > avail_dur and avail_dur > 0:
+                tempo = min(1.35, max(1.0, v_dur / avail_dur))
+                filter_ops.append(f"atempo={tempo:.3f}")
+                eff_dur = v_dur / tempo
+            else:
+                eff_dur = v_dur if v_dur > 0 else avail_dur
+
+            fade_st = max(0.1, min(eff_dur, avail_dur))
+            filter_ops.append(f"afade=t=out:st={fade_st:.2f}:d=0.20")
+            filter_ops.append(f"adelay={delay_ms}|{delay_ms}")
+            filter_ops.append("volume=1.2")
             tag = f"sp_{sc.scene_index}"
-            filter_chains.append(
-                f"[{v_idx}:a]atrim=0:{max_voice_dur:.2f},asetpts=PTS-STARTPTS,afade=t=out:st={fade_start:.2f}:d=0.25,adelay={delay_ms}|{delay_ms},volume=1.2[{tag}]"
-            )
+            filter_chains.append(f"[{v_idx}:a]{','.join(filter_ops)}[{tag}]")
             speech_tags.append(f"[{tag}]")
 
     # Build synchronized multi-track speech stream across all scenes
