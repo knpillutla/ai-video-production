@@ -58,6 +58,30 @@ def get_audio_duration(path: Path | str) -> float:
     return 0.0
 
 
+def get_video_duration(path: Path | str) -> float:
+    """Read video duration in seconds from MP4 mvhd atom in 0.1ms with zero external process overhead."""
+    try:
+        p = Path(path)
+        if not p.exists() or p.stat().st_size < 1000:
+            return 5.0
+        with open(p, "rb") as f:
+            data = f.read(min(p.stat().st_size, 300000))
+            idx = data.find(b"mvhd")
+            if idx != -1 and idx + 36 <= len(data):
+                version = data[idx + 4]
+                if version == 0:
+                    timescale = int.from_bytes(data[idx + 16 : idx + 20], "big")
+                    duration = int.from_bytes(data[idx + 20 : idx + 24], "big")
+                else:
+                    timescale = int.from_bytes(data[idx + 24 : idx + 28], "big")
+                    duration = int.from_bytes(data[idx + 28 : idx + 36], "big")
+                if timescale > 0:
+                    return duration / float(timescale)
+    except Exception:
+        pass
+    return 5.0
+
+
 def build_single_pass_command(
     timeline: CompiledTimeline,
     output_path: Path | str,
@@ -73,9 +97,10 @@ def build_single_pass_command(
     for idx, sc in enumerate(timeline.scenes):
         if sc.video_path and sc.video_path.exists():
             cmd.extend(["-i", str(sc.video_path)])
-            pts_factor = (sc.duration_seconds / 10.0) if sc.duration_seconds > 10.0 else 1.0
+            v_dur = max(0.5, get_video_duration(sc.video_path))
+            pts_factor = sc.duration_seconds / v_dur
             filter_chains.append(
-                f"[{idx}:v]setpts={pts_factor:.4f}*(PTS-STARTPTS),scale={timeline.target_resolution[0]}:{timeline.target_resolution[1]}:flags=bicubic,fps={timeline.fps},setsar=1[v{idx}]"
+                f"[{idx}:v]setpts={pts_factor:.4f}*(PTS-STARTPTS),trim=duration={sc.duration_seconds:.2f},scale={timeline.target_resolution[0]}:{timeline.target_resolution[1]}:flags=bicubic,fps={timeline.fps},setsar=1[v{idx}]"
             )
         else:
             img_file = sc.image_path or Path("placeholder.png")

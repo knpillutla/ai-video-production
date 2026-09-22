@@ -4,7 +4,7 @@ from typing import Any
 
 from src.cinematics.continuity.environmental_state import environmental_state_tracker
 from src.compliance.rights_ledger import rights_ledger
-from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary
+from src.compositor.ffmpeg_pipeline import get_audio_duration, get_ffmpeg_binary
 from src.compositor.pipeline_prompts import extract_dialogue_text
 from src.core.telemetry import logger
 from src.domain.rights import AssetType, CommercialLicenseType
@@ -285,7 +285,13 @@ async def synthesize_scenes(
             "voice_path": str(voice_path) if voice_path else None,
             "shot_type": sc.get("shot_type", "medium"), "dialogue": dialogue,
         })
-        subtitle_segments.append({"start": current_time, "end": current_time + dur, "text": dialogue})
+        speech_dur = get_audio_duration(voice_path) if voice_path else 0.0
+        sub_dur = min(dur - 0.20, speech_dur + 0.45) if speech_dur > 0 else (dur - 0.20)
+        subtitle_segments.append({
+            "start": round(current_time, 2),
+            "end": round(current_time + max(0.5, sub_dur), 2),
+            "text": dialogue,
+        })
         current_time += dur
 
     return compiled_scenes, subtitle_segments, current_time
