@@ -70,7 +70,7 @@ async def produce_full_network_release_batch(motion_model: str = "auto", master_
 async def main():
     parser = argparse.ArgumentParser(description="Warm Glow Multi-Channel Network Manager")
     parser.add_argument("--channel", type=str, default="all", choices=["all", "nature", "sleep", "study"], help="Channel to produce")
-    parser.add_argument("--motion-model", type=str, default="auto", choices=["auto", "wan", "kling", "hunyuan", "lanczos"], help="AI video diffusion motion model (default: auto)")
+    parser.add_argument("--motion-model", type=str, default="auto", choices=["auto", "kling_v3", "kling_4k", "wan", "kling", "hunyuan", "lanczos"], help="AI video diffusion motion model (default: auto -> kling_v3 for <=5 shots)")
     parser.add_argument("--master-duration", type=float, default=60.0, choices=[60.0, 120.0], help="Initial master set duration in seconds (default: 60.0)")
     args = parser.parse_args()
 

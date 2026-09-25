@@ -18,6 +18,7 @@ from src.core.telemetry import logger
 from src.providers.dance.fal_hunyuan import FalHunyuanAdapter
 from src.providers.dance.fal_kling import FalKlingAdapter
 from src.providers.visual.fal_flux_pro_ultra import FalFluxProUltraAdapter
+from src.providers.visual.fal_kling_v3 import FalKlingV3Adapter
 from src.providers.visual.fal_wan21 import FalWan21Adapter
 
 
@@ -35,13 +36,15 @@ class MotionClipTask:
     allow_fallback: bool = False
 
 
-def resolve_motion_model(model: str, prompt_context: str) -> tuple[str, str]:
+def resolve_motion_model(model: str, prompt_context: str, total_shots: int = 4) -> tuple[str, str]:
     """Dynamically route to optimal AI video diffusion model with directorial rationale."""
-    if model in ("hunyuan", "wan", "kling", "lanczos"):
+    if model in ("hunyuan", "wan", "kling", "kling_v3", "kling_4k", "lanczos"):
         return model, f"Direct configuration override ({model})"
+    if total_shots <= 5:
+        return "kling_v3", f"Kling v3 4K Native selected as default for <=5 shots ({total_shots} shots) for native 4K UHD OLED fidelity"
     p = prompt_context.lower()
     if any(k in p for k in ("fire", "flame", "ember", "hearth", "waterfall", "rapids", "cascade", "chimney")):
-        return "kling", "Kling 1.6 Pro selected for high volumetric momentum, dynamic fire embers, and fluid splash plumes"
+        return "kling_v3", "Kling v3 4K Native selected for high volumetric momentum, dynamic fire embers, and fluid splash plumes"
     return "wan", "Alibaba Wan 2.1 selected as default for photorealistic 3D liquid displacement, natural foliage sway, and scenic landscapes"
 
 
@@ -76,21 +79,26 @@ class VisualBatchService:
         tasks: List[MotionClipTask],
     ) -> List[Path]:
         """Render batch of AI video diffusion clips concurrently with dynamic routing and 4K scaling."""
+        total_shots = len(tasks)
+
         async def _process_single_motion(task: MotionClipTask) -> Path:
             if task.output_path.is_file() and task.output_path.stat().st_size > 1000:
                 logger.info(f"decision_motion_cache_hit: Reusing {task.output_path.name} ($0.00 spend)")
                 print(f"[DECISION - MOTION CACHE HIT] Clip {task.output_path.name} exists on disk. Reusing asset ($0.00 spend).")
                 return task.output_path
 
-            chosen_model, rationale = resolve_motion_model(task.model, f"{task.visual_prompt} {task.motion_prompt}")
+            chosen_model, rationale = resolve_motion_model(task.model, f"{task.visual_prompt} {task.motion_prompt}", total_shots=total_shots)
             logger.info(f"decision_motion_routing: {task.output_path.name} -> {chosen_model.upper()} ({rationale})")
             print(f"[DECISION - MOTION ROUTING] {task.output_path.name} -> {chosen_model.upper()} ({rationale})")
 
-            if chosen_model in ("hunyuan", "wan", "kling") and self.fal_key and task.image_path.is_file() and task.image_path.stat().st_size > 1000:
+            if chosen_model in ("hunyuan", "wan", "kling", "kling_v3", "kling_4k") and self.fal_key and task.image_path.is_file() and task.image_path.stat().st_size > 1000:
                 try:
                     raw_diff = task.output_path.parent / f"raw_diff_{task.output_path.name}"
                     if chosen_model == "wan":
                         adapter = FalWan21Adapter(api_key=self.fal_key)
+                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=task.motion_prompt, output_path=raw_diff, force_live=True)
+                    elif chosen_model in ("kling_v3", "kling_4k"):
+                        adapter = FalKlingV3Adapter(api_key=self.fal_key)
                         await adapter.generate_video(image_url=str(task.image_path), motion_prompt=task.motion_prompt, output_path=raw_diff, force_live=True)
                     elif chosen_model == "kling":
                         adapter = FalKlingAdapter(api_key=self.fal_key)

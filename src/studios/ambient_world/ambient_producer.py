@@ -41,6 +41,7 @@ class AmbientWorldProducer:
         long_play_hours: Optional[float] = None,
         fade_to_black_hours: Optional[float] = None,
         generate_short: bool = False,
+        photos_only: bool = False,
         allow_fallback: bool = False,
     ) -> Dict[str, Any]:
         """Execute 4-Stage Progressive Quality Gate with 100% Artifact Idempotency."""
@@ -67,6 +68,20 @@ class AmbientWorldProducer:
             for scene in sb.scenes
         ]
         keyframe_paths = await visual_batch_service.render_keyframes_batch(kf_tasks)
+
+        # Stage 2 Gate: If photos_only is requested, dispatch review notification and stop
+        if photos_only:
+            from src.services.notification import notification_service
+            await notification_service.notify_keyframes_ready(
+                channel_name=f"Studio Ambient ({sb.cluster.upper()})",
+                episode_id=ep_dir.name,
+                title=sb.title,
+                keyframe_paths=[str(p.resolve()) for p in keyframe_paths],
+            )
+            return {
+                "episode_id": ep_dir.name, "title": sb.title, "status": "photos_ready_for_review",
+                "keyframes": [str(p) for p in keyframe_paths], "storage_path": str(ep_dir),
+            }
 
         # Stage 3: Audio Synthesis & Binaural 3D Velvet Mastering (Idempotent via soundtrack_service)
         raw_bgm_path, master_bgm_path = ep_dir / "raw_soundtrack.mp3", ep_dir / "velvet_binaural_master_48k.mp3"
@@ -105,6 +120,13 @@ class AmbientWorldProducer:
         long_play_path = handle_long_play_export(master_4k_path, ep_dir, long_play_hours, fade_to_black_hours)
         short_video_path = handle_short_export(master_4k_path, ep_dir, generate_short)
         yt_package, ab_thumbnails, localized = export_metadata_packages(sb, ep_dir, long_play_hours, fade_to_black_hours)
+        await topic_memory.remember_topic(
+            topic=sb.title,
+            genre=f"ambient_{sb.cluster}",
+            tags=[sb.primary_archetype, sb.cluster],
+            story_synopsis=f"{sb.title} ({len(sb.scenes)} visual perspectives 4K UHD)",
+            episode_id=ep_dir.name,
+        )
 
         render_time = round(time.time() - t_start, 2)
         logger.info(f"ambient_production_ready: {ep_dir.name} in {render_time}s")

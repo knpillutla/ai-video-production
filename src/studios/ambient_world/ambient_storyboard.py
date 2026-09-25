@@ -49,25 +49,25 @@ def resolve_contextual_defaults(cluster: str, user_duration: Optional[float], us
             dur, default_shots = 120.0, 4
             rationale = "Scenic Nature & Mountain Retreat: 120s master across 4 distinct perspectives (Panoramic Valley, Alpine Stream/Meadow, Macro Flora/Texture, Golden Ridge) to deliver dynamic scenic progression and eliminate visual fatigue over multi-hour broadcasts."
         elif cluster in ("deep_sleep", "cozy_hearth"):
-            dur, default_shots = 60.0, 2
-            rationale = "Deep Sleep & Insomnia Sanctuary: 60s master across 2 steady hypnotic perspectives (Wide Snowy Cabin, Warm Hearth Embers) to maximize continuous tranquility and prevent sleep-disturbing visual cuts."
+            dur, default_shots = 90.0, 3
+            rationale = "Deep Sleep & Insomnia Sanctuary: 90s master across 3 steady hypnotic perspectives (Wide Snowy Cabin Exterior, Warm Hearth Ember Macro, Cozy Bedside/Window Nook) to maximize continuous tranquility and rich visual atmosphere."
         else:
             dur, default_shots = 90.0, 3
             rationale = "Study Focus & Cozy Cafe: 90s master across 3 cozy focal zones (Ambient Window Desk, Steaming Mug Macro, Rainy Glass Nook) to maintain calm flow-state immersion."
     else:
         dur = user_duration
-        if dur <= 60.0:
+        if cluster in ("deep_sleep", "cozy_hearth"):
+            default_shots = 3
+            rationale = f"Custom Duration {dur}s in Deep Sleep: Utilizing 3 long, hypnotic shots ({dur/3:.1f}s each) to protect delta-wave entrainment."
+        elif dur <= 60.0:
             default_shots = 2
             rationale = f"Custom Duration {dur}s: Using 2 balanced perspectives (Wide Atmospheric + Intimate Macro) for compact loop cadence."
-        elif cluster in ("deep_sleep", "cozy_hearth"):
-            default_shots = 2
-            rationale = f"Custom Duration {dur}s in Deep Sleep: Preserving 2 long, hypnotic shots ({dur/2}s each) to protect delta-wave entrainment."
         elif cluster in ("alpine", "aquatic", "forest_seasonal"):
             default_shots = 4
-            rationale = f"Custom Duration {dur}s in Nature Retreat: Utilizing 4 progressive angles ({dur/4}s each) for comprehensive scenic coverage."
+            rationale = f"Custom Duration {dur}s in Nature Retreat: Utilizing 4 progressive angles ({dur/4:.1f}s each) for comprehensive scenic coverage."
         else:
             default_shots = 3
-            rationale = f"Custom Duration {dur}s in Focus Setting: Utilizing 3 balanced focal angles ({dur/3}s each)."
+            rationale = f"Custom Duration {dur}s in Focus Setting: Utilizing 3 balanced focal angles ({dur/3:.1f}s each)."
 
     shots = user_shots if (user_shots and user_shots in (2, 3, 4)) else default_shots
     return dur, shots, rationale
@@ -115,33 +115,52 @@ def generate_ambient_storyboard(
         duration_seconds=shot_dur,
         domain="water_fluid" if any(k in f"{primary} {secondary}" for k in ("rain", "beach", "ocean", "river", "lake")) else "landscape_solid",
     ))
-    print(f"   [Shot 2 / Intimate Macro] Sensory: Tactile micro-textures (rain droplets, water ripples) for soothing focus.")
+    print(f"   [Shot 2 / Intimate Macro] Sensory: Tactile micro-textures (rain droplets, water ripples, hearth embers) for soothing focus.")
 
-    # Shot 3 (if 3 or 4 shots): Mid-range environmental landscape / architectural feature
+    # Shot 3 (if 3 or 4 shots): Contextual third perspective
     if shots_count >= 3:
-        s3_vis = (
-            f"Masterpiece 4K medium-range photograph of tranquil {arch1.display_name.lower()} terrain with natural textures, "
-            f"winding pathway, rustic timber textures, crystal mountain water, soft 5400K natural sunlight, 50mm lens, zero humans."
-        )
+        if arch1.cluster in ("deep_sleep", "cozy_hearth"):
+            s3_vis = (
+                f"Masterpiece 4K photograph of a cozy rustic cabin interior reading nook with a frosted panoramic window looking out at gentle night snowfall. "
+                f"Warm glowing amber candlelight and soft wool throw blanket on deep leather armchair, steaming mug on cedar side table, extreme coziness, 50mm portrait lens, 8k resolution, zero humans."
+            )
+            s3_motion = "Gentle dancing candlelight flame, soft snowfall drifting peacefully outside frosted window pane, warm steady cozy interior perspective, zero timelapse."
+            domain_s3 = "landscape_solid"
+            shot3_title = "Cozy Hearth Nook & Frosted Window"
+        elif arch1.cluster in ("alpine", "aquatic", "forest_seasonal"):
+            s3_vis = (
+                f"Masterpiece 4K photograph of a serene turquoise glacial mountain lake reflecting towering granite alpine peaks, "
+                f"dense emerald green pine forest, smooth natural shoreline pebbles, soft 5400K natural daylight, 50mm lens, 8k resolution, zero humans, zero buildings."
+            )
+            s3_motion = "Ultra-slow calm glassy water ripples on lake surface, barely perceptible mountain breeze in pine branches, rock-steady tripod camera, zero timelapse."
+            domain_s3 = "water_fluid"
+            shot3_title = "Glacial Lake & Pines"
+        else:
+            s3_vis = (
+                f"Masterpiece 4K photograph of an intimate rainy cafe window nook, raindrops trickling down glass, warm ambient interior lights, soft bokeh, 50mm lens, 8k resolution, zero humans."
+            )
+            s3_motion = "Slow gentle rain droplets trickling down window glass, warm soothing cafe ambient lights in soft blur, peaceful stationary camera, zero timelapse."
+            domain_s3 = "water_fluid"
+            shot3_title = "Rainy Glass Nook"
+
         scenes.append(AmbientScenePrompt(
             scene_index=3, perspective_type="mid_environmental", visual_prompt=s3_vis,
-            motion_prompt="Gentle natural breeze drifting across foliage, subtle water ripples, steady atmospheric camera.",
-            duration_seconds=shot_dur, domain=arch1.default_domain,
+            motion_prompt=s3_motion, duration_seconds=shot_dur, domain=domain_s3,
         ))
-        print(f"   [Shot 3 / Mid Environmental] Setting: Rustic terrain and architectural features to ground the viewer.")
+        print(f"   [Shot 3 / {shot3_title}] Setting: Atmospheric {shot3_title.lower()} to enrich visual depth.")
 
     # Shot 4 (if 4 shots): Atmospheric golden canopy / high ridge sunset horizon
     if shots_count >= 4:
         s4_vis = (
-            f"Masterpiece 4K panoramic golden hour photograph of {arch1.display_name.lower()} with warm amber light washing over the peaks and treetops. "
-            f"Ethereal low-hanging mountain mist, tranquil stillness, 35mm Arri cinematography, 8k resolution, zero humans."
+            f"Masterpiece 4K panoramic golden hour photograph of high alpine mountain pass with warm amber twilight light washing over the peaks and ridges. "
+            f"Ethereal low-hanging mountain mist, tranquil stillness, 35mm Arri cinematography, 8k resolution, zero humans, zero buildings."
         )
         scenes.append(AmbientScenePrompt(
             scene_index=4, perspective_type="golden_canopy", visual_prompt=s4_vis,
-            motion_prompt="Ultra-slow serene mist rolling over high ridge, warm glowing light shifts, steady peaceful perspective.",
+            motion_prompt="Ultra-slow tranquil amber twilight glow over high mountain ridges, almost stationary mist in the valley, steady peaceful perspective, zero timelapse.",
             duration_seconds=shot_dur, domain="landscape_solid",
         ))
-        print(f"   [Shot 4 / Golden Canopy] Lighting: Warm amber twilight shift to eliminate visual monotony.\n")
+        print(f"   [Shot 4 / Golden Ridge] Lighting: Warm amber twilight shift to eliminate visual monotony.\n")
 
     return AmbientStoryboard(
         title=title, primary_archetype=arch1.key, secondary_archetype=arch2.key if arch2 else None,

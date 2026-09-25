@@ -28,27 +28,28 @@ ARCHETYPES: Dict[str, AtmosphericArchetype] = {
         display_name="Swiss Alps Mountain Sanctuary",
         cluster="alpine",
         wide_visual_prompt=(
-            "Masterpiece 4K panoramic photograph of the Swiss Alps in Lauterbrunnen valley at morning. "
-            "Majestic snow-capped alpine peaks towering in the background, emerald green flower meadows with yellow wildflowers, "
-            "quaint traditional Swiss wooden chalets, crystal mountain stream, natural 5400K daylight, 35mm Arri cinematography, zero humans."
+            "Masterpiece 4K panoramic photograph of the Swiss Alps in Lauterbrunnen valley at pristine morning. "
+            "Majestic snow-capped alpine granite peaks towering in the background, emerald green flower meadows with yellow wildflowers, "
+            "crystal-clear glacial stream winding through lush pastureland, natural 5400K daylight, 35mm Arri cinematography, 8k resolution, zero humans, zero buildings."
         ),
         intimate_visual_prompt=(
-            "Close-up 50mm portrait perspective of delicate alpine edelweiss and wild gentian flowers with morning dew, "
-            "wooden timber chalet balcony, soft warm mountain sunrise bokeh, deep tranquil atmosphere, zero humans."
+            "Masterpiece 4K photograph of a pristine turquoise alpine glacial stream flowing smoothly over mossy granite stones and smooth pebbles in a lush green Swiss meadow, "
+            "delicate wild edelweiss and blue gentian flowers growing on the riverbank, distant snow-capped peaks, creamy natural bokeh, zero humans, zero buildings."
         ),
         wide_motion_prompt=(
-            "Very gentle alpine breeze swaying mountain wildflowers, ultra-slow tranquil cloud drift across distant snow peaks, "
-            "smooth stationary camera with subtle steadycam sway."
+            "Ultra-subtle, extremely slow and serene ambient living wallpaper motion. Distant clouds are almost stationary in the sky with calm stillness, "
+            "very gentle breeze swaying wildflower tips, crystal water flowing smoothly, rock-steady tripod camera, zero timelapse, zero fast clouds, zero morphing."
         ),
         intimate_motion_prompt=(
-            "Soft mountain wind gently brushing floral petals, glistening morning dew in soft sunrise light, calm stationary camera."
+            "Ultra-slow crystal clear mountain water flowing smoothly over river stones with gentle ripples, "
+            "soft micro-breeze touching riverbank flowers, perfectly steady camera on tripod, tranquil living wallpaper cadence."
         ),
         acoustic_tags=(
             "[velvet acoustic ambient], gentle Swiss mountain breeze, distant soft alpine cowbells, peaceful acoustic guitar and flute, "
             "soothing 432Hz sleep tuning, -21 LUFS anti-fatigue master, zero harsh hiss"
         ),
         default_domain="landscape_solid",
-        tags=["swiss_alps", "mountains", "chalet", "peaceful", "nature"],
+        tags=["swiss_alps", "mountains", "stream", "peaceful", "nature"],
     ),
     "himalayas": AtmosphericArchetype(
         key="himalayas",

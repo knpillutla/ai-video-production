@@ -78,3 +78,38 @@ def export_long_play_broadcast(
         subprocess.run(cmd_fallback, capture_output=True, check=True)
 
     return out
+
+
+def stretch_channel_episode_background(channel_name: str, episode_id: str) -> Path:
+    """Find channel episode directory on disk and stretch master video to target long-play duration."""
+    import json
+    channel_slug = "earth_serenade" if "earth" in channel_name.lower() else ("silent_hearth" if "silent" in channel_name.lower() or "sleep" in channel_name.lower() else "rain_and_quill")
+    ep_dir = Path("storage/channels") / channel_slug / episode_id
+    if not ep_dir.is_dir():
+        # Search all channels for the episode ID
+        for ch in Path("storage/channels").iterdir():
+            if ch.is_dir() and (ch / episode_id).is_dir():
+                ep_dir = ch / episode_id
+                break
+
+    master_path = ep_dir / "master_4k_ambient.mp4"
+    if not master_path.is_file():
+        raise FileNotFoundError(f"Cannot find master_4k_ambient.mp4 in {ep_dir}")
+
+    # Read target hours from youtube_packaging.json if present
+    pkg_file = ep_dir / "youtube_packaging.json"
+    hours, fade_h = 3.0, None
+    if "silent" in channel_slug or "sleep" in channel_slug:
+        hours, fade_h = 8.0, 2.0
+    if pkg_file.is_file():
+        try:
+            pkg = json.loads(pkg_file.read_text(encoding="utf-8"))
+            hours = pkg.get("long_play_hours", hours)
+            fade_h = pkg.get("fade_to_black_hours", fade_h)
+        except Exception:
+            pass
+
+    suffix = f"_{int(fade_h)}h_black" if fade_h else ""
+    hour_label = int(hours) if hours.is_integer() else hours
+    out_lp = ep_dir / f"master_4k_{hour_label}hour{suffix}_sleep.mp4"
+    return export_long_play_broadcast(source_4k_video=master_path, output_long_play=out_lp, target_duration_seconds=hours * 3600.0, fade_to_black_hours=fade_h)

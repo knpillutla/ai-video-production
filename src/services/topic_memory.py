@@ -29,7 +29,7 @@ class TopicMemoryService:
             logger.warning(f"topic_memory_check_fallback: {exc}")
             return False, None
 
-    def remember_topic(
+    async def remember_topic(
         self,
         topic: str,
         genre: str,
@@ -39,10 +39,11 @@ class TopicMemoryService:
     ) -> None:
         """Persist topic, metadata, and story synopsis to Topic Memory."""
         try:
-            mcp_remember_topic(
+            await mcp_remember_topic(
                 topic=topic,
                 metadata={"genre": genre, "tags": tags, "episode_id": episode_id},
-                story=story_synopsis,
+                final_story=story_synopsis,
+                episode_id=episode_id,
             )
             logger.info(f"topic_remembered: topic='{topic}' ep={episode_id}")
         except Exception as exc:

@@ -1,9 +1,10 @@
-"""Fal.ai Alibaba Wan 2.1 Video Motion Synthesis Adapter.
+"""Fal.ai Kling v3 4K Native Image-to-Video Synthesis Adapter.
 
 Features:
-- Fast turnaround (~60s generation time)
-- Flat rate: $0.40 per 5s clip
-- Endpoint: fal-ai/wan-i2v
+- Native 4K UHD video diffusion directly from FAL.ai
+- Endpoint: fal-ai/kling-video/v3/4k/image-to-video
+- Input parameter: start_image_url
+- Unmatched temporal consistency and fluid physical kinematics
 """
 
 from __future__ import annotations
@@ -11,19 +12,19 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 import httpx
 
 from src.core.telemetry import logger
 from src.providers.base import is_mock_mode
 from src.providers.fal_storage import _fal_api_key, upload_to_fal
 
-_WAN21_ENDPOINT = "https://queue.fal.run/fal-ai/wan-i2v"
-_POLL_INTERVAL_S = 3.0
-_POLL_MAX_ATTEMPTS = 120
+_KLING_V3_4K_ENDPOINT = "https://queue.fal.run/fal-ai/kling-video/v3/4k/image-to-video"
+_POLL_INTERVAL_S = 4.0
+_POLL_MAX_ATTEMPTS = 120  # 480s max for 4K diffusion
 
 
-def _extract_video_url(payload: Any) -> str | None:
+def _extract_video_url(payload: Any) -> Optional[str]:
     if not isinstance(payload, dict):
         return None
     for k in ("video", "output", "file"):
@@ -40,12 +41,12 @@ def _extract_video_url(payload: Any) -> str | None:
     return None
 
 
-class FalWan21Adapter:
-    """Alibaba Wan 2.1 Image-to-Video generation adapter on Fal.ai."""
+class FalKlingV3Adapter:
+    """Kling v3 4K Native Image-to-Video generation adapter on Fal.ai."""
 
-    def __init__(self, api_key: str | None = None, endpoint: str | None = None) -> None:
+    def __init__(self, api_key: Optional[str] = None, endpoint: Optional[str] = None):
         self.api_key = api_key or _fal_api_key()
-        self.endpoint = endpoint or _WAN21_ENDPOINT
+        self.endpoint = endpoint or _KLING_V3_4K_ENDPOINT
 
     async def generate_video(
         self,
@@ -55,12 +56,12 @@ class FalWan21Adapter:
         duration: int = 5,
         force_live: bool = False,
     ) -> tuple[str, Path]:
-        """Synthesize 5s motion using Alibaba Wan 2.1."""
+        """Synthesize native 4K video motion from a static start image using Kling v3 4K."""
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 
         if out.exists() and out.stat().st_size > 500_000:
-            logger.info(f"fal_wan21_cache_hit: {out.name} ({out.stat().st_size} B)")
+            logger.info(f"fal_kling_v3_cache_hit: {out.name} ({out.stat().st_size} B)")
             return f"file://{out}", out
 
         if is_mock_mode() and not force_live:
@@ -68,8 +69,8 @@ class FalWan21Adapter:
 
         if not self.api_key:
             if force_live:
-                raise ValueError("FAL_KEY is required for LIVE Wan 2.1 generation")
-            logger.warning("fal_wan21: no FAL_KEY — using local placeholder")
+                raise ValueError("FAL_KEY is required for LIVE Kling v3 4K generation")
+            logger.warning("fal_kling_v3: no FAL_KEY — using local placeholder")
             return await self._fallback_local(out, duration)
 
         actual_url = image_url
@@ -80,7 +81,7 @@ class FalWan21Adapter:
         headers = {"Authorization": f"Key {self.api_key}", "Content-Type": "application/json"}
         payload = {
             "prompt": motion_prompt,
-            "image_url": actual_url,
+            "start_image_url": actual_url,
             "negative_prompt": "rapid motion, fast moving clouds, timelapse, morphing clouds, cloud rolling, warping, high speed, turbulent wind, jerky motion, flickering, blurry, distortion, artificial structures, buildings",
         }
 
@@ -98,7 +99,7 @@ class FalWan21Adapter:
             if not status_url or not response_url:
                 sub = await client.post(self.endpoint, headers=headers, json=payload)
                 if sub.status_code not in (200, 201, 202):
-                    raise RuntimeError(f"Wan 2.1 submit failed: {sub.status_code} - {sub.text[:200]}")
+                    raise RuntimeError(f"Kling v3 4K submit failed: {sub.status_code} - {sub.text[:200]}")
                 sub_data = sub.json()
                 status_url = sub_data.get("status_url")
                 response_url = sub_data.get("response_url")
@@ -116,7 +117,7 @@ class FalWan21Adapter:
                     final_res = r_resp.json()
                     vid_url = _extract_video_url(final_res) or _extract_video_url(res_data)
                     if not vid_url:
-                        raise RuntimeError(f"Could not extract video url: {final_res}")
+                        raise RuntimeError(f"Could not extract Kling v3 video url: {final_res}")
 
                     for attempt in range(3):
                         try:
@@ -124,19 +125,19 @@ class FalWan21Adapter:
                             if len(v_bytes) > 5000:
                                 out.write_bytes(v_bytes)
                                 job_sidecar.unlink(missing_ok=True)
-                                logger.info(f"fal_wan21_ok: {out.name} ({len(v_bytes)} B)")
+                                logger.info(f"fal_kling_v3_ok: {out.name} ({len(v_bytes)} B)")
                                 return vid_url, out
                         except Exception as dl_err:
-                            logger.warning(f"fal_wan21_download_retry: attempt {attempt+1}/3 failed ({dl_err}). Retrying...")
+                            logger.warning(f"fal_kling_v3_download_retry: attempt {attempt+1}/3 failed ({dl_err}). Retrying...")
                             await asyncio.sleep(2.0)
-                    raise RuntimeError(f"Failed to download Wan 2.1 video after 3 attempts from {vid_url}")
+                    raise RuntimeError(f"Failed to download Kling v3 video after 3 attempts from {vid_url}")
 
                 if status in ("FAILED", "CANCELLED"):
                     job_sidecar.unlink(missing_ok=True)
-                    raise RuntimeError(f"Wan 2.1 task failed: {res_data}")
+                    raise RuntimeError(f"Kling v3 4K task failed: {res_data}")
 
             job_sidecar.unlink(missing_ok=True)
-            raise TimeoutError("Wan 2.1 generation timed out")
+            raise TimeoutError("Kling v3 4K generation timed out")
 
     async def _fallback_local(self, out: Path, duration: int) -> tuple[str, Path]:
         import subprocess
@@ -144,13 +145,12 @@ class FalWan21Adapter:
         exe = imageio_ffmpeg.get_ffmpeg_exe()
         cmd = [
             exe, "-y",
-            "-f", "lavfi", "-i", f"color=c=0x0f172a:s=1280x720:d={duration}:r=24",
+            "-f", "lavfi", "-i", f"color=c=0x0f172a:s=3840x2160:d={duration}:r=24",
             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", str(out)
         ]
         subprocess.run(cmd, check=True, capture_output=True)
         return f"file://{out}", out
 
 
-fal_wan21_adapter = FalWan21Adapter()
-
-__all__ = ["FalWan21Adapter", "fal_wan21_adapter"]
+fal_kling_v3_adapter = FalKlingV3Adapter()
+__all__ = ["FalKlingV3Adapter", "fal_kling_v3_adapter"]
