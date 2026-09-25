@@ -1,8 +1,160 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "1.0.0",
-  "active_profile": "development",
-  "description": "Declarative AI Model Selection & Routing Configuration. Modify models, providers, and endpoints here without changing code.",
+  "version": "2.0.0",
+  "active_profile": "production",
+  "description": "Declarative AI Model Selection & Routing Configuration with Genre Overrides.",
+  "defaults": {
+    "image": {
+      "provider": "Fal.ai",
+      "model": "FLUX 1.1 Pro Ultra",
+      "endpoint": "https://queue.fal.run/fal-ai/flux-pro/v1.1-ultra",
+      "aspect_ratio": "16:9",
+      "raw": true,
+      "cost_usd": 0.06
+    },
+    "video_motion": {
+      "provider": "Fal.ai",
+      "model": "Tencent Hunyuan Video 1080p",
+      "endpoint": "https://queue.fal.run/fal-ai/hunyuan-video-image-to-video",
+      "cost_usd_per_sec": 0.075,
+      "resolution": "1080p"
+    },
+    "lipsync": {
+      "provider": "Fal.ai",
+      "model": "LatentSync",
+      "endpoint": "https://queue.fal.run/fal-ai/latentsync"
+    },
+    "script": {
+      "provider": "Google",
+      "model": "gemini-1.5-pro",
+      "fallback_model": "gemini-1.5-flash"
+    },
+    "tts": {
+      "provider": "Microsoft",
+      "model": "Azure Speech Neural HD"
+    },
+    "music": {
+      "provider": "MusicAPI.ai",
+      "model": "Suno v3.5 Pro",
+      "endpoint": "https://api.musicapi.ai/api/v1/sonic/create"
+    },
+    "render": {
+      "provider": "FFmpeg",
+      "model": "single-pass-4k-lanczos",
+      "fps": 24,
+      "crf": 18
+    }
+  },
+  "genre_overrides": {
+    "nature_documentary": {
+      "description": "Blue-chip 4K nature and landscape documentaries (The Epic Lens).",
+      "image": {
+        "provider": "Fal.ai",
+        "model": "FLUX 1.1 Pro Ultra",
+        "endpoint": "https://queue.fal.run/fal-ai/flux-pro/v1.1-ultra",
+        "aspect_ratio": "16:9",
+        "raw": true
+      },
+      "video_motion": {
+        "provider": "Fal.ai",
+        "model": "Tencent Hunyuan Video 1080p",
+        "endpoint": "https://queue.fal.run/fal-ai/hunyuan-video-image-to-video",
+        "cost_usd_per_sec": 0.075,
+        "primary_domain": "landscape_solid"
+      },
+      "water_video_motion": {
+        "provider": "Fal.ai",
+        "model": "Alibaba Wan 2.1",
+        "endpoint": "https://queue.fal.run/fal-ai/wan-i2v",
+        "cost_usd_per_sec": 0.080,
+        "primary_domain": "water_fluid"
+      },
+      "render": {
+        "fps": 24,
+        "crf": 18,
+        "resolution": "3840x2160"
+      }
+    },
+    "scenic_relaxation": {
+      "description": "Long-form 4K scenic ambient walking and drone tours.",
+      "image": {
+        "provider": "Fal.ai",
+        "model": "FLUX 1.1 Pro Ultra",
+        "endpoint": "https://queue.fal.run/fal-ai/flux-pro/v1.1-ultra",
+        "aspect_ratio": "16:9",
+        "raw": true
+      },
+      "video_motion": {
+        "provider": "Fal.ai",
+        "model": "Tencent Hunyuan Video 1080p",
+        "endpoint": "https://queue.fal.run/fal-ai/hunyuan-video-image-to-video",
+        "cost_usd_per_sec": 0.075
+      },
+      "render": {
+        "fps": 60,
+        "crf": 18,
+        "resolution": "3840x2160"
+      }
+    },
+    "south_indian_dance": {
+      "description": "High-energy South Indian / Telugu mass folk dance choreography & music videos.",
+      "image": {
+        "provider": "Fal.ai",
+        "model": "FLUX 1.1 Pro Ultra",
+        "endpoint": "https://queue.fal.run/fal-ai/flux-pro/v1.1-ultra"
+      },
+      "video_motion": {
+        "provider": "Fal.ai",
+        "model": "Kling v3 Pro",
+        "endpoint": "https://queue.fal.run/fal-ai/kling-video/v3/pro/image-to-video",
+        "cost_usd_per_clip": 1.40
+      },
+      "lipsync": {
+        "provider": "Fal.ai",
+        "model": "LatentSync",
+        "endpoint": "https://queue.fal.run/fal-ai/latentsync"
+      },
+      "render": {
+        "fps": 30,
+        "crf": 18,
+        "resolution": "3840x2160"
+      }
+    },
+    "mass_folk_dance": {
+      "description": "Upbeat mass dance steps and troupe synchronization.",
+      "video_motion": {
+        "provider": "Fal.ai",
+        "model": "Kling v3 Pro",
+        "endpoint": "https://queue.fal.run/fal-ai/kling-video/v3/pro/image-to-video"
+      },
+      "lipsync": {
+        "provider": "Fal.ai",
+        "model": "LatentSync",
+        "endpoint": "https://queue.fal.run/fal-ai/latentsync"
+      },
+      "render": {
+        "fps": 30,
+        "crf": 18
+      }
+    },
+    "extreme_survival": {
+      "description": "Harsh sub-zero blizzard and mountain survival documentaries.",
+      "image": {
+        "provider": "Fal.ai",
+        "model": "FLUX 1.1 Pro Ultra",
+        "endpoint": "https://queue.fal.run/fal-ai/flux-pro/v1.1-ultra"
+      },
+      "video_motion": {
+        "provider": "Fal.ai",
+        "model": "Tencent Hunyuan Video 1080p",
+        "endpoint": "https://queue.fal.run/fal-ai/hunyuan-video-image-to-video"
+      },
+      "render": {
+        "fps": 24,
+        "crf": 18
+      }
+    }
+  },
   "profiles": {
     "local": {
       "description": "Offline Deterministic Mode ($0.00 Cost, Mocks & DSP)",
@@ -12,155 +164,27 @@
       "lipsync": { "provider": "None", "model": "none", "enabled": false },
       "tts": { "provider": "Local", "model": "synthetic-wav", "cost_usd": 0.0 },
       "music": { "provider": "LocalDSP", "model": "procedural-audio", "cost_usd": 0.0 },
-      "render": { "provider": "FFmpeg", "model": "local-single-pass", "fps": 30 }
+      "render": { "provider": "FFmpeg", "model": "local-single-pass", "fps": 24 }
     },
     "development": {
-      "description": "Development Mode (--dev): Fast prototyping using H3 Max Turbo for testing Gemini camera movement prompts at low cost",
-      "script": {
-        "provider": "Google",
-        "model": "gemini-1.5-pro",
-        "fallback_model": "gemini-1.5-flash",
-        "temperature": 0.7
-      },
-      "image": {
-        "provider": "Fal.ai",
-        "model": "FLUX.1-dev",
-        "endpoint": "https://queue.fal.run/fal-ai/flux/dev",
-        "num_inference_steps": 28,
-        "guidance_scale": 3.5
-      },
-      "video_motion": {
-        "provider": "Fal.ai",
-        "model": "H3 Max",
-        "endpoint": "https://queue.fal.run/minimax/h3-max/image-to-video",
-        "duration": 5,
-        "resolution": "768P",
-        "cost_usd_per_sec": 0.08,
-        "prompt_expansion_mode": "disabled",
-        "pricing_tiers": {
-          "480p": 0.05,
-          "768p": 0.08,
-          "1080p": 0.16
-        },
-        "notes": "MiniMax H3 Max on Fal.ai: $0.05/s (480p), $0.08/s (768p), $0.16/s (1080p). Defaulting to 768p for rapid camera movement evaluation."
-      },
-      "lipsync": {
-        "provider": "Fal.ai",
-        "model": "LatentSync",
-        "endpoint": "https://queue.fal.run/fal-ai/latentsync"
-      },
-      "tts": {
-        "provider": "Microsoft",
-        "model": "Azure Speech Neural HD"
-      },
-      "music": {
-        "provider": "MusicAPI.ai",
-        "model": "Suno Sonic v5",
-        "endpoint": "https://api.musicapi.ai/api/v1/sonic/create"
-      },
-      "render": {
-        "provider": "FFmpeg",
-        "model": "single-pass-4k-unsharp",
-        "fps": 30
-      }
+      "description": "Development Fast Iteration Mode",
+      "script": { "provider": "Google", "model": "gemini-1.5-flash" },
+      "image": { "provider": "Fal.ai", "model": "FLUX.1-dev", "endpoint": "https://queue.fal.run/fal-ai/flux/dev" },
+      "video_motion": { "provider": "Fal.ai", "model": "Tencent Hunyuan Video 1080p", "endpoint": "https://queue.fal.run/fal-ai/hunyuan-video-image-to-video", "cost_usd_per_sec": 0.075 },
+      "lipsync": { "provider": "Fal.ai", "model": "LatentSync", "endpoint": "https://queue.fal.run/fal-ai/latentsync" },
+      "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD" },
+      "music": { "provider": "MusicAPI.ai", "model": "Suno v3.5 Pro", "endpoint": "https://api.musicapi.ai/api/v1/sonic/create" },
+      "render": { "provider": "FFmpeg", "model": "single-pass-4k-lanczos", "fps": 24 }
     },
     "production": {
-      "description": "Production Live Mode (--live): High-fidelity broadcast quality using Kling 1.5 Pro or Seedance 2.5",
-      "script": {
-        "provider": "Google",
-        "model": "gemini-1.5-pro",
-        "temperature": 0.7
-      },
-      "image": {
-        "provider": "Fal.ai",
-        "model": "FLUX.1-dev",
-        "endpoint": "https://queue.fal.run/fal-ai/flux/dev",
-        "num_inference_steps": 30,
-        "guidance_scale": 3.5
-      },
-      "video_motion": {
-        "provider": "Fal.ai",
-        "model": "Seedance 2.5",
-        "endpoint": "https://queue.fal.run/bytedance/seedance-2.5/us/reference-to-video",
-        "duration": 10,
-        "resolution": "720p",
-        "aspect_ratio": "16:9",
-        "cost_usd_per_sec": 0.5676,
-        "pricing_tiers": {
-          "480p": 0.2646,
-          "720p": 0.5676,
-          "720p_video_input": 0.34056
-        },
-        "token_rate_per_1k": 0.02568,
-        "token_formula": "(height * width * (input_duration + output_duration) * 24) / 1024",
-        "notes": "ByteDance Seedance 2.5: $0.5676/s (720p), $0.2646/s (480p), $0.34056/s (with video input). Token rate: $0.02568 per 1K tokens."
-      },
-      "lipsync": {
-        "provider": "Fal.ai",
-        "model": "LatentSync",
-        "endpoint": "https://queue.fal.run/fal-ai/latentsync"
-      },
-      "tts": {
-        "provider": "Microsoft",
-        "model": "Azure Speech Neural HD"
-      },
-      "music": {
-        "provider": "MusicAPI.ai",
-        "model": "Suno Sonic v5",
-        "endpoint": "https://api.musicapi.ai/api/v1/sonic/create"
-      },
-      "render": {
-        "provider": "FFmpeg",
-        "model": "single-pass-4k-unsharp",
-        "fps": 30
-      }
+      "description": "Production Broadcast 4K Mode",
+      "script": { "provider": "Google", "model": "gemini-1.5-pro" },
+      "image": { "provider": "Fal.ai", "model": "FLUX 1.1 Pro Ultra", "endpoint": "https://queue.fal.run/fal-ai/flux-pro/v1.1-ultra", "cost_usd": 0.06 },
+      "video_motion": { "provider": "Fal.ai", "model": "Tencent Hunyuan Video 1080p", "endpoint": "https://queue.fal.run/fal-ai/hunyuan-video-image-to-video", "cost_usd_per_sec": 0.075 },
+      "lipsync": { "provider": "Fal.ai", "model": "LatentSync", "endpoint": "https://queue.fal.run/fal-ai/latentsync" },
+      "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD" },
+      "music": { "provider": "MusicAPI.ai", "model": "Suno v3.5 Pro", "endpoint": "https://api.musicapi.ai/api/v1/sonic/create" },
+      "render": { "provider": "FFmpeg", "model": "single-pass-4k-lanczos", "fps": 24, "crf": 18 }
     }
-  },
-  "available_video_models_catalog": [
-    {
-      "model": "H3 Max",
-      "provider": "Fal.ai",
-      "endpoint": "https://queue.fal.run/minimax/h3-max/image-to-video",
-      "speed": "Real-time / ~2-3 seconds",
-      "cost_tier": "$0.05/s (480p) | $0.08/s (768p) | $0.16/s (1080p)",
-      "pricing": {
-        "480p": 0.05,
-        "768p": 0.08,
-        "1080p": 0.16
-      },
-      "recommended_for": "Development, prototyping, verifying Gemini camera movement & motion prompts"
-    },
-    {
-      "model": "Seedance 2.5",
-      "provider": "Fal.ai",
-      "endpoint": "https://queue.fal.run/bytedance/seedance-2.5/us/reference-to-video",
-      "speed": "Standard / High Quality",
-      "cost_tier": "$0.5676/s (720p) | $0.2646/s (480p) | $0.34056/s (video in)",
-      "pricing": {
-        "720p": 0.5676,
-        "480p": 0.2646,
-        "720p_video_input": 0.34056
-      },
-      "token_rate_per_1k": 0.02568,
-      "token_formula": "(H * W * (input_dur + output_dur) * 24) / 1024",
-      "recommended_for": "Native 30s long generation, multimodal reference control, cinematic motion"
-    },
-    {
-      "model": "Hunyuan Video v1.5",
-      "provider": "Fal.ai",
-      "endpoint": "https://queue.fal.run/fal-ai/hunyuan-video-v1.5/image-to-video",
-      "speed": "Standard High-Fidelity",
-      "cost_tier": "$0.075 / second",
-      "unit_cost_usd_per_sec": 0.075,
-      "recommended_for": "High prompt adherence, open video architecture, cinematic physics and dynamic motion"
-    },
-    {
-      "model": "Kling 1.5 Pro",
-      "provider": "Fal.ai",
-      "endpoint": "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
-      "speed": "High Quality Pro",
-      "cost_tier": "High (~$0.14-$0.28)",
-      "recommended_for": "Broadcast-grade dance choreography and human kinematics"
-    }
-  ]
+  }
 }

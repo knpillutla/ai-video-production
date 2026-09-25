@@ -172,8 +172,30 @@ def build_storyboard_prompt(
         "- 'vocal_gender': 'male', 'female', or 'duet'\n"
         "- 'characters': list of character metadata objects\n"
         "- 'scenes': list of scene objects\n"
+        "  * Each scene MUST include 'motion_domain': 'water_fluid' (for active rivers, waterfalls, ocean waves, rapids, rain) or 'landscape_solid' (for mountains, rock canyons, forest canopies, valleys, aerial vistas) or 'human_action' (for dance and character movement)\n"
         "  * Each scene MUST include 'motion_type': 'kinetic_video' (for dynamic kinetic scenes with moving crowds, vehicles, fountains, rain, or active walking) or 'steadycam_vista' (for serene panoramic landscapes, architectural viewpoints, and calm atmosphere)\n"
         "  * Each scene MUST include 'camera_movement': 'slow_zoom_in', 'slow_zoom_out', 'pan_left', 'pan_right', 'tilt_up', or 'tilt_down' autonomously chosen by analyzing the scene's architectural lines, vanishing points, spires, and framing\n"
+    )
+    extras.append(
+        "MANDATORY GENRE & STORY RELEVANCE (Zero Unsolicited Humans in Nature/Scenic Guard): "
+        "1. For Nature Documentaries, Scenic Landscapes, Wildlife, and Ambient Relaxation: Do NOT generate human characters "
+        "or protagonists unless explicitly requested by the user. Set 'characters': [] and ensure all 'visual_prompt' "
+        "and 'motion_prompt' scenes focus 100% on majestic wilderness, ancient geological formations, turquoise waters, "
+        "canopy flora, atmospheric mist, and natural fauna.\n"
+        "2. For Story-Driven Genres (South Indian Dance, Comedy, Drama, Short Films, Music Videos): "
+        "Apply the 100% Character Consistency & Immutable Anchor Directive — define an immutable 'character_anchor_prompt' "
+        "in 'characters' and prepend it identically to every scene's 'visual_prompt' where the character appears."
+    )
+    extras.append(
+        "MANDATORY 100% CHARACTER CONSISTENCY & IMMUTABLE ANCHOR DIRECTIVE (For Human Story & Dance Productions): "
+        "1. For the lead protagonist and main characters, define an immutable, highly detailed 'character_anchor_prompt' "
+        "in character metadata specifying exact name, age (23–27), balanced fit build, facial bone structure, skin complexion, "
+        "hair style, facial hair, and exact culturally authentic wardrobe colors and fabric patterns.\n"
+        "2. In EVERY SINGLE scene in the 'scenes' array where this character appears, 'visual_prompt' MUST begin with this "
+        "EXACT identical character anchor text word-for-word before adding specific camera framing, shot type, or scene action. "
+        "Strictly prohibit changing facial features, hair, skin tone, or clothing colors between scenes.\n"
+        "3. LENS & LIGHTING: All visual prompts must mandate crisp 5400K natural daylight, Arri Alexa 35mm Master Prime lens, "
+        "and negative tokens ('zero plastic skin, zero CGI sheen, zero artificial yellow lens flare blowouts')."
     )
     extras.append(
         "MANDATORY CAST & WARDROBE DIRECTIVE: All main characters (male and female) must have a balanced, "
@@ -196,6 +218,17 @@ def build_storyboard_prompt(
         "mandate visible dynamic weather physics: continuous sheets of heavy falling raindrops slicing through the frame, water droplets splashing "
         "off dancing bodies/faces, raindrops bouncing upward off wet ground with expanding ripples in puddles, swirling snowflakes, or dust plumes. "
         "Never output camera-only motion when dynamic weather is present."
+    )
+    extras.append(
+        "MANDATORY WATER DYNAMICS & FLUID PHYSICS DIRECTIVE (Zero Gelatinous Foam / Melting Water Guard): "
+        "1. LINEAR FLOW VECTOR ALIGNMENT: In rivers, streams, waterfalls, and ocean waves, always align camera motion "
+        "parallel to the water flow vector (e.g. slow push forward looking downstream, or slow pull back looking upstream). "
+        "Strictly prohibit contradictory perpendicular camera motion that confuses diffusion fluid dynamics.\n"
+        "2. SMOOTH GLASSY CURRENTS OVER FROZEN SPLASH: 'visual_prompt' for water must mandate continuous flowing glassy currents, "
+        "laminar natural ripples, and clean specular water reflections. Strictly prohibit chaotic frozen mid-air splash droplets, "
+        "heavy static foam blobs across boulders, or turbulent spray that causes AI video models to produce melting foam artifacts.\n"
+        "3. FLUID MOTION PROMPT TOKENS: In 'motion_prompt', explicitly mandate: 'smooth continuous downstream fluid motion, "
+        "realistic water surface displacement, natural laminar flow, zero gelatinous morphing, zero frozen foam melting'."
     )
     extras.append(
         "MANDATORY AUDIO-VISUAL DURATION SYNCHRONIZATION: The spoken commentary or dialogue in each scene MUST "

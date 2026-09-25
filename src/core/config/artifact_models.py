@@ -112,18 +112,18 @@ def get_artifact_profile(profile: str | None = None) -> ArtifactProfile:
     return ArtifactProfile(
         name=selected,  # type: ignore[arg-type]
         script=_am("script", "Google", "gemini-1.5-pro"),
-        image=_am("image", "Fal.ai", "FLUX.1-dev", "https://queue.fal.run/fal-ai/flux/dev"),
+        image=_am("image", "Fal.ai", "FLUX 1.1 Pro Ultra", "https://queue.fal.run/fal-ai/flux-pro/v1.1-ultra"),
         motion_video=_am(
             "video_motion", "Fal.ai",
-            "H3 Max Turbo" if selected == "development" else "Kling 1.5 Pro",
-            "https://queue.fal.run/fal-ai/minimax/h3-max-turbo/image-to-video" if selected == "development" else "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
+            "Tencent Hunyuan Video 1080p",
+            "https://queue.fal.run/fal-ai/hunyuan-video-image-to-video",
         ),
         lipsync=_am("lipsync", "Fal.ai", "LatentSync", "https://queue.fal.run/fal-ai/latentsync"),
         tts=_am("tts", "Microsoft", "Azure Speech Neural HD"),
-        music=_am("music", "MusicAPI.ai", "Suno Sonic v5", "https://api.musicapi.ai/api/v1/sonic/create"),
-        bgm=_am("music", "MusicAPI.ai", "Suno Sonic v5", "https://api.musicapi.ai/api/v1/sonic/create"),
+        music=_am("music", "MusicAPI.ai", "Suno v3.5 Pro", "https://api.musicapi.ai/api/v1/sonic/create"),
+        bgm=_am("music", "MusicAPI.ai", "Suno v3.5 Pro", "https://api.musicapi.ai/api/v1/sonic/create"),
         subtitles=ArtifactModel("Local", "deterministic-subtitles", allow_fallback=allow_fb),
-        render=_am("render", "FFmpeg", "single-pass-4k-unsharp"),
+        render=_am("render", "FFmpeg", "single-pass-4k-lanczos"),
     )
 
 

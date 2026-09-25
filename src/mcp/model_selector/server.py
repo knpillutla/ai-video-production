@@ -28,11 +28,11 @@ MODEL_CATALOG: dict[str, dict[str, Any]] = {
         "factors": {"audio_fidelity": "24kHz Broadcast Neural", "accent_authenticity": "High", "cost_per_char": "$0.000016"},
     },
     "visual_image": {
-        "primary": {"provider": "Fal.ai", "model": "flux-1-dev", "unit_cost": 0.025, "unit_name": "image"},
-        "fallback": {"provider": "Stability", "model": "sdxl-turbo", "unit_cost": 0.004, "unit_name": "image"},
-        "rationale_template": "Selected for sub-second photorealism, accurate typographic prompt rendering, and 25% lower cost ($0.003 vs $0.004/image).",
-        "alternatives": {"Stability/sdxl-turbo": "Higher cost and noticeable artifacting on complex architectural/historical monuments."},
-        "factors": {"resolution": "4K Cinematic", "generation_latency": "< 1.5s", "prompt_adherence": "Exceptional"},
+        "primary": {"provider": "Fal.ai", "model": "flux-pro-v1.1-ultra", "unit_cost": 0.06, "unit_name": "image"},
+        "fallback": {"provider": "Fal.ai", "model": "flux-1-dev", "unit_cost": 0.025, "unit_name": "image"},
+        "rationale_template": "Selected for 8K photorealism, high dynamic range, and micro-texture clarity at $0.06/image.",
+        "alternatives": {"Fal.ai/flux-1-dev": "Lower cost but lacks raw ultra dynamic range."},
+        "factors": {"resolution": "8K Raw Cinematic", "generation_latency": "< 2.0s", "prompt_adherence": "Exceptional"},
     },
     "music_bgm": {
         "primary": {"provider": "Suno", "model": "v3.5-pro", "unit_cost": 0.08, "unit_name": "track"},
@@ -42,18 +42,18 @@ MODEL_CATALOG: dict[str, dict[str, Any]] = {
         "factors": {"rights_clearance": "Full Commercial YPP", "dynamic_range": "Studio Master", "flat_rate": "$0.0800"},
     },
     "lipsync": {
-        "primary": {"provider": "Fal.ai", "model": "live-portrait", "unit_cost": 0.012, "unit_name": "second"},
+        "primary": {"provider": "Fal.ai", "model": "latentsync", "unit_cost": 0.012, "unit_name": "second"},
         "fallback": {"provider": "LocalFFmpeg", "model": "avatar-pulse-animator", "unit_cost": 0.0, "unit_name": "second"},
         "rationale_template": "Selected for serverless photorealistic facial landmark tracking and zero local GPU overhead.",
         "alternatives": {"LocalFFmpeg/avatar-pulse-animator": "Low compute cost but lacks 3D mesh deformation realism."},
         "factors": {"facial_alignment": "Sub-millimeter", "render_rate": "Real-time", "cost_per_sec": "$0.0120"},
     },
     "video_motion": {
-        "primary": {"provider": "Fal.ai", "model": "minimax-video-01", "unit_cost": 0.040, "unit_name": "second"},
-        "fallback": {"provider": "LocalFFmpeg", "model": "camera-pan-zoom-2.5d", "unit_cost": 0.0, "unit_name": "second"},
-        "rationale_template": "Selected for high dynamic camera motion synthesis and temporal consistency.",
-        "alternatives": {"LocalFFmpeg/camera-pan-zoom-2.5d": "Zero cost 2.5D optical pan/zoom fallback."},
-        "factors": {"motion_quality": "Fluid 30fps", "temporal_coherence": "High"},
+        "primary": {"provider": "Fal.ai", "model": "hunyuan-video-1080p", "unit_cost": 0.075, "unit_name": "second"},
+        "fallback": {"provider": "Fal.ai", "model": "kling-video-v3-pro", "unit_cost": 0.280, "unit_name": "second"},
+        "rationale_template": "Selected for native 1080p resolution, high temporal stability, and cost-efficiency at $0.075/sec.",
+        "alternatives": {"Fal.ai/kling-video-v3-pro": "Higher cost, reserved for complex dance & human choreography."},
+        "factors": {"motion_quality": "Native 1080p 24fps", "temporal_coherence": "Extreme", "cost_per_sec": "$0.0750"},
     },
     "sfx_audio": {
         "primary": {"provider": "Fal.ai", "model": "audioldm-2", "unit_cost": 0.005, "unit_name": "clip"},
@@ -71,13 +71,29 @@ async def select_best_model(
     category: str,
     language: str = "en",
     budget_tier: str = "balanced",
+    genre: str = "general",
+    scene_domain: str = "general",
     simulate_rate_limit: bool = False,
 ) -> dict[str, Any]:
-    """Dynamically resolve optimal provider model with multi-factor decision reasoning and failover."""
+    """Dynamically resolve optimal provider model with multi-factor decision reasoning, genre/domain overrides, and failover."""
     start_time = time.perf_counter()
     cat_info = MODEL_CATALOG.get(category, MODEL_CATALOG["script_creative"])
 
-    if simulate_rate_limit:
+    # Genre & Domain specific overrides for video motion
+    is_dance = any(k in (genre or "").lower() for k in ("dance", "telugu", "south_indian", "folk", "mass", "jathara"))
+    is_water = any(k in f"{genre} {scene_domain}".lower() for k in ("water", "river", "waterfall", "rapids", "ocean", "stream", "waves", "rain"))
+
+    if category == "video_motion" and is_water and not simulate_rate_limit:
+        chosen = {"provider": "Fal.ai", "model": "wan-2.1-i2v", "unit_cost": 0.080, "unit_name": "second"}
+        fallback_triggered = False
+        status_reason = f"Domain Override: Water/Fluid ('{scene_domain}') -> Alibaba Wan 2.1"
+        reasoning = "Alibaba Wan 2.1 selected for superior laminar liquid flow, dynamic ripple physics, and zero foam-melting artifacts."
+    elif category == "video_motion" and is_dance and not simulate_rate_limit:
+        chosen = {"provider": "Fal.ai", "model": "kling-video-v3-pro", "unit_cost": 0.280, "unit_name": "second"}
+        fallback_triggered = False
+        status_reason = f"Genre Override: '{genre}' -> Kling v3 Pro"
+        reasoning = f"Genre override applied for '{genre}': Kling v3 Pro selected for complex human dance choreography & kinematic stability."
+    elif simulate_rate_limit:
         chosen = cat_info["fallback"]
         fallback_triggered = True
         status_reason = "HTTP 429 Rate Limit Simulated -> Fast Failover within 350ms"

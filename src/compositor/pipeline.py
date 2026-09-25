@@ -26,6 +26,7 @@ from src.providers.llm.gemini_adapter import GeminiLLMAdapter
 from src.providers.music.suno_adapter import SunoMusicAdapter
 from src.providers.tts.azure_speech import AzureSpeechTTSAdapter
 from src.providers.visual.fal_flux_dev import FalFluxDevAdapter
+from src.providers.visual.fal_flux_pro_ultra import FalFluxProUltraAdapter
 from src.scripts.cli_presentation import print_storyboard_artifact_manifest
 from src.scripts.local_subtitles import generate_subtitle_bundle
 from src.services.character_consistency import get_or_create_character_anchor
@@ -39,6 +40,7 @@ class ProductionPipelineCoordinator:
         self.strict = strict
         self.llm = GeminiLLMAdapter(strict=strict)
         self.visual = FalFluxDevAdapter()
+        self.visual_ultra = FalFluxProUltraAdapter()
         self.fal_flux = self.visual
         self.fal_kling = FalKlingAdapter()
         self.fal_lipsync = FalLatentSyncAdapter()
@@ -158,11 +160,12 @@ class ProductionPipelineCoordinator:
             enable_video_motion = force_live or strategy.genre_id in ("walking_tour", "dance", "tourist_guide", "travel_guide", "nature_documentary", "epic_cinematic", "mountain_survival", "music_video") or getattr(episode.options, "enable_video_motion", False)
             print_storyboard_artifact_manifest(storyboard_data=storyboard_data, fmt_str=fmt_str, enable_voice_over=enable_voice_over, enable_bgm=enable_bgm, enable_video_motion=enable_video_motion, enable_lipsync=bool(enable_lipsync), culture_context=derived_culture, profile=profile)
 
+            active_visual = self.visual_ultra if (profile == "production" or strategy.genre_id in ("nature_documentary", "scenic_relaxation", "epic_cinematic", "mountain_survival")) else self.visual
             try:
                 compiled_scenes, subtitle_segments, current_time = await synthesize_scenes(
                     scenes_list=scenes_list, scenes_dir=scenes_dir, stems_dir=stems_dir,
                     episode=episode, scale=scale, char_anchor=char_anchor,
-                    derived_culture=derived_culture, visual_adapter=self.visual,
+                    derived_culture=derived_culture, visual_adapter=active_visual,
                     tts_adapter=self.tts, language=language, enable_voice_over=enable_voice_over,
                     enable_lipsync=bool(enable_lipsync), force_live=force_live, kling_adapter=video_motion_adapter,
                     enable_video_motion=enable_video_motion, auto_confirm=auto_confirm, custom_gate_input_fn=custom_gate_input_fn,

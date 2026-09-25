@@ -12,7 +12,7 @@ from src.providers.base import is_mock_mode
 from src.providers.fal_storage import _fal_api_key, upload_to_fal
 
 
-_DEFAULT_HUNYUAN_ENDPOINT = "https://queue.fal.run/fal-ai/hunyuan-video-v1.5/image-to-video"
+_DEFAULT_HUNYUAN_ENDPOINT = "https://queue.fal.run/fal-ai/hunyuan-video-image-to-video"
 
 
 def _extract_video_url(payload: Any) -> str | None:

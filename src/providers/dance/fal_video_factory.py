@@ -23,12 +23,18 @@ def resolve_video_motion_adapter(
     purely through model_selection_config.json without touching Python code.
     """
     sc_conf = get_scenario_config(scenario=scenario, profile=profile)
-    vid_conf = sc_conf.get("video_motion", {})
-
-    model_name = str(model_override or vid_conf.get("model", "Kling 1.5 Pro")).lower()
+    is_dance = any(k in scenario.lower() for k in ("dance", "telugu", "south_indian", "folk", "mass", "jathara"))
+    default_model = "Kling v3 Pro" if is_dance else "Tencent Hunyuan Video 1080p"
+    model_name = str(model_override or vid_conf.get("model", default_model)).lower()
     endpoint = endpoint_override or vid_conf.get("endpoint")
 
-    logger.info(f"resolving_video_motion_adapter: profile={profile}, model={model_name}, endpoint={endpoint}")
+    logger.info(f"resolving_video_motion_adapter: profile={profile}, scenario={scenario}, model={model_name}, endpoint={endpoint}")
+
+    if any(k in model_name for k in ("kling", "dance", "choreography")):
+        return FalKlingAdapter(endpoint=endpoint)
+
+    if any(k in model_name for k in ("hunyuan", "tencent", "nature", "documentary")):
+        return FalHunyuanAdapter(endpoint=endpoint)
 
     if any(k in model_name for k in ("h3", "minimax", "turbo", "prototype")):
         return FalH3MaxTurboAdapter(endpoint=endpoint)
@@ -36,11 +42,7 @@ def resolve_video_motion_adapter(
     if any(k in model_name for k in ("seedance", "bytedance")):
         return FalSeedanceAdapter(endpoint=endpoint)
 
-    if any(k in model_name for k in ("hunyuan", "tencent")):
-        return FalHunyuanAdapter(endpoint=endpoint)
-
-    # Default to Kling adapter (configurable with standard/pro endpoint)
-    return FalKlingAdapter()
+    return FalHunyuanAdapter(endpoint=endpoint)
 
 
 __all__ = ["resolve_video_motion_adapter"]
