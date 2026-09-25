@@ -18,6 +18,7 @@ from src.api.routes import (
     projects,
     schedules,
     shows,
+    studio_orchestrator,
     trending,
 )
 from src.core.config import settings
@@ -27,30 +28,22 @@ from src.core.telemetry import logger
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan context managing startup and shutdown."""
-    from uuid import UUID
     from src.core.queue import task_queue
-    from src.compositor.pipeline import pipeline_coordinator
 
     logger.info(
         f"video_studio_started: env={settings.app.app_env}, storage={settings.storage.storage_backend}"
     )
 
-    async def video_worker(payload: dict):
-        u_id = UUID(payload["user_id"])
-        ep_id = UUID(payload["episode_id"])
-        dry_run = payload.get("dry_run", False)
-        tier = payload.get("tier", "balanced")
-        enable_bgm = payload.get("enable_bgm")
-        enable_vo = payload.get("enable_voice_over", True)
-        enable_lipsync = payload.get("enable_lipsync")
-        gender = payload.get("voice_gender", "female")
-        await pipeline_coordinator.produce_episode_master(
-            u_id, ep_id, dry_run=dry_run, tier=tier,
-            enable_bgm=enable_bgm, enable_voice_over=enable_vo,
-            enable_lipsync=enable_lipsync, gender=gender,
-        )
+    # Initialize modular studios
+    try:
+        import src.studios.nature_retreat       # noqa: F401
+        import src.studios.cozy_ambiance        # noqa: F401
+        import src.studios.rain_retreat         # noqa: F401
+        import src.studios.healing_relaxation   # noqa: F401
+        logger.info("studios_initialized: nature_retreat, cozy_ambiance, rain_retreat, healing_relaxation")
+    except Exception as exc:
+        logger.warning(f"studio_initialization_warning: {exc}")
 
-    task_queue.register_handler("produce_video", video_worker)
     await task_queue.start_worker()
 
     yield
@@ -91,6 +84,7 @@ def create_app() -> FastAPI:
     app.include_router(schedules.router)
     app.include_router(analytics.router)
     app.include_router(local_production.router)
+    app.include_router(studio_orchestrator.router)
 
     @app.get("/health", tags=["Health"])
     async def health_check():

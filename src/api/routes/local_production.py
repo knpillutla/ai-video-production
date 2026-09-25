@@ -133,3 +133,47 @@ async def produce_video_locally(req: LocalProduceRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Local production synthesis failed: {str(exc)}",
         )
+
+
+class NatureRetreatRequest(BaseModel):
+    """Payload to trigger Nature Retreat Studio generation from UI or API."""
+
+    theme: str = Field(default="Rainforest Waterfall Patio & Plunge Pool", description="Retreat theme")
+    duration_seconds: Optional[float] = Field(default=20.0, description="Duration in seconds")
+    scenes_count: Optional[int] = Field(default=4, description="Number of distinct camera angles")
+    episode_id: Optional[str] = Field(default=None, description="Episode identifier")
+    user_id: Optional[str] = Field(default="user_krishna_01", description="User identifier")
+
+
+@router.post("/nature-retreat", status_code=status.HTTP_200_OK)
+async def produce_nature_retreat_endpoint(req: NatureRetreatRequest):
+    """Trigger Nature Retreat Studio generation with multi-angle composition, audio vault, and 4K master."""
+    from src.studios.nature_retreat.retreat_producer import produce_nature_retreat
+    try:
+        res = await produce_nature_retreat(
+            theme=req.theme,
+            duration=req.duration_seconds or 20.0,
+            scenes=req.scenes_count or 4,
+        )
+        ep_id = res["episode_id"]
+        v_name = Path(res["master_video_path"]).name
+        return {
+            "success": True,
+            "job_id": f"job_{ep_id.lower()}",
+            "episode_id": ep_id,
+            "title": res["title"],
+            "video_url": f"/storage/live_production/nature_retreats/{ep_id}/{v_name}",
+            "storage_path": res["storage_path"],
+            "keyframes": res["keyframes"],
+            "raw_videos": res["raw_videos"],
+            "bgm_url": res["bgm_path"],
+            "render_time_seconds": res["render_time_seconds"],
+            "artifacts": res["artifacts"],
+        }
+    except Exception as exc:
+        logger.error(f"nature_retreat_api_failed: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Nature retreat synthesis failed: {str(exc)}",
+        )
+

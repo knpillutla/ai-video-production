@@ -21,6 +21,17 @@ __pycache__/
 env/
 venv/
 ENV/
+config/tokens/
+config/tokens/*
+config/*secret*.json
+config/*token*.json
+config/*credential*.json
+*client_secret*.json
+token_*.json
+*.token
+*.pem
+*.key
+*.cert
 
 # Local Storage, SQLite Databases & Generated Media Renders
 storage/*

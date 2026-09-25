@@ -226,6 +226,13 @@ def build_storyboard_prompt(
         "3. CALM MIRROR LAKES & FJORDS ('landscape_solid'): For still glacial lakes, glassy reflection pools, and calm fjords, tag 'motion_domain': 'landscape_solid' (routes to Tencent Hunyuan Video 1080p for needle-sharp reflections and temporal stability)."
     )
     extras.append(
+        "MANDATORY BROADCAST AMBIENT AUDIO & SOUNDSCAPE DIRECTIVE (Directive 14 & 15): "
+        "For nature documentaries, patio retreats, and ambient soundscapes, autonomously generate detailed 'suno_tags' "
+        "mandating organic acoustic clarity and zero synthetic hiss (e.g. '[ambient nature], crystal-clear mountain waterfall, "
+        "soothing gentle water splash and babbling brook, soft acoustic meditative harp and bamboo flute, zero hiss, 48kHz broadcast master'). "
+        "In offline/local mode, system utilizes multi-band procedural DSP foley."
+    )
+    extras.append(
         "MANDATORY AUDIO-VISUAL DURATION SYNCHRONIZATION: The spoken commentary or dialogue in each scene MUST "
         "match the scene's 'duration_seconds'. At standard articulate pacing (~115–125 wpm / ~1.8–2.0 words/sec), "
         "write 12–16 words for a 10.0s scene, 6–8 words for a 5.0s scene, and 18–24 words for a 15.0s scene. "

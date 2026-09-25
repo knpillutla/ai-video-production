@@ -22,7 +22,7 @@ class HTTPClientPool:
 
         if cls._client is None or cls._client.is_closed or (cls._loop is not None and cls._loop is not current_loop):
             cls._client = httpx.AsyncClient(
-                timeout=httpx.Timeout(60.0, connect=10.0),
+                timeout=httpx.Timeout(180.0, connect=20.0),
                 limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
             )
             cls._loop = current_loop

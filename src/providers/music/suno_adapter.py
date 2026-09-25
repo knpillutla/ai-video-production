@@ -123,6 +123,19 @@ class SunoMusicAdapter(MusicProviderProtocol):
             logger.info(f"suno_track_cache_hit: reusing existing soundtrack {out.name} ({out.stat().st_size} bytes)")
             return out
 
+        # Universal Audio Vault Cache Check: Search for matching stem by genre/theme/concept (Directive 3)
+        if not force_live:
+            from src.services.audio_vault import audio_vault
+            cached_stem = audio_vault.find_matching_stem(
+                genre=genre, theme=mood, concept=title, tags=lyrics,
+                vocal_gender=vocal_gender, min_similarity=0.70,
+            )
+            if cached_stem and cached_stem.is_file():
+                import shutil
+                shutil.copy2(cached_stem, out)
+                logger.info(f"audio_vault_stem_reused: {cached_stem.name} -> {out.name}")
+                return out
+
         if (force_live or lyrics) and self.api_key and not is_mock_mode():
             try:
                 audio_url = await self.generate_track(
@@ -151,6 +164,11 @@ class SunoMusicAdapter(MusicProviderProtocol):
                             temp_mp3.unlink()
                         if proc.returncode == 0 and out.exists() and out.stat().st_size > 1000:
                             logger.info(f"suno_live_audio_downloaded: {out.name} ({out.stat().st_size} bytes)")
+                            from src.services.audio_vault import audio_vault
+                            audio_vault.register_stem(
+                                source_path=out, genre=genre, theme=mood, concept=title,
+                                tags=lyrics, title=title or genre, vocal_gender=vocal_gender,
+                            )
                             return out
             except Exception as ex:
                 logger.warning(f"suno_live_download_failed: {ex}. Checking local audio fallbacks.")

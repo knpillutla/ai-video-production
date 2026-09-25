@@ -21,7 +21,11 @@ All AI agents working within this workspace must adhere strictly to the engineer
 ### 3. Reusable Deterministic Scripts & Universal Artifact Caching
 * Recurring tasks must be implemented as standalone, reusable Python scripts located in `scripts/` or modular service utilities.
 * Cache assets and LLM outputs using SHA-256 prompt hashing to prevent redundant API expenditure.
-* **Universal Artifact Caching & Idempotency Mandate (All Media Categories):** Reuse created artifacts as much as possible; all production pipeline stages must be strictly idempotent. This rule applies universally across **ALL categories—images, references, backgrounds, scripts, songs, video, audio, lipsync, thumbnails, and composite renders**. If an artifact file already exists on disk and is non-empty for that project/episode/task, **we MUST NOT create or call external models again**. If an artifact is deleted or does not exist, then and only then create it again as required for improvements.
+* **Universal Artifact Caching & Idempotency Mandate (All Media Categories & All Channels):** Reuse created artifacts as much as possible; all production pipeline stages must be strictly idempotent. This rule applies universally across **ALL categories and ALL channels—images, references, backgrounds, scripts, songs, video, audio, lipsync, thumbnails, and composite renders**.
+  - **Tier 1 (Local Disk Check):** If an artifact file already exists on disk and is non-empty (>1000 bytes) for that project/episode/task, **we MUST NOT create or call external models again**.
+  - **Tier 2 (In-Flight Remote Request Resumption):** Persist in-flight asynchronous request tokens (e.g. FAL `request_id`, Suno task IDs) to local JSON state (`fal_req_p*.json`). On script restart/resumption, poll existing pending requests before ever initiating a new paid API call.
+  - **Tier 3 (AudioVault & Stem Cache Check):** Search `AudioVault` / local stem caches for matching musical genres/moods before dispatching new Suno synthesis.
+  - **Tier 4 (Idempotent `--id` Resumption):** All studio agents and channel scripts across all genres MUST support `--id <episode_id>` to resume interrupted productions, synthesizing ONLY the missing artifacts while preserving completed ones.
 
 ### 4. Hard 300-Line Limit Per File
 * **No code file may exceed 300 lines** (target 120–220 lines).
@@ -41,21 +45,23 @@ All AI agents working within this workspace must adhere strictly to the engineer
 * When a user submits a video for production from the UI, the system must first calculate and display the total estimated cost and an itemized breakdown (tokens, voice characters, images/clips, compute).
 * Generation jobs must remain blocked until the user explicitly clicks the confirmation button.
 
-### 8. Model Testing Safety & Cost Guard (Single Test Only, Max 10s Duration)
+### 8. Model Testing Safety & Cost Guard (Strict Ban on Bulk Tests, Single Test Only, Max 10s Duration)
+* **STRICT BAN ON RUNNING ALL TESTS:** **NEVER, EVER automatically run all tests.** Running full test suites (`pytest tests/` or bulk passes) consumes enormous CPU/time and poses high accidental API cost risks. Agents must **NEVER run all tests** unless explicitly and verbatim instructed by the user to run all tests.
+* **Targeted Single-Test Execution Only:** When verifying a code change, run **ONLY the single specific test file or specific test function** related directly to that change (e.g., `pytest tests/test_specific.py -k test_target`).
 * **Automated Tests Core Mandate:** When testing models as part of automated tests, **only run one test only with 10 sec duration**, to ensure we do not call more than one test, to save on costs.
-* **Zero Paid Calls in Default Test Suite:** The standard test suite (`pytest`) must ALWAYS run 100% locally with offline deterministic mocks/fallbacks. Even if paid API keys are present in `.env` or system environment, the full test suite must NEVER call external AI models.
-* **Strict Single Test Limit for Live Models:** When testing actual/live external AI models (Gemini, Together Flux, Azure Speech, Suno, Fal) as part of automated tests, you must **run only ONE test only**. Never call or run more than one test against live models.
-* **Hard 10-Second Duration Cap:** Any automated test that calls an actual model or synthesizes video/audio must be strictly capped to a **maximum duration of 10 seconds** (and minimal token/character count) to prevent enormous API expenditures.
+* **Zero Paid Calls in Default Test Suite:** The standard test suite must ALWAYS run 100% locally with offline deterministic mocks/fallbacks. Even if paid API keys are present in `.env` or system environment, tests must NEVER call external AI models without explicit flags.
+* **Strict Single Test Limit for Live Models:** When testing actual/live external AI models (Gemini, Together Flux, Azure Speech, Suno, Fal), you must **run only ONE test only**. Never call or run more than one test against live models.
+* **Hard 10-Second Duration Cap:** Any test that calls an actual model or synthesizes video/audio must be strictly capped to a **maximum duration of 10 seconds** (and minimal token/character count) to prevent API expenditures.
+
 
 
 ### 9. Mandatory Terraform-Only IaC
 * **Always create Terraform scripts only for all cloud platforms** (Azure, GCP, AWS, Multi-Cloud).
 * Never use Bicep, ARM templates, CloudFormation, or platform-specific template languages. Standardize on HashiCorp Terraform (`.tf`) files for 100% of infrastructure declarations.
 
-### 10. Topic, Metadata & Final Story Deduplication & User Alerting
+### 10. Topic Deduplication, Autonomous Creative Auto-Pivot & Persistent Memory
 * **Mandatory Persistence:** Every time a video is created, save the topic, metadata information (genre, tags, audience, format), and the final story synthesized from the script into the persistent Topic Memory vault.
-* **Pre-Creation Duplicate Guard:** When a user creates or estimates a video with similar metadata or topic (cosine similarity $\ge 0.80$ or heavy metadata overlap), the system MUST NOT create the duplicate content.
-* **Mandatory User Alert:** Immediately block the request (HTTP 409 Conflict) and display a prominent alert to the user detailing the existing conflicting topic, episode ID, and similarity percentage to prevent channel demonetization and wasted budget.
+* **Pre-Creation Duplicate Guard & Autonomous Pivot:** When a request matches an existing topic (cosine similarity $\ge 0.80$ or heavy metadata overlap), the agent MUST NOT produce duplicate content or crash. Instead, the agent alerts the user of the conflicting episode, **autonomously generates a differentiated unique angle (new sub-location, time-of-day, or atmospheric fusion)** within that niche, and **seamlessly continues its production loop** until a novel, high-CTR master video is successfully created.
 
 
 ### 11. Mandatory YouTube Partner Program (YPP) Monetization-Safe Content Standards
@@ -128,4 +134,34 @@ All AI agents working within this workspace must adhere strictly to the engineer
   3. *Calm Glassy Fjords & Mirror Lake Reflections (`landscape_solid`):* Route to **Tencent Hunyuan Video 1080p** ($0.075/s) for needle-sharp rock/tree reflections and rock-solid temporal stability.
   4. *Subject Interacting with Water (`wildlife_animal` / `human_action`):* Route to **Kling v3 Pro** ($0.280/s) for biological swimming kinematics, breaching marine life, or splashing characters.
 
+### 21. Mandatory Consultative Alignment & Feedback First (No Premature / Blind Code Edits)
+* **Feedback & Advice First:** When the user shares an idea, request, architectural preference, or direction, the agent must **first provide thoughtful feedback, engineering analysis, trade-off evaluation, and professional advice BEFORE making any code, file, or configuration changes**.
+* **Co-Finalization Before Action:** Discuss the approach, pros, cons, edge cases, and alternatives with the user. Finalize the exact plan based on the user's intent combined with the agent's advice, and proceed with code modifications only once aligned.
+* **Zero Premature Assumptions:** Never blindly jump to modify codebases, alter configurations, or create unilateral scripts without first consulting and aligning on the finalized decision with the user.
+
+### 22. Mandatory 4-Stage Progressive Quality Gate & Cost Guard (All Production Pipelines & Studio Agents)
+All studio agents, generation pipelines, and scratch production scripts must strictly enforce the **4-Stage Progressive Quality Gate** to prevent wasted time, unnecessary API spend, and flawed renders:
+* **Stage 1: Pre-Flight Deduplication & Storyboard Gate:** Before generating any visual or video assets, verify topic uniqueness via Topic Memory (cosine similarity $\ge 0.80$ block) and review the Gemini storyboard structure, scene prompts, and itemized cost forecast.
+* **Stage 2: Keyframe Image Quality Gate (FLUX 1.1 Pro Ultra):** Synthesize keyframe images first; inspect and approve before dispatching to video motion synthesis. Allow targeted single-scene image recreation or prompt tweaking ($0.06) rather than discarding an entire expensive video render ($1.40).
+* **Stage 3: Audio & Soundtrack Gate (AudioVault & Suno v3.5 Pro):** Verify or retrieve matching 48kHz stereo audio from the AudioVault cache ($0.00 cost) or generate fresh Suno stems with full commercial rights and zero synthetic hiss.
+* **Stage 4: Domain Video Motion & 4K Master Assembly:** Animate only approved keyframes using domain-specific models (Kling v3 Pro for waterfall/collisions, Wan 2.1 for laminar fluid, Hunyuan for solid vistas) and assemble visually lossless 4K master (CRF 18, -14 LUFS).
+
+### 23. Mandatory 2-Phase AI Video Diffusion & Local Long-Play Stretch Architecture (All Agents & All Channels)
+* **Phase 1 (Authentic AI Video Diffusion for Master Scenes):** Every production across all channels MUST synthesize genuine cinematic AI video diffusion motion for the initial master scenes using domain-optimized models (**Alibaba Wan 2.1** for water/rain/snow, **Kling v1.6 Pro** for fireplaces/mist/waterfalls, **Tencent Hunyuan Video** for mountain landscapes).
+* **Phase 2 (Deterministic Zero-Cost Local Long-Play Stretched Broadcast):** Once the pristine 4K AI diffusion master is synthesized and approved, all long-play expansions (1h, 3h, 8h sleep broadcasts) MUST be generated locally using single-pass FFmpeg seamless stream looping (`-stream_loop`) with optional Circadian OLED fade-to-black.
+
+### 24. Mandatory Autonomous Goal-Completion & Self-Healing Execution Loop (Zero Stalls / Zero Aborts)
+* **Never Stalling or Giving Up:** AI agents within this studio must NEVER halt, crash, or abort prematurely when encountering recoverable edge cases (e.g. topic duplicates, API queue latencies, transient timeouts, or intermediate render retries).
+* **Continuous Execution Loop:** An agent MUST autonomously self-heal (auto-pivot on duplicates, resume in-flight request IDs on timeout, auto-regenerate failed shots) until the verified final 4K video is rendered.
+
+### 25. Mandatory Directorial Decision & Cache Transparency Logging (All Agents & Studios)
+* **Explicit Rationale for Every Action:** Every agent, studio producer, and pipeline stage MUST log the complete rationale for its decisions in telemetry and console output:
+  - **Storyboard Decisions:** Log why a specific duration (e.g., 120s vs 60s) and shot count (e.g., 4 vs 2 shots) were selected based on the archetype/cluster context.
+  - **Cache vs. Invocation Transparency:** Explicitly declare `CACHE HIT` (with filename, local path, and similarity score) or `CACHE MISS -> INVOKING [MODEL]` with the reason why fresh synthesis is required.
+  - **Audio & Suno Invocations:** If Suno is called, explicitly log why an existing AudioVault stem was not reused (e.g. `AudioVault checked (0 matching stems >= 0.70 similarity) -> Invoking Suno v3.5 Pro for fresh [genre] soundscape`).
+  - **Motion Routing:** For every scene, log the model choice and why it was routed (e.g. `Wan 2.1 for laminar river currents` or `Kling 1.6 Pro for campfire embers`).
+
 Refer to [AGENT_INSTRUCTIONS.md](file:///c:/neel-1/projects/content-generation/AGENT_INSTRUCTIONS.md) for detailed architecture, code patterns, and the pre-commit self-audit checklist.
+
+
+
