@@ -41,6 +41,7 @@ async def run_deep_sleep_production(
     fade_black_hours: float = 2.0,
     generate_short: bool = True,
     review_first: bool = True,
+    allow_fallback: bool = False,
 ) -> dict:
     """Execute complete production for Silent Hearth channel with idempotent resume and review gate."""
     logger.info(f"starting_deep_sleep_channel_job: {primary}+{secondary} id={episode_id} motion={motion_model}")
@@ -60,6 +61,7 @@ async def run_deep_sleep_production(
         long_play_hours=None,
         fade_to_black_hours=None,
         generate_short=generate_short,
+        allow_fallback=allow_fallback,
     )
 
     master_path = Path(result["master_video_path"])
@@ -110,6 +112,7 @@ async def main():
     parser.add_argument("--fade-black", type=float, default=2.0, help="Hours after which video fades to OLED black screen (default: 2.0)")
     parser.add_argument("--no-short", action="store_true", help="Disable 9:16 vertical short generation")
     parser.add_argument("--no-review", action="store_true", help="Auto-stretch without pausing for review")
+    parser.add_argument("--allow-fallback", action="store_true", help="Allow fallback to local zoom-pan motion if live diffusion fails")
     args = parser.parse_args()
 
     print("\n" + "=" * 65)
@@ -134,6 +137,7 @@ async def main():
         fade_black_hours=args.fade_black,
         generate_short=not args.no_short,
         review_first=not args.no_review,
+        allow_fallback=args.allow_fallback,
     )
 
 

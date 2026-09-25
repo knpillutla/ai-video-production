@@ -45,26 +45,26 @@ class NatureRetreatProducer:
         title = storyboard.get("title_localized", "Nature Retreat")
         suno_tags = storyboard.get("suno_tags", "ambient nature, waterfall, tranquil")
 
-        # 1. Synthesize Keyframes (FLUX 1.1 Pro Ultra)
-        keyframe_paths: list[Path] = []
-        for sc in scenes:
+        # 1. Synthesize Keyframes (FLUX 1.1 Pro Ultra Concurrent Batch)
+        async def _fetch_kf(sc):
             idx = sc.get("scene_index", 0)
             kf_path = scenes_dir / f"scene_{idx:02d}.jpg"
             if not (kf_path.is_file() and kf_path.stat().st_size > 1000):
                 await self._render_keyframe(sc["visual_prompt"], kf_path)
-            keyframe_paths.append(kf_path)
+            return kf_path
 
-        # 2. Synthesize Video Motion (Kling v3 Pro / Wan 2.1 / Steadycam)
-        video_clip_paths: list[Path] = []
-        for sc in scenes:
+        keyframe_paths = list(await asyncio.gather(*[_fetch_kf(sc) for sc in scenes]))
+
+        # 2. Synthesize Video Motion (Kling v3 Pro / Wan 2.1 Concurrent Batch)
+        async def _fetch_motion(sc, kf_path):
             idx = sc.get("scene_index", 0)
-            kf_path = scenes_dir / f"scene_{idx:02d}.jpg"
             vid_path = scenes_dir / f"scene_{idx:02d}_motion.mp4"
             domain = sc.get("motion_domain", "water_fluid")
-
             if not (vid_path.is_file() and vid_path.stat().st_size > 1000):
                 await self._render_motion_clip(kf_path, sc["motion_prompt"], domain, vid_path, sc.get("duration_seconds", 5.0))
-            video_clip_paths.append(vid_path)
+            return vid_path
+
+        video_clip_paths = list(await asyncio.gather(*[_fetch_motion(sc, kf) for sc, kf in zip(scenes, keyframe_paths)]))
 
         # 3. Audio & Music Scoring (AudioVault Cache -> Suno v3.5 Pro)
         bgm_path = stems_dir / "bgm_master.wav"

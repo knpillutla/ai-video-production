@@ -65,8 +65,9 @@ class FalHunyuanAdapter:
         duration: int = 5,
         aspect_ratio: str = "16:9",
         force_live: bool = False,
+        req_file: Path | str | None = None,
     ) -> tuple[str, Path]:
-        """Synthesize video motion using Tencent Hunyuan Video v1.5."""
+        """Synthesize video motion using Tencent Hunyuan Video v1.5 with in-flight queue resumption."""
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 
@@ -97,20 +98,34 @@ class FalHunyuanAdapter:
                 "image_url": actual_url,
             }
 
-            job_sidecar = out.with_suffix(out.suffix + ".fal_job.json")
+            job_sidecar = Path(req_file) if req_file else out.with_suffix(out.suffix + ".fal_job.json")
             status_url, response_url = None, None
-            if job_sidecar.exists():
-                try:
-                    import json
-                    job_data = json.loads(job_sidecar.read_text(encoding="utf-8"))
-                    status_url = job_data.get("status_url")
-                    response_url = job_data.get("response_url")
-                    print(f"    [i] Fal.ai Hunyuan Video: Resuming existing queue job for {out.name}...")
-                except Exception:
-                    status_url, response_url = None, None
 
-            async with httpx.AsyncClient(timeout=300.0) as client:
-                if not status_url or not response_url:
+            # 1. Check specified sidecar, default sidecar, or directory sidecars
+            candidates = [job_sidecar, out.with_suffix(out.suffix + ".fal_job.json")]
+            # Also check for fal_diff_req_p*.json in parent
+            candidates.extend(list(out.parent.glob("fal_diff_req_*.json")))
+
+            for c in candidates:
+                if c and c.is_file():
+                    try:
+                        import json
+                        job_data = json.loads(c.read_text(encoding="utf-8"))
+                        status_url = job_data.get("status_url")
+                        response_url = job_data.get("response_url")
+                        req_id = job_data.get("request_id")
+                        if not response_url and req_id:
+                            response_url = f"{self.endpoint}/requests/{req_id}"
+                        if response_url or status_url:
+                            job_sidecar = c
+                            print(f"    [i] Fal.ai Hunyuan Video: Resuming existing remote queue job for {out.name} ({req_id or 'url'})...")
+                            logger.info(f"fal_hunyuan_resuming_job: req_id={req_id} file={c.name}")
+                            break
+                    except Exception:
+                        continue
+
+            async with httpx.AsyncClient(timeout=720.0) as client:
+                if not status_url and not response_url:
                     print(f"    [~] Fal.ai Hunyuan Video: Submitting {out.name} to GPU queue...")
                     submit_res = await client.post(self.endpoint, headers=headers, json=payload)
                     if submit_res.status_code not in (200, 201, 202):
@@ -120,17 +135,17 @@ class FalHunyuanAdapter:
                     video_url = _extract_video_url(res_json)
                     status_url = res_json.get("status_url")
                     response_url = res_json.get("response_url")
-                    if status_url and response_url:
+                    if status_url or response_url:
                         import json
-                        job_sidecar.write_text(json.dumps({"status_url": status_url, "response_url": response_url}), encoding="utf-8")
+                        job_sidecar.write_text(json.dumps({"request_id": res_json.get("request_id"), "status_url": status_url, "response_url": response_url}), encoding="utf-8")
                 else:
                     video_url = None
                     res_json = {}
 
                 if not video_url and (status_url or response_url):
-                    for attempt in range(80):
+                    for attempt in range(240):
                         if attempt > 0:
-                            await asyncio.sleep(2.5)
+                            await asyncio.sleep(3.0)
                         poll_target = status_url or response_url
                         poll_res = await client.get(poll_target, headers=headers, params={"logs": "1"})
                         if poll_res.status_code not in (200, 202):

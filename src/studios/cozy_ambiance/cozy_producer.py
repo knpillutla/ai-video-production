@@ -34,24 +34,25 @@ class CozyAmbianceProducer:
 
         logger.info(f"starting_cozy_ambiance_production: theme='{sb.theme}' dir={ep_dir.name}")
 
-        # Stage 2: Keyframe Image Gate (2 Keyframes)
-        keyframe_paths: List[Path] = []
-        for scene in sb.scenes:
+        # Stage 2: Keyframe Image Gate (Concurrent 2 Keyframes)
+        async def _fetch_kf(scene):
             kf_path = ep_dir / f"keyframe_p{scene.scene_index}.jpg"
             await self._render_keyframe(scene.visual_prompt, kf_path)
-            keyframe_paths.append(kf_path)
+            return kf_path
+
+        keyframe_paths = list(await asyncio.gather(*[_fetch_kf(s) for s in sb.scenes]))
 
         # Stage 3: Audio & Soundtrack Gate
         bgm_path = ep_dir / "soundtrack_48k.mp3"
         await self._synthesize_audio(sb.title, sb.audio_tags, bgm_path, sb.total_duration)
 
-        # Stage 4: Fluid Video Motion & 4K Master Assembly
-        video_clip_paths: List[Path] = []
-        for idx, (scene, kf_path) in enumerate(zip(sb.scenes, keyframe_paths)):
+        # Stage 4: Fluid Video Motion & 4K Master Assembly (Concurrent Batch)
+        async def _fetch_motion(scene, kf_path):
             clip_path = ep_dir / f"motion_p{scene.scene_index}.mp4"
-            # 10s motion per perspective, looped seamlessly to scene duration
             await self._render_motion_clip(kf_path, scene.motion_prompt, clip_path, duration_sec=scene.duration_seconds)
-            video_clip_paths.append(clip_path)
+            return clip_path
+
+        video_clip_paths = list(await asyncio.gather(*[_fetch_motion(s, kf) for s, kf in zip(sb.scenes, keyframe_paths)]))
 
         master_4k_path = ep_dir / "master_4k_60s.mp4"
         await self._assemble_4k_master(video_clip_paths, bgm_path, master_4k_path)

@@ -40,6 +40,7 @@ async def run_study_focus_production(
     total_hours: float = 3.0,
     generate_short: bool = True,
     review_first: bool = True,
+    allow_fallback: bool = False,
 ) -> dict:
     """Execute complete production for Rain & Quill channel with idempotent resume and review gate."""
     logger.info(f"starting_study_focus_channel_job: {primary}+{secondary} id={episode_id} motion={motion_model}")
@@ -65,6 +66,7 @@ async def run_study_focus_production(
         long_play_hours=None,
         fade_to_black_hours=None,
         generate_short=generate_short,
+        allow_fallback=allow_fallback,
     )
 
     master_path = Path(result["master_video_path"])
@@ -113,6 +115,7 @@ async def main():
     parser.add_argument("--hours", type=float, default=3.0, help="Study block duration in hours (default: 3.0)")
     parser.add_argument("--no-short", action="store_true", help="Disable 9:16 vertical short generation")
     parser.add_argument("--no-review", action="store_true", help="Auto-stretch without pausing for review")
+    parser.add_argument("--allow-fallback", action="store_true", help="Allow fallback to local zoom-pan motion if live diffusion fails")
     args = parser.parse_args()
 
     print("\n" + "=" * 65)
@@ -136,6 +139,7 @@ async def main():
         total_hours=args.hours,
         generate_short=not args.no_short,
         review_first=not args.no_review,
+        allow_fallback=args.allow_fallback,
     )
 
 

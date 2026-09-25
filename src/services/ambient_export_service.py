@@ -7,6 +7,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+import subprocess
+import imageio_ffmpeg
+
 from src.services.ambient_metadata_packager import YouTubeAmbientPackage, generate_youtube_ambient_package
 from src.services.ambient_shorts_extractor import generate_ambient_short
 from src.services.ambient_translator import LocalizedMetadata, localize_metadata_for_languages
@@ -14,6 +17,30 @@ from src.services.long_play_stretcher import export_long_play_broadcast
 from src.services.thumbnail_ab_packager import ThumbnailABPackage, generate_thumbnail_ab_variants
 from src.services.topic_memory import topic_memory
 from src.studios.ambient_world.ambient_storyboard import AmbientStoryboard
+
+
+def assemble_4k_master(video_clips: list[Path], audio_path: Path, out_master: Path) -> Path:
+    """Assemble seamless 4K master video with smooth cross-dissolve transitions and universal yuv420p encoding."""
+    ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+    n = len(video_clips)
+    if n == 1:
+        cmd = [ffmpeg_bin, "-y", "-i", str(video_clips[0]), "-i", str(audio_path), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "18", "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-shortest", "-movflags", "+faststart", str(out_master)]
+    elif n == 2:
+        cmd = [ffmpeg_bin, "-y", "-i", str(video_clips[0]), "-i", str(video_clips[1]), "-i", str(audio_path), "-filter_complex", "[0:v][1:v]xfade=transition=fade:duration=1.5:offset=28.5[v]", "-map", "[v]", "-map", "2:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "18", "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-shortest", "-movflags", "+faststart", str(out_master)]
+    else:
+        inputs = []
+        for c in video_clips:
+            inputs.extend(["-i", str(c)])
+        inputs.extend(["-i", str(audio_path)])
+        filter_parts, prev_tag, curr_offset = [], "0:v", 28.5
+        for i in range(1, n):
+            out_tag = f"v{i}" if i < n - 1 else "v"
+            filter_parts.append(f"[{prev_tag}][{i}:v]xfade=transition=fade:duration=1.5:offset={curr_offset:.1f}[{out_tag}]")
+            prev_tag = out_tag
+            curr_offset += 28.5
+        cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-map", f"{n}:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "18", "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-shortest", "-movflags", "+faststart", str(out_master)]
+    subprocess.run(cmd, capture_output=True, check=True)
+    return out_master
 
 
 def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], fade_hours: Optional[float]) -> Optional[Path]:

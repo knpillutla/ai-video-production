@@ -39,6 +39,7 @@ async def run_nature_sanctuary_production(
     long_play_hours: float = 3.0,
     generate_short: bool = True,
     review_first: bool = True,
+    allow_fallback: bool = False,
 ) -> dict:
     """Execute production for Earth Serenade channel with idempotent caching and review gate."""
     logger.info(f"starting_nature_sanctuary_channel_job: archetype={archetype} id={episode_id} motion={motion_model}")
@@ -58,6 +59,7 @@ async def run_nature_sanctuary_production(
         long_play_hours=None,
         fade_to_black_hours=None,
         generate_short=generate_short,
+        allow_fallback=allow_fallback,
     )
 
     master_path = Path(result["master_video_path"])
@@ -99,12 +101,13 @@ async def main():
     parser = argparse.ArgumentParser(description="Earth Serenade Niche Channel Producer")
     parser.add_argument("--archetype", type=str, default="swiss_alps", choices=NATURE_ARCHETYPES, help="Nature archetype")
     parser.add_argument("--id", type=str, default=None, help="Optional existing episode ID to resume/reuse cached artifacts")
-    parser.add_argument("--motion-model", type=str, default="auto", choices=["auto", "wan", "kling", "hunyuan", "lanczos"], help="AI video diffusion motion model (default: auto)")
+    parser.add_argument("--motion-model", type=str, default="wan", choices=["wan", "kling", "hunyuan", "auto", "lanczos"], help="AI video diffusion motion model (default: wan)")
     parser.add_argument("--master-duration", type=float, default=None, choices=[60.0, 90.0, 120.0], help="Master set duration in seconds (default: auto-derived by topic)")
     parser.add_argument("--shots", type=int, default=None, choices=[2, 3, 4], help="Explicit number of visual shots (default: auto-derived by topic)")
     parser.add_argument("--hours", type=float, default=3.0, help="Long-play duration in hours (e.g. 1.0, 3.0, 2.5)")
     parser.add_argument("--no-short", action="store_true", help="Disable 9:16 vertical short generation")
     parser.add_argument("--no-review", action="store_true", help="Auto-stretch without pausing for review")
+    parser.add_argument("--allow-fallback", action="store_true", help="Allow fallback to local zoom-pan motion if live diffusion fails")
     args = parser.parse_args()
 
     print("\n" + "=" * 65)
@@ -127,6 +130,7 @@ async def main():
         long_play_hours=args.hours,
         generate_short=not args.no_short,
         review_first=not args.no_review,
+        allow_fallback=args.allow_fallback,
     )
 
 
