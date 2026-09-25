@@ -1,6 +1,6 @@
 # AI Video Production Studio: Multi-Channel CLI & Stretch Cheatsheet
 
-This cheatsheet contains all production and stretching commands for the automated YouTube channels, covering the 3-stage Human-in-the-Loop review workflow, Kling v3 4K Native diffusion, and ultra-fast long-play broadcast stretching.
+This cheatsheet contains all production and stretching commands for the automated YouTube channels, covering the 3-stage Human-in-the-Loop review workflow, Kling v3 4K Native diffusion, custom mood prompting (`--prompt "..."`), `--shots 1` single-scene living wallpapers, and ultra-fast long-play broadcast stretching.
 
 ---
 
@@ -11,6 +11,26 @@ This cheatsheet contains all production and stretching commands for the automate
 | **1. Earth Serenade** | 4K Scenic Nature Sanctuaries (`swiss_alps`, `mountains`, `ocean_world`) | 60s – 120s | 1.0 – 3.0 Hours | Direct Copy (~10s) | Kling v3 4K Native (`kling_v3`) |
 | **2. Silent Hearth** | Deep Sleep & Insomnia (`blizzard`, `camp_fire`, `rain`) | 90s (3 shots min) | 8.0 Hours | Direct Copy (or `--sleep` for 2h fade) | Kling v3 4K Native (`kling_v3`) |
 | **3. Rain & Quill** | Study, Focus & Ambience (`beach_house`, `cafe`, `rain`) | 90s (3 shots) | 3.0 Hours | Direct Copy (~10s) | Kling v3 4K Native (`kling_v3`) |
+
+---
+
+## 🔥 Single-Shot + Custom Mood Prompting (`--shots 1 --prompt "..."`)
+
+Ideal for winter evenings, fireplace living wallpapers, or specific scenic aesthetics where you want **only 1 uninterrupted hypnotic shot** matching your custom direction ($2.10 total API spend):
+
+```powershell
+# Example 1: Cozy Stone Fireplace (1 Shot, Burning Oak Logs & Embers)
+python scripts/channels/deep_sleep_sanctuary_pipeline.py --primary blizzard --secondary camp_fire --shots 1 --prompt "Rustic stone fireplace with burning oak logs, crackling flames and glowing orange charcoal embers" --photos-only
+python scripts/channels/deep_sleep_sanctuary_pipeline.py --id <episode_id> --shots 1
+
+# Example 2: Swiss Alps Glacial Stream (1 Shot, Pure Crystalline Water Ripples)
+python scripts/channels/nature_sanctuary_pipeline.py --archetype swiss_alps --shots 1 --prompt "Crystalline turquoise glacial mountain stream flowing over smooth pebbles with towering snow peaks in background" --photos-only
+python scripts/channels/nature_sanctuary_pipeline.py --id <episode_id> --shots 1
+
+# Example 3: Rain on Library Window (1 Shot, Warm Armchair & Raindrops)
+python scripts/channels/study_focus_cafe_pipeline.py --primary beach_house --secondary rain --shots 1 --prompt "Cozy library window with raindrops trickling down glass, warm glowing reading lamp and steaming ceramic tea cup" --photos-only
+python scripts/channels/study_focus_cafe_pipeline.py --id <episode_id> --shots 1
+```
 
 ---
 

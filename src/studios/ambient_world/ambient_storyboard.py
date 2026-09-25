@@ -69,7 +69,10 @@ def resolve_contextual_defaults(cluster: str, user_duration: Optional[float], us
             default_shots = 3
             rationale = f"Custom Duration {dur}s in Focus Setting: Utilizing 3 balanced focal angles ({dur/3:.1f}s each)."
 
-    shots = user_shots if (user_shots and user_shots in (2, 3, 4)) else default_shots
+    shots = user_shots if (user_shots and user_shots in (1, 2, 3, 4)) else default_shots
+    if shots == 1 and user_duration is None:
+        dur = 30.0
+        rationale = "Single Shot Minimalist Master: 1 steady hypnotic living wallpaper perspective (30s loop) for uninterrupted tranquility."
     return dur, shots, rationale
 
 
@@ -77,6 +80,7 @@ def generate_ambient_storyboard(
     primary: str = "swiss_alps",
     secondary: Optional[str] = None,
     custom_title: Optional[str] = None,
+    custom_prompt: Optional[str] = None,
     duration_seconds: Optional[float] = None,
     num_shots: Optional[int] = None,
 ) -> AmbientStoryboard:
@@ -87,11 +91,13 @@ def generate_ambient_storyboard(
     total_dur, shots_count, rationale = resolve_contextual_defaults(arch1.cluster, duration_seconds, num_shots)
     shot_dur = round(total_dur / shots_count, 1)
 
-    logger.info(f"directorial_decision: archetype='{arch1.key}' cluster='{arch1.cluster}' duration={total_dur}s shots={shots_count} shot_dur={shot_dur}s")
+    logger.info(f"directorial_decision: archetype='{arch1.key}' cluster='{arch1.cluster}' duration={total_dur}s shots={shots_count} shot_dur={shot_dur}s custom_prompt={bool(custom_prompt)}")
     logger.info(f"decision_rationale: {rationale}")
     print(f"\n[AGENT DIRECTORIAL DECISION]")
     print(f"   * Theme / Cluster:     {arch1.display_name} ({arch1.cluster.upper()})")
-    print(f"   * Master Set Duration: {int(total_dur)}s ({shots_count} Shots @ {shot_dur}s each)")
+    print(f"   * Master Set Duration: {int(total_dur)}s ({shots_count} Shot{'s' if shots_count > 1 else ''} @ {shot_dur}s each)")
+    if custom_prompt:
+        print(f"   * Custom Mood Prompt:  \"{custom_prompt.strip()}\"")
     print(f"   * Strategic Rationale: {rationale}\n")
 
     title = custom_title or (f"{arch1.display_name} with {arch2.display_name}" if (arch2 and arch2.key != arch1.key) else arch1.display_name)
@@ -99,23 +105,33 @@ def generate_ambient_storyboard(
 
     scenes: List[AmbientScenePrompt] = []
 
-    # Shot 1: Wide establishing atmospheric perspective
-    s1_vis = f"{arch1.wide_visual_prompt}" + (f" Blended with {arch2.display_name.lower()} atmosphere." if arch2 else "")
+    # Shot 1: Wide establishing atmospheric perspective or customized single shot
+    if shots_count == 1 and custom_prompt:
+        s1_vis = f"Masterpiece 4K photograph of {custom_prompt.strip()}. Warm cinematic natural lighting, 50mm lens, 8k resolution, zero humans, photorealistic detail."
+        s1_motion = f"Ultra-slow organic motion of {custom_prompt.strip()}, rock-steady camera perspective, zero rapid movement, zero timelapse, peaceful living wallpaper."
+    else:
+        s1_vis = f"{arch1.wide_visual_prompt}" + (f" Blended with {arch2.display_name.lower()} atmosphere." if arch2 else "")
+        s1_motion = arch1.wide_motion_prompt
+        if custom_prompt:
+            s1_vis += f" Accented with {custom_prompt.strip()}."
+            s1_motion += f" Featuring {custom_prompt.strip()}."
+
     scenes.append(AmbientScenePrompt(
         scene_index=1, perspective_type="wide_atmospheric", visual_prompt=s1_vis,
-        motion_prompt=arch1.wide_motion_prompt, duration_seconds=shot_dur, domain=arch1.default_domain,
+        motion_prompt=s1_motion, duration_seconds=shot_dur, domain=arch1.default_domain,
     ))
     print(f"   [Shot 1 / Wide Establishing] Scale: Monumental panorama to establish deep environmental immersion.")
 
-    # Shot 2: Intimate macro / focal detail perspective
-    s2_vis = (arch2.intimate_visual_prompt if arch2 else arch1.intimate_visual_prompt)
-    scenes.append(AmbientScenePrompt(
-        scene_index=2, perspective_type="intimate_macro", visual_prompt=s2_vis,
-        motion_prompt=(arch2.intimate_motion_prompt if arch2 else arch1.intimate_motion_prompt),
-        duration_seconds=shot_dur,
-        domain="water_fluid" if any(k in f"{primary} {secondary}" for k in ("rain", "beach", "ocean", "river", "lake")) else "landscape_solid",
-    ))
-    print(f"   [Shot 2 / Intimate Macro] Sensory: Tactile micro-textures (rain droplets, water ripples, hearth embers) for soothing focus.")
+    # Shot 2 (if 2, 3, or 4 shots): Intimate macro / focal detail perspective
+    if shots_count >= 2:
+        s2_vis = (arch2.intimate_visual_prompt if arch2 else arch1.intimate_visual_prompt)
+        scenes.append(AmbientScenePrompt(
+            scene_index=2, perspective_type="intimate_macro", visual_prompt=s2_vis,
+            motion_prompt=(arch2.intimate_motion_prompt if arch2 else arch1.intimate_motion_prompt),
+            duration_seconds=shot_dur,
+            domain="water_fluid" if any(k in f"{primary} {secondary}" for k in ("rain", "beach", "ocean", "river", "lake")) else "landscape_solid",
+        ))
+        print(f"   [Shot 2 / Intimate Macro] Sensory: Tactile micro-textures (rain droplets, water ripples, hearth embers) for soothing focus.")
 
     # Shot 3 (if 3 or 4 shots): Contextual third perspective
     if shots_count >= 3:

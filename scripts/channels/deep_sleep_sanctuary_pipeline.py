@@ -51,6 +51,7 @@ async def main():
     sb = generate_ambient_storyboard(
         primary=args.primary,
         secondary=args.secondary,
+        custom_prompt=args.prompt,
         duration_seconds=args.master_duration,
         num_shots=args.shots,
     )

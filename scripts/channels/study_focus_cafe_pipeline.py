@@ -50,6 +50,7 @@ async def main():
         primary=args.primary,
         secondary=args.secondary,
         custom_title=f"Cozy {args.primary.replace('_', ' ').title()} Rain ~ {int(args.hours)} Hours Deep Study & Focus [4K]",
+        custom_prompt=args.prompt,
         duration_seconds=args.master_duration,
         num_shots=args.shots,
     )
