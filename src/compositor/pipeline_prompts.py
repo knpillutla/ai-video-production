@@ -140,11 +140,11 @@ def build_storyboard_prompt(
             f"Write a dramatic, cinematic short film script on: {title} in {genre} "
             f"genre with duration {duration_seconds}s in {language} language."
         )
-    elif any(k in fmt for k in ("relaxation", "scenic", "nature", "lounge", "walk", "drive")):
+    elif any(k in fmt for k in ("retreat", "patio", "soundscape", "cozy", "relaxation", "scenic", "nature", "lounge", "walk", "drive")):
         base = (
-            f"Write a serene, scenic visual relaxation script on: {title} in {fmt} "
-            f"format. Emphasize breathtaking landscapes, ambient sound design, "
-            f"peaceful pacing, and visual meditation with duration {duration_seconds}s in {language} language."
+            f"Write a tranquil, luxurious cozy ambient retreat and soundscape script on: {title} in {fmt} "
+            f"format. Emphasize opulent biophilic patio architecture, cascading waterfalls, lush botanical gardens, "
+            f"warm glowing lanterns, multi-angle perspectives, and 48kHz nature sound design with duration {duration_seconds}s in {language} language."
         )
     else:
         base = (
@@ -172,16 +172,16 @@ def build_storyboard_prompt(
         "- 'vocal_gender': 'male', 'female', or 'duet'\n"
         "- 'characters': list of character metadata objects\n"
         "- 'scenes': list of scene objects\n"
-        "  * Each scene MUST include 'motion_domain': 'water_fluid' (for active rivers, waterfalls, ocean waves, rapids, rain) or 'landscape_solid' (for mountains, rock canyons, forest canopies, valleys, aerial vistas) or 'human_action' (for dance and character movement)\n"
-        "  * Each scene MUST include 'motion_type': 'kinetic_video' (for dynamic kinetic scenes with moving crowds, vehicles, fountains, rain, or active walking) or 'steadycam_vista' (for serene panoramic landscapes, architectural viewpoints, and calm atmosphere)\n"
+        "  * Each scene MUST include 'motion_domain': one of ['landscape_solid', 'water_fluid', 'water_impact_collision', 'wildlife_animal', 'human_action', 'atmospheric_weather', 'macro_botanical', 'aerial_fpv', 'celestial_nightscape']\n"
+        "  * Each scene MUST include 'motion_type': 'kinetic_video' (for dynamic kinetic scenes with moving wildlife, water, crowds, or active walking) or 'steadycam_vista' (for serene panoramic landscapes, architectural viewpoints, and calm atmosphere)\n"
         "  * Each scene MUST include 'camera_movement': 'slow_zoom_in', 'slow_zoom_out', 'pan_left', 'pan_right', 'tilt_up', or 'tilt_down' autonomously chosen by analyzing the scene's architectural lines, vanishing points, spires, and framing\n"
     )
     extras.append(
         "MANDATORY GENRE & STORY RELEVANCE (Zero Unsolicited Humans in Nature/Scenic Guard): "
         "1. For Nature Documentaries, Scenic Landscapes, Wildlife, and Ambient Relaxation: Do NOT generate human characters "
-        "or protagonists unless explicitly requested by the user. Set 'characters': [] and ensure all 'visual_prompt' "
-        "and 'motion_prompt' scenes focus 100% on majestic wilderness, ancient geological formations, turquoise waters, "
-        "canopy flora, atmospheric mist, and natural fauna.\n"
+        "or protagonists unless explicitly requested by the user. Set 'characters': []. All scenes must focus on majestic "
+        "wilderness, geological formations, pristine waters, canopy flora, and authentic wild fauna/animals (e.g. grizzly bears, "
+        "wolves, soaring eagles, elk herds) tagged with 'motion_domain': 'wildlife_animal'.\n"
         "2. For Story-Driven Genres (South Indian Dance, Comedy, Drama, Short Films, Music Videos): "
         "Apply the 100% Character Consistency & Immutable Anchor Directive — define an immutable 'character_anchor_prompt' "
         "in 'characters' and prepend it identically to every scene's 'visual_prompt' where the character appears."
@@ -220,15 +220,10 @@ def build_storyboard_prompt(
         "Never output camera-only motion when dynamic weather is present."
     )
     extras.append(
-        "MANDATORY WATER DYNAMICS & FLUID PHYSICS DIRECTIVE (Zero Gelatinous Foam / Melting Water Guard): "
-        "1. LINEAR FLOW VECTOR ALIGNMENT: In rivers, streams, waterfalls, and ocean waves, always align camera motion "
-        "parallel to the water flow vector (e.g. slow push forward looking downstream, or slow pull back looking upstream). "
-        "Strictly prohibit contradictory perpendicular camera motion that confuses diffusion fluid dynamics.\n"
-        "2. SMOOTH GLASSY CURRENTS OVER FROZEN SPLASH: 'visual_prompt' for water must mandate continuous flowing glassy currents, "
-        "laminar natural ripples, and clean specular water reflections. Strictly prohibit chaotic frozen mid-air splash droplets, "
-        "heavy static foam blobs across boulders, or turbulent spray that causes AI video models to produce melting foam artifacts.\n"
-        "3. FLUID MOTION PROMPT TOKENS: In 'motion_prompt', explicitly mandate: 'smooth continuous downstream fluid motion, "
-        "realistic water surface displacement, natural laminar flow, zero gelatinous morphing, zero frozen foam melting'."
+        "MANDATORY WATER DYNAMICS & 3-TIER WATER/COLLISION STRATEGY DIRECTIVE (Directive 20): "
+        "1. HEAVY IMPACT & CRASHING WATERFALLS ('water_impact_collision'): For heavy cascading waterfalls plunging into pools, violent river rapids churning over boulders, coastal breakers/surf smashing cliff rocks, or physical bodies splashing in water, tag 'motion_domain': 'water_impact_collision' (routes to Kling v3 Pro). In 'motion_prompt', mandate 'powerful volumetric liquid momentum, heavy water crashing down over rock ledge, explosive splash plume and expanding impact ripples at base, billowing fine water vapor. Negative: zero static vertical streaks, zero falling wire artifacts'.\n"
+        "2. SMOOTH FLOWING WATER ('water_fluid'): For continuous rivers, laminar streams, gentle ocean swells, rain, and canal currents, tag 'motion_domain': 'water_fluid' (routes to Alibaba Wan 2.1). In 'motion_prompt', mandate 'smooth continuous laminar fluid displacement, natural rolling surface waves, dynamic water specular highlights. Negative: gelatinous water, melting foam, static frozen water'.\n"
+        "3. CALM MIRROR LAKES & FJORDS ('landscape_solid'): For still glacial lakes, glassy reflection pools, and calm fjords, tag 'motion_domain': 'landscape_solid' (routes to Tencent Hunyuan Video 1080p for needle-sharp reflections and temporal stability)."
     )
     extras.append(
         "MANDATORY AUDIO-VISUAL DURATION SYNCHRONIZATION: The spoken commentary or dialogue in each scene MUST "

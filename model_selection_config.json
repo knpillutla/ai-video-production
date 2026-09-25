@@ -69,6 +69,46 @@
         "cost_usd_per_sec": 0.080,
         "primary_domain": "water_fluid"
       },
+      "domain_routing_matrix": {
+        "landscape_solid": { "model": "Tencent Hunyuan Video 1080p", "provider": "Fal.ai", "cost_sec": 0.075 },
+        "water_fluid": { "model": "Alibaba Wan 2.1", "provider": "Fal.ai", "cost_sec": 0.080 },
+        "water_impact_collision": { "model": "Kling v3 Pro", "provider": "Fal.ai", "cost_sec": 0.280 },
+        "wildlife_animal": { "model": "Kling v3 Pro", "provider": "Fal.ai", "cost_sec": 0.280 },
+        "human_action": { "model": "Kling v3 Pro", "provider": "Fal.ai", "cost_sec": 0.280 },
+        "atmospheric_weather": { "model": "Alibaba Wan 2.1", "provider": "Fal.ai", "cost_sec": 0.080 },
+        "macro_botanical": { "model": "Alibaba Wan 2.1", "provider": "Fal.ai", "cost_sec": 0.080 },
+        "aerial_fpv": { "model": "Kling v3 Pro", "provider": "Fal.ai", "cost_sec": 0.280 },
+        "celestial_nightscape": { "model": "Tencent Hunyuan Video 1080p", "provider": "Fal.ai", "cost_sec": 0.075 }
+      },
+      "render": {
+        "fps": 24,
+        "crf": 18,
+        "resolution": "3840x2160"
+      }
+    },
+    "cozy_ambient_retreat": {
+      "description": "Biophilic cozy patio soundscapes, cascading waterfalls, and ambient ASMR relaxation.",
+      "image": {
+        "provider": "Fal.ai",
+        "model": "FLUX 1.1 Pro Ultra",
+        "endpoint": "https://queue.fal.run/fal-ai/flux-pro/v1.1-ultra",
+        "aspect_ratio": "16:9",
+        "raw": true
+      },
+      "video_motion": {
+        "provider": "Fal.ai",
+        "model": "Alibaba Wan 2.1",
+        "endpoint": "https://queue.fal.run/fal-ai/wan-i2v",
+        "cost_usd_per_sec": 0.080,
+        "primary_domain": "water_fluid"
+      },
+      "domain_routing_matrix": {
+        "landscape_solid": { "model": "Tencent Hunyuan Video 1080p", "provider": "Fal.ai", "cost_sec": 0.075 },
+        "water_fluid": { "model": "Alibaba Wan 2.1", "provider": "Fal.ai", "cost_sec": 0.080 },
+        "water_impact_collision": { "model": "Kling v3 Pro", "provider": "Fal.ai", "cost_sec": 0.280 },
+        "atmospheric_weather": { "model": "Alibaba Wan 2.1", "provider": "Fal.ai", "cost_sec": 0.080 },
+        "macro_botanical": { "model": "Alibaba Wan 2.1", "provider": "Fal.ai", "cost_sec": 0.080 }
+      },
       "render": {
         "fps": 24,
         "crf": 18,

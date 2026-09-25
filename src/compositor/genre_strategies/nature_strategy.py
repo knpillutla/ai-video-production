@@ -43,13 +43,27 @@ class NatureDocumentaryStrategy:
                 "location": {"type": "STRING"},
                 "shot_type": {"type": "STRING"},
                 "camera_movement": {"type": "STRING"},
+                "motion_domain": {
+                    "type": "STRING",
+                    "enum": [
+                        "landscape_solid",
+                        "water_fluid",
+                        "water_impact_collision",
+                        "wildlife_animal",
+                        "human_action",
+                        "atmospheric_weather",
+                        "macro_botanical",
+                        "aerial_fpv",
+                        "celestial_nightscape",
+                    ],
+                },
                 "visual_prompt": {"type": "STRING"},
                 "motion_prompt": {"type": "STRING"},
                 "dialogue": {"type": "STRING"},
                 "foley_sfx": {"type": "STRING"},
             },
             "required": ["scene_index", "duration_seconds", "location", "shot_type",
-                         "visual_prompt", "motion_prompt", "dialogue"],
+                         "motion_domain", "visual_prompt", "motion_prompt", "dialogue"],
         }
         character = {
             "type": "OBJECT",

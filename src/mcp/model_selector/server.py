@@ -79,20 +79,25 @@ async def select_best_model(
     start_time = time.perf_counter()
     cat_info = MODEL_CATALOG.get(category, MODEL_CATALOG["script_creative"])
 
-    # Genre & Domain specific overrides for video motion
+    # Professional Domain Scene Routing for Video Motion
     is_dance = any(k in (genre or "").lower() for k in ("dance", "telugu", "south_indian", "folk", "mass", "jathara"))
-    is_water = any(k in f"{genre} {scene_domain}".lower() for k in ("water", "river", "waterfall", "rapids", "ocean", "stream", "waves", "rain"))
+    is_impact_or_collision = scene_domain in ("water_impact_collision", "wildlife_animal", "human_action", "aerial_fpv") or is_dance or any(
+        k in f"{genre} {scene_domain}".lower() for k in ("collision", "impact", "crashing", "waterfall", "cascade", "rapid", "plunge", "wildlife", "animal", "fauna", "bear", "wolf", "eagle", "whale", "shark", "dolphin", "marine", "predator", "bird", "human", "character", "action", "drone", "fpv")
+    )
+    is_fluid_or_weather = scene_domain in ("water_fluid", "atmospheric_weather", "macro_botanical") or any(
+        k in f"{genre} {scene_domain}".lower() for k in ("water", "river", "stream", "ocean", "sea", "surf", "coast", "tide", "swell", "waves", "rain", "fog", "mist", "blizzard", "bloom")
+    )
 
-    if category == "video_motion" and is_water and not simulate_rate_limit:
-        chosen = {"provider": "Fal.ai", "model": "wan-2.1-i2v", "unit_cost": 0.080, "unit_name": "second"}
-        fallback_triggered = False
-        status_reason = f"Domain Override: Water/Fluid ('{scene_domain}') -> Alibaba Wan 2.1"
-        reasoning = "Alibaba Wan 2.1 selected for superior laminar liquid flow, dynamic ripple physics, and zero foam-melting artifacts."
-    elif category == "video_motion" and is_dance and not simulate_rate_limit:
+    if category == "video_motion" and is_impact_or_collision and not simulate_rate_limit:
         chosen = {"provider": "Fal.ai", "model": "kling-video-v3-pro", "unit_cost": 0.280, "unit_name": "second"}
         fallback_triggered = False
-        status_reason = f"Genre Override: '{genre}' -> Kling v3 Pro"
-        reasoning = f"Genre override applied for '{genre}': Kling v3 Pro selected for complex human dance choreography & kinematic stability."
+        status_reason = f"Domain Override: '{scene_domain}' -> Kling v3 Pro"
+        reasoning = f"Kling v3 Pro selected for '{scene_domain}' — superior volumetric force, heavy water collision/splash impact, and kinematic limb stability."
+    elif category == "video_motion" and is_fluid_or_weather and not simulate_rate_limit:
+        chosen = {"provider": "Fal.ai", "model": "wan-2.1-i2v", "unit_cost": 0.080, "unit_name": "second"}
+        fallback_triggered = False
+        status_reason = f"Domain Override: '{scene_domain}' -> Alibaba Wan 2.1"
+        reasoning = f"Alibaba Wan 2.1 selected for '{scene_domain}' — superior smooth laminar liquid surface displacement, rolling waves, and zero static wire artifacts."
     elif simulate_rate_limit:
         chosen = cat_info["fallback"]
         fallback_triggered = True

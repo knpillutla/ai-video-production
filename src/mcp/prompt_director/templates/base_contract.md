@@ -49,6 +49,18 @@ Video motion synthesis models animate ONLY what is explicitly commanded in 'moti
 2. DIRECTORIAL CAMERA MOVEMENT GRAMMAR (Directive 20):
    - Every motion prompt must command precise cinematic camera movement matching the dramatic beat: slow crane-jib descent, 180° orbiting arc, steadycam forward tracking, or creeping slow push-in. Avoid static unmotivated framing.
 
+### MANDATORY 3-TIER WATER DYNAMICS & MOTION DOMAIN TAXONOMY (Directive 20)
+Every scene object in 'scenes' MUST include 'motion_domain' chosen precisely based on fluid physics:
+1. 'water_impact_collision' (Kling v3 Pro Route): Use for all heavy cascading waterfalls, rock plunges, violent white-water river rapids churning over boulders, coastal breakers/surf slamming cliff walls, and subjects or wildlife splashing in water.
+   - Visual Prompt Mandate: Rich liquid volume, turbulent foam froth at the impact base, atmospheric mist plume.
+   - Motion Prompt Mandate: "Powerful volumetric liquid momentum, heavy water crashing down over rock ledge, explosive splash plume and expanding impact ripples at base, billowing fine water vapor. Negative: zero static vertical streaks, zero falling wire artifacts."
+2. 'water_fluid' (Alibaba Wan 2.1 Route): Use for continuous smooth laminar rivers, meandering streams, gentle ocean swells, rain, creek currents, and canal flows.
+   - Visual Prompt Mandate: Continuous glassy flowing surface, natural wave ripples, specular sunlight glints.
+   - Motion Prompt Mandate: "Smooth continuous laminar fluid displacement, natural rolling surface wave crests, dynamic water specular highlights. Negative: gelatinous water, melting foam, static frozen water."
+3. 'landscape_solid' (Tencent Hunyuan 1080p Route): Use for calm mirror glacial lakes, still reflection pools, glassy fjords, majestic mountain peaks, and architectural facades.
+   - Visual & Motion Prompt Mandate: "Needle-sharp mirror lake reflection, crystal atmospheric stillness, perfectly stable architectural lines."
+4. Other Domains: 'wildlife_animal' (Kling), 'human_action' (Kling), 'aerial_fpv' (Kling), 'atmospheric_weather' (Wan 2.1), 'macro_botanical' (Wan 2.1), 'celestial_nightscape' (Hunyuan 1080p).
+
 ### MANDATORY AUDIO-VISUAL DURATION SYNCHRONIZATION (Strict Word Budget)
 Every scene's spoken dialogue duration MUST match the visual `duration_seconds` of that scene:
 - Standard articulate speaking cadence is ~1.8–2.0 words per second (~115–125 words per minute).
@@ -56,6 +68,7 @@ Every scene's spoken dialogue duration MUST match the visual `duration_seconds` 
 - For a 5.0-second scene: write EXACTLY 6–8 spoken words (spoken duration ~3.0–3.5s).
 - For a 15.0-second scene: write EXACTLY 18–24 spoken words.
 - In spoken narration scenes, NEVER write lengthy or crowded paragraphs exceeding `(duration_seconds * 1.8)` words. Audio delivery and visual display MUST remain in seamless cinematic synchronization.
+
 
 
 

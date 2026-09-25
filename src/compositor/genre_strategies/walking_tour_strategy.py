@@ -74,12 +74,26 @@ class WalkingTourStrategy:
                 "pov_perspective": {"type": "STRING"},
                 "motion_type": {"type": "STRING", "description": "'kinetic_video' for active moving shots or 'steadycam_vista' for serene 4K panoramic vista glides"},
                 "camera_movement": {"type": "STRING", "description": "'slow_zoom_in', 'slow_zoom_out', 'pan_left', 'pan_right', 'tilt_up', or 'tilt_down' based on architectural composition"},
+                "motion_domain": {
+                    "type": "STRING",
+                    "enum": [
+                        "landscape_solid",
+                        "water_fluid",
+                        "water_impact_collision",
+                        "wildlife_animal",
+                        "human_action",
+                        "atmospheric_weather",
+                        "macro_botanical",
+                        "aerial_fpv",
+                        "celestial_nightscape",
+                    ],
+                },
                 "visual_prompt": {"type": "STRING"},
                 "motion_prompt": {"type": "STRING"},
                 "dialogue": {"type": "STRING"},
                 "ambient_sfx": {"type": "STRING"},
             },
-            "required": ["scene_index", "duration_seconds", "location", "motion_type",
+            "required": ["scene_index", "duration_seconds", "location", "motion_domain", "motion_type",
                          "camera_movement", "visual_prompt", "motion_prompt", "dialogue"],
         }
         return {

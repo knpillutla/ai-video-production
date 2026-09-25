@@ -52,13 +52,27 @@ class EpicCinematicStrategy:
                 "location": {"type": "STRING"},
                 "shot_type": {"type": "STRING"},
                 "vfx_elements": {"type": "STRING"},
+                "motion_domain": {
+                    "type": "STRING",
+                    "enum": [
+                        "landscape_solid",
+                        "water_fluid",
+                        "water_impact_collision",
+                        "wildlife_animal",
+                        "human_action",
+                        "atmospheric_weather",
+                        "macro_botanical",
+                        "aerial_fpv",
+                        "celestial_nightscape",
+                    ],
+                },
                 "visual_prompt": {"type": "STRING"},
                 "motion_prompt": {"type": "STRING"},
                 "dialogue": {"type": "ARRAY", "items": dialogue_line},
                 "sfx_description": {"type": "STRING"},
             },
             "required": ["scene_index", "duration_seconds", "location",
-                         "visual_prompt", "motion_prompt"],
+                         "motion_domain", "visual_prompt", "motion_prompt"],
         }
         character = {
             "type": "OBJECT",
