@@ -1,50 +1,54 @@
-<!-- TOP APP NAVIGATION BAR -->
-<header class="h-16 border-b border-[var(--border)] bg-[#0d1322] flex items-center justify-between px-5 shrink-0 z-30">
-  <div class="flex items-center gap-4">
-    <div class="flex items-center gap-2.5 cursor-pointer" onclick="switchTab('studio')">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center shadow-lg shadow-indigo-600/30">
-        <i class="fa-solid fa-clapperboard text-white text-base"></i>
+<!-- TOP APP NAVIGATION BAR (COMPACT DENSE) -->
+<header class="h-11 border-b border-[var(--border)] bg-[#0d1322] flex items-center justify-between px-3.5 shrink-0 z-30">
+  <div class="flex items-center gap-3">
+    <!-- Sidebar Collapse Toggle Button -->
+    <button onclick="toggleSidebarCollapse()" class="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-800/40 transition" title="Collapse / Expand Sidebar Menu">
+      <i class="fa-solid fa-bars text-xs text-indigo-400"></i>
+    </button>
+
+    <div class="flex items-center gap-2 cursor-pointer" onclick="switchTab('studio')" title="Open Production Studio">
+      <div class="w-6 h-6 rounded-lg bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center shadow">
+        <i class="fa-solid fa-clapperboard text-white text-[11px]"></i>
       </div>
       <div>
-        <span class="font-black text-base text-white tracking-tight">CineAI Studio</span>
-        <span class="text-[9px] font-bold px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded ml-1">RUNWAY</span>
+        <span class="font-black text-sm text-white tracking-tight">CineAI Studio</span>
+        <span class="text-[8px] font-bold px-1 py-0.2 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded ml-1">RUNWAY</span>
       </div>
     </div>
-    <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-slate-900/60 border border-[var(--border)] rounded-full text-xs text-gray-300">
-      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+    <div class="hidden md:flex items-center gap-1.5 px-2 py-0.5 bg-slate-900/60 border border-[var(--border)] rounded-full text-[10px] text-gray-300">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
       <span>Universe: <strong class="text-white">Delhi WFH Confusions</strong></span>
     </div>
   </div>
 
-  <div class="flex items-center gap-3">
-    <!-- Top Create Video Button (Required by tests and user) -->
-    <button onclick="openCreateVideoWizardModal()" id="btn-top-create-video" class="px-4 py-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition active:scale-95">
-      <i class="fa-solid fa-plus text-xs"></i>
-      <span>Create New Video</span>
+  <div class="flex items-center gap-2">
+    <!-- Top Create Video Button -->
+    <button onclick="openCreateVideoWizardModal()" id="btn-top-create-video" class="px-2.5 py-1 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-[11px] rounded-lg shadow flex items-center gap-1.5 transition active:scale-95">
+      <i class="fa-solid fa-plus text-[10px]"></i>
+      <span>New Video</span>
     </button>
 
     <!-- Theme Switcher -->
-    <button onclick="toggleTheme()" class="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 border border-[var(--border)] text-xs rounded-xl text-gray-200 transition flex items-center gap-1.5" title="Toggle Theme">
-      <i id="theme-toggle-icon" class="fa-solid fa-circle-half-stroke text-indigo-400"></i>
+    <button onclick="toggleTheme()" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700 border border-[var(--border)] text-[11px] rounded-lg text-gray-200 transition flex items-center gap-1" title="Toggle Theme">
+      <i id="theme-toggle-icon" class="fa-solid fa-circle-half-stroke text-indigo-400 text-[10px]"></i>
       <span id="theme-toggle-label">Theme</span>
     </button>
 
     <!-- Settings Button -->
-    <button onclick="openModal('settings-modal')" class="p-2 bg-slate-800/80 hover:bg-slate-700 border border-[var(--border)] rounded-xl text-gray-300 hover:text-white transition" title="User Settings & Preferences">
-      <i class="fa-solid fa-gear text-xs"></i>
+    <button onclick="openModal('settings-modal')" class="p-1 bg-slate-800/80 hover:bg-slate-700 border border-[var(--border)] rounded-lg text-gray-300 hover:text-white transition" title="User Settings">
+      <i class="fa-solid fa-gear text-[11px]"></i>
     </button>
 
     <!-- Credits Wallet -->
-    <div class="px-3 py-1.5 bg-emerald-950/40 border border-emerald-500/30 rounded-xl text-xs flex items-center gap-2 font-mono">
-      <i class="fa-solid fa-wallet text-emerald-400"></i>
+    <div class="px-2 py-0.8 bg-emerald-950/40 border border-emerald-500/30 rounded-lg text-[10px] flex items-center gap-1.5 font-mono">
+      <i class="fa-solid fa-wallet text-emerald-400 text-[10px]"></i>
       <span id="user-credit-display" class="font-bold text-emerald-400">$10.00 USD</span>
     </div>
 
-    <!-- User Profile Badge / Google Sign In -->
-    <div onclick="openModal('auth-modal')" class="flex items-center gap-2.5 px-3 py-1 bg-slate-800/80 border border-[var(--border)] rounded-xl cursor-pointer hover:border-indigo-500/60 transition" title="Google Account Profile">
-      <img id="user-avatar-display" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80" alt="Avatar" class="w-6 h-6 rounded-full border border-indigo-400">
-      <span id="user-name-display" class="font-semibold text-white text-xs">Krishna P.</span>
-      <i class="fa-solid fa-angle-down text-[10px] text-gray-400"></i>
+    <!-- User Profile Badge -->
+    <div onclick="openModal('auth-modal')" class="flex items-center gap-1.5 px-2 py-0.5 bg-slate-800/80 border border-[var(--border)] rounded-lg cursor-pointer hover:border-indigo-500/60 transition" title="Google Account Profile">
+      <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-bold text-[9px] flex items-center justify-center border border-indigo-400">KP</div>
+      <span id="user-name-display" class="font-semibold text-white text-[11px]">Krishna P.</span>
     </div>
   </div>
 </header>

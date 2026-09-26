@@ -1,0 +1,59 @@
+<!-- MODAL: SAVE & MANAGE USER CUSTOM PREFERENCES -->
+<div id="preference-modal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl">
+    <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+      <h3 class="font-black text-slate-900 dark:text-white text-base flex items-center gap-2">
+        <i class="fa-solid fa-bookmark text-indigo-600 dark:text-indigo-400"></i>
+        <span>Save Custom Preference Profile</span>
+      </h3>
+      <button onclick="closeModal('preference-modal')" class="text-slate-500 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Save New Form -->
+    <form onsubmit="handleSavePreferenceForm(event)" class="space-y-4">
+      <div>
+        <label class="block text-slate-800 dark:text-gray-300 text-xs font-bold mb-1">Preference Profile Name</label>
+        <input type="text" id="pref-profile-name" placeholder="e.g. My 8h Nature ASMR Setup, Comedy Short, BBC 4K" required class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-[var(--border)] rounded-lg text-slate-900 dark:text-white text-xs font-medium">
+      </div>
+
+      <div class="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-[var(--border)] rounded-xl space-y-2">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="pref-is-default" class="accent-indigo-600 w-4 h-4 rounded">
+          <span class="text-xs font-bold text-slate-900 dark:text-white">Set as Default on Login</span>
+        </label>
+        <p class="text-[10px] text-slate-600 dark:text-gray-400 ml-6 leading-tight">
+          Whenever you open CineAI Studio, these options will automatically be pre-selected instead of system presets.
+        </p>
+      </div>
+
+      <!-- Current Snapshot Summary -->
+      <div class="p-3 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-500/30 rounded-xl space-y-1">
+        <div class="text-[10px] font-bold uppercase text-indigo-900 dark:text-indigo-300">Options Snapshot:</div>
+        <div id="pref-snapshot-summary" class="text-[11px] font-mono text-slate-800 dark:text-gray-300 leading-tight">
+          Format: 16:9 • Duration: 10s • Tier: Balanced • Audio: BGM + Voiceover
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeModal('preference-modal')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-gray-300 rounded-lg text-xs font-bold hover:bg-slate-200">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow">
+          <i class="fa-solid fa-check"></i>
+          <span>Save Preference</span>
+        </button>
+      </div>
+    </form>
+
+    <!-- Saved Profiles Manager List -->
+    <div class="pt-3 border-t border-slate-200 dark:border-[var(--border)] space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-900 dark:text-white">Saved Preferences</span>
+        <span id="pref-saved-count" class="text-[10px] font-mono text-slate-500 dark:text-gray-400">0 Profiles</span>
+      </div>
+      <div id="pref-saved-list" class="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+</div>

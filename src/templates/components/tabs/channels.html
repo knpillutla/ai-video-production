@@ -1,43 +1,157 @@
-<!-- TAB: YOUTUBE CHANNELS -->
-<div id="tab-channels" class="space-y-6 hidden">
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-2xl font-black text-white tracking-tight">Connected YouTube Channels</h1>
-      <p class="text-xs text-gray-400">Manage OAuth credentials, auto-publishing schedules &amp; syndication rules.</p>
+<!-- TAB: CHANNEL VIDEO PRODUCTION HUB & PIPELINE INSPECTOR (ULTRA-COMPACT DENSE VIEW) -->
+<div id="tab-channels" class="space-y-2.5 hidden">
+  <!-- Screen Header & Title -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[var(--card)] border border-[var(--border)] rounded-xl px-3.5 py-2.5 shadow-sm">
+    <div class="flex items-center gap-2">
+      <div class="w-6 h-6 rounded-lg bg-gradient-to-tr from-red-600 via-purple-600 to-indigo-600 flex items-center justify-center text-white text-xs shadow">
+        <i class="fa-brands fa-youtube"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-white tracking-tight leading-none">Channel Video Production Hub</h1>
+        <p class="text-[10px] text-gray-400 mt-0.5">Filter by channel to monitor all videos, stages, models used, costs, audio modes, and YouTube packaging.</p>
+      </div>
     </div>
-    <button onclick="showStudioModal({title: 'Add Channel', message: 'YouTube OAuth integration modal will launch for account linking.', nextStep: 'Authorize Studio in Google Cloud.'})" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs flex items-center gap-2">
-      <i class="fa-brands fa-youtube"></i>
-      <span>Connect New Channel</span>
-    </button>
+    <div class="flex items-center gap-1.5">
+      <button onclick="fetchChannelHubVideos()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-[var(--border)] text-gray-200 hover:text-white font-bold rounded-lg text-[11px] flex items-center gap-1 transition active:scale-95 shadow-sm" title="Refresh Videos">
+        <i id="channel-hub-refresh-icon" class="fa-solid fa-arrows-rotate text-[10px] text-indigo-400"></i>
+        <span>Refresh</span>
+      </button>
+      <button onclick="switchTab('studio')" class="px-2.5 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 shadow transition active:scale-95">
+        <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+        <span>Production Studio</span>
+      </button>
+    </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div class="p-4 bg-[var(--card)] border border-[var(--border)] rounded-xl space-y-3">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full bg-red-600/20 text-red-500 flex items-center justify-center text-xl font-bold">@</div>
-        <div>
-          <h3 class="font-bold text-white text-sm">@telugucomedyhub</h3>
-          <p class="text-xs text-gray-400">Telugu Comedy Shorts &amp; Web Series • 32.4K Subs</p>
+  <!-- Channel Selector Shelf (Compact Interactive Cards) -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2" id="channel-selector-cards">
+    <!-- All Channels Card -->
+    <div onclick="selectHubChannel('all')" id="hub-channel-card-all" class="p-2 bg-indigo-950/40 border-2 border-indigo-500 rounded-xl cursor-pointer transition ring-1 ring-indigo-500/40 space-y-1">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <div class="w-5 h-5 rounded-md bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px]">
+            <i class="fa-solid fa-network-wired"></i>
+          </div>
+          <span class="font-bold text-white text-[11px]">All Channels</span>
         </div>
+        <span id="stat-count-all" class="text-[10px] font-mono font-bold text-indigo-300 bg-indigo-900/60 px-1.5 py-0.2 rounded border border-indigo-500/30">0</span>
       </div>
-      <div class="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
-        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-        <span>Auto-Publish Active (Daily at 6:30 PM IST)</span>
-      </div>
+      <p class="text-[9px] text-gray-400 truncate">Network-wide overview.</p>
     </div>
 
-    <div class="p-4 bg-[var(--card)] border border-[var(--border)] rounded-xl space-y-3">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-xl font-bold">@</div>
-        <div>
-          <h3 class="font-bold text-white text-sm">@cineai_docs</h3>
-          <p class="text-xs text-gray-400">Tech &amp; Ocean Documentaries • 16.2K Subs</p>
+    <!-- Earth Serenade -->
+    <div onclick="selectHubChannel('earth_serenade')" id="hub-channel-card-earth_serenade" class="p-2 bg-[var(--card)] border border-[var(--border)] hover:border-emerald-500/60 rounded-xl cursor-pointer transition space-y-1">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <div class="w-5 h-5 rounded-md bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px]">
+            <i class="fa-solid fa-mountain-sun"></i>
+          </div>
+          <span class="font-bold text-white text-[11px]">Earth Serenade</span>
         </div>
+        <span id="stat-count-earth_serenade" class="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-900/60 px-1.5 py-0.2 rounded border border-emerald-500/30">0</span>
       </div>
-      <div class="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
-        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-        <span>Auto-Publish Active (Weekly Saturdays)</span>
+      <p class="text-[9px] text-gray-400 truncate">@EarthSerenade • Alpine &amp; Retreats</p>
+    </div>
+
+    <!-- Silent Hearth -->
+    <div onclick="selectHubChannel('silent_hearth')" id="hub-channel-card-silent_hearth" class="p-2 bg-[var(--card)] border border-[var(--border)] hover:border-amber-500/60 rounded-xl cursor-pointer transition space-y-1">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <div class="w-5 h-5 rounded-md bg-amber-500/20 text-amber-400 flex items-center justify-center text-[10px]">
+            <i class="fa-solid fa-fire-flame-curved"></i>
+          </div>
+          <span class="font-bold text-white text-[11px]">Silent Hearth</span>
+        </div>
+        <span id="stat-count-silent_hearth" class="text-[10px] font-mono font-bold text-amber-300 bg-amber-900/60 px-1.5 py-0.2 rounded border border-amber-500/30">0</span>
       </div>
+      <p class="text-[9px] text-gray-400 truncate">@SilentHearthSleep • Cabin &amp; ASMR</p>
+    </div>
+
+    <!-- Telugu Comedy Hub -->
+    <div onclick="selectHubChannel('telugu_comedy')" id="hub-channel-card-telugu_comedy" class="p-2 bg-[var(--card)] border border-[var(--border)] hover:border-purple-500/60 rounded-xl cursor-pointer transition space-y-1">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <div class="w-5 h-5 rounded-md bg-purple-500/20 text-purple-400 flex items-center justify-center text-[10px]">
+            <i class="fa-solid fa-masks-theater"></i>
+          </div>
+          <span class="font-bold text-white text-[11px]">Telugu Comedy</span>
+        </div>
+        <span id="stat-count-telugu_comedy" class="text-[10px] font-mono font-bold text-purple-300 bg-purple-900/60 px-1.5 py-0.2 rounded border border-purple-500/30">0</span>
+      </div>
+      <p class="text-[9px] text-gray-400 truncate">@telugucomedyhub • Skits &amp; Satire</p>
+    </div>
+
+    <!-- CineAI Docs -->
+    <div onclick="selectHubChannel('cineai_docs')" id="hub-channel-card-cineai_docs" class="p-2 bg-[var(--card)] border border-[var(--border)] hover:border-blue-500/60 rounded-xl cursor-pointer transition space-y-1">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <div class="w-5 h-5 rounded-md bg-blue-500/20 text-blue-400 flex items-center justify-center text-[10px]">
+            <i class="fa-solid fa-compass"></i>
+          </div>
+          <span class="font-bold text-white text-[11px]">CineAI Docs</span>
+        </div>
+        <span id="stat-count-cineai_docs" class="text-[10px] font-mono font-bold text-blue-300 bg-blue-900/60 px-1.5 py-0.2 rounded border border-blue-500/30">0</span>
+      </div>
+      <p class="text-[9px] text-gray-400 truncate">@cineai_docs • Wildlife &amp; Oceans</p>
+    </div>
+  </div>
+
+  <!-- Multi-Dimensional Filters Bar -->
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+    <div class="relative flex-1 min-w-[200px]">
+      <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2 text-gray-400 text-[10px]"></i>
+      <input type="text" id="channel-hub-search" onkeyup="filterChannelHubVideos()" placeholder="Search title, ID, topic, model..." class="w-full pl-7 pr-2.5 py-1 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-[11px]">
+    </div>
+    <div class="flex items-center gap-1.5 flex-wrap">
+      <select id="channel-hub-filter-status" onchange="filterChannelHubVideos()" class="bg-slate-900 border border-[var(--border)] text-gray-300 rounded-lg px-2 py-1 text-[11px] font-medium">
+        <option value="all">All Statuses (In Progress, Published, Pending, etc.)</option>
+        <option value="published">Published (8h/3h Broadcasts)</option>
+        <option value="pending_review">Pending Review (Masters Ready)</option>
+        <option value="processing">In Progress / Processing</option>
+        <option value="queued">Queued</option>
+        <option value="not_started">Not Started / Drafts</option>
+      </select>
+
+      <select id="channel-hub-filter-audio" onchange="filterChannelHubVideos()" class="bg-slate-900 border border-[var(--border)] text-gray-300 rounded-lg px-2 py-1 text-[11px] font-medium">
+        <option value="all">All Audio Modes</option>
+        <option value="music">With Music (BGM Track)</option>
+        <option value="nature">Pure Nature / ASMR Sounds</option>
+        <option value="dual">Dual (Music + Pure Nature)</option>
+      </select>
+
+      <select id="channel-hub-filter-format" onchange="filterChannelHubVideos()" class="bg-slate-900 border border-[var(--border)] text-gray-300 rounded-lg px-2 py-1 text-[11px] font-medium">
+        <option value="all">All Formats</option>
+        <option value="long">16:9 Long-Play (3h / 8h / Master)</option>
+        <option value="short">9:16 Short Teaser (20s)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Comprehensive Channel Videos Table (Ultra-Compact High-Density) -->
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-[11px]">
+        <thead class="bg-slate-900/90 text-gray-400 font-bold border-b border-[var(--border)] text-[10px] uppercase">
+          <tr>
+            <th class="px-2.5 py-1.5">Channel</th>
+            <th class="px-2.5 py-1.5">Episode ID</th>
+            <th class="px-2.5 py-1.5">Video Edition</th>
+            <th class="px-2.5 py-1.5">Title</th>
+            <th class="px-2.5 py-1.5">Story Topic (Click Script)</th>
+            <th class="px-2 py-1.5 text-center">Status</th>
+            <th class="px-2 py-1.5 text-center">Audio Mode</th>
+            <th class="px-2 py-1.5 text-center">Duration</th>
+            <th class="px-2 py-1.5 text-right font-mono">Cost</th>
+            <th class="px-2 py-1.5 text-center">Stages Built</th>
+            <th class="px-2 py-1.5 text-center">Models Used</th>
+            <th class="px-2 py-1.5 text-center">Timestamps</th>
+            <th class="px-2 py-1.5 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="channel-hub-tbody" class="divide-y divide-[var(--border)] text-[11px]">
+          <!-- Populated dynamically via JavaScript -->
+        </tbody>
+      </table>
     </div>
   </div>
 </div>

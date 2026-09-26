@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CineAI Studio - Autonomous AI Video Production</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="stylesheet" href="/static/css/styles.css?v=3.0">
 </head>
 <body class="h-screen flex flex-col overflow-hidden text-sm">
 
@@ -18,7 +19,7 @@
     {% include "components/layout/sidebar.html" %}
 
     <!-- MAIN WORKSPACE TABS -->
-    <main class="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[var(--bg)] space-y-6">
+    <main class="flex-1 overflow-y-auto custom-scrollbar p-3 bg-[var(--bg)] space-y-2.5">
       {% include "components/tabs/apps.html" %}
       {% include "components/tabs/studio.html" %}
       {% include "components/tabs/ledger.html" %}
@@ -35,22 +36,27 @@
   {% include "components/modals/guide_modal.html" %}
   {% include "components/modals/player_modal.html" %}
   {% include "components/modals/artifacts_modal.html" %}
+  {% include "components/modals/channel_inspector_modal.html" %}
+  {% include "components/modals/script_modal.html" %}
+  {% include "components/modals/preference_modal.html" %}
 
   <!-- JAVASCRIPT ENGINES -->
-  <script src="/static/js/core_state.js?v=2.5"></script>
-  <script src="/static/js/theme_settings.js?v=2.5"></script>
-  <script src="/static/js/apps_catalog.js?v=2.5"></script>
-  <script src="/static/js/default_videos_data.js?v=2.5"></script>
-  <script src="/static/js/studio_videos.js?v=2.5"></script>
-  <script src="/static/js/studio_modal.js?v=2.5"></script>
-  <script src="/static/js/player_controller.js?v=2.5"></script>
-  <script src="/static/js/artifacts_controller.js?v=2.5"></script>
-  <script src="/static/js/prompt_generator.js?v=2.5"></script>
-  <script src="/static/js/guided_wizard.js?v=2.5"></script>
-  <script src="/static/js/dashboard_stats.js?v=2.5"></script>
-  <script src="/static/js/wizard_ui.js?v=2.5"></script>
-  <script src="/static/js/preview_panel.js?v=2.5"></script>
-  <script src="/static/js/studio_format_controller.js?v=2.5"></script>
-  <script src="/static/js/app_init.js?v=2.5"></script>
+  <script src="/static/js/core_state.js?v=3.0"></script>
+  <script src="/static/js/theme_settings.js?v=3.0"></script>
+  <script src="/static/js/apps_catalog.js?v=3.0"></script>
+  <script src="/static/js/default_videos_data.js?v=3.0"></script>
+  <script src="/static/js/studio_videos.js?v=3.0"></script>
+  <script src="/static/js/preferences_controller.js?v=3.0"></script>
+  <script src="/static/js/channel_hub_controller.js?v=3.0"></script>
+  <script src="/static/js/studio_modal.js?v=3.0"></script>
+  <script src="/static/js/player_controller.js?v=3.0"></script>
+  <script src="/static/js/artifacts_controller.js?v=3.0"></script>
+  <script src="/static/js/prompt_generator.js?v=3.0"></script>
+  <script src="/static/js/guided_wizard.js?v=3.0"></script>
+  <script src="/static/js/dashboard_stats.js?v=3.0"></script>
+  <script src="/static/js/wizard_ui.js?v=3.0"></script>
+  <script src="/static/js/preview_panel.js?v=3.0"></script>
+  <script src="/static/js/studio_format_controller.js?v=3.0"></script>
+  <script src="/static/js/app_init.js?v=3.0"></script>
 </body>
 </html>

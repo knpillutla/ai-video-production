@@ -1,57 +1,70 @@
-<!-- RUNWAY-INSPIRED NAVIGATION SIDEBAR -->
-<aside class="w-56 bg-[#0a0f1c] border-r border-[var(--border)] flex flex-col justify-between shrink-0 select-none">
-  <div class="p-3 space-y-3">
-    <!-- Blue + New Session / Video Button (Runway Exact Style) -->
-    <button onclick="openCreateVideoWizardModal()" class="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/30 flex items-center justify-between transition active:scale-98">
-      <div class="flex items-center gap-2">
-        <i class="fa-solid fa-plus text-xs"></i>
-        <span>New Video</span>
+<!-- RUNWAY-INSPIRED NAVIGATION SIDEBAR (PINNABLE & COLLAPSIBLE) -->
+<aside id="app-sidebar" class="w-44 bg-[#0a0f1c] border-r border-[var(--border)] flex flex-col justify-between shrink-0 select-none transition-all duration-200 ease-in-out">
+  <div class="p-2 space-y-2">
+    <!-- Top Header: Menu Title, Pin/Unpin & Collapse Controls -->
+    <div class="flex items-center justify-between px-1 py-0.5">
+      <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wider sidebar-label">Studio Menu</span>
+      <div class="flex items-center gap-0.5">
+        <!-- Pin / Unpin Button -->
+        <button id="sidebar-pin-btn" onclick="toggleSidebarPin()" class="p-1 text-indigo-400 hover:text-indigo-300 rounded transition text-xs" title="Pin / Unpin Sidebar">
+          <i id="sidebar-pin-icon" class="fa-solid fa-thumbtack text-[10px]"></i>
+        </button>
+        <!-- Collapse / Expand Toggle Button -->
+        <button onclick="toggleSidebarCollapse()" class="p-1 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded transition text-xs" title="Collapse / Expand Menu">
+          <i id="sidebar-collapse-icon" class="fa-solid fa-angles-left text-[10px] text-indigo-400"></i>
+        </button>
       </div>
-      <i class="fa-solid fa-chevron-down text-[10px] opacity-70"></i>
+    </div>
+
+    <!-- Blue + New Session / Video Button -->
+    <button onclick="openCreateVideoWizardModal()" id="sidebar-new-btn" class="w-full py-1.5 px-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] rounded-lg shadow flex items-center justify-between transition active:scale-98" title="Create New Video">
+      <div class="flex items-center gap-1.5">
+        <i class="fa-solid fa-plus text-[10px]"></i>
+        <span class="sidebar-label">New Video</span>
+      </div>
+      <i class="fa-solid fa-chevron-down text-[8px] opacity-70"></i>
     </button>
 
-    <!-- Nav Links (Matching Runway Menu) -->
-    <div class="space-y-1">
-      <div class="px-3 py-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Navigation</div>
-
-      <button onclick="switchTab('studio')" id="tab-btn-studio" class="w-full flex items-center gap-3 px-3 py-2 text-white bg-indigo-600/20 border-r-2 border-indigo-500 font-medium transition text-left rounded-lg text-xs">
-        <i class="fa-solid fa-wand-magic-sparkles text-indigo-400 w-4 text-center"></i>
-        <span>Create Video</span>
+    <!-- Nav Links (Renamed Create Video -> Production Studio) -->
+    <div class="space-y-0.5">
+      <button onclick="switchTab('studio')" id="tab-btn-studio" class="w-full flex items-center gap-2 px-2.5 py-1.5 text-white bg-indigo-600/20 border-r-2 border-indigo-500 font-medium transition text-left rounded-md text-[11px]" title="Production Studio">
+        <i class="fa-solid fa-wand-magic-sparkles text-indigo-400 w-3 text-center text-[10px]"></i>
+        <span class="sidebar-label">Production Studio</span>
       </button>
 
-      <button onclick="switchTab('ledger')" id="tab-btn-ledger" class="w-full flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-lg text-xs">
-        <i class="fa-solid fa-list-check text-cyan-400 w-4 text-center"></i>
-        <span>Video Ledger</span>
+      <button onclick="switchTab('ledger')" id="tab-btn-ledger" class="w-full flex items-center gap-2 px-2.5 py-1.5 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-md text-[11px]" title="Video Production Ledger">
+        <i class="fa-solid fa-list-check text-cyan-400 w-3 text-center text-[10px]"></i>
+        <span class="sidebar-label">Video Ledger</span>
       </button>
 
-      <button onclick="switchTab('apps')" id="tab-btn-apps" class="w-full flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-lg text-xs">
-        <i class="fa-solid fa-shapes text-purple-400 w-4 text-center"></i>
-        <span>Apps & Tools</span>
+      <button onclick="switchTab('apps')" id="tab-btn-apps" class="w-full flex items-center gap-2 px-2.5 py-1.5 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-md text-[11px]" title="Apps & Studio Tools">
+        <i class="fa-solid fa-shapes text-purple-400 w-3 text-center text-[10px]"></i>
+        <span class="sidebar-label">Apps &amp; Tools</span>
       </button>
 
-      <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="w-full flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-lg text-xs">
-        <i class="fa-solid fa-chart-pie text-cyan-400 w-4 text-center"></i>
-        <span>Dashboard</span>
+      <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="w-full flex items-center gap-2 px-2.5 py-1.5 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-md text-[11px]" title="Analytics Dashboard">
+        <i class="fa-solid fa-chart-pie text-cyan-400 w-3 text-center text-[10px]"></i>
+        <span class="sidebar-label">Dashboard</span>
       </button>
 
-      <button onclick="switchTab('channels')" id="tab-btn-channels" class="w-full flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-lg text-xs">
-        <i class="fa-brands fa-youtube text-red-500 w-4 text-center"></i>
-        <span>YouTube Channels</span>
+      <button onclick="switchTab('channels')" id="tab-btn-channels" class="w-full flex items-center gap-2 px-2.5 py-1.5 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-md text-[11px]" title="YouTube Channels Hub">
+        <i class="fa-brands fa-youtube text-red-500 w-3 text-center text-[10px]"></i>
+        <span class="sidebar-label">YouTube Channels</span>
       </button>
 
-      <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="w-full flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-lg text-xs">
-        <i class="fa-solid fa-coins text-amber-400 w-4 text-center"></i>
-        <span>Financials</span>
+      <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="w-full flex items-center gap-2 px-2.5 py-1.5 text-gray-400 hover:text-white hover:bg-slate-800/40 font-medium transition text-left rounded-md text-[11px]" title="Cost & Financials">
+        <i class="fa-solid fa-coins text-amber-400 w-3 text-center text-[10px]"></i>
+        <span class="sidebar-label">Financials</span>
       </button>
     </div>
 
-    <!-- Production Tier Selector in Sidebar (Required by test) -->
-    <div class="p-2.5 bg-slate-900/80 border border-[var(--border)] rounded-xl space-y-1.5">
-      <div class="flex items-center justify-between text-[10px] text-gray-400 font-bold uppercase">
-        <span>Production Tier</span>
+    <!-- Production Tier Selector in Sidebar -->
+    <div class="p-2 bg-slate-900/80 border border-[var(--border)] rounded-lg space-y-1 sidebar-tier-box">
+      <div class="flex items-center justify-between text-[9px] text-gray-400 font-bold uppercase">
+        <span>Tier</span>
         <span id="sidebar-tier-price-pill" class="text-indigo-400 font-mono font-bold">$0.14 USD</span>
       </div>
-      <select id="studio-tier-select" onchange="onStudioTierChange(this.value)" class="w-full bg-slate-950 border border-[var(--border)] text-gray-200 text-xs rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-indigo-500">
+      <select id="studio-tier-select" onchange="onStudioTierChange(this.value)" class="w-full bg-slate-950 border border-[var(--border)] text-gray-200 text-[10px] rounded px-1.5 py-1 focus:ring-1 focus:ring-indigo-500">
         <option value="low_cost">Low Cost ($0.02)</option>
         <option value="balanced" selected>Balanced ($0.14)</option>
         <option value="cinematic">Cinematic ($0.45)</option>
@@ -60,11 +73,11 @@
   </div>
 
   <!-- User Storage Info & Settings -->
-  <div class="p-3 border-t border-[var(--border)] space-y-2">
-    <div class="text-[10px] text-gray-400 font-mono">Container: <span id="user-container-display" class="text-indigo-300">user-c4b8e28f</span></div>
-    <button onclick="openModal('settings-modal')" class="w-full px-3 py-2 bg-slate-800/60 hover:bg-slate-700 text-gray-300 hover:text-white rounded-lg text-xs transition flex items-center gap-2">
-      <i class="fa-solid fa-sliders text-indigo-400"></i>
-      <span>Settings & Prefs</span>
+  <div class="p-2 border-t border-[var(--border)] space-y-1 sidebar-storage-box">
+    <div class="text-[9px] text-gray-400 font-mono">Container: <span id="user-container-display" class="text-indigo-300">user-c4b8e28f</span></div>
+    <button onclick="openModal('settings-modal')" class="w-full px-2 py-1 bg-slate-800/60 hover:bg-slate-700 text-gray-300 hover:text-white rounded text-[10px] transition flex items-center gap-1.5">
+      <i class="fa-solid fa-sliders text-indigo-400 text-[9px]"></i>
+      <span class="sidebar-label">Settings</span>
     </button>
   </div>
 </aside>

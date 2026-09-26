@@ -62,6 +62,8 @@ function switchTab(tabId) {
     renderDashboardStats();
   } else if (tabId === "apps" && typeof renderAppsCatalog === "function") {
     renderAppsCatalog();
+  } else if (tabId === "channels" && typeof fetchChannelHubVideos === "function") {
+    fetchChannelHubVideos();
   }
 }
 

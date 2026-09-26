@@ -35,7 +35,10 @@ function updateUserUI() {
   const creditEl = document.getElementById("user-credit-display");
   const containerEl = document.getElementById("user-container-display");
   if (nameEl) nameEl.textContent = currentUser.display_name;
-  if (avatarEl && currentUser.avatar_url) avatarEl.src = currentUser.avatar_url;
+  if (avatarEl) {
+    if (avatarEl.tagName === "IMG" && currentUser.avatar_url) avatarEl.src = currentUser.avatar_url;
+    else if (currentUser.display_name) avatarEl.textContent = currentUser.display_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  }
   if (creditEl) creditEl.textContent = `$${currentUser.balance_usd.toFixed(2)} USD`;
   if (containerEl) containerEl.textContent = currentUser.container_id;
 }
@@ -81,3 +84,92 @@ function loginWithDevAccount() {
     nextStep: "Preferences and container access verified."
   });
 }
+
+let isSidebarPinned = true;
+
+function toggleSidebarPin() {
+  const sidebar = document.getElementById("app-sidebar");
+  const pinIcon = document.getElementById("sidebar-pin-icon");
+  const collapseIcon = document.getElementById("sidebar-collapse-icon");
+  if (!sidebar) return;
+
+  isSidebarPinned = !isSidebarPinned;
+  localStorage.setItem("cineai_sidebar_pinned", isSidebarPinned ? "true" : "false");
+
+  if (isSidebarPinned) {
+    sidebar.classList.remove("unpinned", "collapsed", "hover-expanded");
+    if (pinIcon) {
+      pinIcon.className = "fa-solid fa-thumbtack text-[10px] text-indigo-400 rotate-0";
+      pinIcon.parentElement.title = "Unpin Sidebar";
+    }
+    if (collapseIcon) collapseIcon.className = "fa-solid fa-angles-left text-[10px] text-indigo-400";
+    if (typeof showProfileStatusToast === "function") showProfileStatusToast("Sidebar Pinned");
+  } else {
+    sidebar.classList.add("unpinned", "collapsed");
+    if (pinIcon) {
+      pinIcon.className = "fa-solid fa-thumbtack text-[10px] text-slate-400 -rotate-45";
+      pinIcon.parentElement.title = "Pin Sidebar";
+    }
+    if (collapseIcon) collapseIcon.className = "fa-solid fa-angles-right text-[10px] text-indigo-400";
+    if (typeof showProfileStatusToast === "function") showProfileStatusToast("Sidebar Unpinned");
+  }
+}
+
+function toggleSidebarCollapse() {
+  const sidebar = document.getElementById("app-sidebar");
+  const collapseIcon = document.getElementById("sidebar-collapse-icon");
+  if (!sidebar) return;
+
+  const isCollapsed = sidebar.classList.toggle("collapsed");
+  if (collapseIcon) {
+    collapseIcon.className = isCollapsed ? "fa-solid fa-angles-right text-[10px] text-indigo-400" : "fa-solid fa-angles-left text-[10px] text-indigo-400";
+  }
+  localStorage.setItem("cineai_sidebar_collapsed", isCollapsed ? "true" : "false");
+}
+
+function setupSidebarHoverPeek() {
+  const sidebar = document.getElementById("app-sidebar");
+  if (!sidebar) return;
+
+  sidebar.addEventListener("mouseenter", () => {
+    if (!isSidebarPinned && sidebar.classList.contains("collapsed")) {
+      sidebar.classList.add("hover-expanded");
+    }
+  });
+
+  sidebar.addEventListener("mouseleave", () => {
+    if (!isSidebarPinned) {
+      sidebar.classList.remove("hover-expanded");
+    }
+  });
+}
+
+function initSidebarState() {
+  const savedPin = localStorage.getItem("cineai_sidebar_pinned");
+  isSidebarPinned = savedPin === null ? true : savedPin === "true";
+  const savedCollapsed = localStorage.getItem("cineai_sidebar_collapsed") === "true";
+
+  const sidebar = document.getElementById("app-sidebar");
+  const pinIcon = document.getElementById("sidebar-pin-icon");
+  const collapseIcon = document.getElementById("sidebar-collapse-icon");
+
+  if (sidebar) {
+    if (!isSidebarPinned) {
+      sidebar.classList.add("unpinned", "collapsed");
+      if (pinIcon) {
+        pinIcon.className = "fa-solid fa-thumbtack text-[10px] text-slate-400 -rotate-45";
+        pinIcon.parentElement.title = "Pin Sidebar";
+      }
+      if (collapseIcon) collapseIcon.className = "fa-solid fa-angles-right text-[10px] text-indigo-400";
+    } else if (savedCollapsed) {
+      sidebar.classList.add("collapsed");
+      if (collapseIcon) collapseIcon.className = "fa-solid fa-angles-right text-[10px] text-indigo-400";
+    }
+  }
+
+  setupSidebarHoverPeek();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initSidebarState();
+});

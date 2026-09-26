@@ -1,4 +1,4 @@
-// CineAI Studio: Prompt Hero, Dynamic Mode Templates & Clear Controller
+// CineAI Studio: Prompt Hero, Dynamic Niche Radio Groups & Tier Controller
 let currentCreationMode = "theme";
 
 function selectProductionTier(tierKey) {
@@ -20,7 +20,94 @@ function selectProductionTier(tierKey) {
   if (pill) pill.textContent = tier.priceStr;
 }
 
-function onStudioTierChange(tierKey) { selectProductionTier(tierKey); }
+const NICHE_RADIO_CONFIGS = {
+  // Relaxation & Ambient Group
+  relax_ocean: {
+    prompt: "Gentle Ocean Waves & Coastal Sunset - Rolling crystalline swells, golden horizon reflections, soothing binaural tide ebb and flow",
+    bgm: true, voice: false, pureNature: false, fps: "24", channel: "earth_serenade"
+  },
+  relax_nature: {
+    prompt: "Untamed Emerald Rainforest & Whispering Canopy - Dewdrop glistens on mossy boulders, gentle breeze through towering ancient pines",
+    bgm: true, voice: false, pureNature: false, fps: "24", channel: "earth_serenade"
+  },
+  relax_mountains: {
+    prompt: "Majestic Swiss Alpine Peaks & Morning Mist - Glacial mountain reflections in mirrored lakes, tranquil alpine meadow breeze",
+    bgm: true, voice: false, pureNature: false, fps: "24", channel: "earth_serenade"
+  },
+  relax_campfire: {
+    prompt: "Cozy Log Cabin Hearth & Crackling Campfire - Deep amber embers, glowing pine logs, soft snowfall outside panoramic window, warm ASMR",
+    bgm: false, voice: false, pureNature: true, fps: "24", channel: "silent_hearth"
+  },
+  relax_rain: {
+    prompt: "Calming Forest River Rain & Distant Thunder - Gentle steady rain falling on broad leaves, tranquil stream ripples, cozy atmospheric soundscape",
+    bgm: false, voice: false, pureNature: true, fps: "24", channel: "earth_serenade"
+  },
+  relax_serenity: {
+    prompt: "Kyoto Zen Rock Garden & Sacred Lotus Pond - Smooth bamboo water fountain drops, raked gravel ripples, 432Hz harmonic acoustic peace",
+    bgm: true, voice: false, pureNature: false, fps: "24", channel: "earth_serenade"
+  },
+  relax_retreat: {
+    prompt: "Biophilic Forest Terrace Sanctuary - Open glass pavilion, lush tropical greenery, cedar wood deck, serene meditation atmosphere",
+    bgm: true, voice: false, pureNature: false, fps: "24", channel: "earth_serenade"
+  },
+  relax_architecture: {
+    prompt: "Minimalist Modern Alpine Villa & Infinity Pool - Clean architectural lines, panoramic mountain vistas, warm evening lighting",
+    bgm: true, voice: false, pureNature: false, fps: "24", channel: "silent_hearth"
+  },
+  relax_beaches: {
+    prompt: "Secluded Tropical White Sand Beach & Turquoise Lagoon - Gentle crystal wave wash, swaying palm fronds, warm sea breeze",
+    bgm: true, voice: false, pureNature: false, fps: "24", channel: "earth_serenade"
+  },
+
+  // Blue-Chip Documentaries Group
+  doc_wildlife: {
+    prompt: "African Savannah Predators & Migration - Lion prides resting under acacia trees, cheetah high-speed pursuit, wildebeest river crossings",
+    bgm: true, voice: true, pureNature: false, fps: "24", channel: "cineai_docs"
+  },
+  doc_nature: {
+    prompt: "Ancient Redwood Giants & Temperate Rainforest Ecology - Towering 300ft canopy, endemic salamanders, macro moisture cycles, rich narration",
+    bgm: true, voice: true, pureNature: false, fps: "24", channel: "cineai_docs"
+  },
+  doc_ocean: {
+    prompt: "Deep Coral Reef Ecosystems & Pelagic Giants - Bioluminescent abyssal creatures, humpback whale pods, vibrant shallow reef biodiversity",
+    bgm: true, voice: true, pureNature: false, fps: "24", channel: "cineai_docs"
+  },
+  doc_architecture: {
+    prompt: "Eternal Granite Temples & Sacred Ancient Geometry - Dravidian gopuram carvings, monumental acoustic corridors, lost empire engineering",
+    bgm: true, voice: true, pureNature: false, fps: "24", channel: "cineai_docs"
+  },
+  doc_beaches: {
+    prompt: "Coastal Geological Formations & Tidal Ecosystems - Dramatic sea stacks, marine iguana foraging, erosion forces carving rugged cliffs",
+    bgm: true, voice: true, pureNature: false, fps: "24", channel: "cineai_docs"
+  },
+  doc_mountains: {
+    prompt: "Himalayan High-Altitude Nomads & Glacial Extremes - Sub-zero survival, snow leopard territory, high mountain passes and prayer flags",
+    bgm: true, voice: true, pureNature: false, fps: "24", channel: "cineai_docs"
+  }
+};
+
+function selectNicheRadio(nicheKey) {
+  const cfg = NICHE_RADIO_CONFIGS[nicheKey];
+  if (!cfg) return;
+
+  const promptInput = document.getElementById("youtube-prompt-input");
+  if (promptInput) {
+    promptInput.value = cfg.prompt;
+    flashPromptInput(promptInput);
+  }
+
+  const setC = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+  const setV = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+
+  setC("studio-toggle-bgm", cfg.bgm);
+  setC("studio-toggle-voice-over", cfg.voice);
+  setC("studio-toggle-pure-nature", cfg.pureNature);
+  setV("studio-fps", cfg.fps || "24");
+
+  if (typeof togglePureNatureMode === "function") {
+    togglePureNatureMode(cfg.pureNature);
+  }
+}
 
 const TEMPLATES_BY_MODE = {
   theme: [
@@ -57,29 +144,22 @@ const MODE_STARTERS = {
 };
 
 const MODE_CONFIG = {
-  theme: { ph: "Describe your theme (e.g., Walking in the Rain, Nature & Waterfalls, Wildlife, Oceans)...", hint: "Theme active • World Cities, Villages, Mountains, Oceans & Architecture" },
+  theme: { ph: "Describe your theme or select a niche radio button above...", hint: "Theme active • World Cities, Villages, Mountains, Oceans & Architecture" },
   idea: { ph: "Describe your creative story concept, characters, comedic angle...", hint: "Idea active • Narrative concepts, characters & comedy" },
   script: { ph: "Paste your screenplay, dialogue lines, voiceover narration, or scene breakdown...", hint: "Script active • Full screenplay, scene beats or dialogue stems" },
-  youtube: { ph: "Enter prompt or styling directions to apply from reference video...", hint: "YouTube Reference active • Paste video link & prompt to apply reference styling, art & sound" }
+  youtube: { ph: "Enter prompt or styling directions to apply from reference video...", hint: "YouTube Reference active • Paste video link & prompt to apply reference styling" }
 };
 
 function clearTemplateCardHighlights() {
   document.querySelectorAll("[id^='creative-card-']").forEach(c => c.classList.remove("ring-2", "ring-indigo-500"));
 }
 
-const MODE_TITLES = {
-  theme: "Theme Presets (Nature, Animals, Heritage, Travel)",
-  idea: "Story & Angle Ideas (Comedy, Sci-Fi, Street Food, Drama)",
-  script: "Screenplay & Dialogue Stems (Voiceover, Dialogue, Explainer)",
-  youtube: "YouTube Reference Styling (Drone, Vlog, Macro ASMR, Fast Cuts)"
-};
-
 function renderTemplatesForMode(mode) {
   const container = document.getElementById("creative-templates-container");
   if (!container) return;
   const templates = TEMPLATES_BY_MODE[mode] || TEMPLATES_BY_MODE.theme;
   const titleEl = document.getElementById("creative-presets-title");
-  if (titleEl) titleEl.textContent = MODE_TITLES[mode] || "Creative Templates";
+  if (titleEl) titleEl.textContent = mode === "theme" ? "Theme Presets (Nature, Wildlife, Heritage, Travel)" : "Creative Templates";
 
   container.innerHTML = templates.map((t, idx) => `
     <div id="creative-card-${t.id}" onclick="applyTemplate('${mode}', ${idx})" class="p-3.5 bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] hover:border-indigo-500/50 rounded-xl cursor-pointer transition space-y-1 group active:scale-95 shadow-sm">
@@ -87,8 +167,8 @@ function renderTemplatesForMode(mode) {
         <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">${t.badge}</span>
         <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-gray-500 group-hover:text-indigo-400"></i>
       </div>
-      <div class="font-bold text-white text-xs group-hover:text-indigo-300">${t.title}</div>
-      <div class="text-[10px] text-gray-400 leading-tight">${t.desc}</div>
+      <div class="font-bold text-slate-900 dark:text-white text-xs group-hover:text-indigo-300">${t.title}</div>
+      <div class="text-[10px] text-slate-600 dark:text-gray-400 leading-tight">${t.desc}</div>
     </div>
   `).join("");
 }
@@ -109,13 +189,6 @@ function applyTemplate(mode, idxOrObj) {
   document.getElementById("creative-card-" + t.id)?.classList.add("ring-2", "ring-indigo-500");
 }
 
-function selectCreativeTopic(topicKey) {
-  for (const list of Object.values(TEMPLATES_BY_MODE)) {
-    const found = list.find(t => t.id.includes(topicKey) || t.title.toLowerCase().includes(topicKey.toLowerCase()) || t.prompt.toLowerCase().includes(topicKey.toLowerCase()));
-    if (found) { applyTemplate(currentCreationMode, found); return; }
-  }
-}
-
 function setCreationMode(mode, autoPopulate = false) {
   currentCreationMode = mode;
   ["theme", "idea", "script", "youtube"].forEach(m => {
@@ -130,6 +203,7 @@ function setCreationMode(mode, autoPopulate = false) {
   const textarea = document.getElementById("youtube-prompt-input");
   const urlInput = document.getElementById("youtube-url-input");
   const urlContainer = document.getElementById("youtube-url-container");
+  const genreShelf = document.getElementById("theme-genre-shelf");
   const hint = document.getElementById("creation-mode-hint");
   const cfg = MODE_CONFIG[mode] || MODE_CONFIG.theme;
 
@@ -148,7 +222,10 @@ function setCreationMode(mode, autoPopulate = false) {
     }
   }
 
-  // Strictly remove / hide YouTube reference container in Theme, Idea & Script modes
+  if (genreShelf) {
+    genreShelf.classList.toggle("hidden", mode !== "theme");
+  }
+
   if (urlContainer) {
     if (mode === "youtube") {
       urlContainer.classList.remove("hidden");
@@ -167,26 +244,12 @@ function flashPromptInput(el) {
   setTimeout(() => el.classList.remove("ring-2", "ring-indigo-500", "border-indigo-400", "bg-indigo-950/40"), 1000);
 }
 
-function usePresetPrompt(mode, text, url = null) {
-  if (mode && mode !== currentCreationMode) setCreationMode(mode);
-  const pInput = document.getElementById("youtube-prompt-input");
-  const uInput = document.getElementById("youtube-url-input");
-  if (currentCreationMode === "youtube") {
-    if (uInput && url) uInput.value = url;
-    if (pInput) pInput.value = text;
-  } else {
-    if (uInput) uInput.value = "";
-    if (pInput) pInput.value = text;
-  }
-  if (pInput) flashPromptInput(pInput);
-  clearTemplateCardHighlights();
-}
-
 function clearStudioInputs() {
   const pInput = document.getElementById("youtube-prompt-input");
   const uInput = document.getElementById("youtube-url-input");
   if (pInput) { pInput.value = ""; pInput.focus(); flashPromptInput(pInput); }
   if (uInput) uInput.value = "";
+  document.querySelectorAll("input[name='niche_theme_radio']").forEach(r => r.checked = false);
   const setV = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
   const setC = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
   setV("studio-duration", "10"); setC("studio-toggle-bgm", true); setC("studio-toggle-voice-over", true);
@@ -203,7 +266,6 @@ function deriveTitleFromInput(text, mode) {
   return clean.length > 40 ? clean.slice(0, 38) + "..." : clean;
 }
 
-// Authoritative user inputs: Always uses current input values (user edits override templates)
 function quickTestProduceFromPrompt() {
   const promptInput = document.getElementById("youtube-prompt-input");
   const urlInput = document.getElementById("youtube-url-input");
@@ -286,12 +348,10 @@ function quickTestProduceFromPrompt() {
   if (typeof startLocalVideoProductionJob === "function") startLocalVideoProductionJob(newVid);
 }
 
-// When user manually types into input fields, remove template preset card selection highlight
 document.addEventListener("DOMContentLoaded", () => {
   const pInput = document.getElementById("youtube-prompt-input");
   const uInput = document.getElementById("youtube-url-input");
   if (pInput) pInput.addEventListener("input", clearTemplateCardHighlights);
   if (uInput) uInput.addEventListener("input", clearTemplateCardHighlights);
-  // Initialize mode templates on startup (defaults to theme, YouTube URL hidden)
   setCreationMode("theme", false);
 });

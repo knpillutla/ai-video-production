@@ -1,26 +1,26 @@
-<!-- TAB: CREATE VIDEO (Runway-Inspired Focused Video Creation Screen) -->
+<!-- TAB: PRODUCTION STUDIO (Runway-Inspired Autonomous Video Creation Screen) -->
 <div id="tab-studio" class="space-y-6">
   <!-- RUNWAY HERO: "What do you want to create?" -->
-  <div class="bg-gradient-to-b from-[#111828]/90 to-[#0c1220] border border-[var(--border)] rounded-2xl p-6 shadow-xl space-y-4">
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-4">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
       <div>
-        <h1 class="text-2xl font-black text-white tracking-tight">What do you want to create?</h1>
-        <p class="text-xs text-gray-400">Autonomous AI video engine powered by multi-tier models, Telugu/Hindi transcreation &amp; YouTube syndication.</p>
+        <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">What do you want to create?</h1>
+        <p class="text-xs text-slate-600 dark:text-gray-400">Autonomous AI video engine powered by multi-tier models, Telugu/Hindi transcreation &amp; YouTube syndication.</p>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="switchTab('ledger')" class="px-3.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 border border-[var(--border)] text-indigo-300 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm" title="View Video Production Ledger">
+        <button onclick="switchTab('ledger')" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 border border-[var(--border)] text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm" title="View Video Production Ledger">
           <i class="fa-solid fa-list-check text-xs"></i>
           <span>View Video Ledger</span>
         </button>
-        <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full flex items-center gap-1.5">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/40 rounded-full flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
           Pipeline Ready
         </span>
       </div>
     </div>
 
     <!-- Central Runway Prompt Card -->
-    <div class="bg-slate-900/90 border border-indigo-500/30 rounded-2xl p-5 shadow-2xl space-y-4">
+    <div class="bg-[var(--bg)] border border-indigo-500/30 rounded-2xl p-5 shadow-sm space-y-4">
       <!-- Creation Mode Selector: Theme, Idea, Script, YouTube Reference -->
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div class="inline-flex items-center p-1 bg-slate-950/80 border border-slate-800 rounded-xl gap-1">
@@ -86,39 +86,101 @@
         </div>
       </div>
 
+      <!-- THEME GENRE & NICHE SELECTOR SHELF (RADIO GROUPS) -->
+      <div id="theme-genre-shelf" class="p-3 bg-[var(--card)] border border-[var(--border)] rounded-xl space-y-2.5">
+        <!-- Group 1: Relaxation & Ambient -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold text-slate-900 dark:text-emerald-400 flex items-center gap-1.5">
+              <i class="fa-solid fa-spa text-emerald-600 dark:text-emerald-400 text-xs"></i>
+              <span>Relaxation &amp; Ambient Soundscapes:</span>
+            </span>
+            <span class="text-[9px] text-slate-500 dark:text-gray-400 font-mono">BGM + Nature ASMR • Long-Play Ready</span>
+          </div>
+          <div class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-1.5 text-[11px]">
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500 transition"><input type="radio" name="niche_theme_radio" value="relax_ocean" onchange="selectNicheRadio(this.value)" class="accent-emerald-600"><span class="font-medium text-slate-900 dark:text-gray-200">Ocean</span></label>
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500 transition"><input type="radio" name="niche_theme_radio" value="relax_nature" onchange="selectNicheRadio(this.value)" class="accent-emerald-600"><span class="font-medium text-slate-900 dark:text-gray-200">Nature</span></label>
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500 transition"><input type="radio" name="niche_theme_radio" value="relax_mountains" onchange="selectNicheRadio(this.value)" class="accent-emerald-600"><span class="font-medium text-slate-900 dark:text-gray-200">Mountains</span></label>
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500 transition"><input type="radio" name="niche_theme_radio" value="relax_campfire" onchange="selectNicheRadio(this.value)" class="accent-emerald-600"><span class="font-medium text-slate-900 dark:text-gray-200">Camp Fire</span></label>
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500 transition"><input type="radio" name="niche_theme_radio" value="relax_rain" onchange="selectNicheRadio(this.value)" class="accent-emerald-600"><span class="font-medium text-slate-900 dark:text-gray-200">Rain</span></label>
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500 transition"><input type="radio" name="niche_theme_radio" value="relax_serenity" onchange="selectNicheRadio(this.value)" class="accent-emerald-600"><span class="font-medium text-slate-900 dark:text-gray-200">Serenity</span></label>
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500 transition"><input type="radio" name="niche_theme_radio" value="relax_retreat" onchange="selectNicheRadio(this.value)" class="accent-emerald-600"><span class="font-medium text-slate-900 dark:text-gray-200">Retreat</span></label>
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500 transition"><input type="radio" name="niche_theme_radio" value="relax_architecture" onchange="selectNicheRadio(this.value)" class="accent-emerald-600"><span class="font-medium text-slate-900 dark:text-gray-200">Architecture</span></label>
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500 transition"><input type="radio" name="niche_theme_radio" value="relax_beaches" onchange="selectNicheRadio(this.value)" class="accent-emerald-600"><span class="font-medium text-slate-900 dark:text-gray-200">Beaches</span></label>
+          </div>
+        </div>
+
+        <!-- Group 2: Blue-Chip Documentaries -->
+        <div class="space-y-1.5 pt-1 border-t border-slate-200 dark:border-slate-800">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold text-slate-900 dark:text-blue-400 flex items-center gap-1.5">
+              <i class="fa-solid fa-compass text-blue-600 dark:text-blue-400 text-xs"></i>
+              <span>Documentaries (Blue-Chip 24fps):</span>
+            </span>
+            <span class="text-[9px] text-slate-500 dark:text-gray-400 font-mono">Narrative Voiceover • BBC/NatGeo Style</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5 text-[11px]">
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500 transition"><input type="radio" name="niche_theme_radio" value="doc_wildlife" onchange="selectNicheRadio(this.value)" class="accent-blue-600"><span class="font-medium text-slate-900 dark:text-gray-200">Wildlife</span></label>
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500 transition"><input type="radio" name="niche_theme_radio" value="doc_nature" onchange="selectNicheRadio(this.value)" class="accent-blue-600"><span class="font-medium text-slate-900 dark:text-gray-200">Nature</span></label>
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500 transition"><input type="radio" name="niche_theme_radio" value="doc_ocean" onchange="selectNicheRadio(this.value)" class="accent-blue-600"><span class="font-medium text-slate-900 dark:text-gray-200">Ocean</span></label>
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500 transition"><input type="radio" name="niche_theme_radio" value="doc_architecture" onchange="selectNicheRadio(this.value)" class="accent-blue-600"><span class="font-medium text-slate-900 dark:text-gray-200">Architecture</span></label>
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500 transition"><input type="radio" name="niche_theme_radio" value="doc_beaches" onchange="selectNicheRadio(this.value)" class="accent-blue-600"><span class="font-medium text-slate-900 dark:text-gray-200">Beaches</span></label>
+            <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500 transition"><input type="radio" name="niche_theme_radio" value="doc_mountains" onchange="selectNicheRadio(this.value)" class="accent-blue-600"><span class="font-medium text-slate-900 dark:text-gray-200">Mountains</span></label>
+          </div>
+        </div>
+      </div>
+
       <!-- Textarea Input Box (Prompt, Script, or Adaptation Angle) -->
       <div class="relative">
         <textarea id="youtube-prompt-input" rows="3" placeholder="explore niagara falls" class="w-full p-3.5 bg-slate-950/80 border border-slate-700/60 rounded-xl text-white text-xs placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
       </div>
 
       <!-- Production Modalities, Duration, Stretch & Cinematic Settings -->
-      <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
-        <div class="flex items-center justify-between">
-          <span class="text-[11px] font-bold text-gray-300 flex items-center gap-1.5">
-            <i class="fa-solid fa-sliders text-indigo-400"></i>
-            Production Controls &amp; Settings
-          </span>
-          <span class="text-[10px] text-gray-500 font-mono">Defaults pre-selected &bull; Customize any option</span>
+      <div class="p-3 bg-[var(--card)] border border-[var(--border)] rounded-xl space-y-2">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-bold text-slate-900 dark:text-gray-200 flex items-center gap-1.5">
+              <i class="fa-solid fa-sliders text-indigo-600 dark:text-indigo-400"></i>
+              <span>Production Controls:</span>
+            </span>
+            <span id="studio-profile-status-toast" class="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 opacity-0 transition-opacity duration-300"></span>
+          </div>
+
+          <!-- Presets & User Preferences Switcher Controls -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <select id="studio-profile-selector" onchange="onProfileSelectChange(this.value)" class="px-2 py-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded text-[10px] font-bold focus:outline-none focus:border-indigo-500" title="Switch between Presets and your saved custom preferences">
+              <option value="presets">⚡ Presets (Studio Default)</option>
+            </select>
+            <button type="button" onclick="resetToStudioPresets()" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-gray-200 border border-slate-300 dark:border-slate-700 rounded text-[10px] font-bold flex items-center gap-1 transition shadow-sm active:scale-95" title="Reset all options to default Presets">
+              <i class="fa-solid fa-rotate-left text-[9px] text-indigo-600 dark:text-indigo-400"></i>
+              <span>Presets</span>
+            </button>
+            <button type="button" onclick="openSavePreferenceModal()" class="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold flex items-center gap-1 transition shadow-sm active:scale-95" title="Save current settings with a custom name">
+              <i class="fa-solid fa-bookmark text-[9px]"></i>
+              <span>Save Preference</span>
+            </button>
+          </div>
         </div>
+
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2 pt-1 text-xs">
-          <label class="flex items-center gap-2 p-1.5 bg-slate-900/80 rounded-lg border border-slate-800 cursor-pointer hover:border-slate-700">
-            <input type="checkbox" id="studio-toggle-bgm" checked class="accent-indigo-500 w-3.5 h-3.5 rounded">
-            <span class="text-[11px] text-gray-300 font-medium">BGM Track</span>
+          <label class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-900/80 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-slate-400">
+            <input type="checkbox" id="studio-toggle-bgm" checked class="accent-indigo-600 w-3.5 h-3.5 rounded">
+            <span class="text-[11px] text-slate-900 dark:text-gray-300 font-medium">BGM Track</span>
           </label>
-          <label class="flex items-center gap-2 p-1.5 bg-slate-900/80 rounded-lg border border-slate-800 cursor-pointer hover:border-slate-700">
-            <input type="checkbox" id="studio-toggle-voice-over" checked class="accent-indigo-500 w-3.5 h-3.5 rounded">
-            <span class="text-[11px] text-gray-300 font-medium">Voiceover</span>
+          <label class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-900/80 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-slate-400">
+            <input type="checkbox" id="studio-toggle-voice-over" checked class="accent-indigo-600 w-3.5 h-3.5 rounded">
+            <span class="text-[11px] text-slate-900 dark:text-gray-300 font-medium">Voiceover</span>
           </label>
-          <label class="flex items-center gap-2 p-1.5 bg-slate-900/80 rounded-lg border border-slate-800 cursor-pointer hover:border-slate-700">
-            <input type="checkbox" id="studio-toggle-tts" class="accent-indigo-500 w-3.5 h-3.5 rounded">
-            <span class="text-[11px] text-gray-300 font-medium">Dialogue TTS</span>
+          <label class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-900/80 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-slate-400">
+            <input type="checkbox" id="studio-toggle-tts" class="accent-indigo-600 w-3.5 h-3.5 rounded">
+            <span class="text-[11px] text-slate-900 dark:text-gray-300 font-medium">Dialogue TTS</span>
           </label>
-          <label class="flex items-center gap-2 p-1.5 bg-slate-900/80 rounded-lg border border-slate-800 cursor-pointer hover:border-slate-700">
-            <input type="checkbox" id="studio-toggle-lipsync" class="accent-indigo-500 w-3.5 h-3.5 rounded">
-            <span class="text-[11px] text-gray-300 font-medium">Avatar LipSync</span>
+          <label class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-900/80 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-slate-400">
+            <input type="checkbox" id="studio-toggle-lipsync" class="accent-indigo-600 w-3.5 h-3.5 rounded">
+            <span class="text-[11px] text-slate-900 dark:text-gray-300 font-medium">Avatar LipSync</span>
           </label>
           <div>
-            <select id="studio-duration" class="w-full px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-white text-[11px] focus:outline-none focus:border-indigo-500 font-semibold" title="Target Video Duration">
+            <select id="studio-duration" class="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-[11px] focus:outline-none focus:border-indigo-500 font-semibold" title="Target Video Duration">
               <option value="10" selected>Duration: 10s (Test)</option>
               <option value="15">Duration: 15s (Reel)</option>
               <option value="30">Duration: 30s (Promo)</option>
@@ -130,21 +192,21 @@
             </select>
           </div>
           <div>
-            <select id="studio-stretch-hours" class="w-full px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-white text-[11px] focus:outline-none focus:border-indigo-500 font-semibold" title="Long-Play Broadcast Stretch">
+            <select id="studio-stretch-hours" class="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-[11px] focus:outline-none focus:border-indigo-500 font-semibold" title="Long-Play Broadcast Stretch">
               <option value="0" selected>Stretch: None (Default)</option>
               <option value="3.0">Stretch: 3 Hours</option>
               <option value="8.0">Stretch: 8 Hours</option>
             </select>
           </div>
           <div>
-            <select id="studio-fps" class="w-full px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-white text-[11px] focus:outline-none focus:border-indigo-500 font-semibold" title="Cinematic Frame Rate">
+            <select id="studio-fps" class="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-[11px] focus:outline-none focus:border-indigo-500 font-semibold" title="Cinematic Frame Rate">
               <option value="24" selected>24 fps (Cinematic)</option>
               <option value="30">30 fps (Music/Dance)</option>
               <option value="60">60 fps (Fluid Walking)</option>
             </select>
           </div>
           <div>
-            <select id="studio-language" class="w-full px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-white text-[11px] focus:outline-none focus:border-indigo-500">
+            <select id="studio-language" class="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-[11px] focus:outline-none focus:border-indigo-500">
               <option value="en" selected>English (en)</option>
               <option value="te">Telugu (te)</option>
               <option value="hi">Hindi (hi)</option>

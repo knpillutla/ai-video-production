@@ -1,0 +1,210 @@
+<!-- MODAL: CHANNEL EPISODE DEEP-DIVE & PIPELINE INSPECTOR -->
+<div id="channel-episode-inspector-modal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+  <div class="bg-[var(--card)] border border-indigo-500/40 rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
+    
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+      <div class="flex items-center gap-3">
+        <div id="inspector-channel-badge" class="px-2.5 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 rounded-lg text-xs font-bold font-mono">
+          @EarthSerenade
+        </div>
+        <div>
+          <h3 id="inspector-episode-title" class="font-black text-white text-base leading-tight">Episode Title</h3>
+          <p id="inspector-episode-id" class="text-xs text-gray-400 font-mono">ep_id • Created 2026-09-26</p>
+        </div>
+      </div>
+      <button onclick="closeModal('channel-episode-inspector-modal')" class="text-gray-400 hover:text-white text-base p-1">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Inspector Tabs -->
+    <div class="flex items-center justify-between bg-slate-900/80 p-1 rounded-xl text-xs flex-wrap gap-1">
+      <div class="inline-flex items-center gap-1">
+        <button type="button" onclick="switchInspectorTab('player')" id="inspector-tab-btn-player" class="px-3.5 py-1.5 font-bold text-white bg-indigo-600 rounded-lg shadow flex items-center gap-1.5">
+          <i class="fa-solid fa-play text-xs"></i>
+          <span>4K Video Player</span>
+        </button>
+        <button type="button" onclick="switchInspectorTab('youtube')" id="inspector-tab-btn-youtube" class="px-3.5 py-1.5 font-medium text-gray-400 hover:text-white rounded-lg flex items-center gap-1.5">
+          <i class="fa-brands fa-youtube text-red-500 text-xs"></i>
+          <span>YouTube Packaging</span>
+        </button>
+        <button type="button" onclick="switchInspectorTab('cost')" id="inspector-tab-btn-cost" class="px-3.5 py-1.5 font-medium text-gray-400 hover:text-white rounded-lg flex items-center gap-1.5">
+          <i class="fa-solid fa-coins text-amber-400 text-xs"></i>
+          <span>Cost Breakdown</span>
+        </button>
+        <button type="button" onclick="switchInspectorTab('models')" id="inspector-tab-btn-models" class="px-3.5 py-1.5 font-medium text-gray-400 hover:text-white rounded-lg flex items-center gap-1.5">
+          <i class="fa-solid fa-microchip text-indigo-400 text-xs"></i>
+          <span>Models &amp; Stages</span>
+        </button>
+        <button type="button" onclick="switchInspectorTab('artifacts')" id="inspector-tab-btn-artifacts" class="px-3.5 py-1.5 font-medium text-gray-400 hover:text-white rounded-lg flex items-center gap-1.5">
+          <i class="fa-solid fa-folder-open text-amber-400 text-xs"></i>
+          <span>Disk Artifacts</span>
+        </button>
+      </div>
+      <div id="inspector-status-badge" class="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full text-[11px] font-bold">
+        Published
+      </div>
+    </div>
+
+    <!-- TAB 1: 4K VIDEO PLAYER -->
+    <div id="inspector-tab-player" class="space-y-3">
+      <!-- Player Video Source Switcher -->
+      <div class="flex items-center justify-between bg-slate-950/60 p-2 rounded-xl text-xs">
+        <span class="font-bold text-gray-300 text-[11px]">Select Stream:</span>
+        <div class="flex items-center gap-1.5 flex-wrap" id="inspector-stream-buttons">
+          <!-- Populated by JS: Music Master, Pure Nature, 8h Broadcast, Short -->
+        </div>
+      </div>
+
+      <div class="relative bg-black rounded-xl overflow-hidden aspect-video border border-[var(--border)] shadow-xl flex items-center justify-center">
+        <video id="inspector-video-player" controls class="w-full h-full object-contain" preload="metadata"></video>
+      </div>
+    </div>
+
+    <!-- TAB 2: YOUTUBE PACKAGING (1-Click Copy) -->
+    <div id="inspector-tab-youtube" class="space-y-4 hidden text-xs">
+      <div class="flex items-center justify-between">
+        <div class="font-bold text-white text-xs">YouTube Studio Copy-Paste Metadata:</div>
+        <div class="inline-flex items-center gap-1 p-0.5 bg-slate-900 border border-slate-800 rounded-lg">
+          <button type="button" onclick="switchPackagingEdition('music')" id="btn-pack-music" class="px-2.5 py-1 text-[11px] font-bold rounded bg-indigo-600 text-white">Music Edition</button>
+          <button type="button" onclick="switchPackagingEdition('nature')" id="btn-pack-nature" class="px-2.5 py-1 text-[11px] font-medium text-gray-400 hover:text-white">Pure Nature (NO MUSIC)</button>
+        </div>
+      </div>
+
+      <!-- Title Box -->
+      <div class="space-y-1">
+        <div class="flex items-center justify-between text-gray-400">
+          <span>Title:</span>
+          <button onclick="copyInspectorField('inspector-yt-title')" class="text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1">
+            <i class="fa-regular fa-copy"></i> Copy
+          </button>
+        </div>
+        <textarea id="inspector-yt-title" rows="2" readonly class="w-full p-2.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white font-mono text-[11px] select-all"></textarea>
+      </div>
+
+      <!-- Description Box -->
+      <div class="space-y-1">
+        <div class="flex items-center justify-between text-gray-400">
+          <span>Description:</span>
+          <button onclick="copyInspectorField('inspector-yt-desc')" class="text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1">
+            <i class="fa-regular fa-copy"></i> Copy
+          </button>
+        </div>
+        <textarea id="inspector-yt-desc" rows="5" readonly class="w-full p-2.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white font-mono text-[11px] select-all"></textarea>
+      </div>
+
+      <!-- Tags & Pinned Comment -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-gray-400">
+            <span>Tags:</span>
+            <button onclick="copyInspectorField('inspector-yt-tags')" class="text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1">
+              <i class="fa-regular fa-copy"></i> Copy
+            </button>
+          </div>
+          <textarea id="inspector-yt-tags" rows="3" readonly class="w-full p-2.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white font-mono text-[11px] select-all"></textarea>
+        </div>
+
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-gray-400">
+            <span>Pinned Comment:</span>
+            <button onclick="copyInspectorField('inspector-yt-pinned')" class="text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1">
+              <i class="fa-regular fa-copy"></i> Copy
+            </button>
+          </div>
+          <textarea id="inspector-yt-pinned" rows="3" readonly class="w-full p-2.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white font-mono text-[11px] select-all"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: COST BREAKDOWN (Itemized by Stage & Model) -->
+    <div id="inspector-tab-cost" class="space-y-4 hidden text-xs">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="p-3 bg-slate-900 border border-[var(--border)] rounded-xl">
+          <div class="text-[10px] text-gray-400 uppercase font-bold">Total Episode Spend</div>
+          <div id="inspector-cost-total" class="font-mono text-base font-black text-emerald-400 mt-0.5">$0.00 USD</div>
+        </div>
+        <div class="p-3 bg-slate-900 border border-[var(--border)] rounded-xl">
+          <div class="text-[10px] text-gray-400 uppercase font-bold">Long-Play Duration</div>
+          <div id="inspector-cost-duration" class="font-mono text-base font-bold text-white mt-0.5">8:00:00</div>
+        </div>
+        <div class="p-3 bg-slate-900 border border-[var(--border)] rounded-xl">
+          <div class="text-[10px] text-gray-400 uppercase font-bold">Cost Per Hour Broadcast</div>
+          <div id="inspector-cost-per-hour" class="font-mono text-base font-bold text-indigo-300 mt-0.5">$0.27 / hr</div>
+        </div>
+        <div class="p-3 bg-slate-900 border border-[var(--border)] rounded-xl">
+          <div class="text-[10px] text-gray-400 uppercase font-bold">Cloud GPU Spend</div>
+          <div class="font-mono text-base font-bold text-emerald-400 mt-0.5">$0.00 (Zero GPU)</div>
+        </div>
+      </div>
+
+      <!-- Cost By Stage Table -->
+      <div class="space-y-2">
+        <div class="font-bold text-white text-xs flex items-center gap-1.5">
+          <i class="fa-solid fa-layer-group text-indigo-400"></i>
+          <span>Itemized Spend by Production Stage:</span>
+        </div>
+        <div class="border border-[var(--border)] rounded-xl overflow-hidden">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900 text-gray-400 font-bold border-b border-[var(--border)]">
+              <tr>
+                <th class="p-2.5">Stage</th>
+                <th class="p-2.5">Engine / Model</th>
+                <th class="p-2.5">Units / Activity</th>
+                <th class="p-2.5 text-right font-mono">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody id="inspector-cost-stage-tbody" class="divide-y divide-[var(--border)]">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Cost By Model Table -->
+      <div class="space-y-2">
+        <div class="font-bold text-white text-xs flex items-center gap-1.5">
+          <i class="fa-solid fa-microchip text-purple-400"></i>
+          <span>Itemized Spend by AI Model / Provider:</span>
+        </div>
+        <div class="border border-[var(--border)] rounded-xl overflow-hidden">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900 text-gray-400 font-bold border-b border-[var(--border)]">
+              <tr>
+                <th class="p-2.5">AI Model</th>
+                <th class="p-2.5">Provider</th>
+                <th class="p-2.5 text-center">Share (%)</th>
+                <th class="p-2.5 text-right font-mono">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody id="inspector-cost-model-tbody" class="divide-y divide-[var(--border)]">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: MODELS & STAGES -->
+    <div id="inspector-tab-models" class="space-y-4 hidden text-xs">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="inspector-models-grid">
+        <!-- Populated via JS -->
+      </div>
+      <div class="p-3 bg-slate-900/60 border border-[var(--border)] rounded-xl space-y-2">
+        <div class="font-bold text-white text-xs">Production Stages Milestones:</div>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2" id="inspector-stages-grid">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: DISK ARTIFACTS -->
+    <div id="inspector-tab-artifacts" class="space-y-3 hidden text-xs">
+      <div class="font-bold text-white text-xs">Generated Media Files on Disk:</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="inspector-artifacts-list">
+        <!-- Populated via JS -->
+      </div>
+    </div>
+  </div>
+</div>

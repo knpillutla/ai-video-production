@@ -118,6 +118,11 @@ def create_app() -> FastAPI:
         except Exception as exc:
             return HTMLResponse(f"<h1>CineAI Studio API Online</h1><p>{exc}</p>")
 
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon_endpoint():
+        from fastapi import Response
+        return Response(status_code=204)
+
     return app
 
 
