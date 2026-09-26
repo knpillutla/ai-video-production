@@ -39,19 +39,19 @@ def _probe_clip_duration(clip_path: Path) -> float:
     return 5.0
 
 
-def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_master: Path, scene_hold_sec: float = 60.0) -> Path:
-    """Assemble relaxing 4K master with 60.0s (1 full minute) Extended Perspective Hold per shot and slow 2.0s crossfades."""
+def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_master: Path, scene_hold_sec: float = 60.0, crf: int = 22) -> Path:
+    """Assemble relaxing 4K master with 60.0s (1 full minute) Extended Perspective Hold per shot and slow 2.0s crossfades in CRF 22 format."""
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     n = len(video_clips)
     x_dur = 2.0  # Slow, meditative 2-second cross-dissolve
     
     if n == 1:
         if audio_path and audio_path.is_file():
-            cmd = [ffmpeg_bin, "-y", "-i", str(video_clips[0]), "-i", str(audio_path), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "22", "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-shortest", "-movflags", "+faststart", str(out_master)]
+            cmd = [ffmpeg_bin, "-y", "-i", str(video_clips[0]), "-i", str(audio_path), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-shortest", "-movflags", "+faststart", str(out_master)]
         else:
-            cmd = [ffmpeg_bin, "-y", "-i", str(video_clips[0]), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "22", "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
+            cmd = [ffmpeg_bin, "-y", "-i", str(video_clips[0]), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
     else:
-        # Multi-Shot: Hold each scene for 45.0 seconds before slow 2.0s cross-dissolve
+        # Multi-Shot: Hold each scene for 60.0 seconds before slow 2.0s cross-dissolve
         inputs = []
         for c in video_clips:
             inputs.extend(["-stream_loop", "-1", "-t", str(scene_hold_sec), "-i", str(c)])
@@ -67,7 +67,7 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
                 filter_parts.append(f"[{prev_tag}][s{i}]xfade=transition=fade:duration={x_dur:.2f}:offset={curr_offset:.2f}[{out_tag}]")
                 prev_tag = out_tag
                 curr_offset += scene_hold_sec - x_dur
-            cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-map", f"{n}:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "22", "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-shortest", "-movflags", "+faststart", str(out_master)]
+            cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-map", f"{n}:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-shortest", "-movflags", "+faststart", str(out_master)]
         else:
             # Native Audio Mode (--no-bgm): Loop native video audio and acrossfade
             scales = [f"[{i}:v]scale=3840:2160,setsar=1[s{i}]" for i in range(n)]
@@ -83,7 +83,7 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
                 prev_a = out_a
                 curr_offset += scene_hold_sec - x_dur
             full_filter = ";".join(filter_v + filter_a)
-            cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", full_filter, "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "22", "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
+            cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", full_filter, "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
 
     try:
         subprocess.run(cmd, capture_output=True, check=True)
@@ -94,18 +94,18 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
     return out_master
 
 
-def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], ep_dir: Path) -> Dict[str, Path]:
-    """Assemble 4K masters. If audio_path is provided, assembles BOTH Music Master and Pure Nature Master.
+def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], ep_dir: Path, crf: int = 22) -> Dict[str, Path]:
+    """Assemble 4K masters in CRF 22 format. If audio_path is provided, assembles BOTH Music Master and Pure Nature Master.
     If audio_path is None (--no-bgm), assembles ONLY a single Pure Nature Master.
     """
     master_music = ep_dir / "master_4k_ambient.mp4"
     if not master_music.is_file() or master_music.stat().st_size < 1000:
         if audio_path and audio_path.is_file():
-            print(f"[STAGE 2 - MASTER ASSEMBLY] Assembling Music Master (With BGM) -> {master_music.name}")
-            assemble_4k_master(video_clips, audio_path, master_music)
+            print(f"[STAGE 2 - MASTER ASSEMBLY] Assembling Music Master (With BGM, CRF {crf}) -> {master_music.name}")
+            assemble_4k_master(video_clips, audio_path, master_music, crf=crf)
         else:
-            print(f"[STAGE 2 - MASTER ASSEMBLY] Assembling Single Native Master (--no-bgm) -> {master_music.name}")
-            assemble_4k_master(video_clips, None, master_music)
+            print(f"[STAGE 2 - MASTER ASSEMBLY] Assembling Single Native Master (--no-bgm, CRF {crf}) -> {master_music.name}")
+            assemble_4k_master(video_clips, None, master_music, crf=crf)
     else:
         logger.info(f"decision_master_video_cache_hit: Reusing {master_music.name} ($0.00 spend)")
         print(f"[DECISION - MASTER VIDEO CACHE HIT] Master 4K video already exists ({master_music.name}). Reusing asset ($0.00 spend).")
@@ -120,14 +120,15 @@ def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], e
     # Otherwise assemble dual version: Pure Nature Master (No Music)
     master_nature = ep_dir / "master_4k_ambient_nature_only.mp4"
     if not master_nature.is_file() or master_nature.stat().st_size < 1000:
-        print(f"[STAGE 2 - DUAL MASTER ASSEMBLY] Assembling Pure Nature Master (No Music) -> {master_nature.name}")
-        assemble_4k_master(video_clips, None, master_nature)
+        print(f"[STAGE 2 - DUAL MASTER ASSEMBLY] Assembling Pure Nature Master (No Music, CRF {crf}) -> {master_nature.name}")
+        assemble_4k_master(video_clips, None, master_nature, crf=crf)
     else:
         logger.info(f"decision_nature_master_cache_hit: Reusing {master_nature.name} ($0.00 spend)")
         print(f"[DECISION - NATURE MASTER CACHE HIT] Pure Nature 4K video already exists ({master_nature.name}). Reusing asset ($0.00 spend).")
 
     return {
         "music_master": master_music,
+
         "nature_master": master_nature,
     }
 

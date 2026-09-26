@@ -31,8 +31,9 @@ def assemble_documentary_4k_master(
     audio_path: Path,
     output_master: Path,
     srt_path: Optional[Path] = None,
+    crf: int = 22,
 ) -> Path:
-    """Assemble seamless 4K 24fps documentary master with dynamic crossfades and mixed audio."""
+    """Assemble seamless 4K 24fps documentary master with dynamic crossfades and optimized CRF 22 encoding."""
     out = output_master.resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
 
@@ -50,7 +51,7 @@ def assemble_documentary_4k_master(
             "-i", str(video_clips[0]),
             "-i", str(audio_path),
             "-r", "24",
-            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "18",
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
             "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
             "-shortest", "-movflags", "+faststart",
             str(out)
@@ -80,7 +81,7 @@ def assemble_documentary_4k_master(
             "-map", "[v]",
             "-map", f"{n}:a",
             "-r", "24",
-            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "18",
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
             "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
             "-shortest", "-movflags", "+faststart",
             str(out)
