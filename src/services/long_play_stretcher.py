@@ -18,8 +18,9 @@ def export_long_play_broadcast(
     target_duration_seconds: float = 3600.0,  # default 1 hour
     fade_to_black_hours: Optional[float] = None,
     target_resolution: str = "3840x2160",
+    crf: int = 22,
 ) -> Path:
-    """Export long-play 4K video with optional Circadian Fade-to-Black."""
+    """Export long-play 4K video with optional Circadian Fade-to-Black and configurable CRF."""
     src = Path(source_4k_video).resolve()
     out = Path(output_long_play).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -28,11 +29,10 @@ def export_long_play_broadcast(
         raise FileNotFoundError(f"Source video master not found: {src}")
 
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-    logger.info(f"stretching_long_play_video: {src.name} -> {out.name} ({target_duration_seconds}s, fade_to_black={fade_to_black_hours}h)")
+    logger.info(f"stretching_long_play_video: {src.name} -> {out.name} ({target_duration_seconds}s, crf={crf}, fade_to_black={fade_to_black_hours}h)")
 
     if fade_to_black_hours and (fade_to_black_hours * 3600.0) < target_duration_seconds:
         fade_start_sec = fade_to_black_hours * 3600.0
-        # Visual fades to black at fade_start_sec while audio continues uninterrupted
         vf_filter = (
             f"[0:v]fade=t=out:st={int(fade_start_sec)}:d=30:color=black,"
             f"drawbox=y=0:color=black@1.0:t=fill:enable='gte(t,{int(fade_start_sec + 30)})'[v]"
@@ -43,19 +43,20 @@ def export_long_play_broadcast(
             "-filter_complex", vf_filter,
             "-map", "[v]", "-map", "0:a",
             "-t", str(target_duration_seconds),
-            "-c:v", "libx264", "-preset", "ultrafast", "-threads", "4", "-crf", "18",
-            "-c:a", "copy",
+            "-c:v", "libx264", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
+            "-c:a", "aac", "-b:a", "320k",
             "-movflags", "+faststart",
             str(out)
         ]
     else:
-        # Visually lossless 0-CPU-cost stream copy
+        # Continuous monotonic timestamp broadcast encoding (prevents YouTube processing abandonment)
         cmd = [
             ffmpeg_bin, "-y",
             "-stream_loop", "-1",
             "-i", str(src),
             "-t", str(target_duration_seconds),
-            "-c", "copy",
+            "-c:v", "libx264", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
+            "-c:a", "aac", "-b:a", "320k",
             "-movflags", "+faststart",
             str(out)
         ]
@@ -64,18 +65,8 @@ def export_long_play_broadcast(
         subprocess.run(cmd, capture_output=True, check=True)
         logger.info(f"long_play_export_complete: {out.name} ({round(out.stat().st_size / (1024*1024), 2)} MB)")
     except subprocess.CalledProcessError as err:
-        logger.warning(f"stream_copy_failed_fallback_reencode: {err}")
-        cmd_fallback = [
-            ffmpeg_bin, "-y",
-            "-stream_loop", "-1",
-            "-i", str(src),
-            "-t", str(target_duration_seconds),
-            "-c:v", "libx264", "-preset", "ultrafast", "-threads", "4", "-crf", "18",
-            "-c:a", "aac", "-b:a", "320k",
-            "-movflags", "+faststart",
-            str(out)
-        ]
-        subprocess.run(cmd_fallback, capture_output=True, check=True)
+        logger.error(f"failed_to_export_long_play: {err}")
+        raise
 
     return out
 

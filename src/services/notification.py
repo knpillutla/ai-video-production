@@ -88,13 +88,13 @@ class NotificationService:
         to_email = recipient_email or os.getenv("CREATOR_EMAIL", "creator@youtube.studio")
         base_url = os.getenv("API_BASE_URL", "http://localhost:8000")
         token = f"master_rev_{uuid4().hex[:16]}"
-        subject = f"🎬 Master Ready for Review: '{title}' [{channel_name}]"
+        subject = f"Master Ready for Review: '{title}' [{channel_name}]"
         direct_confirm_url = f"{base_url}/api/approvals/quick-confirm?token={token}"
         cli_command = f"python scripts/channels/{stretch_script} --id {episode_id}"
 
         html_body = f"""
         <div style='font-family: sans-serif; background: #080c15; color: #fff; padding: 28px; border-radius: 12px; max-width: 600px;'>
-          <h2 style='color: #10b981; margin-top: 0;'>🎬 4K Master Video Ready for Review</h2>
+          <h2 style='color: #10b981; margin-top: 0;'>4K Master Video Ready for Review</h2>
           <p>Channel: <strong>{channel_name}</strong></p>
           <p>Episode: <strong>{title}</strong> (ID: <code>{episode_id}</code>)</p>
           <div style='background: #0f1626; border: 1px solid #1e293b; padding: 16px; border-radius: 8px; margin: 16px 0;'>
@@ -137,7 +137,7 @@ class NotificationService:
         self._send_smtp_email(to_email, subject, html_body)
 
         print("\n" + "=" * 70)
-        print(f"📧 HUMAN-IN-THE-LOOP REVIEW NOTIFICATION DISPATCHED")
+        print(f"[NOTIFICATION] HUMAN-IN-THE-LOOP REVIEW NOTIFICATION DISPATCHED")
         print(f"To:          {to_email}")
         print(f"Subject:     {subject}")
         print(f"1-Click URL: {direct_confirm_url}")
@@ -158,14 +158,14 @@ class NotificationService:
         to_email = recipient_email or os.getenv("CREATOR_EMAIL", "creator@youtube.studio")
         base_url = os.getenv("API_BASE_URL", "http://localhost:8000")
         token = f"photo_rev_{uuid4().hex[:16]}"
-        subject = f"🖼️ Photos Ready for Review: '{title}' [{channel_name}]"
+        subject = f"Photos Ready for Review: '{title}' [{channel_name}]"
         direct_confirm_url = f"{base_url}/api/approvals/quick-confirm?token={token}"
         cli_command = f"python scripts/channels/{pipeline_script} --id {episode_id}"
 
         kf_list_html = "".join(f"<li style='margin: 4px 0;'><code>{p}</code></li>" for p in keyframe_paths)
         html_body = f"""
         <div style='font-family: sans-serif; background: #080c15; color: #fff; padding: 28px; border-radius: 12px; max-width: 600px;'>
-          <h2 style='color: #38bdf8; margin-top: 0;'>🖼️ 4K Keyframe Photos Ready for Review</h2>
+          <h2 style='color: #38bdf8; margin-top: 0;'>4K Keyframe Photos Ready for Review</h2>
           <p>Channel: <strong>{channel_name}</strong></p>
           <p>Episode: <strong>{title}</strong> (ID: <code>{episode_id}</code>)</p>
           <div style='background: #0f1626; border: 1px solid #1e293b; padding: 16px; border-radius: 8px; margin: 16px 0;'>
@@ -178,7 +178,7 @@ class NotificationService:
           </div>
           <div style='margin: 24px 0;'>
             <a href='{direct_confirm_url}' style='background: #38bdf8; color: #080c15; padding: 14px 28px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block;'>
-              ⚡ Approve Photos & Synthesize Video Motion
+              Approve Photos & Synthesize Video Motion
             </a>
           </div>
         </div>
@@ -210,7 +210,7 @@ class NotificationService:
         self._send_smtp_email(to_email, subject, html_body)
 
         print("\n" + "=" * 70)
-        print(f"🖼️ KEYFRAME PHOTOS READY FOR HUMAN REVIEW ({len(keyframe_paths)} Images)")
+        print(f"[NOTIFICATION] KEYFRAME PHOTOS READY FOR HUMAN REVIEW ({len(keyframe_paths)} Images)")
         print(f"To:          {to_email}")
         print(f"Subject:     {subject}")
         for idx, kf in enumerate(keyframe_paths, 1):

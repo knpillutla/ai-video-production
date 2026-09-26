@@ -1,5 +1,4 @@
-"""Human-in-the-Loop (HITL) Video Approval API routes."""
-
+from pathlib import Path
 from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
@@ -64,14 +63,32 @@ async def quick_confirm_via_token(token: str, request: Request):
     # If this is a Channel Master Review Token
     if channel_name and episode_id:
         notification_service.consume_token(token)
-        logger.info(f"channel_master_approved_via_email: channel='{channel_name}' ep_id='{episode_id}'")
+        logger.info(f"channel_master_approved_via_email: channel='{channel_name}' ep_id='{episode_id}' -> privacy=public")
         
-        # Trigger background stretch for this channel episode
-        from src.services.long_play_stretcher import stretch_channel_episode_background
-        try:
-            stretch_channel_episode_background(channel_name=channel_name, episode_id=str(episode_id))
-        except Exception as e:
-            logger.warning(f"background_stretch_trigger: {e}")
+        # Determine channel key and storage path
+        ch_clean = channel_name.lower().replace(" ", "_").replace("&", "and")
+        if "earth" in ch_clean: ch_key = "earth_serenade"
+        elif "silent" in ch_clean or "hearth" in ch_clean: ch_key = "silent_hearth"
+        elif "rain" in ch_clean or "quill" in ch_clean: ch_key = "rain_and_quill"
+        else: ch_key = "earth_serenade"
+
+        ch_dir = Path("storage/channels") / ch_key / str(episode_id)
+        
+        # Trigger background stretch & public upload
+        from src.services.youtube_upload_service import upload_channel_episode
+        upload_res = {}
+        if ch_dir.is_dir():
+            try:
+                upload_res = upload_channel_episode(
+                    channel_key=ch_key,
+                    channel_name=channel_name,
+                    episode_dir=ch_dir,
+                    privacy_status="public",
+                    dry_run=False,
+                    upload_short=True,
+                )
+            except Exception as e:
+                logger.warning(f"email_approval_upload_failed: {e}")
 
         accepts_html = request and "text/html" in request.headers.get("accept", "")
         if accepts_html:
@@ -80,17 +97,17 @@ async def quick_confirm_via_token(token: str, request: Request):
                 <html><body style='font-family:system-ui;background:#080c15;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;'>
                 <div style='background:#0f1626;border:1px solid #10b981;padding:36px;border-radius:16px;max-width:520px;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.5);'>
                     <div style='width:60px;height:60px;background:rgba(16,185,129,0.2);border:2px solid #10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;'>✅</div>
-                    <h2 style='color:#10b981;margin:0 0 8px;'>Channel Master Approved!</h2>
+                    <h2 style='color:#10b981;margin:0 0 8px;'>Approved & Published to YouTube!</h2>
                     <h3 style='color:#f8fafc;font-size:16px;margin:0 0 16px;'>{channel_name}</h3>
                     <p style='color:#94a3b8;font-size:13px;line-height:1.6;'>
-                        Episode <code>{episode_id}</code> has been approved.<br>
-                        Long-play stretch to full broadcast duration is now running in the background.
+                        Episode <code>{episode_id}</code> has been approved and published as <strong>PUBLIC</strong>.<br>
+                        Both 4K Broadcast Masters and the 9:16 Short are now live on YouTube.
                     </p>
                 </div></body></html>
                 """,
                 status_code=200,
             )
-        return {"status": "approved", "channel_name": channel_name, "episode_id": str(episode_id), "message": "Channel master approved & stretching to long-play."}
+        return {"status": "approved", "privacy": "public", "channel_name": channel_name, "episode_id": str(episode_id), "uploads": upload_res}
 
     episode = repo.get_episode(user_id, episode_id) if user_id else None
     if not episode:
@@ -132,25 +149,8 @@ async def quick_confirm_via_token(token: str, request: Request):
 
     accepts_html = request and "text/html" in request.headers.get("accept", "")
     if accepts_html:
-        return HTMLResponse(
-            content=f"""
-            <html><body style='font-family:system-ui;background:#080c15;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;'>
-            <div style='background:#0f1626;border:1px solid #10b981;padding:36px;border-radius:16px;max-width:520px;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.5);'>
-                <div style='width:60px;height:60px;background:rgba(16,185,129,0.2);border:2px solid #10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;'>✅</div>
-                <h2 style='color:#10b981;margin:0 0 8px;'>Episode Approved & Broadcasted!</h2>
-                <h3 style='color:#f8fafc;font-size:16px;margin:0 0 16px;'>{episode.title}</h3>
-                <p style='color:#94a3b8;font-size:13px;line-height:1.6;'>
-                    Your video was approved directly from your email confirmation button without requiring login.<br>
-                    <strong>Platform Video ID:</strong> <span style='color:#818cf8;font-family:monospace;'>{yt_id or "N/A"}</span><br>
-                    <strong>C2PA Synthetic Disclosure:</strong> Verified Active
-                </p>
-                <div style='margin-top:24px;'>
-                    <a href='/ui' style='background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:12px 28px;text-decoration:none;border-radius:10px;font-weight:bold;display:inline-block;'>Open CineAI Studio</a>
-                </div>
-            </div></body></html>
-            """,
-            status_code=200,
-        )
+        html = f"<html><body style='font-family:system-ui;background:#080c15;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;'><div style='background:#0f1626;border:1px solid #10b981;padding:36px;border-radius:16px;max-width:520px;text-align:center;'><h2 style='color:#10b981;'>Episode Approved & Broadcasted!</h2><h3 style='color:#f8fafc;'>{episode.title}</h3><p style='color:#94a3b8;'>Approved via email token.<br>Video ID: <code>{yt_id or 'N/A'}</code></p><a href='/ui' style='background:#4f46e5;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;'>Open Studio</a></div></body></html>"
+        return HTMLResponse(content=html, status_code=200)
 
     return ApprovalActionResponse(
         episode_id=episode.id,

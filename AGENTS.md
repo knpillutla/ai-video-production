@@ -85,7 +85,7 @@ All AI agents working within this workspace must adhere strictly to the engineer
   - **30 fps:** Music videos, mass folk dance, upbeat choreography, and stage comedy (provides optimal temporal sharpness for fast footwork and spinning costumes while retaining cinematic cadence).
   - **60 fps:** First-person POV walking tours, fluid scenic landscape tracking, and action motion (eliminates pan judder and creates realistic physical immersion).
 * **Broadcast Audio Standards:** All audio stems and final masters MUST be formatted to **48,000 Hz (48 kHz) 24-bit stereo**, encoded in **AAC at 256–320 kbps**, normalized to **-14.0 LUFS (±1.0 LUFS)** integrated loudness (True Peak < -1.0 dBFS, YouTube & EBU R128 standard), with deterministic ducking of BGM down by -18 dB to -22 dB during speech.
-* **Visually Lossless 4K Video:** Master all final video deliveries in **4K UHD (3840×2160 for 16:9, 2160×3840 for 9:16 Shorts)** at **CRF 18–20** visually lossless quality via single-pass FFmpeg, `yuv420p` pixel format, and `+faststart` MP4 metadata.
+* **Visually Lossless 4K Video (CRF 22 Global Standard):** Master all final video deliveries and long-play broadcasts in **4K UHD (3840×2160 for 16:9, 2160×3840 for 9:16 Shorts)** at **CRF 22** (~12–14 Mbps) via single-pass FFmpeg, `preset veryfast`, `threads 4`, `yuv420p` pixel format, and `+faststart` MP4 metadata. This cuts 3-hour broadcast file sizes in half (from 28.5 GB down to ~14–18 GB) with zero visible loss on 4K OLED screens while accelerating YouTube cloud processing.
 
 ### 15. Mandatory Beat-Driven Choreographic Progression & Musical Alignment Standards
 * **Gemini Lyrics & Scriptwriting Contract:** In all dance, song, and musical productions, **Gemini MUST create the structured script and rhyming lyrical verse / hook couplets** with metric cadence (*prasa*), rhythmic meter, and cultural authenticity. Never allow Suno or external models to hallucinate arbitrary lyrics without Gemini's structured direction.
@@ -160,6 +160,10 @@ All studio agents, generation pipelines, and scratch production scripts must str
   - **Cache vs. Invocation Transparency:** Explicitly declare `CACHE HIT` (with filename, local path, and similarity score) or `CACHE MISS -> INVOKING [MODEL]` with the reason why fresh synthesis is required.
   - **Audio & Suno Invocations:** If Suno is called, explicitly log why an existing AudioVault stem was not reused (e.g. `AudioVault checked (0 matching stems >= 0.70 similarity) -> Invoking Suno v3.5 Pro for fresh [genre] soundscape`).
   - **Motion Routing:** For every scene, log the model choice and why it was routed (e.g. `Wan 2.1 for laminar river currents` or `Kling 1.6 Pro for campfire embers`).
+
+### 26. Mandatory Extended Perspective Hold & YouTube-Compliant Monotonic Long-Play Standards (All Relaxation Channels)
+* **45s–60s Extended Perspective Hold (Anti-Fatigue Standard):** In all multi-shot ambient, nature, and relaxation productions, each scenic perspective MUST linger peacefully for **45 to 60 seconds** before transitioning via a slow **2.0-second cross-dissolve**. Rapid cycling (e.g. 5–10s scene cuts) causes cognitive arousal and visual fatigue and is strictly prohibited for relaxation and sleep broadcasts.
+* **YouTube Ingest Compliance (Monotonic Timestamps & CRF 22):** All long-play stretch broadcasts (1h, 3h, 8h) MUST encode with continuous, monotonically increasing DTS/PTS timestamps (`-preset veryfast -threads 4 -crf 22 -c:a aac -b:a 320k -movflags +faststart`) to eliminate timestamp discontinuities across loop boundaries and guarantee 100% YouTube cloud ingest compliance with zero "Processing abandoned" errors.
 
 Refer to [AGENT_INSTRUCTIONS.md](file:///c:/neel-1/projects/content-generation/AGENT_INSTRUCTIONS.md) for detailed architecture, code patterns, and the pre-commit self-audit checklist.
 

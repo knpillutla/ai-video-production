@@ -115,36 +115,10 @@ class HealingRelaxationProducer:
         )
 
     async def _assemble_4k_master(self, video_clips: List[Path], audio_path: Path, out_master: Path):
-        """Assemble seamless 4K master video with 1.5s cross-dissolve transition."""
-        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-        if len(video_clips) == 2:
-            cmd = [
-                ffmpeg_bin, "-y",
-                "-i", str(video_clips[0]),
-                "-i", str(video_clips[1]),
-                "-i", str(audio_path),
-                "-filter_complex", "[0:v][1:v]xfade=transition=fade:duration=1.5:offset=28.5[v]",
-                "-map", "[v]", "-map", "2:a",
-                "-c:v", "libx264", "-preset", "fast", "-crf", "18",
-                "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-                "-shortest", "-movflags", "+faststart",
-                str(out_master)
-            ]
-        else:
-            concat_txt = out_master.parent / "clips_concat.txt"
-            with open(concat_txt, "w", encoding="utf-8") as f:
-                for c in video_clips:
-                    f.write(f"file '{c.absolute().as_posix()}'\n")
-            cmd = [
-                ffmpeg_bin, "-y",
-                "-f", "concat", "-safe", "0", "-i", str(concat_txt),
-                "-i", str(audio_path),
-                "-c:v", "libx264", "-preset", "fast", "-crf", "18",
-                "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-                "-shortest", "-movflags", "+faststart",
-                str(out_master)
-            ]
-        subprocess.run(cmd, capture_output=True, check=True)
+        """Assemble seamless 4K master video with 45s Extended Hold and CRF 22."""
+        from src.services.ambient_export_service import assemble_4k_master
+        assemble_4k_master(video_clips, audio_path, out_master)
+
 
 
 async def handle_orchestrated_healing(job_id: str, request: Any) -> Any:

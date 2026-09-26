@@ -143,23 +143,10 @@ class NatureRetreatProducer:
         )
 
     async def _assemble_4k_master(self, video_clips: list[Path], audio_path: Path, out_master: Path):
-        """Assemble seamless single-pass 4K UHD master video with 48kHz audio."""
-        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-        concat_txt = out_master.parent / "clips_concat.txt"
-        with open(concat_txt, "w", encoding="utf-8") as f:
-            for c in video_clips:
-                f.write(f"file '{c.absolute().as_posix()}'\n")
+        """Assemble seamless single-pass 4K UHD master video with 45s Extended Hold and CRF 22."""
+        from src.services.ambient_export_service import assemble_4k_master
+        assemble_4k_master(video_clips, audio_path, out_master)
 
-        cmd = [
-            ffmpeg_bin, "-y",
-            "-f", "concat", "-safe", "0", "-i", str(concat_txt),
-            "-i", str(audio_path),
-            "-c:v", "libx264", "-preset", "fast", "-crf", "18",
-            "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-            "-shortest", "-movflags", "+faststart",
-            str(out_master)
-        ]
-        subprocess.run(cmd, capture_output=True, check=True)
 
 
 async def handle_orchestrated_retreat(job_id: str, request: Any) -> Any:

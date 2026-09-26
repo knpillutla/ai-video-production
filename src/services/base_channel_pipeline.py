@@ -50,11 +50,13 @@ class BaseChannelPipeline:
         no_bgm: bool = False,
         auto_stretch: bool = False,
         allow_fallback: bool = False,
+        uncompressed: bool = False,
     ) -> Dict[str, Any]:
         """Execute standardized 3-stage pipeline workflow with review gates and --id banners."""
         effective_hours = long_play_hours or self.config.default_hours
         effective_fade = fade_to_black_hours or self.config.default_fade_black_hours
         eff_model = motion_model or self.config.default_motion_model
+        crf_val = 16 if uncompressed else 22
 
         logger.info(f"starting_channel_job: {self.config.channel_name} id={episode_id} motion={eff_model} photos_only={photos_only} no_bgm={no_bgm}")
         print(f"\n[DECISION - CHANNEL PIPELINE INITIALIZED]")
@@ -88,25 +90,29 @@ class BaseChannelPipeline:
                 pipeline_script=self.config.script_name,
             )
             print("\n" + "=" * 70)
-            print(f"🖼️  STAGE 1 COMPLETE: 4K KEYFRAME PHOTOS READY ({len(result['keyframes'])} Images)!")
+            print(f"[STAGE 1 COMPLETE] 4K KEYFRAME PHOTOS READY ({len(result['keyframes'])} Images)!")
             print(f"Episode ID:  {ep_id}")
             for idx, kf in enumerate(result["keyframes"], 1):
                 print(f"Shot {idx} Photo: {kf}")
-            print(f"\n👉 TO PROCEED TO STAGE 2 (Generate 4K Video Motion & Master Audio from these photos):")
+            print(f"\n[NEXT STEPS] TO PROCEED TO STAGE 2 (Generate 4K Video Motion & Master Audio):")
             print(f"   python scripts/channels/{self.config.script_name} --id {ep_id}")
             print("=" * 70 + "\n")
             return result
 
         # Stage 2 Gate: 4K Master Video Review
         master_path = Path(result["master_video_path"])
+        nature_master_path = Path(result["master_nature_video_path"]) if result.get("master_nature_video_path") else None
         actual_dur = int(sb.total_duration)
         print("\n" + "=" * 70)
-        print(f"🎬 STAGE 2 COMPLETE: {actual_dur}-SECOND 4K MASTER READY ({len(sb.scenes)} Shots)!")
-        print(f"Episode ID:  {ep_id}")
-        print(f"File Path:   {master_path.resolve()}")
-        print(f"Audio Track: {result['bgm_path']}")
+        print(f"[STAGE 2 COMPLETE] {actual_dur}-SECOND 4K MASTER READY ({len(sb.scenes)} Shots)!")
+        print(f"Episode ID:       {ep_id}")
+        print(f"Music Master:     {master_path.resolve()}")
+        if nature_master_path and nature_master_path.is_file() and nature_master_path.resolve() != master_path.resolve():
+            print(f"Pure Nature 4K:   {nature_master_path.resolve()}")
+        if result.get("bgm_path"):
+            print(f"Audio Track:      {result['bgm_path']}")
         if result.get("short_video_path"):
-            print(f"9:16 Short:  {result['short_video_path']}")
+            print(f"9:16 Teaser:      {result['short_video_path']}")
         print("=" * 70)
 
         await notification_service.notify_channel_master_ready(
@@ -123,7 +129,7 @@ class BaseChannelPipeline:
             stretch_cmd = f"python scripts/channels/{self.config.script_name} --id {ep_id} --auto-stretch --hours {effective_hours}"
             if effective_fade is not None:
                 stretch_cmd += f" --fade-black {effective_fade}"
-            print(f"\n👉 TO PROCEED TO STAGE 3 (Lossless {effective_hours}-Hour Long-Play Stretch):")
+            print(f"\n[NEXT STEPS] TO PROCEED TO STAGE 3 (Lossless {effective_hours}-Hour Long-Play Stretch):")
             print(f"   {stretch_cmd}")
             print(f"   (Or click 'Approve & Stretch' in your review email)\n")
             print("=" * 70 + "\n")
@@ -131,7 +137,7 @@ class BaseChannelPipeline:
 
         # Stage 3: Long-Play Stretch Execution
         fade_txt = f" (Fade-to-Black at {effective_fade}h)" if effective_fade else ""
-        print(f"\n⚡ Auto-stretching {actual_dur}s master to {effective_hours} Hours Long-Play{fade_txt}...")
+        print(f"\n[STAGE 3 AUTO-STRETCH] Auto-stretching {actual_dur}s master to {effective_hours} Hours Long-Play{fade_txt}...")
         target_sec = effective_hours * 3600.0
         hour_label = int(effective_hours) if effective_hours.is_integer() else effective_hours
         
@@ -144,10 +150,25 @@ class BaseChannelPipeline:
                 output_long_play=long_play_path,
                 target_duration_seconds=target_sec,
                 fade_to_black_hours=effective_fade,
+                crf=crf_val,
             )
 
+        # Stretch pure nature master if present
+        if nature_master_path and nature_master_path.is_file() and nature_master_path.resolve() != master_path.resolve():
+            lp_nature_path = master_path.parent / f"master_4k_{hour_label}hour_nature_only{suffix}_broadcast.mp4"
+            if not lp_nature_path.is_file() or lp_nature_path.stat().st_size < 1000:
+                print(f"[STAGE 3 AUTO-STRETCH] Auto-stretching Pure Nature master to {effective_hours} Hours (CRF {crf_val})...")
+                export_long_play_broadcast(
+                    source_4k_video=nature_master_path,
+                    output_long_play=lp_nature_path,
+                    target_duration_seconds=target_sec,
+                    fade_to_black_hours=effective_fade,
+                    crf=crf_val,
+                )
+            result["long_play_nature_video_path"] = str(lp_nature_path)
+
         result["long_play_video_path"] = str(long_play_path)
-        print(f"✅ STAGE 3 COMPLETE: Long-Play Video Ready: {long_play_path.resolve()}\n")
+        print(f"[STAGE 3 COMPLETE] Long-Play Video Ready: {long_play_path.resolve()}\n")
         return result
 
 
@@ -178,4 +199,6 @@ def create_base_channel_parser(
     parser.add_argument("--no-short", action="store_true", help="Disable vertical short generation")
     parser.add_argument("--auto-stretch", action="store_true", help="Automatically stretch without waiting for approval")
     parser.add_argument("--allow-fallback", action="store_true", help="Allow zoom-pan fallback if live diffusion fails")
+    parser.add_argument("--keep-uncompressed", "--uncompressed", dest="uncompressed", action="store_true", help="Preserve uncompressed high-bitrate broadcast (CRF 16) instead of default optimized CRF 22")
     return parser
+

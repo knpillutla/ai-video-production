@@ -26,6 +26,11 @@ python scripts/channels/deep_sleep_sanctuary_pipeline.py --id <episode_id> --sho
 # Example 2: Natural Rain on Cabin Window (No BGM)
 python scripts/channels/study_focus_cafe_pipeline.py --primary beach_house --secondary rain --shots 1 --no-bgm --prompt "Cozy library window with gentle raindrops trickling down glass, warm glowing reading lamp" --photos-only
 python scripts/channels/study_focus_cafe_pipeline.py --id <episode_id> --shots 1 --no-bgm
+
+# Optional: Preserve Uncompressed High-Bitrate Size (--keep-uncompressed)
+# By default, all stretch broadcasts encode with optimized CRF 22 (~14-18 GB for 3 hours, 50% faster upload).
+# To force uncompressed CRF 16 high-bitrate (~28.5 GB), pass --keep-uncompressed:
+python scripts/channels/nature_sanctuary_pipeline.py --id <episode_id> --auto-stretch --hours 3.0 --keep-uncompressed
 ```
 
 ---
@@ -108,3 +113,44 @@ python src/services/long_play_stretcher.py --input storage/channels/silent_heart
 ```powershell
 python scripts/channels/channel_network_manager.py --channel all
 ```
+
+---
+
+## 4. Channel-Specific YouTube Upload Commands
+
+Each channel uploads directly to its dedicated YouTube Brand Account using its isolated token in `config/tokens/` and automatically publishes **both the Music Broadcast and the Pure Nature ASMR Broadcast** with tailored titles, tags, and synthetic media disclosures:
+
+```powershell
+# Channel 1: Earth Serenade (@EarthSerenade4K)
+python scripts/channels/upload_earth_serenade.py --id ep_swiss_alps_1790365543 --privacy unlisted
+# (Add --dry-run to simulate upload payload first)
+
+# Channel 2: Silent Hearth (@SilentHearthSleep)
+python scripts/channels/upload_silent_hearth.py --id ep_blizzard_1790363895 --privacy unlisted
+
+# Channel 3: Rain & Quill (@RainAndQuill)
+python scripts/channels/upload_rain_and_quill.py --id ep_beach_house_1790365123 --privacy unlisted
+```
+
+---
+
+## 5. 🎙️ Blue-Chip Documentary Studio CLI
+
+Produces 4K 24fps cinematic documentaries with authoritative natural history voiceover (Western Male default, `--female-voice`, multilingual `--lang te/hi`, and fatigue-free ducking).
+
+```powershell
+# Example 1: Wildlife Documentary (Stage 1 Photos Review -> Stage 2 Master):
+python scripts/channels/documentary_pipeline.py --genre wildlife --photos-only
+python scripts/channels/documentary_pipeline.py --id <episode_id>
+
+# Example 2: Ancient Structures with Female Narrator:
+python scripts/channels/documentary_pipeline.py --genre ancient_structures --female-voice --prompt "Giza Pyramids and astronomical alignments"
+
+# Example 3: Ocean Documentary with Subtle Background Orchestral Score (-26dB):
+python scripts/channels/documentary_pipeline.py --genre ocean --bgm --prompt "Bioluminescent coral trenches of the deep Pacific"
+
+# Example 4: Mountains in Telugu / Hindi:
+python scripts/channels/documentary_pipeline.py --genre mountains --lang te
+```
+
+

@@ -61,6 +61,7 @@ async def main():
         no_bgm=args.no_bgm,
         auto_stretch=args.auto_stretch,
         allow_fallback=args.allow_fallback,
+        uncompressed=getattr(args, "uncompressed", False),
     )
 
 

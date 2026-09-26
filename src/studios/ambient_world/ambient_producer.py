@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 from src.core.telemetry import logger
 from src.services.ambient_export_service import (
     assemble_4k_master,
+    assemble_dual_masters,
     export_metadata_packages,
     handle_long_play_export,
     handle_short_export,
@@ -115,13 +116,10 @@ class AmbientWorldProducer:
         ]
         video_clip_paths = await visual_batch_service.render_motion_batch(motion_tasks)
 
-        master_4k_path = ep_dir / "master_4k_ambient.mp4"
-        if not master_4k_path.is_file() or master_4k_path.stat().st_size < 1000:
-            print(f"[DECISION - MASTER ASSEMBLY] Assembling {len(video_clip_paths)} clips into seamless 4K master with 1.5s cross-dissolve transitions.")
-            assemble_4k_master(video_clip_paths, master_bgm_path, master_4k_path)
-        else:
-            logger.info(f"decision_master_video_cache_hit: Reusing {master_4k_path.name} ($0.00 spend)")
-            print(f"[DECISION - MASTER VIDEO CACHE HIT] Master 4K video already exists ({master_4k_path.name}). Reusing asset ($0.00 spend).")
+        # Stage 5: Master Assembly & Packaging Delegation
+        masters = assemble_dual_masters(video_clip_paths, master_bgm_path, ep_dir)
+        master_4k_path = masters["music_master"]
+        master_nature_path = masters["nature_master"]
 
         long_play_path = handle_long_play_export(master_4k_path, ep_dir, long_play_hours, fade_to_black_hours)
         short_video_path = handle_short_export(master_4k_path, ep_dir, generate_short)
@@ -138,6 +136,7 @@ class AmbientWorldProducer:
         logger.info(f"ambient_production_ready: {ep_dir.name} in {render_time}s")
         return {
             "episode_id": ep_dir.name, "title": sb.title, "master_video_path": str(master_4k_path),
+            "master_nature_video_path": str(master_nature_path),
             "long_play_video_path": str(long_play_path) if long_play_path else None,
             "short_video_path": str(short_video_path) if short_video_path else None,
             "keyframes": [str(p) for p in keyframe_paths], "raw_videos": [str(p) for p in video_clip_paths],

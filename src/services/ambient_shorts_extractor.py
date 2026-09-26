@@ -26,20 +26,26 @@ def generate_ambient_short(
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     logger.info(f"generating_ambient_short: {src.name} -> {out.name} ({duration_seconds}s)")
 
-    # 9:16 Center Crop + Scale + Subtle Vignette + Text Hook
+    # 9:16 Center Crop + Lanczos Scale + Smooth 0.5s In/Out Loop Fades
+    fade_out_start = max(1.0, duration_seconds - 0.5)
     vf_filters = [
         "crop=ih*9/16:ih:iw/2-(ih*9/16)/2:0",
         f"scale={aspect_ratio.replace(':', 'x')}:flags=lanczos",
-        "vignette=PI/4",
+        "fade=t=in:st=0:d=0.5",
+        f"fade=t=out:st={fade_out_start:.2f}:d=0.5",
     ]
-    vf_chain = ",".join(vf_filters)
+    af_filters = [
+        "afade=t=in:st=0:d=0.5",
+        f"afade=t=out:st={fade_out_start:.2f}:d=0.5",
+    ]
 
     cmd = [
         ffmpeg_bin, "-y",
         "-ss", "0",
         "-i", str(src),
         "-t", str(duration_seconds),
-        "-vf", vf_chain,
+        "-vf", ",".join(vf_filters),
+        "-af", ",".join(af_filters),
         "-c:v", "libx264", "-preset", "veryfast", "-threads", "4", "-crf", "18",
         "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
         "-movflags", "+faststart",
