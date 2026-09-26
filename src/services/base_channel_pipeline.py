@@ -144,7 +144,12 @@ class BaseChannelPipeline:
         suffix = f"_{int(effective_fade)}h_black" if effective_fade else ""
         long_play_path = master_path.parent / f"master_4k_{hour_label}hour{suffix}_broadcast.mp4"
 
-        if not long_play_path.is_file() or long_play_path.stat().st_size < 1000:
+        needs_lp_rebuild = (
+            not long_play_path.is_file()
+            or long_play_path.stat().st_size < 1000
+            or long_play_path.stat().st_mtime < master_path.stat().st_mtime
+        )
+        if needs_lp_rebuild:
             export_long_play_broadcast(
                 source_4k_video=master_path,
                 output_long_play=long_play_path,
@@ -156,7 +161,12 @@ class BaseChannelPipeline:
         # Stretch pure nature master if present
         if nature_master_path and nature_master_path.is_file() and nature_master_path.resolve() != master_path.resolve():
             lp_nature_path = master_path.parent / f"master_4k_{hour_label}hour_nature_only{suffix}_broadcast.mp4"
-            if not lp_nature_path.is_file() or lp_nature_path.stat().st_size < 1000:
+            needs_nature_lp_rebuild = (
+                not lp_nature_path.is_file()
+                or lp_nature_path.stat().st_size < 1000
+                or lp_nature_path.stat().st_mtime < nature_master_path.stat().st_mtime
+            )
+            if needs_nature_lp_rebuild:
                 print(f"[STAGE 3 AUTO-STRETCH] Auto-stretching Pure Nature master to {effective_hours} Hours (CRF {crf_val})...")
                 export_long_play_broadcast(
                     source_4k_video=nature_master_path,

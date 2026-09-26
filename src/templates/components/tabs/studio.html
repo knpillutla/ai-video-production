@@ -58,21 +58,49 @@
         <button id="btn-analyze-youtube" onclick="analyzeReferenceConcept()" class="hidden" aria-hidden="true"></button>
       </div>
 
+      <!-- Format / Aspect Ratio Selector (Video 16:9 vs Short 9:16) -->
+      <div class="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-950/70 border border-slate-800 rounded-xl">
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] font-bold text-gray-300 flex items-center gap-1.5">
+            <i class="fa-solid fa-film text-indigo-400"></i>
+            Format:
+          </span>
+          <div class="inline-flex items-center p-0.5 bg-slate-900 border border-slate-700/80 rounded-lg gap-1">
+            <button type="button" onclick="setStudioFormat('16:9')" id="format-btn-landscape" class="px-3 py-1 text-xs font-bold rounded-md bg-indigo-600 text-white shadow transition flex items-center gap-1.5" title="16:9 Landscape 4K Video (Default)">
+              <i class="fa-solid fa-display text-[11px]"></i>
+              <span>16:9 Video (Default)</span>
+            </button>
+            <button type="button" onclick="setStudioFormat('9:16')" id="format-btn-portrait" class="px-3 py-1 text-xs font-medium text-gray-400 hover:text-white rounded-md transition flex items-center gap-1.5" title="9:16 Vertical Short / Reel">
+              <i class="fa-solid fa-mobile-screen text-[11px] text-pink-400"></i>
+              <span>9:16 Short</span>
+            </button>
+          </div>
+          <input type="hidden" id="studio-selected-format" value="16:9">
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <label class="flex items-center gap-1.5 px-2 py-1 bg-slate-900 rounded-lg border border-slate-800 cursor-pointer hover:border-slate-700 text-xs" title="Generate pure environmental sounds with no music">
+            <input type="checkbox" id="studio-toggle-pure-nature" class="accent-emerald-500 w-3.5 h-3.5 rounded" onchange="togglePureNatureMode(this.checked)">
+            <span class="text-[11px] text-gray-300 font-medium">Pure Nature / ASMR (No BGM)</span>
+          </label>
+        </div>
+      </div>
+
       <!-- Textarea Input Box (Prompt, Script, or Adaptation Angle) -->
       <div class="relative">
         <textarea id="youtube-prompt-input" rows="3" placeholder="explore niagara falls" class="w-full p-3.5 bg-slate-950/80 border border-slate-700/60 rounded-xl text-white text-xs placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
       </div>
 
-      <!-- Audio Modalities, Speech Controls & Duration -->
+      <!-- Production Modalities, Duration, Stretch & Cinematic Settings -->
       <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
         <div class="flex items-center justify-between">
           <span class="text-[11px] font-bold text-gray-300 flex items-center gap-1.5">
             <i class="fa-solid fa-sliders text-indigo-400"></i>
-            Audio Modalities &amp; Duration
+            Production Controls &amp; Settings
           </span>
-          <span class="text-[10px] text-gray-500 font-mono">BGM &bull; Voiceover &bull; Duration &bull; Language</span>
+          <span class="text-[10px] text-gray-500 font-mono">Defaults pre-selected &bull; Customize any option</span>
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 pt-1 text-xs">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2 pt-1 text-xs">
           <label class="flex items-center gap-2 p-1.5 bg-slate-900/80 rounded-lg border border-slate-800 cursor-pointer hover:border-slate-700">
             <input type="checkbox" id="studio-toggle-bgm" checked class="accent-indigo-500 w-3.5 h-3.5 rounded">
             <span class="text-[11px] text-gray-300 font-medium">BGM Track</span>
@@ -95,15 +123,24 @@
               <option value="15">Duration: 15s (Reel)</option>
               <option value="30">Duration: 30s (Promo)</option>
               <option value="60">Duration: 60s (1 Min)</option>
+              <option value="90">Duration: 90s (Master)</option>
               <option value="120">Duration: 2 Min</option>
               <option value="300">Duration: 5 Min</option>
               <option value="480">Duration: 8 Min</option>
             </select>
           </div>
           <div>
-            <select id="studio-voice-gender" class="w-full px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-white text-[11px] focus:outline-none focus:border-indigo-500">
-              <option value="female" selected>Voice: Female</option>
-              <option value="male">Voice: Male</option>
+            <select id="studio-stretch-hours" class="w-full px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-white text-[11px] focus:outline-none focus:border-indigo-500 font-semibold" title="Long-Play Broadcast Stretch">
+              <option value="0" selected>Stretch: None (Default)</option>
+              <option value="3.0">Stretch: 3 Hours</option>
+              <option value="8.0">Stretch: 8 Hours</option>
+            </select>
+          </div>
+          <div>
+            <select id="studio-fps" class="w-full px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-white text-[11px] focus:outline-none focus:border-indigo-500 font-semibold" title="Cinematic Frame Rate">
+              <option value="24" selected>24 fps (Cinematic)</option>
+              <option value="30">30 fps (Music/Dance)</option>
+              <option value="60">60 fps (Fluid Walking)</option>
             </select>
           </div>
           <div>

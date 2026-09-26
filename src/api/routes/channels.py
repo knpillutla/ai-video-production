@@ -44,6 +44,19 @@ async def list_channels(current_user: User = Depends(get_current_user)):
     return repo.list_channels(current_user.id)
 
 
+@router.get("/episodes")
+async def list_channel_episodes(channel_id: str | None = None):
+    """Scan and list all channel episodes with full metadata, stages, models, and artifacts."""
+    from pathlib import Path
+    from src.api.routes.channel_episodes_scanner import scan_all_channel_episodes
+
+    storage_dir = Path(__file__).resolve().parent.parent.parent.parent / "storage"
+    episodes = scan_all_channel_episodes(storage_dir)
+    if channel_id and channel_id != "all":
+        episodes = [ep for ep in episodes if ep.get("channel_id") == channel_id]
+    return {"status": "ok", "count": len(episodes), "episodes": episodes}
+
+
 @router.post("", response_model=Channel, status_code=status.HTTP_201_CREATED)
 async def create_channel(
     req: ChannelCreate,

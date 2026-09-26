@@ -9,13 +9,86 @@
 }
 
 [data-theme="light"] {
-  --bg: #f8fafc;
+  --bg: #f1f5f9;
   --card: #ffffff;
-  --card-hover: #f1f5f9;
-  --border: #e2e8f0;
+  --card-hover: #f8fafc;
+  --border: #cbd5e1;
   --text: #0f172a;
-  --text-muted: #64748b;
+  --text-muted: #475569;
   --accent: #4f46e5;
+}
+
+/* Light Theme Component Overrides */
+[data-theme="light"] header,
+[data-theme="light"] aside,
+[data-theme="light"] .bg-\[\#0d1322\],
+[data-theme="light"] .bg-\[\#090d16\],
+[data-theme="light"] .bg-\[\#111828\]\/90,
+[data-theme="light"] .bg-\[\#0c1220\] {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .bg-slate-900,
+[data-theme="light"] .bg-slate-900\/90,
+[data-theme="light"] .bg-slate-900\/80,
+[data-theme="light"] .bg-slate-900\/60,
+[data-theme="light"] .bg-slate-950\/80,
+[data-theme="light"] .bg-slate-950\/70,
+[data-theme="light"] .bg-slate-950\/60 {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] textarea,
+[data-theme="light"] input[type="text"],
+[data-theme="light"] select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] textarea::placeholder,
+[data-theme="light"] input::placeholder {
+  color: #94a3b8 !important;
+}
+
+[data-theme="light"] .text-white,
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3,
+[data-theme="light"] strong {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .text-gray-300,
+[data-theme="light"] .text-gray-400 {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .text-gray-500 {
+  color: #64748b !important;
+}
+
+[data-theme="light"] .bg-slate-800,
+[data-theme="light"] .bg-slate-800\/80 {
+  background-color: #e2e8f0 !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] .bg-slate-800:hover,
+[data-theme="light"] .bg-slate-800\/80:hover {
+  background-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .bg-slate-950\/90,
+[data-theme="light"] .bg-slate-950 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
 }
 
 [data-theme="cyberpunk"] {

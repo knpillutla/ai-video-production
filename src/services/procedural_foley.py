@@ -48,8 +48,28 @@ def synthesize_foley_stem(
     s_lower = (setting_type or "").lower()
     is_indoor = (space or "").lower() == "indoor"
 
-    # 1. Weather Layer Synthesis
-    if any(k in w_lower for k in ("rain", "monsoon", "downpour", "drizzle", "storm")):
+    # 1. Weather & Environmental Layer Synthesis
+    if any(k in w_lower for k in ("water", "stream", "river", "creek", "brook", "cascade", "alpine", "mountain", "lake", "ocean", "waves")):
+        noise = _generate_pink_noise(num_samples, seed=105)
+        stream_gain = 0.22
+        for i in range(num_samples):
+            t = i / sample_rate
+            surge = 1.0 + 0.25 * math.sin(2 * math.pi * 0.35 * t) * math.cos(2 * math.pi * 0.12 * t)
+            n = noise[i] * stream_gain * surge
+            left_channel[i] += n * 0.95
+            right_channel[i] += n * 1.05
+    elif any(k in w_lower for k in ("fire", "fireplace", "hearth", "campfire", "ember")):
+        noise = _generate_pink_noise(num_samples, seed=205)
+        fire_gain = 0.14
+        rng = random.Random(305)
+        for i in range(num_samples):
+            n = noise[i] * fire_gain
+            if rng.random() < 0.008:
+                pop = rng.uniform(-0.5, 0.5)
+                n += pop
+            left_channel[i] += n
+            right_channel[i] += n * 0.95
+    elif any(k in w_lower for k in ("rain", "monsoon", "downpour", "drizzle", "storm")):
         noise = _generate_pink_noise(num_samples, seed=101)
         rain_gain = 0.35 if "heavy" in w_lower or "downpour" in w_lower else 0.18
         if is_indoor:

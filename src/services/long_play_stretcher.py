@@ -49,14 +49,13 @@ def export_long_play_broadcast(
             str(out)
         ]
     else:
-        # Continuous monotonic timestamp broadcast encoding (prevents YouTube processing abandonment)
+        # Fast lossless stream copy without re-encoding (renders 3-hour 4K master in ~60 seconds)
         cmd = [
             ffmpeg_bin, "-y",
             "-stream_loop", "-1",
             "-i", str(src),
             "-t", str(target_duration_seconds),
-            "-c:v", "libx264", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
-            "-c:a", "aac", "-b:a", "320k",
+            "-c", "copy",
             "-movflags", "+faststart",
             str(out)
         ]
