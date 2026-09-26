@@ -1,38 +1,95 @@
 <!-- TAB: VIDEO PRODUCTION LEDGER (Dedicated History & Master Inspector Screen) -->
-<div id="tab-ledger" class="space-y-5 hidden">
-  <!-- Screen Header & Actions -->
-  <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm">
-    <div>
+<div id="tab-ledger" class="space-y-3 hidden">
+  <!-- TOP UNIFIED HEADER: Title, Channel Selector Chips & Search Bar in One Compact Card -->
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-sm space-y-2.5">
+    <!-- Row 1: Screen Title & Action Buttons -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--border)] pb-2">
       <div class="flex items-center gap-2">
-        <h1 class="text-xl font-black text-white tracking-tight">Video Production Ledger</h1>
-        <span class="text-[10px] font-bold px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full">Traceable Memory</span>
+        <h1 class="text-base font-black text-slate-900 dark:text-white tracking-tight">Video Production Ledger</h1>
+        <span class="text-[10px] font-bold px-2 py-0.5 bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 rounded-full">Traceable Memory</span>
+        <span class="text-xs text-slate-500 dark:text-gray-400 hidden md:inline">• Click any row to inspect &amp; preview on the right panel</span>
       </div>
-      <p class="text-xs text-gray-400 mt-0.5">Click any row to inspect &amp; preview on the right panel. Sorted by Date/Time DESC with full pipeline metadata.</p>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="switchTab('studio')" class="px-3 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow transition active:scale-95">
+          <i class="fa-solid fa-plus text-[10px]"></i>
+          <span>Create Video</span>
+        </button>
+        <button onclick="refreshStudioLedger()" id="btn-refresh-ledger" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-[var(--border)] text-slate-700 dark:text-gray-200 hover:text-slate-900 dark:hover:text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition active:scale-95 shadow-sm" title="Refresh Ledger Table">
+          <i id="ledger-refresh-icon" class="fa-solid fa-arrows-rotate text-[10px] text-indigo-600 dark:text-indigo-400"></i>
+          <span>Refresh</span>
+        </button>
+        <button onclick="openCreateVideoWizardModal()" class="px-3 py-1 bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow">
+          <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+          <span>Wizard</span>
+        </button>
+      </div>
     </div>
+
+    <!-- Row 2: Channel Selector Chips -->
     <div class="flex items-center gap-2 flex-wrap">
-      <button onclick="switchTab('studio')" class="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow transition active:scale-95">
-        <i class="fa-solid fa-plus text-xs"></i>
-        <span>Create Video</span>
-      </button>
-      <button onclick="toggleRightPanelVisibility()" id="btn-toggle-panel" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-[var(--border)] text-indigo-300 hover:text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition active:scale-95 shadow-sm" title="Toggle Preview Panel">
-        <i class="fa-solid fa-tv text-xs"></i>
-        <span id="btn-toggle-panel-text">Preview Panel</span>
-      </button>
-      <button onclick="refreshStudioLedger()" id="btn-refresh-ledger" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-[var(--border)] text-gray-200 hover:text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition active:scale-95 shadow-sm" title="Refresh Ledger Table">
-        <i id="ledger-refresh-icon" class="fa-solid fa-arrows-rotate text-xs text-indigo-400"></i>
-        <span>Refresh</span>
-      </button>
-      <button onclick="openCreateVideoWizardModal()" class="px-3.5 py-1.5 bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow">
-        <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
-        <span>Wizard</span>
-      </button>
+      <span class="text-xs font-bold text-slate-700 dark:text-gray-300 flex items-center gap-1 shrink-0">
+        <i class="fa-solid fa-tower-broadcast text-indigo-600 dark:text-indigo-400 text-xs"></i>
+        <span>Channel:</span>
+      </span>
+      <div class="flex items-center gap-1.5 flex-wrap" id="ledger-channel-chips">
+        <button type="button" onclick="selectStudioChannel('all')" id="ledger-ch-all" class="px-2.5 py-1 rounded-lg text-xs font-bold transition bg-indigo-600 text-white shadow-sm flex items-center gap-1.5 ring-1 ring-indigo-400">
+          <i class="fa-solid fa-globe text-[11px]"></i>
+          <span>All Channels</span>
+        </button>
+        <button type="button" onclick="selectStudioChannel('earth_serenade')" id="ledger-ch-earth_serenade" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-gray-300 hover:text-white bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-leaf text-[11px] text-emerald-500"></i>
+          <span>Earth Serenade</span>
+          <span class="text-[9px] font-mono text-emerald-600 dark:text-emerald-400">4K Nature</span>
+        </button>
+        <button type="button" onclick="selectStudioChannel('silent_hearth')" id="ledger-ch-silent_hearth" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-gray-300 hover:text-white bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-500 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-fire text-[11px] text-amber-500"></i>
+          <span>Silent Hearth</span>
+          <span class="text-[9px] font-mono text-amber-600 dark:text-amber-400">Fire &amp; ASMR</span>
+        </button>
+        <button type="button" onclick="selectStudioChannel('cineai_docs')" id="ledger-ch-cineai_docs" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-gray-300 hover:text-white bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-film text-[11px] text-blue-500"></i>
+          <span>CineAI Docs</span>
+          <span class="text-[9px] font-mono text-blue-600 dark:text-blue-400">24fps BBC</span>
+        </button>
+        <button type="button" onclick="selectStudioChannel('telugu_comedy')" id="ledger-ch-telugu_comedy" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-gray-300 hover:text-white bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-pink-500 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-masks-theater text-[11px] text-pink-500"></i>
+          <span>Comedy Satire</span>
+          <span class="text-[9px] font-mono text-pink-600 dark:text-pink-400">9:16 Shorts</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Row 3: Search Bar & Dropdown Filters -->
+    <div class="flex flex-wrap items-center gap-2 text-xs">
+      <div class="relative flex-1 min-w-[200px]">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+        <input type="text" id="studio-search-input" onkeyup="renderStudioVideoHistory()" placeholder="Search videos by title, ID, language..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs">
+      </div>
+      <select id="studio-filter-status" onchange="renderStudioVideoHistory()" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-gray-300 rounded-lg px-2.5 py-1.5 text-xs">
+        <option value="all">All Statuses</option>
+        <option value="queued">Queued</option>
+        <option value="pending">Pending</option>
+        <option value="processing">Processing</option>
+        <option value="completed">Completed</option>
+      </select>
+      <select id="studio-filter-tier" onchange="renderStudioVideoHistory()" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-gray-300 rounded-lg px-2.5 py-1.5 text-xs">
+        <option value="all">All Tiers</option>
+        <option value="low_cost">Low Cost ($0.02)</option>
+        <option value="balanced">Balanced ($0.14)</option>
+        <option value="cinematic">Cinematic ($0.45)</option>
+      </select>
+      <select id="studio-filter-youtube" onchange="renderStudioVideoHistory()" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-gray-300 rounded-lg px-2.5 py-1.5 text-xs">
+        <option value="all">All YouTube States</option>
+        <option value="published">Published</option>
+        <option value="unpublished">Unpublished</option>
+      </select>
     </div>
   </div>
 
   <!-- Real-time Queued Notification Banner -->
-  <div id="ledger-queued-banner" class="hidden p-3.5 bg-emerald-950/90 border border-emerald-500/50 rounded-xl flex items-center justify-between gap-3 shadow-xl">
+  <div id="ledger-queued-banner" class="hidden p-3 bg-emerald-950/90 border border-emerald-500/50 rounded-xl flex items-center justify-between gap-3 shadow-xl">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-base shrink-0">
+      <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm shrink-0">
         <i class="fa-solid fa-circle-check"></i>
       </div>
       <div>
@@ -41,74 +98,47 @@
           <span class="text-[10px] text-gray-400">Request ID:</span>
           <span id="banner-request-id" class="font-mono text-emerald-300 bg-emerald-900/60 px-2 py-0.5 rounded border border-emerald-500/30 text-[10px] font-bold">job_...</span>
         </div>
-        <div id="banner-request-detail" class="text-[11px] text-gray-300 mt-0.5">Your video request is now queued. Track synthesis progress in real time below.</div>
+        <div id="banner-request-detail" class="text-[10px] text-gray-300 mt-0.5">Track synthesis progress in real time below.</div>
       </div>
     </div>
-    <button onclick="document.getElementById('ledger-queued-banner').classList.add('hidden')" class="text-gray-400 hover:text-white text-xs p-1.5 rounded-lg hover:bg-slate-800 transition">
+    <button onclick="document.getElementById('ledger-queued-banner').classList.add('hidden')" class="text-gray-400 hover:text-white text-xs p-1 rounded-lg hover:bg-slate-800 transition">
       <i class="fa-solid fa-xmark"></i>
     </button>
   </div>
 
-  <!-- Filters Bar -->
-  <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-    <div class="relative flex-1 min-w-[220px]">
-      <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-xs"></i>
-      <input type="text" id="studio-search-input" onkeyup="renderStudioVideoHistory()" placeholder="Search videos by title, ID, language..." class="w-full pl-8 pr-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-xs">
-    </div>
-    <div class="flex items-center gap-2 flex-wrap">
-      <select id="studio-filter-status" onchange="renderStudioVideoHistory()" class="bg-slate-900 border border-[var(--border)] text-gray-300 rounded-lg px-2.5 py-1.5 text-xs">
-        <option value="all">All Statuses</option>
-        <option value="queued">Queued</option>
-        <option value="pending">Pending</option>
-        <option value="processing">Processing</option>
-        <option value="completed">Completed</option>
-      </select>
-      <select id="studio-filter-tier" onchange="renderStudioVideoHistory()" class="bg-slate-900 border border-[var(--border)] text-gray-300 rounded-lg px-2.5 py-1.5 text-xs">
-        <option value="all">All Tiers</option>
-        <option value="low_cost">Low Cost ($0.02)</option>
-        <option value="balanced">Balanced ($0.14)</option>
-        <option value="cinematic">Cinematic ($0.45)</option>
-      </select>
-      <select id="studio-filter-youtube" onchange="renderStudioVideoHistory()" class="bg-slate-900 border border-[var(--border)] text-gray-300 rounded-lg px-2.5 py-1.5 text-xs">
-        <option value="all">All YouTube States</option>
-        <option value="published">Published</option>
-        <option value="unpublished">Unpublished</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- Split View: Table on Left + Preview Inspector Panel on Right -->
-  <div class="flex flex-col xl:flex-row gap-6 items-start">
-    <!-- Ledger Table Column -->
-    <div id="studio-ledger-col" class="w-full xl:flex-1 min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
-      <div class="overflow-x-auto">
+  <!-- Two-Panel Split Layout: 40% Left (Ledger Table) + 60% Right (Master Inspector) -->
+  <div class="grid grid-cols-1 xl:grid-cols-[40%_60%] gap-4 items-start">
+    <!-- LEFT PANEL (40%): Video Ledger Table -->
+    <div id="studio-ledger-col" class="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-sm flex flex-col max-h-[calc(100vh-210px)]">
+      <!-- Ledger Table Scroll Area -->
+      <div class="overflow-x-auto overflow-y-auto flex-1 rounded-xl border border-[var(--border)] custom-scrollbar">
         <table class="w-full text-left text-xs">
-          <thead class="bg-slate-900/90 text-gray-400 font-bold border-b border-[var(--border)]">
+          <thead class="bg-slate-100 dark:bg-slate-900/90 text-slate-700 dark:text-gray-400 font-bold border-b border-[var(--border)] sticky top-0 z-10">
             <tr>
-              <th class="p-3">ID / Job UUID</th>
-              <th class="p-3">Title &amp; Concept</th>
-              <th class="p-3 text-center">Video Type</th>
-              <th class="p-3 text-center">Format (Long/Short)</th>
-              <th class="p-3 text-center">Style</th>
-              <th class="p-3 text-center">Production Type</th>
-              <th class="p-3 text-center">Option Selected</th>
-              <th class="p-3 text-center">Status</th>
-              <th class="p-3 text-right font-mono">Cost</th>
-              <th class="p-3 text-center">Date / Time (DESC)</th>
-              <th class="p-3 text-center">Processing Start</th>
-              <th class="p-3 text-center">Processing Completed</th>
-              <th class="p-3 text-center">Published to YouTube</th>
-              <th class="p-3 text-center">Artifacts &amp; Action</th>
+              <th class="p-2.5">ID / Job UUID</th>
+              <th class="p-2.5">Title &amp; Concept</th>
+              <th class="p-2.5 text-center">Type</th>
+              <th class="p-2.5 text-center">Format</th>
+              <th class="p-2.5 text-center">Style</th>
+              <th class="p-2.5 text-center">Production</th>
+              <th class="p-2.5 text-center">Tier</th>
+              <th class="p-2.5 text-center">Status</th>
+              <th class="p-2.5 text-right font-mono">Cost</th>
+              <th class="p-2.5 text-center">Created</th>
+              <th class="p-2.5 text-center">Started</th>
+              <th class="p-2.5 text-center">Completed</th>
+              <th class="p-2.5 text-center">YouTube</th>
+              <th class="p-2.5 text-center">Action</th>
             </tr>
           </thead>
-          <tbody id="studio-video-history-rows" class="divide-y divide-slate-800/60">
+          <tbody id="studio-video-history-rows" class="divide-y divide-slate-200 dark:divide-slate-800/60">
             <!-- Populated dynamically sorted by Date/Time DESC -->
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- Right Ledger Inspector Panel Partial Include (Read-Only) -->
+    <!-- RIGHT PANEL (60%): Master Inspector (Matching Studio Screen) -->
     {% include "components/tabs/ledger_panel_inspector.html" %}
   </div>
 </div>

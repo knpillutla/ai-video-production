@@ -127,12 +127,12 @@ function renderInspectorFromVideo(vid) {
 
   if (imagesContainer && keyframes.length > 0) {
     imagesContainer.innerHTML = keyframes.map((kf, i) => `
-      <div class="flex flex-col items-center gap-0.5 shrink-0">
-        <div class="group relative w-20 h-14 rounded-lg overflow-hidden bg-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-blue-500 cursor-pointer transition shadow" onclick="previewLightboxImage('${kf}')">
+      <div class="flex flex-col items-center gap-0.5 w-full">
+        <div class="group relative w-full h-14 rounded-lg overflow-hidden bg-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-blue-500 cursor-pointer transition shadow" onclick="previewLightboxImage('${kf}')">
           <img src="${kf}" alt="Shot ${i + 1}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
           <span class="absolute top-0.5 right-0.5 px-1 py-0.2 rounded bg-black/70 text-[7px] font-mono text-blue-300">4K Flux</span>
         </div>
-        <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">${shotNames[i] || `Shot ${i + 1}`}</span>
+        <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">${shotNames[i] || `Shot ${i + 1}`}</span>
         <span class="text-[8px] font-mono text-blue-600 dark:text-blue-400">⏱ ${photoTimings[i % photoTimings.length]}</span>
       </div>
     `).join("");

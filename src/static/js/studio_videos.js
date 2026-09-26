@@ -55,6 +55,18 @@ function renderStudioVideoHistory() {
   const filterStatus = document.getElementById("studio-filter-status")?.value || "all";
   const filterTier = document.getElementById("studio-filter-tier")?.value || "all";
   const filterYoutube = document.getElementById("studio-filter-youtube")?.value || "all";
+  const filterChannel = (typeof selectedStudioChannel !== "undefined") ? selectedStudioChannel : "all";
+
+  const matchesChannel = (v) => {
+    if (filterChannel === "all") return true;
+    if (v.channelId && v.channelId === filterChannel) return true;
+    const c = (v.concept || "").toLowerCase() + " " + (v.title || "").toLowerCase() + " " + (v.videoType || "").toLowerCase();
+    if (filterChannel === "earth_serenade") return c.includes("nature") || c.includes("rain") || c.includes("relaxation") || c.includes("soundscape") || c.includes("waterfall");
+    if (filterChannel === "silent_hearth") return c.includes("hearth") || c.includes("fireplace") || c.includes("blizzard") || c.includes("cabin") || c.includes("cozy") || c.includes("asmr");
+    if (filterChannel === "cineai_docs") return c.includes("ocean") || c.includes("documentary") || c.includes("doc") || c.includes("bbc") || c.includes("wildlife");
+    if (filterChannel === "telugu_comedy") return c.includes("comedy") || c.includes("satire") || c.includes("reel") || (v.format && v.format.includes("Short"));
+    return false;
+  };
 
   const filtered = studioVideos
     .filter(v => {
@@ -62,7 +74,7 @@ function renderStudioVideoHistory() {
       const matchesStatus = filterStatus === "all" || (v.status && v.status.toLowerCase() === filterStatus.toLowerCase());
       const matchesTier = filterTier === "all" || (v.tierKey && v.tierKey.toLowerCase() === filterTier.toLowerCase());
       const matchesYoutube = filterYoutube === "all" || (v.youtubeStatus && v.youtubeStatus.toLowerCase() === filterYoutube.toLowerCase());
-      return matchesSearch && matchesStatus && matchesTier && matchesYoutube;
+      return matchesSearch && matchesStatus && matchesTier && matchesYoutube && matchesChannel(v);
     })
     .sort((a, b) => b.createdAt - a.createdAt);
 

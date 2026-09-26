@@ -13,19 +13,22 @@ function selectStudioChannel(channelId) {
   selectedStudioChannel = channelId;
   const meta = CHANNEL_METAS[channelId] || CHANNEL_METAS.all;
 
-  // Update button highlights
+  // Update button highlights for studio and ledger bars
   ["all", "earth_serenade", "silent_hearth", "cineai_docs", "telugu_comedy"].forEach(k => {
+    const activeCls = "px-2.5 py-1 rounded-lg text-xs font-bold transition bg-indigo-600 text-white shadow-sm flex items-center gap-1.5 ring-1 ring-indigo-400";
+    const inactiveCls = "px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-gray-300 hover:text-white bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500 transition flex items-center gap-1.5";
     const btn = document.getElementById("studio-ch-" + k);
-    if (!btn) return;
-    if (k === channelId) {
-      btn.className = "px-2.5 py-1 rounded-lg text-xs font-bold transition bg-indigo-600 text-white shadow-sm flex items-center gap-1.5 ring-1 ring-indigo-400";
-    } else {
-      btn.className = "px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-gray-300 hover:text-white bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500 transition flex items-center gap-1.5";
-    }
+    const ledgerBtn = document.getElementById("ledger-ch-" + k);
+    if (btn) btn.className = (k === channelId) ? activeCls : inactiveCls;
+    if (ledgerBtn) ledgerBtn.className = (k === channelId) ? activeCls : inactiveCls;
   });
 
   const badge = document.getElementById("studio-channel-meta-badge");
   if (badge) badge.textContent = `${meta.name} (${meta.handle})`;
+
+  if (typeof renderStudioVideoHistory === "function") {
+    renderStudioVideoHistory();
+  }
 
   // Broadcast channel change to decoupled panels
   if (window.StudioBus) {

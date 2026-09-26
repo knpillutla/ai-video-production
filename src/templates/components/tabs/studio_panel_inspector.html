@@ -49,65 +49,57 @@
         </div>
       </div>
 
-      <!-- Horizontal scrollable strip of all Master & Long Stretch renders -->
-      <div id="panel-section-master-videos" class="flex items-center gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
+      <!-- Grid of all Master & Long Stretch renders filling the full panel width -->
+      <div id="panel-section-master-videos" class="grid grid-cols-4 gap-2 w-full pb-1">
         <!-- Render 1: 4K Master -->
-        <div class="flex flex-col items-center gap-0.5 shrink-0 cursor-pointer" onclick="selectMasterVideoRender('/static/videos/preview_master.mp4', '4K Master (90s)', this)">
-          <div class="group relative w-20 h-13 rounded-lg overflow-hidden bg-gradient-to-br from-emerald-950 to-slate-900 border-2 border-emerald-500 hover:border-emerald-400 transition shadow flex flex-col justify-between p-1">
+        <div class="flex flex-col items-center gap-0.5 cursor-pointer w-full" onclick="selectMasterVideoRender('/static/videos/preview_master.mp4', '4K Master (90s)', this)">
+          <div class="group relative w-full h-14 rounded-lg overflow-hidden bg-gradient-to-br from-emerald-950 to-slate-900 border-2 border-emerald-500 hover:border-emerald-400 transition shadow flex flex-col justify-between p-1">
             <div class="flex items-center justify-between">
               <span class="px-1 py-0.2 rounded bg-emerald-900/90 text-[7px] font-mono text-emerald-200 border border-emerald-500/40">4K Master</span>
               <span class="text-[7px] font-mono text-emerald-300">90s</span>
             </div>
-            <div class="flex items-center justify-end">
-              <i class="fa-solid fa-play text-[8px] text-emerald-400"></i>
-            </div>
+            <div class="flex items-center justify-end"><i class="fa-solid fa-play text-[8px] text-emerald-400"></i></div>
           </div>
-          <span class="text-[9px] font-bold text-emerald-700 dark:text-emerald-300 truncate max-w-[80px] text-center leading-tight">Master (90s)</span>
+          <span class="text-[9px] font-bold text-emerald-700 dark:text-emerald-300 truncate w-full text-center leading-tight">Master (90s)</span>
           <span class="text-[8px] font-mono text-emerald-600 dark:text-emerald-400">⏱ 24.2s</span>
         </div>
 
         <!-- Render 2: 3-Hour Broadcast Stretch -->
-        <div class="flex flex-col items-center gap-0.5 shrink-0 cursor-pointer" onclick="selectMasterVideoRender('/static/videos/preview_master.mp4', '3-Hour Broadcast (4K)', this)">
-          <div class="group relative w-20 h-13 rounded-lg overflow-hidden bg-gradient-to-br from-indigo-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-indigo-500 transition shadow flex flex-col justify-between p-1">
+        <div class="flex flex-col items-center gap-0.5 cursor-pointer w-full" onclick="selectMasterVideoRender('/static/videos/preview_master.mp4', '3-Hour Broadcast (4K)', this)">
+          <div class="group relative w-full h-14 rounded-lg overflow-hidden bg-gradient-to-br from-indigo-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-indigo-500 transition shadow flex flex-col justify-between p-1">
             <div class="flex items-center justify-between">
               <span class="px-1 py-0.2 rounded bg-indigo-900/90 text-[7px] font-mono text-indigo-200 border border-indigo-500/40">Stretch</span>
               <span class="text-[7px] font-mono text-gray-300">3 Hrs</span>
             </div>
-            <div class="flex items-center justify-end">
-              <i class="fa-solid fa-play text-[8px] text-indigo-400"></i>
-            </div>
+            <div class="flex items-center justify-end"><i class="fa-solid fa-play text-[8px] text-indigo-400"></i></div>
           </div>
-          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">3-Hour Stretch</span>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">3-Hour Stretch</span>
           <span class="text-[8px] font-mono text-indigo-600 dark:text-indigo-400">⏱ 42.5s</span>
         </div>
 
         <!-- Render 3: 8-Hour Broadcast Stretch -->
-        <div class="flex flex-col items-center gap-0.5 shrink-0 cursor-pointer" onclick="selectMasterVideoRender('/static/videos/preview_master.mp4', '8-Hour Broadcast (4K)', this)">
-          <div class="group relative w-20 h-13 rounded-lg overflow-hidden bg-gradient-to-br from-purple-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-purple-500 transition shadow flex flex-col justify-between p-1">
+        <div class="flex flex-col items-center gap-0.5 cursor-pointer w-full" onclick="selectMasterVideoRender('/static/videos/preview_master.mp4', '8-Hour Broadcast (4K)', this)">
+          <div class="group relative w-full h-14 rounded-lg overflow-hidden bg-gradient-to-br from-purple-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-purple-500 transition shadow flex flex-col justify-between p-1">
             <div class="flex items-center justify-between">
               <span class="px-1 py-0.2 rounded bg-purple-900/90 text-[7px] font-mono text-purple-200 border border-purple-500/40">Stretch</span>
               <span class="text-[7px] font-mono text-gray-300">8 Hrs</span>
             </div>
-            <div class="flex items-center justify-end">
-              <i class="fa-solid fa-play text-[8px] text-purple-400"></i>
-            </div>
+            <div class="flex items-center justify-end"><i class="fa-solid fa-play text-[8px] text-purple-400"></i></div>
           </div>
-          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">8-Hour Stretch</span>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">8-Hour Stretch</span>
           <span class="text-[8px] font-mono text-purple-600 dark:text-purple-400">⏱ 78.1s</span>
         </div>
 
         <!-- Render 4: ASMR Clean Loop (No TTS) -->
-        <div class="flex flex-col items-center gap-0.5 shrink-0 cursor-pointer" onclick="selectMasterVideoRender('/static/videos/preview_master.mp4', 'Clean ASMR Loop', this)">
-          <div class="group relative w-20 h-13 rounded-lg overflow-hidden bg-gradient-to-br from-teal-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-teal-500 transition shadow flex flex-col justify-between p-1">
+        <div class="flex flex-col items-center gap-0.5 cursor-pointer w-full" onclick="selectMasterVideoRender('/static/videos/preview_master.mp4', 'Clean ASMR Loop', this)">
+          <div class="group relative w-full h-14 rounded-lg overflow-hidden bg-gradient-to-br from-teal-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-teal-500 transition shadow flex flex-col justify-between p-1">
             <div class="flex items-center justify-between">
               <span class="px-1 py-0.2 rounded bg-teal-900/90 text-[7px] font-mono text-teal-200 border border-teal-500/40">ASMR</span>
               <span class="text-[7px] font-mono text-gray-300">Loop</span>
             </div>
-            <div class="flex items-center justify-end">
-              <i class="fa-solid fa-play text-[8px] text-teal-400"></i>
-            </div>
+            <div class="flex items-center justify-end"><i class="fa-solid fa-play text-[8px] text-teal-400"></i></div>
           </div>
-          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Clean ASMR</span>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">Clean ASMR</span>
           <span class="text-[8px] font-mono text-teal-600 dark:text-teal-400">⏱ 18.4s</span>
         </div>
       </div>
@@ -116,7 +108,7 @@
     <!-- HORIZONTAL DIVIDER LINE -->
     <hr class="border-t border-slate-200 dark:border-slate-800 my-0.5">
 
-    <!-- SECTION 1: KEYFRAME PHOTOS (HORIZONTAL ROW OF COMPACT THUMBNAILS WITH NAMES) -->
+    <!-- SECTION 1: KEYFRAME PHOTOS (4-COLUMN FULL-WIDTH GRID) -->
     <div class="space-y-1">
       <div class="flex items-center justify-between text-[10px] font-bold text-slate-700 dark:text-gray-300">
         <span class="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-mono uppercase">
@@ -124,41 +116,41 @@
         </span>
         <span id="panel-images-count" class="text-slate-500 dark:text-gray-400 font-mono text-[9px]">4 Shots</span>
       </div>
-      <div id="panel-section-images" class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+      <div id="panel-section-images" class="grid grid-cols-4 gap-2 w-full pb-1">
         <!-- Shot 1: Wide Horizon -->
-        <div class="flex flex-col items-center gap-0.5 shrink-0">
-          <div class="group relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-blue-900 to-indigo-950 border border-slate-300 dark:border-slate-700/80 hover:border-blue-500 cursor-pointer transition shadow flex items-center justify-center">
+        <div class="flex flex-col items-center gap-0.5 w-full">
+          <div class="group relative w-full h-14 rounded-lg overflow-hidden bg-gradient-to-br from-blue-900 to-indigo-950 border border-slate-300 dark:border-slate-700/80 hover:border-blue-500 cursor-pointer transition shadow flex items-center justify-center">
             <i class="fa-solid fa-mountain-sun text-blue-400 text-sm"></i>
             <span class="absolute top-0.5 right-0.5 px-1 py-0.2 rounded bg-black/70 text-[7px] font-mono text-blue-300">4K Flux</span>
           </div>
-          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 1: Wide</span>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">Shot 1: Wide</span>
           <span class="text-[8px] font-mono text-blue-600 dark:text-blue-400">⏱ 3.4s</span>
         </div>
         <!-- Shot 2: River Rapids -->
-        <div class="flex flex-col items-center gap-0.5 shrink-0">
-          <div class="group relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-emerald-900 to-teal-950 border border-slate-300 dark:border-slate-700/80 hover:border-emerald-500 cursor-pointer transition shadow flex items-center justify-center">
+        <div class="flex flex-col items-center gap-0.5 w-full">
+          <div class="group relative w-full h-14 rounded-lg overflow-hidden bg-gradient-to-br from-emerald-900 to-teal-950 border border-slate-300 dark:border-slate-700/80 hover:border-emerald-500 cursor-pointer transition shadow flex items-center justify-center">
             <i class="fa-solid fa-water text-emerald-400 text-sm"></i>
             <span class="absolute top-0.5 right-0.5 px-1 py-0.2 rounded bg-black/70 text-[7px] font-mono text-emerald-300">4K Flux</span>
           </div>
-          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 2: River</span>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">Shot 2: River</span>
           <span class="text-[8px] font-mono text-blue-600 dark:text-blue-400">⏱ 3.8s</span>
         </div>
         <!-- Shot 3: Forest Canopy -->
-        <div class="flex flex-col items-center gap-0.5 shrink-0">
-          <div class="group relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-amber-900 to-emerald-950 border border-slate-300 dark:border-slate-700/80 hover:border-amber-500 cursor-pointer transition shadow flex items-center justify-center">
+        <div class="flex flex-col items-center gap-0.5 w-full">
+          <div class="group relative w-full h-14 rounded-lg overflow-hidden bg-gradient-to-br from-amber-900 to-emerald-950 border border-slate-300 dark:border-slate-700/80 hover:border-amber-500 cursor-pointer transition shadow flex items-center justify-center">
             <i class="fa-solid fa-tree text-amber-400 text-sm"></i>
             <span class="absolute top-0.5 right-0.5 px-1 py-0.2 rounded bg-black/70 text-[7px] font-mono text-amber-300">4K Flux</span>
           </div>
-          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 3: Canopy</span>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">Shot 3: Canopy</span>
           <span class="text-[8px] font-mono text-blue-600 dark:text-blue-400">⏱ 3.2s</span>
         </div>
         <!-- Shot 4: Sunset Glow -->
-        <div class="flex flex-col items-center gap-0.5 shrink-0">
-          <div class="group relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-rose-900 to-purple-950 border border-slate-300 dark:border-slate-700/80 hover:border-rose-500 cursor-pointer transition shadow flex items-center justify-center">
+        <div class="flex flex-col items-center gap-0.5 w-full">
+          <div class="group relative w-full h-14 rounded-lg overflow-hidden bg-gradient-to-br from-rose-900 to-purple-950 border border-slate-300 dark:border-slate-700/80 hover:border-rose-500 cursor-pointer transition shadow flex items-center justify-center">
             <i class="fa-solid fa-sun text-rose-400 text-sm"></i>
             <span class="absolute top-0.5 right-0.5 px-1 py-0.2 rounded bg-black/70 text-[7px] font-mono text-rose-300">4K Flux</span>
           </div>
-          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 4: Sunset</span>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">Shot 4: Sunset</span>
           <span class="text-[8px] font-mono text-blue-600 dark:text-blue-400">⏱ 4.1s</span>
         </div>
       </div>
@@ -167,7 +159,7 @@
     <!-- HORIZONTAL DIVIDER LINE -->
     <hr class="border-t border-slate-200 dark:border-slate-800 my-0.5">
 
-    <!-- SECTION 2: RAW MOTION VIDEO CLIPS (HORIZONTAL ROW OF COMPACT THUMBNAILS WITH NAMES) -->
+    <!-- SECTION 2: RAW MOTION VIDEO CLIPS (3-COLUMN FULL-WIDTH GRID) -->
     <div class="space-y-1">
       <div class="flex items-center justify-between text-[10px] font-bold text-slate-700 dark:text-gray-300">
         <span class="flex items-center gap-1 text-purple-600 dark:text-purple-400 font-mono uppercase">
@@ -175,47 +167,41 @@
         </span>
         <span id="panel-raw-videos-count" class="text-slate-500 dark:text-gray-400 font-mono text-[9px]">3 Clips</span>
       </div>
-      <div id="panel-section-raw-videos" class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+      <div id="panel-section-raw-videos" class="grid grid-cols-3 gap-2.5 w-full pb-1">
         <!-- Motion Shot 1: Kling Pro Aerial -->
-        <div class="flex flex-col items-center gap-0.5 shrink-0">
-          <div class="relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-purple-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-purple-500 transition shadow flex flex-col justify-between p-1">
+        <div class="flex flex-col items-center gap-0.5 w-full">
+          <div class="relative w-full h-14 rounded-lg overflow-hidden bg-gradient-to-br from-purple-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-purple-500 transition shadow flex flex-col justify-between p-1">
             <div class="flex items-center justify-between">
               <span class="px-1 py-0.2 rounded bg-purple-900/90 text-[7px] font-mono text-purple-200 border border-purple-500/40">Kling Pro</span>
               <span class="text-[7px] font-mono text-gray-300">5s</span>
             </div>
-            <div class="flex items-center justify-end">
-              <i class="fa-solid fa-play text-[8px] text-purple-400"></i>
-            </div>
+            <div class="flex items-center justify-end"><i class="fa-solid fa-play text-[8px] text-purple-400"></i></div>
           </div>
-          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 1: Aerial</span>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">Shot 1: Aerial</span>
           <span class="text-[8px] font-mono text-purple-600 dark:text-purple-400">⏱ 14.5s</span>
         </div>
         <!-- Motion Shot 2: Wan 2.1 Water -->
-        <div class="flex flex-col items-center gap-0.5 shrink-0">
-          <div class="relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-cyan-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-cyan-500 transition shadow flex flex-col justify-between p-1">
+        <div class="flex flex-col items-center gap-0.5 w-full">
+          <div class="relative w-full h-14 rounded-lg overflow-hidden bg-gradient-to-br from-cyan-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-cyan-500 transition shadow flex flex-col justify-between p-1">
             <div class="flex items-center justify-between">
               <span class="px-1 py-0.2 rounded bg-cyan-900/90 text-[7px] font-mono text-cyan-200 border border-cyan-500/40">Wan 2.1</span>
               <span class="text-[7px] font-mono text-gray-300">10s</span>
             </div>
-            <div class="flex items-center justify-end">
-              <i class="fa-solid fa-play text-[8px] text-cyan-400"></i>
-            </div>
+            <div class="flex items-center justify-end"><i class="fa-solid fa-play text-[8px] text-cyan-400"></i></div>
           </div>
-          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 2: Water</span>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">Shot 2: Water</span>
           <span class="text-[8px] font-mono text-cyan-600 dark:text-cyan-400">⏱ 22.8s</span>
         </div>
         <!-- Motion Shot 3: Hunyuan Canopy -->
-        <div class="flex flex-col items-center gap-0.5 shrink-0">
-          <div class="relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-indigo-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-indigo-500 transition shadow flex flex-col justify-between p-1">
+        <div class="flex flex-col items-center gap-0.5 w-full">
+          <div class="relative w-full h-14 rounded-lg overflow-hidden bg-gradient-to-br from-indigo-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-indigo-500 transition shadow flex flex-col justify-between p-1">
             <div class="flex items-center justify-between">
               <span class="px-1 py-0.2 rounded bg-indigo-900/90 text-[7px] font-mono text-indigo-200 border border-indigo-500/40">Hunyuan</span>
               <span class="text-[7px] font-mono text-gray-300">5s</span>
             </div>
-            <div class="flex items-center justify-end">
-              <i class="fa-solid fa-play text-[8px] text-indigo-400"></i>
-            </div>
+            <div class="flex items-center justify-end"><i class="fa-solid fa-play text-[8px] text-indigo-400"></i></div>
           </div>
-          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 3: Canopy</span>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">Shot 3: Canopy</span>
           <span class="text-[8px] font-mono text-indigo-600 dark:text-indigo-400">⏱ 11.2s</span>
         </div>
       </div>
