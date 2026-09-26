@@ -18,10 +18,7 @@
 
     <!-- Video Canvas / Player -->
     <div class="relative rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center border border-slate-800">
-      <video id="player-modal-video" controls autoplay class="w-full h-full object-contain">
-        <source src="/static/videos/preview_master.mp4" type="video/mp4">
-        Your browser does not support HTML5 video.
-      </video>
+      <video id="player-modal-video" controls preload="none" class="w-full h-full object-contain"></video>
     </div>
 
     <!-- Details and Quick YouTube Action -->

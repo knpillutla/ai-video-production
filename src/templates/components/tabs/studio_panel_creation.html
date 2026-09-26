@@ -1,0 +1,165 @@
+<!-- PANEL 1: STORY & CREATION HUB (Left Panel: New Production & Channel Archive) -->
+<div class="h-full flex flex-col bg-[var(--card)] border border-[var(--border)] rounded-2xl p-2.5 shadow-sm space-y-2 overflow-y-auto custom-scrollbar">
+  <!-- Top Panel 1 Switcher Tabs: New Production vs Existing Episodes -->
+  <div class="flex items-center justify-between border-b border-[var(--border)] pb-1.5">
+    <div class="inline-flex items-center p-0.5 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg">
+      <button type="button" onclick="switchCreationTab('new')" id="btn-tab-creation-new" class="px-2 py-0.5 text-[10px] font-bold rounded transition bg-indigo-600 text-white shadow flex items-center gap-1">
+        <i class="fa-solid fa-wand-magic-sparkles text-[8px]"></i>
+        <span>New</span>
+      </button>
+      <button type="button" onclick="switchCreationTab('archive')" id="btn-tab-creation-archive" class="px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded transition flex items-center gap-1">
+        <i class="fa-solid fa-folder-open text-[8px]"></i>
+        <span>Archive</span>
+        <span id="channel-archive-badge-count" class="px-1 py-0.1 rounded-full text-[8px] bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-gray-300 font-mono">0</span>
+      </button>
+    </div>
+    
+    <div class="flex items-center gap-1">
+      <button type="button" onclick="applyGenreNichePreset()" class="px-1.5 py-0.5 text-[9px] font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800/80 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition flex items-center gap-0.5" title="Restore Studio Recommended Presets">
+        <i class="fa-solid fa-wand-magic-sparkles text-[8px]"></i>
+        <span>Presets</span>
+      </button>
+      <button type="button" onclick="clearStudioInputs()" class="px-1.5 py-0.5 text-[9px] font-bold text-slate-600 dark:text-gray-400 hover:text-white bg-slate-100 dark:bg-slate-800 border border-[var(--border)] rounded hover:bg-slate-200 transition flex items-center gap-0.5" title="Clear Inputs">
+        <i class="fa-solid fa-rotate-left text-[8px]"></i>
+        <span>Clear</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- VIEW A: NEW PRODUCTION CREATION WORKSPACE -->
+  <div id="view-creation-new" class="space-y-2 flex-1 flex flex-col">
+    <!-- Mode Pills: Theme, Idea, Script, YouTube Reference -->
+    <div class="flex flex-wrap items-center justify-between gap-1 bg-slate-50 dark:bg-slate-950/70 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
+      <div class="flex items-center gap-0.5 flex-wrap">
+        <button type="button" onclick="setCreationMode('theme', true)" id="mode-pill-theme" class="px-1.5 py-0.5 text-[10px] font-bold rounded transition bg-indigo-600 text-white shadow flex items-center gap-1">
+          <i class="fa-solid fa-compass text-[8px] text-emerald-400"></i>
+          <span>Theme</span>
+        </button>
+        <button type="button" onclick="setCreationMode('idea', true)" id="mode-pill-idea" class="px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded transition flex items-center gap-1">
+          <i class="fa-solid fa-lightbulb text-[8px] text-yellow-400"></i>
+          <span>Idea</span>
+        </button>
+        <button type="button" onclick="setCreationMode('script', true)" id="mode-pill-script" class="px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded transition flex items-center gap-1">
+          <i class="fa-solid fa-scroll text-[8px] text-purple-400"></i>
+          <span>Script</span>
+        </button>
+        <button type="button" onclick="setCreationMode('youtube', true)" id="mode-pill-youtube" class="px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded transition flex items-center gap-1">
+          <i class="fa-brands fa-youtube text-[8px] text-red-500"></i>
+          <span>Ref</span>
+        </button>
+      </div>
+
+      <!-- Format Switcher -->
+      <div class="inline-flex items-center p-0.5 bg-slate-200 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded gap-0.5">
+        <button type="button" onclick="setStudioFormat('16:9')" id="format-btn-landscape" class="px-1.5 py-0.2 text-[9px] font-bold rounded bg-indigo-600 text-white shadow" title="16:9 4K Video">16:9</button>
+        <button type="button" onclick="setStudioFormat('9:16')" id="format-btn-portrait" class="px-1.5 py-0.2 text-[9px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded" title="9:16 Short">9:16</button>
+        <input type="hidden" id="studio-selected-format" value="16:9">
+      </div>
+    </div>
+
+    <!-- YouTube URL Box (Visible only in YouTube Reference Mode) -->
+    <div id="youtube-url-container" class="space-y-0.5 w-full hidden">
+      <label for="youtube-url-input" class="text-[10px] font-bold text-slate-900 dark:text-gray-200 flex items-center gap-1">
+        <i class="fa-brands fa-youtube text-red-500 text-[10px]"></i>
+        <span>YouTube Ref:</span>
+      </label>
+      <div class="relative w-full">
+        <input type="text" id="youtube-url-input" placeholder="Paste YouTube URL..." class="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-700/60 rounded-lg text-slate-900 dark:text-white text-[10px] placeholder-gray-500 focus:outline-none focus:border-indigo-500">
+      </div>
+    </div>
+
+    <!-- THEME PROGRESSIVE NICHE GROUP SELECTOR -->
+    <div id="theme-genre-shelf" class="p-1.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1.5">
+      <!-- High-Level Group Switcher -->
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-1">
+        <span class="text-[10px] font-bold text-slate-900 dark:text-gray-200">Genre Niche:</span>
+        <div class="flex items-center gap-1.5 text-[10px]">
+          <label class="flex items-center gap-0.5 cursor-pointer">
+            <input type="radio" name="niche_group_switch" value="relaxation" checked onchange="switchNicheGroupView('relaxation')" class="accent-emerald-600 scale-90">
+            <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">Relax</span>
+          </label>
+          <label class="flex items-center gap-0.5 cursor-pointer">
+            <input type="radio" name="niche_group_switch" value="docs" onchange="switchNicheGroupView('docs')" class="accent-blue-600 scale-90">
+            <span class="text-[10px] font-bold text-blue-700 dark:text-blue-400">Docs</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Relaxation Options Sub-Grid (3 Columns for 20% panel) -->
+      <div id="niche-subgrid-relaxation" class="grid grid-cols-3 gap-0.5 text-[9px]">
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_ocean" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Ocean</span></label>
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_nature" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Nature</span></label>
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_mountains" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Mountain</span></label>
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_campfire" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Campfire</span></label>
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_rain" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Rain ASMR</span></label>
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_serenity" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Serenity</span></label>
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_retreat" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Retreat</span></label>
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_architecture" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Arch</span></label>
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_beaches" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Beaches</span></label>
+      </div>
+
+      <!-- Relaxation Shot Hold Cadence Radio Group -->
+      <div id="relaxation-cadence-container" class="pt-1 border-t border-slate-200 dark:border-slate-800/80 space-y-0.5">
+        <div class="flex items-center justify-between">
+          <span class="text-[9px] font-bold text-slate-800 dark:text-emerald-400 flex items-center gap-1">
+            <i class="fa-solid fa-hourglass-half text-emerald-500 text-[8px]"></i>
+            <span>Shot Cadence:</span>
+          </span>
+          <span class="text-[8px] font-mono text-slate-500 dark:text-gray-400">Anti-Fatigue</span>
+        </div>
+        <div class="grid grid-cols-5 gap-0.5 text-[9px]">
+          <label class="flex items-center justify-center p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="studio_shot_hold" value="1m" class="accent-emerald-600 hidden"><span class="font-medium text-slate-900 dark:text-gray-200">1m</span></label>
+          <label class="flex items-center justify-center p-0.5 bg-white dark:bg-slate-900 rounded border border-emerald-500/60 cursor-pointer hover:border-emerald-500"><input type="radio" name="studio_shot_hold" value="3m" checked class="accent-emerald-600 hidden"><span class="font-bold text-emerald-700 dark:text-emerald-300">3m</span></label>
+          <label class="flex items-center justify-center p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="studio_shot_hold" value="5m" class="accent-emerald-600 hidden"><span class="font-medium text-slate-900 dark:text-gray-200">5m</span></label>
+          <label class="flex items-center justify-center p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="studio_shot_hold" value="10m" class="accent-emerald-600 hidden"><span class="font-medium text-slate-900 dark:text-gray-200">10m</span></label>
+          <label class="flex items-center justify-center p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="studio_shot_hold" value="15m" class="accent-emerald-600 hidden"><span class="font-medium text-slate-900 dark:text-gray-200">15m</span></label>
+        </div>
+      </div>
+
+      <!-- Documentaries Options Sub-Grid -->
+      <div id="niche-subgrid-docs" class="grid grid-cols-3 gap-0.5 text-[9px] hidden">
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500"><input type="radio" name="niche_theme_radio" value="doc_wildlife" onchange="selectNicheRadio(this.value)" class="accent-blue-600 scale-75"><span class="truncate">Wildlife</span></label>
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500"><input type="radio" name="niche_theme_radio" value="doc_nature" onchange="selectNicheRadio(this.value)" class="accent-blue-600 scale-75"><span class="truncate">Nature</span></label>
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500"><input type="radio" name="niche_theme_radio" value="doc_ocean" onchange="selectNicheRadio(this.value)" class="accent-blue-600 scale-75"><span class="truncate">Ocean</span></label>
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500"><input type="radio" name="niche_theme_radio" value="doc_architecture" onchange="selectNicheRadio(this.value)" class="accent-blue-600 scale-75"><span class="truncate">Arch</span></label>
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500"><input type="radio" name="niche_theme_radio" value="doc_beaches" onchange="selectNicheRadio(this.value)" class="accent-blue-600 scale-75"><span class="truncate">Beaches</span></label>
+        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500"><input type="radio" name="niche_theme_radio" value="doc_mountains" onchange="selectNicheRadio(this.value)" class="accent-blue-600 scale-75"><span class="truncate">Mountain</span></label>
+      </div>
+    </div>
+
+    <!-- Main Dynamic Labeled Textarea Box -->
+    <div class="space-y-1 flex-1 flex flex-col min-h-0">
+      <div class="flex items-center justify-between">
+        <label for="youtube-prompt-input" id="prompt-input-label" class="text-[10px] font-bold text-slate-900 dark:text-gray-200 flex items-center gap-1">
+          <i class="fa-solid fa-compass text-emerald-500 text-[10px]"></i>
+          <span>Topic / Prompt:</span>
+        </label>
+      </div>
+      <div class="relative flex-1 min-h-[55px]">
+        <textarea id="youtube-prompt-input" rows="2" placeholder="Describe topic or pick a niche above..." class="w-full h-full min-h-[55px] p-2 bg-slate-50 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-700/60 rounded-xl text-slate-900 dark:text-white text-[11px] placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
+      </div>
+    </div>
+
+    <!-- 1-Click Creative Presets Filmstrip -->
+    <div class="space-y-0.5 pt-0.5">
+      <div class="flex items-center justify-between text-[10px]">
+        <span class="font-bold text-slate-700 dark:text-gray-300 flex items-center gap-1">
+          <i class="fa-solid fa-sparkles text-indigo-500 text-[9px]"></i>
+          <span id="creative-presets-title">Inspiration Presets</span>
+        </span>
+        <button onclick="openCreateVideoWizardModal()" class="text-[9px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">Wizard &rarr;</button>
+      </div>
+      <div id="creative-templates-container" class="grid grid-cols-2 gap-1"></div>
+    </div>
+  </div>
+
+  <!-- VIEW B: CHANNEL ARCHIVE / EXISTING PRODUCTIONS (Lazy-Loaded) -->
+  <div id="view-creation-archive" class="space-y-1.5 flex-1 hidden">
+    <div class="flex items-center justify-between gap-1">
+      <input type="text" id="archive-filter-search" oninput="filterChannelArchive()" placeholder="Search episodes..." class="w-full px-2 py-0.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-[10px]">
+    </div>
+    <div id="channel-archive-list-container" class="space-y-1 overflow-y-auto max-h-[500px] custom-scrollbar pr-0.5">
+      <!-- Injected dynamically by JS -->
+    </div>
+  </div>
+</div>

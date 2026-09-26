@@ -5,24 +5,11 @@ photographic prompts, tranquil motion dynamics, and Velvet acoustic tags.
 """
 
 from typing import Dict, List, Optional
-from pydantic import BaseModel, Field
+from src.studios.ambient_world.archetype_model import AtmosphericArchetype
+from src.studios.ambient_world.catalog_data_seasonal import SEASONAL_HEARTH_ARCHETYPES
 
 
-class AtmosphericArchetype(BaseModel):
-    """Detailed visual, motion, and acoustic profile for an ambient environment."""
-    key: str
-    display_name: str
-    cluster: str  # alpine, aquatic, forest_seasonal, cozy_hearth, deep_sleep
-    wide_visual_prompt: str
-    intimate_visual_prompt: str
-    wide_motion_prompt: str
-    intimate_motion_prompt: str
-    acoustic_tags: str
-    default_domain: str = "landscape_solid"
-    tags: List[str] = Field(default_factory=list)
-
-
-ARCHETYPES: Dict[str, AtmosphericArchetype] = {
+CORE_ALPINE_AQUATIC_ARCHETYPES: Dict[str, AtmosphericArchetype] = {
     "swiss_alps": AtmosphericArchetype(
         key="swiss_alps",
         display_name="Swiss Alps Mountain Sanctuary",
@@ -298,76 +285,11 @@ ARCHETYPES: Dict[str, AtmosphericArchetype] = {
         default_domain="landscape_solid",
         tags=["night", "sleep", "moon", "stars", "delta_waves"],
     ),
-    "blizzard": AtmosphericArchetype(
-        key="blizzard",
-        display_name="Cozy Timber Cabin in Mountain Blizzard",
-        cluster="cozy_hearth",
-        wide_visual_prompt=(
-            "Masterpiece 4K photograph from inside a warm timber cabin looking out large bay window at snowstorm blizzard. "
-            "Frost crystals on window corners, swirling snow outside, warm stone fireplace glowing inside, knitted blanket on chair, zero humans."
-        ),
-        intimate_visual_prompt=(
-            "Close-up 50mm framing of delicate frost lace on double-pane glass with warm glowing fireplace reflection inside."
-        ),
-        wide_motion_prompt=(
-            "Swirling blizzard snow outside cabin window, steady warm amber firelight glowing inside, calm stationary perspective."
-        ),
-        intimate_motion_prompt=(
-            "Soft dancing firelight flickering across window frost, gentle outside snow drift, deeply comforting stillness."
-        ),
-        acoustic_tags=(
-            "[velvet acoustic ambient], muted arctic blizzard wind outside, cozy stone fireplace crackle inside, warm acoustic cello, "
-            "comforting sleep master, -21 LUFS"
-        ),
-        default_domain="landscape_solid",
-        tags=["blizzard", "cabin", "snow", "fireplace", "cozy"],
-    ),
-    "winter": AtmosphericArchetype(
-        key="winter",
-        display_name="Pristine Winter Forest & Snowfall",
-        cluster="forest_seasonal",
-        wide_visual_prompt=(
-            "Masterpiece 4K photograph of a serene winter forest with heavy pristine snow on pine boughs and frozen crystalline brook. "
-            "Soft gentle snowflakes falling peacefully through crisp winter air, soft blue-white winter light, zero humans."
-        ),
-        intimate_visual_prompt=(
-            "Close-up 50mm portrait of perfect hexagonal snowflakes resting on deep green pine needles, glistening ice crystals."
-        ),
-        wide_motion_prompt=(
-            "Slow hypnotic vertical drift of fluffy snowflakes through winter pines, tranquil stillness, stationary camera."
-        ),
-        intimate_motion_prompt=(
-            "Gentle snowflakes settling on pine bough, delicate winter sparkle in soft daylight, calm stationary view."
-        ),
-        acoustic_tags=(
-            "[velvet acoustic ambient], soft gentle snowfall stillness, muted winter atmosphere, warm acoustic piano and crystal chimes, "
-            "432Hz sleep tuning, anti-fatigue master"
-        ),
-        default_domain="landscape_solid",
-        tags=["winter", "snow", "forest", "peaceful", "silence"],
-    ),
-    "autumn": AtmosphericArchetype(
-        key="autumn",
-        display_name="Golden Autumn Foliage & River Stream",
-        cluster="forest_seasonal",
-        wide_visual_prompt=(
-            "Masterpiece 4K photograph of a vibrant autumn forest with golden yellow, amber, and crimson maple trees along a clear river. "
-            "Fallen autumn leaves floating on clear water surface, mossy rocks, warm golden afternoon sunlight, 35mm lens, zero humans."
-        ),
-        intimate_visual_prompt=(
-            "Close-up 50mm perspective of crisp golden and red maple leaf resting on smooth wet river pebble with clear water flowing by."
-        ),
-        wide_motion_prompt=(
-            "Gentle autumn leaves slowly drifting down from maple trees, tranquil river current carrying floating leaves, calm camera."
-        ),
-        intimate_motion_prompt=(
-            "Delicate water ripple parting around fallen autumn leaf, golden sunlight sparkle on clear stream, peaceful motion."
-        ),
-        acoustic_tags=(
-            "[velvet acoustic ambient], gentle autumn breeze rustling dry leaves, soft flowing brook, acoustic guitar and Celtic harp, "
-            "warm biophilic grounding, -21 LUFS sleep master"
-        ),
-        default_domain="water_fluid",
-        tags=["autumn", "leaves", "river", "golden", "nature"],
-    ),
 }
+
+ARCHETYPES: Dict[str, AtmosphericArchetype] = {
+    **CORE_ALPINE_AQUATIC_ARCHETYPES,
+    **SEASONAL_HEARTH_ARCHETYPES,
+}
+
+__all__ = ["AtmosphericArchetype", "ARCHETYPES"]

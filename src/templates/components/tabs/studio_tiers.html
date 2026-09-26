@@ -1,0 +1,38 @@
+<!-- 3 Production Tier Selectors (Required for tests and UI) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+  <!-- Low Cost Card -->
+  <div onclick="selectProductionTier('low_cost')" id="tier-card-low_cost" class="p-3 bg-slate-950/70 border border-slate-800 hover:border-emerald-500 rounded-xl cursor-pointer transition">
+    <div id="guided-card-low_cost" class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <input type="radio" id="tier-radio-low_cost" name="tier_choice" value="low_cost" class="accent-emerald-500">
+        <span class="font-bold text-emerald-400 text-xs">Low-Cost Test</span>
+      </div>
+      <span class="font-mono font-bold text-white text-xs">$0.02 USD</span>
+    </div>
+    <p class="text-[10px] text-gray-400 mt-1">Fal FLUX.1-dev • 10s Draft Test • Azure TTS</p>
+  </div>
+
+  <!-- Balanced Card -->
+  <div onclick="selectProductionTier('balanced')" id="tier-card-balanced" class="p-3 bg-indigo-950/40 border border-indigo-500 rounded-xl cursor-pointer transition ring-1 ring-indigo-500/40">
+    <div id="guided-card-balanced" class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <input type="radio" id="tier-radio-balanced" name="tier_choice" value="balanced" checked class="accent-indigo-500">
+        <span class="font-bold text-indigo-300 text-xs">Balanced Creator</span>
+      </div>
+      <span class="font-mono font-bold text-white text-xs">$0.14 USD</span>
+    </div>
+    <p class="text-[10px] text-gray-400 mt-1">FLUX Dev • Azure Speech • YouTube Ready</p>
+  </div>
+
+  <!-- Cinematic Card -->
+  <div onclick="selectProductionTier('cinematic')" id="tier-card-cinematic" class="p-3 bg-slate-950/70 border border-slate-800 hover:border-purple-500 rounded-xl cursor-pointer transition">
+    <div id="guided-card-cinematic" class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <input type="radio" id="tier-radio-cinematic" name="tier_choice" value="cinematic" class="accent-purple-500">
+        <span class="font-bold text-purple-300 text-xs">Cinematic 4K</span>
+      </div>
+      <span class="font-mono font-bold text-white text-xs">$0.45 USD</span>
+    </div>
+    <p class="text-[10px] text-gray-400 mt-1">FLUX Pro • Suno BGM • 4K Master</p>
+  </div>
+</div>

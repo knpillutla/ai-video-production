@@ -1,0 +1,129 @@
+<!-- PANEL 2: PRODUCTION CONTROLS & SYNTHESIS ENGINE (Center Panel) -->
+<div class="h-full flex flex-col bg-[var(--card)] border border-[var(--border)] rounded-2xl p-2.5 shadow-sm space-y-2 overflow-y-auto custom-scrollbar">
+  <!-- Top Profile Switcher & Preferences Header -->
+  <div class="flex items-center justify-between border-b border-[var(--border)] pb-1.5">
+    <div class="flex items-center gap-1">
+      <i class="fa-solid fa-sliders text-indigo-600 dark:text-indigo-400 text-[10px]"></i>
+      <span class="text-[11px] font-bold text-slate-900 dark:text-gray-200">Controls</span>
+    </div>
+
+    <!-- Presets & Preferences Actions -->
+    <div class="flex items-center gap-0.5">
+      <select id="studio-profile-selector" onchange="onProfileSelectChange(this.value)" class="px-1.5 py-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded text-[9px] font-bold focus:outline-none focus:border-indigo-500">
+        <option value="presets">⚡ Presets</option>
+      </select>
+      <button type="button" onclick="openSavePreferenceModal()" class="p-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[9px] font-bold transition shadow-sm" title="Save Custom Profile">
+        <i class="fa-solid fa-bookmark text-[8px]"></i>
+      </button>
+      <button type="button" onclick="resetToStudioPresets()" class="p-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-gray-300 rounded text-[9px] font-bold border border-slate-300 dark:border-slate-700" title="Reset to Defaults">
+        <i class="fa-solid fa-rotate-left text-[8px]"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- SECTION 1: PRODUCTION TIERS -->
+  <div class="space-y-1">
+    <div class="flex items-center justify-between text-[10px] font-bold text-slate-900 dark:text-gray-200">
+      <span>1. Tier:</span>
+      <span id="tier-active-badge" class="font-mono text-[9px] text-indigo-600 dark:text-indigo-400">Balanced ($0.14)</span>
+    </div>
+    <div class="grid grid-cols-3 gap-1">
+      <!-- Low Cost -->
+      <div onclick="selectProductionTier('low_cost')" id="tier-card-low_cost" class="p-1.5 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 rounded-lg cursor-pointer transition text-center space-y-0.2">
+        <div class="font-bold text-emerald-600 dark:text-emerald-400 text-[10px]">Draft</div>
+        <div class="font-mono text-[9px] text-slate-900 dark:text-white font-bold">$0.02</div>
+        <input type="radio" id="tier-radio-low_cost" name="tier_choice" value="low_cost" class="accent-emerald-500 hidden">
+      </div>
+      <!-- Balanced -->
+      <div onclick="selectProductionTier('balanced')" id="tier-card-balanced" class="p-1.5 bg-indigo-50 dark:bg-indigo-950/40 border-2 border-indigo-500 rounded-lg cursor-pointer transition text-center space-y-0.2 ring-1 ring-indigo-500/40">
+        <div class="font-bold text-indigo-700 dark:text-indigo-300 text-[10px]">Balanced</div>
+        <div class="font-mono text-[9px] text-slate-900 dark:text-white font-bold">$0.14</div>
+        <input type="radio" id="tier-radio-balanced" name="tier_choice" value="balanced" checked class="accent-indigo-500 hidden">
+      </div>
+      <!-- Cinematic -->
+      <div onclick="selectProductionTier('cinematic')" id="tier-card-cinematic" class="p-1.5 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 hover:border-purple-500 rounded-lg cursor-pointer transition text-center space-y-0.2">
+        <div class="font-bold text-purple-600 dark:text-purple-300 text-[10px]">4K Master</div>
+        <div class="font-mono text-[9px] text-slate-900 dark:text-white font-bold">$0.45</div>
+        <input type="radio" id="tier-radio-cinematic" name="tier_choice" value="cinematic" class="accent-purple-500 hidden">
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: EXECUTION MODE (Test vs Production) -->
+  <div class="space-y-1">
+    <div class="flex items-center justify-between text-[10px] font-bold text-slate-900 dark:text-gray-200">
+      <span class="flex items-center gap-1">
+        <i class="fa-solid fa-bolt-lightning text-amber-500 text-[9px]"></i>
+        <span>2. Mode:</span>
+      </span>
+      <div class="inline-flex items-center p-0.5 bg-slate-200 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded">
+        <button type="button" onclick="setExecutionMode('test')" id="btn-exec-test" class="px-1.5 py-0.2 text-[9px] font-bold rounded bg-amber-600 text-white shadow">🧪 Test</button>
+        <button type="button" onclick="setExecutionMode('prod')" id="btn-exec-prod" class="px-1.5 py-0.2 text-[9px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded">🚀 Prod</button>
+      </div>
+    </div>
+
+    <!-- Test Duration Options (Shown when in Test Mode) -->
+    <div id="exec-options-test" class="p-1.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-0.5">
+      <div class="grid grid-cols-3 gap-0.5">
+        <button type="button" onclick="setTestDuration(10)" id="btn-test-10s" class="p-0.5 rounded text-center text-[9px] font-bold bg-amber-600 text-white shadow">10s</button>
+        <button type="button" onclick="setTestDuration(30)" id="btn-test-30s" class="p-0.5 rounded text-center text-[9px] font-medium text-slate-700 dark:text-gray-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">30s</button>
+        <button type="button" onclick="setTestDuration(60)" id="btn-test-60s" class="p-0.5 rounded text-center text-[9px] font-medium text-slate-700 dark:text-gray-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">60s</button>
+      </div>
+    </div>
+
+    <!-- Production Master Duration (Shown when in Production Mode) -->
+    <div id="exec-options-prod" class="p-1.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1 hidden">
+      <div class="grid grid-cols-2 gap-1">
+        <select id="studio-duration" onchange="calculateLiveCostEstimate()" class="w-full px-1.5 py-0.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded text-slate-900 dark:text-white text-[10px] font-semibold">
+          <option value="90" selected>90s Master</option>
+          <option value="120">2 Min</option>
+          <option value="300">5 Min</option>
+          <option value="480">8 Min</option>
+          <option value="900">15 Min</option>
+        </select>
+        <select id="studio-stretch-hours" class="w-full px-1.5 py-0.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded text-slate-900 dark:text-white text-[10px] font-semibold">
+          <option value="0" selected>No Stretch</option>
+          <option value="3.0">3 Hours</option>
+          <option value="8.0">8 Hours</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: STEM MODALITY MATRIX & CINEMATIC SPECS -->
+  <div class="space-y-1">
+    <span class="text-[10px] font-bold text-slate-900 dark:text-gray-200">3. Stems &amp; Specs:</span>
+    <div class="grid grid-cols-2 gap-1 text-[10px]">
+      <label class="flex items-center gap-1 p-0.5 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer"><input type="checkbox" id="studio-toggle-bgm" checked class="accent-indigo-600 scale-90"><span class="truncate">BGM</span></label>
+      <label class="flex items-center gap-1 p-0.5 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer"><input type="checkbox" id="studio-toggle-voice-over" checked class="accent-indigo-600 scale-90"><span class="truncate">Voiceover</span></label>
+      <label class="flex items-center gap-1 p-0.5 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer"><input type="checkbox" id="studio-toggle-tts" class="accent-indigo-600 scale-90"><span class="truncate">TTS</span></label>
+      <label class="flex items-center gap-1 p-0.5 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer"><input type="checkbox" id="studio-toggle-pure-nature" class="accent-emerald-600 scale-90" onchange="togglePureNatureMode(this.checked)"><span class="text-emerald-700 dark:text-emerald-400 font-medium truncate">ASMR</span></label>
+    </div>
+
+    <div class="grid grid-cols-2 gap-1 pt-0.5">
+      <select id="studio-fps" class="w-full px-1.5 py-0.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded text-slate-900 dark:text-white text-[10px] font-semibold">
+        <option value="24" selected>24 fps</option>
+        <option value="30">30 fps</option>
+        <option value="60">60 fps</option>
+      </select>
+      <select id="studio-language" class="w-full px-1.5 py-0.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded text-slate-900 dark:text-white text-[10px]">
+        <option value="en" selected>English</option>
+        <option value="te">Telugu</option>
+        <option value="hi">Hindi</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- SECTION 4: LIVE PRE-FLIGHT COST & GRAND ACTION BUTTON -->
+  <div class="pt-1 border-t border-[var(--border)] space-y-1.5 mt-auto">
+    <div class="flex items-center justify-between px-0.5">
+      <span class="text-[9px] text-slate-600 dark:text-gray-400 font-mono">Estimate:</span>
+      <span id="studio-live-cost-badge" class="font-mono font-bold text-[10px] text-emerald-700 dark:text-emerald-400">$0.02 USD (Test 10s)</span>
+    </div>
+    
+    <button id="btn-guided-generate" onclick="quickTestProduceFromPrompt()" class="w-full py-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-black rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition shadow shadow-indigo-600/30 active:scale-95 group">
+      <i class="fa-solid fa-bolt text-yellow-300 group-hover:scale-110 transition-transform text-[10px]"></i>
+      <span id="btn-produce-text">PRODUCE VIDEO</span>
+    </button>
+  </div>
+</div>

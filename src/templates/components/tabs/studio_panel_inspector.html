@@ -1,0 +1,293 @@
+<!-- PANEL 3: MASTER ARTIFACT INSPECTOR (Right Panel: 4K Master, Photos, Clips, Stems) -->
+<div class="h-full flex flex-col bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3 overflow-y-auto custom-scrollbar">
+  <!-- Panel 3 Header & Dual-Tab Switcher (Stems vs YouTube Packaging) -->
+  <div class="flex items-start justify-between border-b border-[var(--border)] pb-2 gap-2">
+    <div class="flex items-start gap-2 min-w-0 flex-1">
+      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0 mt-1"></span>
+      <div class="min-w-0 flex-1 space-y-0.5">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <a href="javascript:void(0)" onclick="openActiveEpisodeModal()" id="panel-header-ep-link" class="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline hover:text-indigo-500 cursor-pointer inline-flex items-center gap-1" title="Click to view full episode ledger details">
+            <span id="panel-header-ep-id">EP-001</span>
+            <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i>
+          </a>
+          <span class="text-[9px] px-1.5 py-0.2 rounded-full font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30" id="panel-header-type-badge">Relaxation &amp; Soundscapes</span>
+          <span class="text-[9px] font-mono text-slate-500 dark:text-gray-400" id="panel-header-meta">4K UHD • 24 FPS</span>
+        </div>
+        <div class="font-bold text-slate-900 dark:text-white text-xs truncate" id="panel-header-title">4K Master Inspector</div>
+        <div class="text-[10px] text-slate-500 dark:text-gray-400 line-clamp-1 leading-tight" id="panel-header-story">Story: High-fidelity cinematic master and synthesized stem artifacts</div>
+      </div>
+    </div>
+
+    <!-- Dual Tab Switcher -->
+    <div class="inline-flex items-center p-0.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
+      <button type="button" onclick="switchInspectorView('stems')" id="btn-inspector-view-stems" class="px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-600 text-white shadow">🎬 Media Stems</button>
+      <button type="button" onclick="switchInspectorView('distribution')" id="btn-inspector-view-dist" class="px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded">🚀 YouTube Hub</button>
+    </div>
+  </div>
+
+  <!-- VIEW A: MEDIA STEMS INSPECTION (Photos, Videos, Audio) -->
+  <div id="inspector-view-stems" class="space-y-2 flex-1 flex flex-col">
+    <!-- SECTION 0: MASTER 4K VIDEO PLAYER & LONG STRETCH RENDERS -->
+    <div class="space-y-1.5">
+      <div class="flex items-center justify-between text-[10px] font-bold text-slate-900 dark:text-gray-200">
+        <span class="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-mono uppercase">
+          <i class="fa-solid fa-crown text-[8px]"></i> 4K Master &amp; Long-Stretch Videos
+        </span>
+        <span id="panel-video-res-badge" class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[8px] font-mono font-bold">4K Master (90s)</span>
+      </div>
+      <div class="relative bg-black rounded-xl overflow-hidden aspect-video max-h-[145px] border border-slate-800 shadow-inner group">
+        <video id="studio-panel-video" controls playsinline preload="none" class="w-full h-full object-contain block"></video>
+        <!-- Overlay for active jobs -->
+        <div id="studio-panel-processing-overlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-3 text-center space-y-1.5">
+          <div class="w-6 h-6 rounded-full border-2 border-indigo-500/30 border-t-indigo-500 animate-spin flex items-center justify-center">
+            <i class="fa-solid fa-wand-magic-sparkles text-indigo-400 text-[10px] animate-pulse"></i>
+          </div>
+          <div>
+            <div id="studio-panel-processing-title" class="font-bold text-white text-xs">AI Studio Pipeline Active</div>
+            <div id="studio-panel-processing-subtitle" class="text-[9px] text-indigo-300">Synthesizing 4K Master...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Horizontal scrollable strip of all Master & Long Stretch renders -->
+      <div id="panel-section-master-videos" class="flex items-center gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
+        <!-- Render 1: 4K Master -->
+        <div class="flex flex-col items-center gap-0.5 shrink-0 cursor-pointer" onclick="selectMasterVideoRender('/static/videos/preview_master.mp4', '4K Master (90s)', this)">
+          <div class="group relative w-20 h-13 rounded-lg overflow-hidden bg-gradient-to-br from-emerald-950 to-slate-900 border-2 border-emerald-500 hover:border-emerald-400 transition shadow flex flex-col justify-between p-1">
+            <div class="flex items-center justify-between">
+              <span class="px-1 py-0.2 rounded bg-emerald-900/90 text-[7px] font-mono text-emerald-200 border border-emerald-500/40">4K Master</span>
+              <span class="text-[7px] font-mono text-emerald-300">90s</span>
+            </div>
+            <div class="flex items-center justify-end">
+              <i class="fa-solid fa-play text-[8px] text-emerald-400"></i>
+            </div>
+          </div>
+          <span class="text-[9px] font-bold text-emerald-700 dark:text-emerald-300 truncate max-w-[80px] text-center leading-tight">Master (90s)</span>
+          <span class="text-[8px] font-mono text-emerald-600 dark:text-emerald-400">⏱ 24.2s</span>
+        </div>
+
+        <!-- Render 2: 3-Hour Broadcast Stretch -->
+        <div class="flex flex-col items-center gap-0.5 shrink-0 cursor-pointer" onclick="selectMasterVideoRender('/static/videos/preview_master.mp4', '3-Hour Broadcast (4K)', this)">
+          <div class="group relative w-20 h-13 rounded-lg overflow-hidden bg-gradient-to-br from-indigo-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-indigo-500 transition shadow flex flex-col justify-between p-1">
+            <div class="flex items-center justify-between">
+              <span class="px-1 py-0.2 rounded bg-indigo-900/90 text-[7px] font-mono text-indigo-200 border border-indigo-500/40">Stretch</span>
+              <span class="text-[7px] font-mono text-gray-300">3 Hrs</span>
+            </div>
+            <div class="flex items-center justify-end">
+              <i class="fa-solid fa-play text-[8px] text-indigo-400"></i>
+            </div>
+          </div>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">3-Hour Stretch</span>
+          <span class="text-[8px] font-mono text-indigo-600 dark:text-indigo-400">⏱ 42.5s</span>
+        </div>
+
+        <!-- Render 3: 8-Hour Broadcast Stretch -->
+        <div class="flex flex-col items-center gap-0.5 shrink-0 cursor-pointer" onclick="selectMasterVideoRender('/static/videos/preview_master.mp4', '8-Hour Broadcast (4K)', this)">
+          <div class="group relative w-20 h-13 rounded-lg overflow-hidden bg-gradient-to-br from-purple-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-purple-500 transition shadow flex flex-col justify-between p-1">
+            <div class="flex items-center justify-between">
+              <span class="px-1 py-0.2 rounded bg-purple-900/90 text-[7px] font-mono text-purple-200 border border-purple-500/40">Stretch</span>
+              <span class="text-[7px] font-mono text-gray-300">8 Hrs</span>
+            </div>
+            <div class="flex items-center justify-end">
+              <i class="fa-solid fa-play text-[8px] text-purple-400"></i>
+            </div>
+          </div>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">8-Hour Stretch</span>
+          <span class="text-[8px] font-mono text-purple-600 dark:text-purple-400">⏱ 78.1s</span>
+        </div>
+
+        <!-- Render 4: ASMR Clean Loop (No TTS) -->
+        <div class="flex flex-col items-center gap-0.5 shrink-0 cursor-pointer" onclick="selectMasterVideoRender('/static/videos/preview_master.mp4', 'Clean ASMR Loop', this)">
+          <div class="group relative w-20 h-13 rounded-lg overflow-hidden bg-gradient-to-br from-teal-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-teal-500 transition shadow flex flex-col justify-between p-1">
+            <div class="flex items-center justify-between">
+              <span class="px-1 py-0.2 rounded bg-teal-900/90 text-[7px] font-mono text-teal-200 border border-teal-500/40">ASMR</span>
+              <span class="text-[7px] font-mono text-gray-300">Loop</span>
+            </div>
+            <div class="flex items-center justify-end">
+              <i class="fa-solid fa-play text-[8px] text-teal-400"></i>
+            </div>
+          </div>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Clean ASMR</span>
+          <span class="text-[8px] font-mono text-teal-600 dark:text-teal-400">⏱ 18.4s</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- HORIZONTAL DIVIDER LINE -->
+    <hr class="border-t border-slate-200 dark:border-slate-800 my-0.5">
+
+    <!-- SECTION 1: KEYFRAME PHOTOS (HORIZONTAL ROW OF COMPACT THUMBNAILS WITH NAMES) -->
+    <div class="space-y-1">
+      <div class="flex items-center justify-between text-[10px] font-bold text-slate-700 dark:text-gray-300">
+        <span class="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-mono uppercase">
+          <i class="fa-solid fa-images text-[9px]"></i> Keyframe Photos (Flux.1 Pro)
+        </span>
+        <span id="panel-images-count" class="text-slate-500 dark:text-gray-400 font-mono text-[9px]">4 Shots</span>
+      </div>
+      <div id="panel-section-images" class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+        <!-- Shot 1: Wide Horizon -->
+        <div class="flex flex-col items-center gap-0.5 shrink-0">
+          <div class="group relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-blue-900 to-indigo-950 border border-slate-300 dark:border-slate-700/80 hover:border-blue-500 cursor-pointer transition shadow flex items-center justify-center">
+            <i class="fa-solid fa-mountain-sun text-blue-400 text-sm"></i>
+            <span class="absolute top-0.5 right-0.5 px-1 py-0.2 rounded bg-black/70 text-[7px] font-mono text-blue-300">4K Flux</span>
+          </div>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 1: Wide</span>
+          <span class="text-[8px] font-mono text-blue-600 dark:text-blue-400">⏱ 3.4s</span>
+        </div>
+        <!-- Shot 2: River Rapids -->
+        <div class="flex flex-col items-center gap-0.5 shrink-0">
+          <div class="group relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-emerald-900 to-teal-950 border border-slate-300 dark:border-slate-700/80 hover:border-emerald-500 cursor-pointer transition shadow flex items-center justify-center">
+            <i class="fa-solid fa-water text-emerald-400 text-sm"></i>
+            <span class="absolute top-0.5 right-0.5 px-1 py-0.2 rounded bg-black/70 text-[7px] font-mono text-emerald-300">4K Flux</span>
+          </div>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 2: River</span>
+          <span class="text-[8px] font-mono text-blue-600 dark:text-blue-400">⏱ 3.8s</span>
+        </div>
+        <!-- Shot 3: Forest Canopy -->
+        <div class="flex flex-col items-center gap-0.5 shrink-0">
+          <div class="group relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-amber-900 to-emerald-950 border border-slate-300 dark:border-slate-700/80 hover:border-amber-500 cursor-pointer transition shadow flex items-center justify-center">
+            <i class="fa-solid fa-tree text-amber-400 text-sm"></i>
+            <span class="absolute top-0.5 right-0.5 px-1 py-0.2 rounded bg-black/70 text-[7px] font-mono text-amber-300">4K Flux</span>
+          </div>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 3: Canopy</span>
+          <span class="text-[8px] font-mono text-blue-600 dark:text-blue-400">⏱ 3.2s</span>
+        </div>
+        <!-- Shot 4: Sunset Glow -->
+        <div class="flex flex-col items-center gap-0.5 shrink-0">
+          <div class="group relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-rose-900 to-purple-950 border border-slate-300 dark:border-slate-700/80 hover:border-rose-500 cursor-pointer transition shadow flex items-center justify-center">
+            <i class="fa-solid fa-sun text-rose-400 text-sm"></i>
+            <span class="absolute top-0.5 right-0.5 px-1 py-0.2 rounded bg-black/70 text-[7px] font-mono text-rose-300">4K Flux</span>
+          </div>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 4: Sunset</span>
+          <span class="text-[8px] font-mono text-blue-600 dark:text-blue-400">⏱ 4.1s</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- HORIZONTAL DIVIDER LINE -->
+    <hr class="border-t border-slate-200 dark:border-slate-800 my-0.5">
+
+    <!-- SECTION 2: RAW MOTION VIDEO CLIPS (HORIZONTAL ROW OF COMPACT THUMBNAILS WITH NAMES) -->
+    <div class="space-y-1">
+      <div class="flex items-center justify-between text-[10px] font-bold text-slate-700 dark:text-gray-300">
+        <span class="flex items-center gap-1 text-purple-600 dark:text-purple-400 font-mono uppercase">
+          <i class="fa-solid fa-film text-[9px]"></i> Raw Video Motion Clips
+        </span>
+        <span id="panel-raw-videos-count" class="text-slate-500 dark:text-gray-400 font-mono text-[9px]">3 Clips</span>
+      </div>
+      <div id="panel-section-raw-videos" class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+        <!-- Motion Shot 1: Kling Pro Aerial -->
+        <div class="flex flex-col items-center gap-0.5 shrink-0">
+          <div class="relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-purple-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-purple-500 transition shadow flex flex-col justify-between p-1">
+            <div class="flex items-center justify-between">
+              <span class="px-1 py-0.2 rounded bg-purple-900/90 text-[7px] font-mono text-purple-200 border border-purple-500/40">Kling Pro</span>
+              <span class="text-[7px] font-mono text-gray-300">5s</span>
+            </div>
+            <div class="flex items-center justify-end">
+              <i class="fa-solid fa-play text-[8px] text-purple-400"></i>
+            </div>
+          </div>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 1: Aerial</span>
+          <span class="text-[8px] font-mono text-purple-600 dark:text-purple-400">⏱ 14.5s</span>
+        </div>
+        <!-- Motion Shot 2: Wan 2.1 Water -->
+        <div class="flex flex-col items-center gap-0.5 shrink-0">
+          <div class="relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-cyan-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-cyan-500 transition shadow flex flex-col justify-between p-1">
+            <div class="flex items-center justify-between">
+              <span class="px-1 py-0.2 rounded bg-cyan-900/90 text-[7px] font-mono text-cyan-200 border border-cyan-500/40">Wan 2.1</span>
+              <span class="text-[7px] font-mono text-gray-300">10s</span>
+            </div>
+            <div class="flex items-center justify-end">
+              <i class="fa-solid fa-play text-[8px] text-cyan-400"></i>
+            </div>
+          </div>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 2: Water</span>
+          <span class="text-[8px] font-mono text-cyan-600 dark:text-cyan-400">⏱ 22.8s</span>
+        </div>
+        <!-- Motion Shot 3: Hunyuan Canopy -->
+        <div class="flex flex-col items-center gap-0.5 shrink-0">
+          <div class="relative w-20 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-indigo-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-indigo-500 transition shadow flex flex-col justify-between p-1">
+            <div class="flex items-center justify-between">
+              <span class="px-1 py-0.2 rounded bg-indigo-900/90 text-[7px] font-mono text-indigo-200 border border-indigo-500/40">Hunyuan</span>
+              <span class="text-[7px] font-mono text-gray-300">5s</span>
+            </div>
+            <div class="flex items-center justify-end">
+              <i class="fa-solid fa-play text-[8px] text-indigo-400"></i>
+            </div>
+          </div>
+          <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate max-w-[80px] text-center leading-tight">Shot 3: Canopy</span>
+          <span class="text-[8px] font-mono text-indigo-600 dark:text-indigo-400">⏱ 11.2s</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- HORIZONTAL DIVIDER LINE -->
+    <hr class="border-t border-slate-200 dark:border-slate-800 my-0.5">
+
+    <!-- SECTION 3: AUDIO & SOUNDSCAPE STEMS (3-COLUMN HORIZONTAL GRID IN 60% PANEL) -->
+    <div class="space-y-1">
+      <div class="flex items-center justify-between text-[10px] font-bold text-slate-700 dark:text-gray-300">
+        <span class="text-[10px] font-bold text-slate-700 dark:text-gray-300 uppercase font-mono">
+          <i class="fa-solid fa-wave-square text-cyan-500 text-[9px] mr-1"></i> Audio &amp; Vocal Stems (48kHz):
+        </span>
+      </div>
+      <div class="grid grid-cols-3 gap-1.5">
+        <!-- Foley Stem -->
+        <div class="px-2 py-1 bg-slate-50 dark:bg-slate-950/70 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col gap-1">
+          <div class="flex items-center justify-between gap-1 min-w-0">
+            <div class="flex items-center gap-1 min-w-0">
+              <i class="fa-solid fa-volume-high text-cyan-600 dark:text-cyan-400 text-[10px] shrink-0"></i>
+              <span id="panel-audio-stem-name" class="text-[9px] text-slate-800 dark:text-gray-300 truncate font-mono">foley_48k.wav</span>
+            </div>
+            <span class="text-[8px] font-mono text-cyan-600 dark:text-cyan-400 shrink-0">⏱ 1.8s</span>
+          </div>
+          <audio id="panel-audio-player" controls preload="none" class="h-3.5 w-full scale-95 origin-center"></audio>
+        </div>
+
+        <!-- Suno BGM Stem -->
+        <div class="px-2 py-1 bg-slate-50 dark:bg-slate-950/70 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col gap-1">
+          <div class="flex items-center justify-between gap-1 min-w-0">
+            <div class="flex items-center gap-1 min-w-0">
+              <i class="fa-solid fa-music text-amber-600 dark:text-amber-400 text-[10px] shrink-0"></i>
+              <span id="panel-bgm-stem-name" class="text-[9px] text-slate-800 dark:text-gray-300 truncate font-mono">suno_master.wav</span>
+            </div>
+            <span class="text-[8px] font-mono text-amber-600 dark:text-amber-400 shrink-0">⏱ 16.5s</span>
+          </div>
+          <audio id="panel-bgm-player" controls preload="none" class="h-3.5 w-full scale-95 origin-center"></audio>
+        </div>
+
+        <!-- TTS Voiceover Stem -->
+        <div class="px-2 py-1 bg-slate-50 dark:bg-slate-950/70 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col gap-1">
+          <div class="flex items-center justify-between gap-1 min-w-0">
+            <div class="flex items-center gap-1 min-w-0">
+              <i class="fa-solid fa-microphone text-rose-600 dark:text-rose-400 text-[10px] shrink-0"></i>
+              <span id="panel-tts-stem-name" class="text-[9px] text-slate-800 dark:text-gray-300 truncate font-mono">voice_azure.wav</span>
+            </div>
+            <span class="text-[8px] font-mono text-rose-600 dark:text-rose-400 shrink-0">⏱ 2.1s</span>
+          </div>
+          <audio id="panel-tts-player" controls preload="none" class="h-3.5 w-full scale-95 origin-center"></audio>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW B: YOUTUBE DISTRIBUTION & PACKAGING HUB -->
+  <div id="inspector-view-distribution" class="space-y-2.5 flex-1 hidden text-xs">
+    <div class="space-y-1">
+      <label class="text-[10px] font-bold text-slate-700 dark:text-gray-300">YouTube SEO Title:</label>
+      <input type="text" id="dist-yt-title" readonly class="w-full px-2.5 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs font-semibold">
+    </div>
+    <div class="space-y-1">
+      <label class="text-[10px] font-bold text-slate-700 dark:text-gray-300">Description &amp; Timestamps:</label>
+      <textarea id="dist-yt-desc" rows="4" readonly class="w-full p-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-[11px] font-mono resize-none"></textarea>
+    </div>
+    <div class="flex items-center gap-1.5 pt-1">
+      <button onclick="downloadActiveSubtitle()" class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-[10px] flex items-center justify-center gap-1">
+        <i class="fa-solid fa-download"></i> <span>Download .ASS Captions</span>
+      </button>
+      <button onclick="copyActiveScript()" class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-gray-200 rounded-lg font-bold text-[10px] flex items-center justify-center gap-1">
+        <i class="fa-solid fa-copy"></i> <span>Copy Script</span>
+      </button>
+    </div>
+  </div>
+</div>

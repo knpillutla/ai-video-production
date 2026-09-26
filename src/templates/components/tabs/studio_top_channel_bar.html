@@ -1,0 +1,47 @@
+<!-- TOP CHANNEL SWITCHER STRIP (Sticky context bar for multi-channel SaaS studio) -->
+<div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-2.5 shadow-sm flex flex-wrap items-center justify-between gap-2.5">
+  <div class="flex items-center gap-2">
+    <span class="text-xs font-bold text-slate-900 dark:text-gray-200 flex items-center gap-1.5 shrink-0">
+      <i class="fa-solid fa-tower-broadcast text-indigo-600 dark:text-indigo-400 text-xs"></i>
+      <span>Active Channel:</span>
+    </span>
+    
+    <!-- Horizontal 1-Click Channel Cards -->
+    <div class="flex items-center gap-1.5 flex-wrap" id="studio-channel-chips">
+      <button type="button" onclick="selectStudioChannel('all')" id="studio-ch-all" class="px-2.5 py-1 rounded-lg text-xs font-bold transition bg-indigo-600 text-white shadow-sm flex items-center gap-1.5 ring-1 ring-indigo-400">
+        <i class="fa-solid fa-globe text-[11px]"></i>
+        <span>All Channels</span>
+      </button>
+      <button type="button" onclick="selectStudioChannel('earth_serenade')" id="studio-ch-earth_serenade" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-gray-300 hover:text-white bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-leaf text-[11px] text-emerald-500"></i>
+        <span>Earth Serenade</span>
+        <span class="text-[9px] font-mono text-emerald-600 dark:text-emerald-400">4K Nature</span>
+      </button>
+      <button type="button" onclick="selectStudioChannel('silent_hearth')" id="studio-ch-silent_hearth" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-gray-300 hover:text-white bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-500 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-fire text-[11px] text-amber-500"></i>
+        <span>Silent Hearth</span>
+        <span class="text-[9px] font-mono text-amber-600 dark:text-amber-400">Fire &amp; ASMR</span>
+      </button>
+      <button type="button" onclick="selectStudioChannel('cineai_docs')" id="studio-ch-cineai_docs" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-gray-300 hover:text-white bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-film text-[11px] text-blue-500"></i>
+        <span>CineAI Docs</span>
+        <span class="text-[9px] font-mono text-blue-600 dark:text-blue-400">24fps BBC</span>
+      </button>
+      <button type="button" onclick="selectStudioChannel('telugu_comedy')" id="studio-ch-telugu_comedy" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-gray-300 hover:text-white bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-pink-500 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-masks-theater text-[11px] text-pink-500"></i>
+        <span>Comedy Satire</span>
+        <span class="text-[9px] font-mono text-pink-600 dark:text-pink-400">9:16 Shorts</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-2 shrink-0">
+    <span id="studio-channel-meta-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+      Universal Multi-Channel Mode
+    </span>
+    <button onclick="switchTab('ledger')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-bold flex items-center gap-1 border border-[var(--border)] transition">
+      <i class="fa-solid fa-list-check text-[10px]"></i>
+      <span>Ledger</span>
+    </button>
+  </div>
+</div>
