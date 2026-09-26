@@ -45,7 +45,19 @@ def resolve_motion_model(model: str, prompt_context: str, total_shots: int = 4) 
     p = prompt_context.lower()
     if any(k in p for k in ("fire", "flame", "ember", "hearth", "waterfall", "rapids", "cascade", "chimney")):
         return "kling_v3", "Kling v3 4K Native selected for high volumetric momentum, dynamic fire embers, and fluid splash plumes"
-    return "wan", "Alibaba Wan 2.1 selected as default for photorealistic 3D liquid displacement, natural foliage sway, and scenic landscapes"
+def _is_clip_4k(video_path: Path) -> bool:
+    """Check if video file has 4K UHD dimensions (width >= 3840 and height >= 2160)."""
+    try:
+        import re
+        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+        res = subprocess.run([ffmpeg_bin, "-i", str(video_path)], capture_output=True, text=True, errors="ignore")
+        match = re.search(r"(\d{3,4})x(\d{3,4})", res.stderr)
+        if match:
+            w, h = int(match.group(1)), int(match.group(2))
+            return w >= 3840 and h >= 2160
+    except Exception:
+        pass
+    return False
 
 
 class VisualBatchService:
@@ -108,11 +120,23 @@ class VisualBatchService:
                         await adapter.generate_video(image_url=str(task.image_path), motion_prompt=task.motion_prompt, output_path=raw_diff, force_live=True, req_file=task.req_file)
 
                     if raw_diff.is_file() and raw_diff.stat().st_size > 1000:
+                        # Direct 4K Pass-Through: If already 4K native, move directly (0% CPU, 0s compute)
+                        if _is_clip_4k(raw_diff):
+                            logger.info(f"decision_4k_direct_pass: {task.output_path.name} is already 4K native. Skipping re-encoding.")
+                            print(f"[DECISION - 4K DIRECT PASS] {task.output_path.name} is native 4K UHD. Preserved directly without CPU re-encoding.")
+                            if task.output_path.exists():
+                                task.output_path.unlink()
+                            raw_diff.rename(task.output_path)
+                            return task.output_path
+
+                        # Only scale/encode if clip is not 4K (e.g. 1080p fallback) with thread capping
                         ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
                         cmd_scale = [
-                            ffmpeg_bin, "-y", "-stream_loop", "-1", "-i", str(raw_diff),
-                            "-t", str(task.duration_seconds), "-vf", "scale=3840:2160:flags=lanczos",
-                            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "24", str(task.output_path)
+                            ffmpeg_bin, "-y", "-i", str(raw_diff),
+                            "-vf", "scale=3840:2160:flags=lanczos",
+                            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4",
+                            "-c:a", "copy",
+                            str(task.output_path)
                         ]
                         subprocess.run(cmd_scale, capture_output=True, check=True)
                         raw_diff.unlink(missing_ok=True)
@@ -138,7 +162,7 @@ class VisualBatchService:
         cmd = [
             ffmpeg_bin, "-y", "-loop", "1", "-i", str(img_path),
             "-vf", f"zoompan=z='min(zoom+0.0003,1.06)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={total_frames}:s=3840x2160:fps=24",
-            "-t", str(duration_sec), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "24", str(out_path),
+            "-t", str(duration_sec), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-r", "24", str(out_path),
         ]
         subprocess.run(cmd, capture_output=True, check=True)
         return out_path

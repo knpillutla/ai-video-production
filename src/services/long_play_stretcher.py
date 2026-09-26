@@ -43,7 +43,7 @@ def export_long_play_broadcast(
             "-filter_complex", vf_filter,
             "-map", "[v]", "-map", "0:a",
             "-t", str(target_duration_seconds),
-            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18",
+            "-c:v", "libx264", "-preset", "ultrafast", "-threads", "4", "-crf", "18",
             "-c:a", "copy",
             "-movflags", "+faststart",
             str(out)
@@ -70,7 +70,7 @@ def export_long_play_broadcast(
             "-stream_loop", "-1",
             "-i", str(src),
             "-t", str(target_duration_seconds),
-            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18",
+            "-c:v", "libx264", "-preset", "ultrafast", "-threads", "4", "-crf", "18",
             "-c:a", "aac", "-b:a", "320k",
             "-movflags", "+faststart",
             str(out)

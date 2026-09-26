@@ -66,6 +66,7 @@ async def main():
         fade_to_black_hours=fade_hours,
         generate_short=not args.no_short,
         photos_only=args.photos_only,
+        no_bgm=args.no_bgm,
         auto_stretch=args.auto_stretch,
         allow_fallback=args.allow_fallback,
     )

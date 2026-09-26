@@ -39,8 +39,9 @@ def generate_healing_storyboard(
         "deeply peaceful spiritual atmosphere, natural balanced 5400K daylight, 35mm Arri Alexa cinematography, 8k resolution, zero humans."
     )
     p1_motion = (
-        "Subtle tranquil morning mist slowly drifting across the glassy lotus pond, very gentle water ripple reflecting dawn light, "
-        "soft swaying cherry blossom branches in the peaceful breeze, slow meditative stationary camera with zero camera shake."
+        "Fixed locked tripod camera, completely stationary camera perspective, zero camera movement, zero panning, zero zooming. "
+        "Subtle tranquil morning mist slowly drifting across the glassy lotus pond, very gentle water ripples reflecting dawn light, "
+        "soft swaying cherry blossom branches in the peaceful breeze."
     )
 
     p2_visual = (
@@ -49,8 +50,9 @@ def generate_healing_storyboard(
         "and clear water revealing smooth submerged river stones below. Soft golden sunrise bokeh in the background, pure serenity, zero humans."
     )
     p2_motion = (
+        "Fixed locked tripod camera, completely stationary camera perspective, zero camera movement, zero panning, zero zooming. "
         "Delicate water movement gently cradling the floating lotus flower, shimmering golden morning light glinting on water droplets, "
-        "soft harmonic background breathing, calm stationary camera."
+        "peaceful stationary camera."
     )
 
     s1 = HealingScenePrompt(

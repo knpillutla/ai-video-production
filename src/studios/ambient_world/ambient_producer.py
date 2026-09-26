@@ -42,6 +42,7 @@ class AmbientWorldProducer:
         fade_to_black_hours: Optional[float] = None,
         generate_short: bool = False,
         photos_only: bool = False,
+        no_bgm: bool = False,
         allow_fallback: bool = False,
     ) -> Dict[str, Any]:
         """Execute 4-Stage Progressive Quality Gate with 100% Artifact Idempotency."""
@@ -83,14 +84,19 @@ class AmbientWorldProducer:
                 "keyframes": [str(p) for p in keyframe_paths], "storage_path": str(ep_dir),
             }
 
-        # Stage 3: Audio Synthesis & Binaural 3D Velvet Mastering (Idempotent via soundtrack_service)
-        raw_bgm_path, master_bgm_path = ep_dir / "raw_soundtrack.mp3", ep_dir / "velvet_binaural_master_48k.mp3"
-        if not master_bgm_path.is_file() or master_bgm_path.stat().st_size < 1000:
-            await soundtrack_service.synthesize_ambient_soundtrack(sb.title, sb.audio_tags, raw_bgm_path, sb.total_duration)
-            apply_binaural_spatial_mastering(input_audio=raw_bgm_path, output_audio=master_bgm_path, target_lufs=-21.0, duration_seconds=sb.total_duration)
+        # Stage 3: Audio Synthesis & Binaural 3D Velvet Mastering (unless --no-bgm)
+        master_bgm_path = None
+        if not no_bgm:
+            raw_bgm_path, master_bgm_path = ep_dir / "raw_soundtrack.mp3", ep_dir / "velvet_binaural_master_48k.mp3"
+            if not master_bgm_path.is_file() or master_bgm_path.stat().st_size < 1000:
+                await soundtrack_service.synthesize_ambient_soundtrack(sb.title, sb.audio_tags, raw_bgm_path, sb.total_duration)
+                apply_binaural_spatial_mastering(input_audio=raw_bgm_path, output_audio=master_bgm_path, target_lufs=-21.0, duration_seconds=sb.total_duration)
+            else:
+                logger.info(f"decision_audio_master_cache_hit: Reusing {master_bgm_path.name} ($0.00 spend)")
+                print(f"[DECISION - AUDIO MASTER CACHE HIT] Master audio already exists on disk ({master_bgm_path.name}). Reusing asset ($0.00 spend).")
         else:
-            logger.info(f"decision_audio_master_cache_hit: Reusing {master_bgm_path.name} ($0.00 spend)")
-            print(f"[DECISION - AUDIO MASTER CACHE HIT] Master audio already exists on disk ({master_bgm_path.name}). Reusing asset ($0.00 spend).")
+            logger.info("decision_no_bgm_active: Preserving 100% native video audio without external BGM soundtrack.")
+            print("[DECISION - NATIVE AUDIO ACTIVE (--no-bgm)] Skipping external Suno BGM. Preserving natural sound directly from video diffusion.")
 
         # Stage 4: AI Video Diffusion Motion Synthesis (Concurrent Parallel Batch via visual_batch_service)
         motion_tasks = [

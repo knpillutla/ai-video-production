@@ -45,9 +45,9 @@ def generate_cozy_storyboard(
         "crisp architectural lines, balanced 5400K natural daylight, photorealistic 35mm Arri Alexa cinematography, 8k resolution, zero humans."
     )
     p1_motion = (
+        "Fixed locked tripod camera, completely stationary camera perspective, zero camera movement, zero panning, zero zooming. "
         "Slow hypnotic rolling ocean waves in the background, gentle flickering flames and glowing embers in the stone fireplace, "
-        "subtle soft breeze gently swaying the palm leaves, very subtle stationary architectural camera breathing, continuous fluid wave dynamics, "
-        "zero static gelatinous water, zero abrupt motion, cinematic tranquil flow."
+        "subtle soft breeze gently swaying the palm leaves, continuous fluid wave dynamics, zero abrupt motion, tranquil flow."
     )
 
     # Perspective 2: Intimate Hearth & Ambiance
@@ -59,8 +59,9 @@ def generate_cozy_storyboard(
         "Warm, deeply comforting ambiance, high dynamic range lighting, ultra-sharp texture details on stone and flame, zero humans."
     )
     p2_motion = (
+        "Fixed locked tripod camera, completely stationary camera perspective, zero camera movement, zero panning, zero zooming. "
         "Gentle natural flame dancing in the fireplace, incandescent wood embers softly pulsing, delicate tea steam slowly rising and dissipating, "
-        "distant ocean waves gently rolling in soft bokeh background, calm stationary camera with subtle warm light flicker on the floor, zero jitter."
+        "distant ocean waves gently rolling in soft bokeh background, calm stationary camera."
     )
 
     s1 = CozyScenePrompt(

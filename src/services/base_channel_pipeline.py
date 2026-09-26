@@ -47,6 +47,7 @@ class BaseChannelPipeline:
         fade_to_black_hours: Optional[float] = None,
         generate_short: bool = True,
         photos_only: bool = False,
+        no_bgm: bool = False,
         auto_stretch: bool = False,
         allow_fallback: bool = False,
     ) -> Dict[str, Any]:
@@ -55,7 +56,7 @@ class BaseChannelPipeline:
         effective_fade = fade_to_black_hours or self.config.default_fade_black_hours
         eff_model = motion_model or self.config.default_motion_model
 
-        logger.info(f"starting_channel_job: {self.config.channel_name} id={episode_id} motion={eff_model} photos_only={photos_only}")
+        logger.info(f"starting_channel_job: {self.config.channel_name} id={episode_id} motion={eff_model} photos_only={photos_only} no_bgm={no_bgm}")
         print(f"\n[DECISION - CHANNEL PIPELINE INITIALIZED]")
         print(f"   * Channel:  {self.config.channel_name} ({self.config.channel_handle})")
         print(f"   * Title:    {sb.title}")
@@ -71,6 +72,7 @@ class BaseChannelPipeline:
             fade_to_black_hours=None,
             generate_short=generate_short,
             photos_only=photos_only,
+            no_bgm=no_bgm,
             allow_fallback=allow_fallback,
         )
 
@@ -171,6 +173,7 @@ def create_base_channel_parser(
     parser.add_argument("--sleep", action="store_true", help="Enable circadian fade-to-black sleep mode (fades to black after 2.0h)")
     parser.add_argument("--fade-black", type=float, default=default_fade_black, help="Explicit hours after which video fades to black (e.g. 2.0)")
     parser.add_argument("--prompt", "-p", type=str, default=None, help="Custom prompt or atmospheric mood enhancement (e.g. 'Warm stone fireplace with crackling oak logs and glowing embers')")
+    parser.add_argument("--no-bgm", action="store_true", help="Disable external Suno BGM and preserve 100% natural audio from video clips (e.g. fireplace crackle, rain, wind)")
     parser.add_argument("--photos-only", action="store_true", help="Stage 1: Generate keyframe photos only for review")
     parser.add_argument("--no-short", action="store_true", help="Disable vertical short generation")
     parser.add_argument("--auto-stretch", action="store_true", help="Automatically stretch without waiting for approval")

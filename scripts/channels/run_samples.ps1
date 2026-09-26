@@ -3,20 +3,16 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 🔥 CUSTOM MOOD PROMPTING + 1 SHOT (--shots 1 --prompt "...")
-# Synthesizes 1 customized hypnotic living wallpaper shot ($2.10 total API spend)
+# 🪵 1-SHOT NATURAL AUDIO LIVING WALLPAPERS (--shots 1 --no-bgm --prompt "...")
+# Uses natural audio from Kling video directly (crackling fire, rain) without BGM ($2.10 total spend)
 # ------------------------------------------------------------------------------
-# Example 1: Cozy Fireplace Living Wallpaper (Burning Oak Logs & Embers)
-python scripts/channels/deep_sleep_sanctuary_pipeline.py --primary blizzard --secondary camp_fire --shots 1 --prompt "Rustic stone fireplace with burning oak logs, crackling flames and glowing orange charcoal embers" --photos-only
-python scripts/channels/deep_sleep_sanctuary_pipeline.py --id <episode_id> --shots 1
+# Example 1: Natural Crackling Fireplace (No BGM, 100% Native Audio)
+python scripts/channels/deep_sleep_sanctuary_pipeline.py --primary blizzard --secondary camp_fire --shots 1 --no-bgm --prompt "Rustic stone fireplace with burning oak logs, crackling flames and glowing orange charcoal embers" --photos-only
+python scripts/channels/deep_sleep_sanctuary_pipeline.py --id <episode_id> --shots 1 --no-bgm
 
-# Example 2: Pure Crystalline Swiss Glacial Stream (1 Shot)
-python scripts/channels/nature_sanctuary_pipeline.py --archetype swiss_alps --shots 1 --prompt "Crystalline turquoise glacial mountain stream flowing over smooth pebbles with towering snow peaks in background" --photos-only
-python scripts/channels/nature_sanctuary_pipeline.py --id <episode_id> --shots 1
-
-# Example 3: Rain on Library Window with Warm Lamp
-python scripts/channels/study_focus_cafe_pipeline.py --primary beach_house --secondary rain --shots 1 --prompt "Cozy library window with raindrops trickling down glass, warm glowing reading lamp and steaming ceramic tea cup" --photos-only
-python scripts/channels/study_focus_cafe_pipeline.py --id <episode_id> --shots 1
+# Example 2: Natural Rain on Cabin Window (No BGM)
+python scripts/channels/study_focus_cafe_pipeline.py --primary beach_house --secondary rain --shots 1 --no-bgm --prompt "Cozy library window with gentle raindrops trickling down glass, warm glowing reading lamp" --photos-only
+python scripts/channels/study_focus_cafe_pipeline.py --id <episode_id> --shots 1 --no-bgm
 
 
 # ------------------------------------------------------------------------------

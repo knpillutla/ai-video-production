@@ -40,8 +40,9 @@ def generate_rain_storyboard(
         "photorealistic 35mm Arri Alexa cinematography, 8k resolution, zero humans, zero artificial flares."
     )
     p1_motion = (
+        "Fixed locked tripod camera, completely stationary camera perspective, zero camera movement, zero panning, zero zooming. "
         "Continuous steady rainfall with realistic vertical raindrops hitting the water surface, fluid river current flowing gently downstream, "
-        "expanding water droplet ripples across the stream surface, subtle swaying wet foliage in the forest breeze, calm stationary camera."
+        "expanding water droplet ripples across the stream surface, subtle swaying wet foliage in the calm forest breeze."
     )
 
     p2_visual = (
@@ -50,8 +51,9 @@ def generate_rain_storyboard(
         "overhanging wet cedar leaves dripping sparkling raindrops. Soft forest background with gentle misty bokeh, ultra-detailed water physics, zero humans."
     )
     p2_motion = (
+        "Fixed locked tripod camera, completely stationary camera perspective, zero camera movement, zero panning, zero zooming. "
         "Hypnotic expanding circular water ripples from falling raindrops, sparkling water reflections, delicate water drops falling from green leaves, "
-        "smooth laminar liquid physics, stationary close-up camera with zero camera shake."
+        "smooth laminar liquid physics, stationary close-up camera."
     )
 
     s1 = RainScenePrompt(

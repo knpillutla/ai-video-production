@@ -43,15 +43,15 @@ def generate_nature_storyboard(
             "duration_seconds": dur_per_scene,
             "shot_type": "wide_shot",
             "motion_domain": "landscape_solid",
-            "motion_type": "steadycam_vista",
-            "camera_movement": "slow_zoom_in",
+            "motion_type": "locked_tripod",
+            "camera_movement": "locked_tripod",
             "visual_prompt": (
                 f"Raw cinematic 35mm film photograph, wide establishing panoramic view of an opulent {theme}, "
                 f"lush tropical rainforest foliage, blooming vibrant bougainvillea, weathered teak wood deck, polished river stones, "
                 f"crystal-clear turquoise plunge pool, warm glowing brass lanterns, soft morning mist, crisp 5400K natural daylight, "
                 f"Arri Alexa 35mm Master Prime lens at f/4.0, zero plastic CGI sheen, zero people."
             ),
-            "motion_prompt": "Slow tranquil steadycam forward glide over teak wood deck toward the lush tropical garden and water, gentle breeze fluttering fern leaves, 24fps.",
+            "motion_prompt": "Fixed locked tripod camera, zero camera movement, zero panning, zero zooming. Pure environmental micro-motion: gentle breeze fluttering tropical leaves and flowers, soft light reflections on calm water.",
             "dialogue": "Welcome to your secluded sanctuary, where cascading waters and pristine nature bring timeless tranquility.",
         },
         {
@@ -59,14 +59,14 @@ def generate_nature_storyboard(
             "duration_seconds": dur_per_scene,
             "shot_type": "medium_shot",
             "motion_domain": water_scene_domain,
-            "motion_type": "kinetic_video",
-            "camera_movement": "tilt_down",
+            "motion_type": "locked_tripod",
+            "camera_movement": "locked_tripod",
             "visual_prompt": (
                 f"Raw cinematic 35mm film still, medium eye-level perspective of a {theme} water feature, "
                 f"natural dark basalt rock formation, cascading crystal water pouring into a tranquil pool, "
                 f"dew-kissed emerald monstera leaves, warm ambient lantern light on stone edges, Arri Alexa 50mm lens at f/2.8, zero people."
             ),
-            "motion_prompt": water_motion_prompt,
+            "motion_prompt": f"Fixed locked tripod camera, zero camera movement, zero panning, zero zooming. {water_motion_prompt}",
             "dialogue": "Listen to the soothing rhythm of living water flowing endlessly over ancient stones.",
         },
         {
@@ -74,14 +74,14 @@ def generate_nature_storyboard(
             "duration_seconds": dur_per_scene,
             "shot_type": "close_up",
             "motion_domain": "water_fluid",
-            "motion_type": "kinetic_video",
-            "camera_movement": "pan_right",
+            "motion_type": "locked_tripod",
+            "camera_movement": "locked_tripod",
             "visual_prompt": (
                 f"Raw cinematic 35mm film still, close-up macro framing of glowing lanterns beside the {theme} pool, "
                 f"floating pink lotus blossoms on glassy turquoise water, gentle surface ripples reflecting warm golden light, "
                 f"creamy optical bokeh background with lush bamboo stalks, Arri Alexa 85mm portrait lens at f/1.4, zero people."
             ),
-            "motion_prompt": "Smooth liquid surface displacement with gentle expanding circular wavelets, soft lantern flicker reflection, 24fps.",
+            "motion_prompt": "Fixed locked tripod camera, zero camera movement, zero panning, zero zooming. Smooth liquid surface displacement with gentle expanding circular wavelets, soft lantern flicker reflection.",
             "dialogue": "Every droplet and soft reflection creates a calm space to breathe and rejuvenate your mind.",
         },
         {
@@ -89,14 +89,14 @@ def generate_nature_storyboard(
             "duration_seconds": dur_per_scene,
             "shot_type": "wide_shot",
             "motion_domain": "landscape_solid",
-            "motion_type": "steadycam_vista",
-            "camera_movement": "slow_zoom_out",
+            "motion_type": "locked_tripod",
+            "camera_movement": "locked_tripod",
             "visual_prompt": (
                 f"Raw cinematic 35mm film photograph, grand atmospheric evening perspective of the entire {theme}, "
                 f"soft twilight sky with warm ambient lanterns illuminating the patio lounge and surrounding botanical canopy, "
                 f"serene peaceful stillness, Arri Alexa 24mm cinema prime lens at f/4.0, zero people."
             ),
-            "motion_prompt": "Tranquil slow camera pull-back revealing the full peaceful luxury retreat illuminated in the evening glow, 24fps.",
+            "motion_prompt": "Fixed locked tripod camera, zero camera movement, zero panning, zero zooming. Soft evening breeze in the botanical canopy, gentle lantern flame flickers, tranquil stillness.",
             "dialogue": "May this tranquil haven bring peace, focus, and deep restful relaxation into your day.",
         },
     ]

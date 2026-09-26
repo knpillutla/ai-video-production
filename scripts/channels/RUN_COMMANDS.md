@@ -1,6 +1,6 @@
 # AI Video Production Studio: Multi-Channel CLI & Stretch Cheatsheet
 
-This cheatsheet contains all production and stretching commands for the automated YouTube channels, covering the 3-stage Human-in-the-Loop review workflow, Kling v3 4K Native diffusion, custom mood prompting (`--prompt "..."`), `--shots 1` single-scene living wallpapers, and ultra-fast long-play broadcast stretching.
+This cheatsheet contains all production and stretching commands for the automated YouTube channels, covering the 3-stage Human-in-the-Loop review workflow, Kling v3 4K Native diffusion, custom mood prompting (`--prompt "..."`), `--shots 1`, native video audio (`--no-bgm`), and ultra-fast long-play broadcast stretching.
 
 ---
 
@@ -14,22 +14,18 @@ This cheatsheet contains all production and stretching commands for the automate
 
 ---
 
-## 🔥 Single-Shot + Custom Mood Prompting (`--shots 1 --prompt "..."`)
+## 🪵 Natural Audio Living Wallpapers (`--shots 1 --no-bgm --prompt "..."`)
 
-Ideal for winter evenings, fireplace living wallpapers, or specific scenic aesthetics where you want **only 1 uninterrupted hypnotic shot** matching your custom direction ($2.10 total API spend):
+Preserves the **100% natural, organic audio synthesized directly in the Kling video** (such as real crackling campfire logs, gentle rainfall, or wind) without overlaying external Suno music ($2.10 total API spend):
 
 ```powershell
-# Example 1: Cozy Stone Fireplace (1 Shot, Burning Oak Logs & Embers)
-python scripts/channels/deep_sleep_sanctuary_pipeline.py --primary blizzard --secondary camp_fire --shots 1 --prompt "Rustic stone fireplace with burning oak logs, crackling flames and glowing orange charcoal embers" --photos-only
-python scripts/channels/deep_sleep_sanctuary_pipeline.py --id <episode_id> --shots 1
+# Example 1: Natural Crackling Fireplace (No BGM, 100% Native Video Audio)
+python scripts/channels/deep_sleep_sanctuary_pipeline.py --primary blizzard --secondary camp_fire --shots 1 --no-bgm --prompt "Rustic stone fireplace with burning oak logs, crackling flames and glowing orange charcoal embers" --photos-only
+python scripts/channels/deep_sleep_sanctuary_pipeline.py --id <episode_id> --shots 1 --no-bgm
 
-# Example 2: Swiss Alps Glacial Stream (1 Shot, Pure Crystalline Water Ripples)
-python scripts/channels/nature_sanctuary_pipeline.py --archetype swiss_alps --shots 1 --prompt "Crystalline turquoise glacial mountain stream flowing over smooth pebbles with towering snow peaks in background" --photos-only
-python scripts/channels/nature_sanctuary_pipeline.py --id <episode_id> --shots 1
-
-# Example 3: Rain on Library Window (1 Shot, Warm Armchair & Raindrops)
-python scripts/channels/study_focus_cafe_pipeline.py --primary beach_house --secondary rain --shots 1 --prompt "Cozy library window with raindrops trickling down glass, warm glowing reading lamp and steaming ceramic tea cup" --photos-only
-python scripts/channels/study_focus_cafe_pipeline.py --id <episode_id> --shots 1
+# Example 2: Natural Rain on Cabin Window (No BGM)
+python scripts/channels/study_focus_cafe_pipeline.py --primary beach_house --secondary rain --shots 1 --no-bgm --prompt "Cozy library window with gentle raindrops trickling down glass, warm glowing reading lamp" --photos-only
+python scripts/channels/study_focus_cafe_pipeline.py --id <episode_id> --shots 1 --no-bgm
 ```
 
 ---

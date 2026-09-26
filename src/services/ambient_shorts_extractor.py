@@ -40,7 +40,7 @@ def generate_ambient_short(
         "-i", str(src),
         "-t", str(duration_seconds),
         "-vf", vf_chain,
-        "-c:v", "libx264", "-preset", "fast", "-crf", "18",
+        "-c:v", "libx264", "-preset", "veryfast", "-threads", "4", "-crf", "18",
         "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
         "-movflags", "+faststart",
         str(out)

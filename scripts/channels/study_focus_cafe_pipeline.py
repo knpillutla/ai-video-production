@@ -62,6 +62,7 @@ async def main():
         long_play_hours=args.hours,
         generate_short=not args.no_short,
         photos_only=args.photos_only,
+        no_bgm=args.no_bgm,
         auto_stretch=args.auto_stretch,
         allow_fallback=args.allow_fallback,
     )

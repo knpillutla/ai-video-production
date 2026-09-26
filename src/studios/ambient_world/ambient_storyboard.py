@@ -108,13 +108,13 @@ def generate_ambient_storyboard(
     # Shot 1: Wide establishing atmospheric perspective or customized single shot
     if shots_count == 1 and custom_prompt:
         s1_vis = f"Masterpiece 4K photograph of {custom_prompt.strip()}. Warm cinematic natural lighting, 50mm lens, 8k resolution, zero humans, photorealistic detail."
-        s1_motion = f"Ultra-slow organic motion of {custom_prompt.strip()}, rock-steady camera perspective, zero rapid movement, zero timelapse, peaceful living wallpaper."
+        s1_motion = f"Fixed locked tripod camera, completely stationary camera perspective, zero camera movement, zero panning, zero zooming. Pure environmental micro-motion: gentle breeze swaying foliage and flowers, natural water ripples, peaceful living wallpaper."
     else:
         s1_vis = f"{arch1.wide_visual_prompt}" + (f" Blended with {arch2.display_name.lower()} atmosphere." if arch2 else "")
         s1_motion = arch1.wide_motion_prompt
         if custom_prompt:
             s1_vis += f" Accented with {custom_prompt.strip()}."
-            s1_motion += f" Featuring {custom_prompt.strip()}."
+            s1_motion += f" Featuring {custom_prompt.strip()} with locked stationary camera framing."
 
     scenes.append(AmbientScenePrompt(
         scene_index=1, perspective_type="wide_atmospheric", visual_prompt=s1_vis,
@@ -140,7 +140,7 @@ def generate_ambient_storyboard(
                 f"Masterpiece 4K photograph of a cozy rustic cabin interior reading nook with a frosted panoramic window looking out at gentle night snowfall. "
                 f"Warm glowing amber candlelight and soft wool throw blanket on deep leather armchair, steaming mug on cedar side table, extreme coziness, 50mm portrait lens, 8k resolution, zero humans."
             )
-            s3_motion = "Gentle dancing candlelight flame, soft snowfall drifting peacefully outside frosted window pane, warm steady cozy interior perspective, zero timelapse."
+            s3_motion = "Fixed locked tripod camera, gentle dancing candlelight flame, soft snowfall drifting peacefully outside frosted window pane, steady cozy interior perspective, zero camera movement."
             domain_s3 = "landscape_solid"
             shot3_title = "Cozy Hearth Nook & Frosted Window"
         elif arch1.cluster in ("alpine", "aquatic", "forest_seasonal"):
@@ -148,14 +148,14 @@ def generate_ambient_storyboard(
                 f"Masterpiece 4K photograph of a serene turquoise glacial mountain lake reflecting towering granite alpine peaks, "
                 f"dense emerald green pine forest, smooth natural shoreline pebbles, soft 5400K natural daylight, 50mm lens, 8k resolution, zero humans, zero buildings."
             )
-            s3_motion = "Ultra-slow calm glassy water ripples on lake surface, barely perceptible mountain breeze in pine branches, rock-steady tripod camera, zero timelapse."
+            s3_motion = "Fixed locked tripod camera, ultra-slow calm glassy water ripples on lake surface, barely perceptible mountain breeze in pine branches and flowers, zero camera movement."
             domain_s3 = "water_fluid"
             shot3_title = "Glacial Lake & Pines"
         else:
             s3_vis = (
                 f"Masterpiece 4K photograph of an intimate rainy cafe window nook, raindrops trickling down glass, warm ambient interior lights, soft bokeh, 50mm lens, 8k resolution, zero humans."
             )
-            s3_motion = "Slow gentle rain droplets trickling down window glass, warm soothing cafe ambient lights in soft blur, peaceful stationary camera, zero timelapse."
+            s3_motion = "Fixed locked tripod camera, slow gentle rain droplets trickling down window glass, warm soothing cafe ambient lights in soft blur, peaceful stationary camera, zero camera movement."
             domain_s3 = "water_fluid"
             shot3_title = "Rainy Glass Nook"
 
@@ -173,7 +173,7 @@ def generate_ambient_storyboard(
         )
         scenes.append(AmbientScenePrompt(
             scene_index=4, perspective_type="golden_canopy", visual_prompt=s4_vis,
-            motion_prompt="Ultra-slow tranquil amber twilight glow over high mountain ridges, almost stationary mist in the valley, steady peaceful perspective, zero timelapse.",
+            motion_prompt="Fixed locked tripod camera, ultra-slow tranquil amber twilight glow over high mountain ridges, almost stationary mist in the valley, steady peaceful perspective, zero camera movement.",
             duration_seconds=shot_dur, domain="landscape_solid",
         ))
         print(f"   [Shot 4 / Golden Ridge] Lighting: Warm amber twilight shift to eliminate visual monotony.\n")
