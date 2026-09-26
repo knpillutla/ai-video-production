@@ -41,7 +41,13 @@
         <span class="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-mono uppercase">
           <i class="fa-solid fa-crown text-[8px]"></i> 4K Master &amp; Long-Stretch Videos
         </span>
-        <span id="ledger-panel-video-badge" class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[8px] font-mono font-bold">4K Master (90s)</span>
+        <div class="flex items-center gap-1.5">
+          <span id="ledger-panel-video-badge" class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[8px] font-mono font-bold">4K Master (90s)</span>
+          <button type="button" onclick="openActiveVideoInPopup()" class="px-2 py-0.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[9px] flex items-center gap-1 shadow transition" title="Open active video in large popup player">
+            <i class="fa-solid fa-up-right-from-square text-[8px]"></i>
+            <span>Popup Player</span>
+          </button>
+        </div>
       </div>
       <div class="relative bg-black rounded-xl overflow-hidden aspect-video max-h-[145px] border border-slate-800 shadow-inner group">
         <video id="studio-panel-video" controls playsinline preload="none" class="w-full h-full object-contain block"></video>
@@ -155,7 +161,7 @@
           <i class="fa-solid fa-wave-square text-cyan-500 text-[9px] mr-1"></i> Audio &amp; Vocal Stems (48kHz):
         </span>
       </div>
-      <div class="grid grid-cols-3 gap-1.5">
+      <div id="panel-section-audio-stems" class="grid grid-cols-3 gap-1.5 w-full pb-1">
         <!-- Foley Stem -->
         <div class="px-2 py-1 bg-slate-50 dark:bg-slate-950/70 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col gap-1">
           <div class="flex items-center justify-between gap-1 min-w-0">

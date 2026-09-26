@@ -15,8 +15,8 @@ function selectStudioChannel(channelId) {
 
   // Update button highlights for studio and ledger bars
   ["all", "earth_serenade", "silent_hearth", "cineai_docs", "telugu_comedy"].forEach(k => {
-    const activeCls = "px-2.5 py-1 rounded-lg text-xs font-bold transition bg-indigo-600 text-white shadow-sm flex items-center gap-1.5 ring-1 ring-indigo-400";
-    const inactiveCls = "px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-gray-300 hover:text-white bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500 transition flex items-center gap-1.5";
+    const activeCls = "px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-950 text-white dark:bg-white dark:text-slate-950 border border-slate-950 dark:border-white shadow-sm flex items-center gap-1.5 ring-1 ring-black/20 dark:ring-white/20";
+    const inactiveCls = "px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-400 dark:hover:border-slate-600 transition-all flex items-center gap-1.5 shadow-sm";
     const btn = document.getElementById("studio-ch-" + k);
     const ledgerBtn = document.getElementById("ledger-ch-" + k);
     if (btn) btn.className = (k === channelId) ? activeCls : inactiveCls;
@@ -35,13 +35,20 @@ function selectStudioChannel(channelId) {
     window.StudioBus.emit("channel:changed", { channelId, meta });
   }
 
-  // Pre-filter presets based on channel
-  if (channelId === "earth_serenade" || channelId === "silent_hearth") {
-    switchNicheGroupView("relaxation");
-  } else if (channelId === "cineai_docs") {
-    switchNicheGroupView("docs");
-  } else if (channelId === "telugu_comedy") {
-    if (typeof setCreationMode === "function") setCreationMode("idea", true);
+  // Pre-filter presets based on channel if functions exist
+  try {
+    if (typeof switchNicheGroupView === "function") {
+      if (channelId === "earth_serenade" || channelId === "silent_hearth") {
+        switchNicheGroupView("relaxation");
+      } else if (channelId === "cineai_docs") {
+        switchNicheGroupView("docs");
+      }
+    }
+    if (channelId === "telugu_comedy" && typeof setCreationMode === "function") {
+      setCreationMode("idea", true);
+    }
+  } catch (err) {
+    console.debug("Preset filter notice:", err);
   }
 }
 

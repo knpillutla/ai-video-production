@@ -218,20 +218,33 @@ Acoustic Engineering: Mastered to -21.0 LUFS with Velvet Low-Pass anti-fatigue f
         })
 
     cost_by_stage = [
-        {"stage": "Stage 1: Keyframe Visuals", "model": "FLUX.1 Dev (Fal AI)", "cost_usd": 0.075, "unit": "3 Keyframes @ $0.025"},
-        {"stage": "Stage 2: 60s Hold & Motion", "model": "Kling v3 Pro / Wan 2.1", "cost_usd": 1.500, "unit": "3 Clips (15s motion @ $0.280/s)"},
-        {"stage": "Stage 3: Acoustic Master", "model": "Suno v3.5 Pro + Kling DSP", "cost_usd": 0.050, "unit": "Master soundtrack + 48kHz field audio"},
-        {"stage": "Stage 4: Story & Scripting", "model": "Gemini 2.5 Pro", "cost_usd": 0.015, "unit": "3,850 tokens (Retention & Lore)"},
-        {"stage": "Stage 5: CRF 22 Stretch", "model": "Single-Pass FFmpeg Copy", "cost_usd": 0.000, "unit": "Local fast stream copy ($0.00 compute)"},
+        {"stage": "Stage 1: Keyframe Visuals", "model": "FLUX.1 Dev (Fal AI)", "cost_usd": 0.075, "unit": "3 Keyframes"},
+        {"stage": "Stage 2: 60s Hold & Motion", "model": "Kling v3 Pro / Wan 2.1", "cost_usd": 1.500, "unit": "3 Motion Clips"},
+        {"stage": "Stage 3: Acoustic Master", "model": "Suno v3.5 Pro + Kling DSP", "cost_usd": 0.050, "unit": "48kHz Field Audio"},
+        {"stage": "Stage 4: Story & Scripting", "model": "Gemini 2.5 Pro", "cost_usd": 0.015, "unit": "Lore Narrative"},
+        {"stage": "Stage 5: CRF 22 Stretch", "model": "Single-Pass FFmpeg Copy", "cost_usd": 0.000, "unit": "Local Copy"}
     ]
-
     cost_by_model = [
         {"model": "Kling v3 Pro (Motion)", "provider": "Fal AI / Kling", "cost_usd": 1.500, "percentage": "68.2%"},
         {"model": "FLUX.1 Dev (Keyframes)", "provider": "Fal AI", "cost_usd": 0.075, "percentage": "3.4%"},
         {"model": "Suno v3.5 Pro (Music)", "provider": "Suno Audio", "cost_usd": 0.050, "percentage": "2.3%"},
         {"model": "Gemini 2.5 Pro (Story)", "provider": "Google DeepMind", "cost_usd": 0.015, "percentage": "0.7%"},
-        {"model": "FFmpeg Engine (Mastering)", "provider": "Local Zero-GPU", "cost_usd": 0.000, "percentage": "0.0%"},
+        {"model": "FFmpeg Engine (Mastering)", "provider": "Local Zero-GPU", "cost_usd": 0.000, "percentage": "0.0%"}
     ]
+
+    keyframes = [
+        {"name": f"Shot {k.replace('keyframe_p', '').replace('.jpg', '')}", "url": f"{rel_prefix}/{k}", "filename": k}
+        for k in sorted(files.keys()) if k.startswith("keyframe_p") and k.endswith(".jpg")
+    ]
+    motion_clips = [
+        {"name": f"Motion {m.replace('motion_p', '').replace('.mp4', '')}", "url": f"{rel_prefix}/{m}", "filename": m, "model": "Kling Pro" if "p1" in m else "Wan 2.1"}
+        for m in sorted(files.keys()) if m.startswith("motion_p") and m.endswith(".mp4") and not m.endswith("_fwd_seamless.mp4")
+    ]
+    audio_stems = []
+    if "raw_soundtrack.mp3" in files:
+        audio_stems.append({"name": "Suno Master Soundtrack", "url": f"{rel_prefix}/raw_soundtrack.mp3", "filename": "raw_soundtrack.mp3", "type": "suno_bgm"})
+    if "velvet_binaural_master_48k.mp3" in files:
+        audio_stems.append({"name": "432Hz Velvet Binaural ASMR", "url": f"{rel_prefix}/velvet_binaural_master_48k.mp3", "filename": "velvet_binaural_master_48k.mp3", "type": "binaural_nature"})
 
     total_cost = sum(item["cost_usd"] for item in cost_by_stage)
 
@@ -261,12 +274,15 @@ Acoustic Engineering: Mastered to -21.0 LUFS with Velvet Low-Pass anti-fatigue f
             "encoding": "Single-Pass FFmpeg CRF 22",
         },
         "stages": {
-            "stage_1_keyframes": "keyframe_p1.jpg" in files,
+            "stage_1_keyframes": len(keyframes) > 0,
             "stage_2_cineloop_masters": "master_4k_ambient.mp4" in files,
             "stage_3_crf22_compression": "master_4k_ambient.mp4" in files,
             "stage_4_long_play_stretch": len(editions) > 2,
             "stage_5_short_teaser": "short_9x16_teaser.mp4" in files,
         },
+        "keyframes": keyframes,
+        "motion_clips": motion_clips,
+        "audio_stems": audio_stems,
         "editions": editions,
         "created_at": created_iso,
         "updated_at": updated_iso,
