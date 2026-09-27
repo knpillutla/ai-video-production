@@ -1,39 +1,83 @@
-<!-- ARTIFACTS MODAL: Traceability & Pipeline Asset Inspector -->
-<div id="artifacts-modal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
-  <div class="bg-[var(--card)] border border-indigo-500/40 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+<!-- EPISODE DETAILS & ARTIFACTS TRACEABILITY MODAL -->
+<div id="artifacts-modal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+  <div class="bg-[var(--card)] border border-indigo-500/40 rounded-2xl max-w-3xl w-full p-5 sm:p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+    <!-- Header -->
     <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-purple-600/20 text-purple-400 flex items-center justify-center text-sm">
-          <i class="fa-solid fa-box-archive"></i>
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-base shrink-0 border border-indigo-500/30">
+          <i class="fa-solid fa-clapperboard"></i>
         </div>
         <div>
-          <h3 id="artifacts-modal-title" class="font-black text-white text-base">Pipeline Artifacts &amp; Traceability</h3>
-          <p id="artifacts-modal-job-id" class="text-[11px] font-mono text-indigo-300">Job UUID: job_ep004_c4b8e28f</p>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span id="artifacts-modal-ep-id" class="px-2 py-0.5 rounded-lg bg-indigo-600 text-white font-mono text-xs font-black shadow-sm">EP-001</span>
+            <h3 id="artifacts-modal-title" class="font-black text-slate-900 dark:text-white text-base">Episode Details &amp; Production Manifest</h3>
+          </div>
+          <p id="artifacts-modal-job-id" class="text-[11px] font-mono text-indigo-600 dark:text-indigo-300 mt-0.5">Job UUID: job_...</p>
         </div>
       </div>
-      <button onclick="closeArtifactsModal()" class="text-gray-400 hover:text-white text-base">
+      <button type="button" onclick="closeArtifactsModal()" class="text-slate-400 hover:text-slate-900 dark:hover:text-white text-lg p-1 transition" title="Close">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
 
-    <!-- Metadata Pill Badges -->
-    <div id="artifacts-meta-badges" class="flex flex-wrap items-center gap-2 text-xs">
-      <!-- Injected dynamically: Video Type, Format (Long/Short), Style, Tier -->
+    <!-- Key Metadata Badges -->
+    <div id="artifacts-meta-badges" class="flex flex-wrap items-center gap-1.5 text-xs">
+      <!-- Injected dynamically: Video Type, Channel, Format, Style, Tier, Status -->
     </div>
 
-    <!-- Generated Artifact Files List -->
+    <!-- Story & Creative Premise Box -->
+    <div class="p-3 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1">
+          <i class="fa-solid fa-feather-pointed"></i> Story Concept &amp; Creative Premise
+        </span>
+        <span id="artifacts-modal-lang" class="text-[10px] font-mono text-slate-500 dark:text-gray-400">English (en)</span>
+      </div>
+      <p id="artifacts-modal-story" class="text-xs text-slate-800 dark:text-gray-200 leading-relaxed font-medium">Detailed story premise...</p>
+    </div>
+
+    <!-- Technical Specs & Model Stack Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+      <div class="p-2.5 bg-slate-50 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800">
+        <div class="text-[9px] font-bold text-slate-400 dark:text-gray-400 uppercase">Duration &amp; FPS</div>
+        <div id="artifacts-spec-duration" class="font-bold text-slate-900 dark:text-white text-xs mt-0.5">10s • 24 FPS</div>
+      </div>
+      <div class="p-2.5 bg-slate-50 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800">
+        <div class="text-[9px] font-bold text-slate-400 dark:text-gray-400 uppercase">Master Format</div>
+        <div id="artifacts-spec-format" class="font-bold text-slate-900 dark:text-white text-xs mt-0.5">4K UHD (CRF 22)</div>
+      </div>
+      <div class="p-2.5 bg-slate-50 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800">
+        <div class="text-[9px] font-bold text-slate-400 dark:text-gray-400 uppercase">Audio Standard</div>
+        <div class="font-bold text-slate-900 dark:text-white text-xs mt-0.5">-14 LUFS • 48kHz</div>
+      </div>
+      <div class="p-2.5 bg-slate-50 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800">
+        <div class="text-[9px] font-bold text-slate-400 dark:text-gray-400 uppercase">Production Cost</div>
+        <div id="artifacts-spec-cost" class="font-bold text-emerald-600 dark:text-emerald-400 text-xs mt-0.5">$0.02 USD</div>
+      </div>
+    </div>
+
+    <!-- Generated Pipeline Artifacts List -->
     <div class="space-y-2">
-      <div class="text-xs font-bold text-gray-300 uppercase tracking-wider">Produced Pipeline Artifacts</div>
-      <div id="artifacts-file-list" class="space-y-2">
+      <div class="flex items-center justify-between">
+        <div class="text-xs font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+          <i class="fa-solid fa-boxes-stacked text-indigo-500"></i>
+          <span>Synthesized Artifacts &amp; Stems</span>
+        </div>
+        <span id="artifacts-file-count" class="text-[10px] font-mono text-slate-500 dark:text-gray-400">7 Files</span>
+      </div>
+      <div id="artifacts-file-list" class="space-y-1.5">
         <!-- Rendered dynamically -->
       </div>
     </div>
 
+    <!-- Footer -->
     <div class="flex items-center justify-between pt-2 border-t border-[var(--border)] text-xs">
-      <span class="text-gray-400 font-mono text-[10px]">Cloud Vault: <strong class="text-indigo-300">user-c4b8e28f/creative_vault</strong></span>
-      <button onclick="closeArtifactsModal()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow text-xs">
-        Close Inspector
-      </button>
+      <span class="text-slate-500 dark:text-gray-400 font-mono text-[10px]">Cloud Vault: <strong class="text-indigo-600 dark:text-indigo-400">master_vault/cineai_episodes</strong></span>
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="closeArtifactsModal()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold rounded-xl transition text-xs">
+          Close
+        </button>
+      </div>
     </div>
   </div>
 </div>

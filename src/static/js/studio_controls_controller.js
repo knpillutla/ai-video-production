@@ -1,6 +1,7 @@
 // CineAI Studio: Panel 2 Controls & Engine Controller (Execution Mode, Cadence & Cost Math)
 let activeExecutionMode = "test"; // "test" | "prod"
-let activeTestDuration = 10;
+let activePipelineStrategy = "auto"; // "auto" | "manual"
+let activeTestDuration = 5;
 
 function setExecutionMode(mode) {
   activeExecutionMode = mode;
@@ -15,33 +16,54 @@ function setExecutionMode(mode) {
     if (btnProd) btnProd.className = "px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded";
     if (optTest) optTest.classList.remove("hidden");
     if (optProd) optProd.classList.add("hidden");
-    if (btnProduceText) btnProduceText.textContent = `TEST DRAFT (${activeTestDuration}s)`;
+    if (btnProduceText) btnProduceText.textContent = activePipelineStrategy === "manual" ? `TEST DRAFT (MANUAL ${activeTestDuration}s)` : `TEST DRAFT (${activeTestDuration}s)`;
   } else {
     if (btnTest) btnTest.className = "px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded";
     if (btnProd) btnProd.className = "px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-600 text-white shadow";
     if (optTest) optTest.classList.add("hidden");
     if (optProd) optProd.classList.remove("hidden");
-    if (btnProduceText) btnProduceText.textContent = "PRODUCE MASTER VIDEO";
+    if (btnProduceText) btnProduceText.textContent = activePipelineStrategy === "manual" ? "PRODUCE (MANUAL STAGE-GATE)" : "PRODUCE MASTER VIDEO";
   }
 
   calculateLiveCostEstimate();
 }
 
+function setPipelineExecutionMode(strat) {
+  activePipelineStrategy = strat;
+  const btnAuto = document.getElementById("btn-pipe-auto");
+  const btnManual = document.getElementById("btn-pipe-manual");
+  const btnProduceText = document.getElementById("btn-produce-text");
+
+  if (strat === "auto") {
+    if (btnAuto) btnAuto.className = "px-1.5 py-0.2 text-[9px] font-bold rounded bg-indigo-600 text-white shadow";
+    if (btnManual) btnManual.className = "px-1.5 py-0.2 text-[9px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded";
+    if (btnProduceText) btnProduceText.textContent = activeExecutionMode === "test" ? `TEST DRAFT (${activeTestDuration}s)` : "PRODUCE MASTER VIDEO";
+    document.getElementById("studio-stage-controls-dock")?.classList.add("hidden");
+  } else {
+    if (btnAuto) btnAuto.className = "px-1.5 py-0.2 text-[9px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded";
+    if (btnManual) btnManual.className = "px-1.5 py-0.2 text-[9px] font-bold rounded bg-purple-600 text-white shadow";
+    if (btnProduceText) btnProduceText.textContent = activeExecutionMode === "test" ? `TEST DRAFT (MANUAL ${activeTestDuration}s)` : "PRODUCE (MANUAL STAGE-GATE)";
+  }
+
+  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) {
+    currentActiveInspectorEpisode.pipelineStrategy = strat;
+    if (typeof updateStageGateDock === "function") updateStageGateDock(currentActiveInspectorEpisode);
+  }
+}
+
 function setTestDuration(sec) {
   activeTestDuration = sec;
-  [10, 30, 60].forEach(s => {
+  [5, 10].forEach(s => {
     const btn = document.getElementById("btn-test-" + s + "s");
     if (!btn) return;
-    if (s === sec) {
-      btn.className = "p-1 rounded text-center text-[10px] font-bold bg-amber-600 text-white shadow";
-    } else {
-      btn.className = "p-1 rounded text-center text-[10px] font-medium text-slate-700 dark:text-gray-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800";
-    }
+    btn.className = (s === sec)
+      ? "p-1 rounded text-center text-[9px] font-bold bg-amber-600 text-white shadow"
+      : "p-1 rounded text-center text-[9px] font-medium text-slate-700 dark:text-gray-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800";
   });
 
   const btnProduceText = document.getElementById("btn-produce-text");
   if (activeExecutionMode === "test" && btnProduceText) {
-    btnProduceText.textContent = `TEST DRAFT (${sec}s)`;
+    btnProduceText.textContent = activePipelineStrategy === "manual" ? `TEST DRAFT (MANUAL ${sec}s)` : `TEST DRAFT (${sec}s)`;
   }
 
   calculateLiveCostEstimate();

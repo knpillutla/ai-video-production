@@ -30,12 +30,12 @@ let currentTier = "balanced";
 let activeTab = "studio";
 
 let currentUser = {
-  id: "user_krishna_01",
-  display_name: "Krishna P.",
-  email: "creator@cineai.studio",
+  id: "knpillutla_gmail_com",
+  display_name: "Krishna Pillutla",
+  email: "knpillutla@gmail.com",
   avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-  balance_usd: 10.00,
-  container_id: "user-c4b8e28f",
+  balance_usd: 100.00,
+  container_id: "user-knpillutla-gmail-com",
   theme: "dark"
 };
 

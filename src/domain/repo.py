@@ -123,9 +123,21 @@ class MemoryRepository:
         return [c for c in self.channels.values() if c.user_id == user_id]
 
     def get_channel(self, user_id: UUID, channel_id: UUID | str) -> Channel | None:
-        cid = UUID(channel_id) if isinstance(channel_id, str) else channel_id
-        c = self.channels.get(cid)
-        return c if c and c.user_id == user_id else None
+        if isinstance(channel_id, UUID):
+            c = self.channels.get(channel_id)
+            return c if c and c.user_id == user_id else None
+        try:
+            cid = UUID(str(channel_id))
+            c = self.channels.get(cid)
+            if c and c.user_id == user_id:
+                return c
+        except (ValueError, TypeError):
+            pass
+        s = str(channel_id).lower()
+        return next(
+            (c for c in self.channels.values() if c.user_id == user_id and ((c.channel_slug and c.channel_slug.lower() == s) or c.channel_name.lower().replace(" ", "_") == s)),
+            None,
+        )
 
     def save_channel(self, channel: Channel) -> Channel:
         self.channels[channel.id] = channel

@@ -60,11 +60,20 @@ class MultiTenantStorageService:
         return ep_path
 
     def get_channel_path(self, user_id: str, channel_id: str) -> Path:
-        """Return path for a user's distribution channel and upload ledger."""
+        """Return path for a user's channel."""
+        clean_chan = re.sub(r"[^a-zA-Z0-9_-]", "_", str(channel_id).lower()).strip("_") or "default_channel"
         base = self.get_user_container_path(user_id)
-        chan_path = base / "distribution" / "channels" / channel_id
+        chan_path = base / "channels" / clean_chan
         chan_path.mkdir(parents=True, exist_ok=True)
         return chan_path
+
+    def get_channel_episode_path(self, user_id: str, channel_id: str, episode_id: str) -> Path:
+        """Return path for an episode within a user's channel."""
+        clean_ep = re.sub(r"[^a-zA-Z0-9_-]", "_", str(episode_id).lower()).strip("_") or "ep_001"
+        chan_path = self.get_channel_path(user_id, channel_id)
+        ep_path = chan_path / clean_ep
+        ep_path.mkdir(parents=True, exist_ok=True)
+        return ep_path
 
     async def save_json(self, file_path: Path, data: dict[str, Any]) -> None:
         """Atomically persist JSON metadata."""

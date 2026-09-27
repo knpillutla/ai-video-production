@@ -259,6 +259,16 @@ async def produce_local_video_episode(
     with open(ep_dir / "project_manifest.json", "w", encoding="utf-8") as f:
         json.dump(manifest_data, f, indent=2)
 
+    kfs = [
+        {"name": "Shot 1: Opening", "url": f"{base_url}/scenes/scene_01.jpg", "timing": f"{scene_dur:.1f}s"},
+        {"name": "Shot 2: Ambiance", "url": f"{base_url}/scenes/scene_02.jpg", "timing": f"{scene_dur:.1f}s"},
+    ]
+    stems = []
+    if voice1 and voice1.exists():
+        stems.append({"name": "voice_azure.wav", "url": f"{base_url}/audio_stems/voice_01.wav", "duration": f"{scene_dur:.1f}s", "color": "rose"})
+    if bgm_file and bgm_file.exists():
+        stems.append({"name": "suno_master.wav", "url": f"{base_url}/audio_stems/bgm_master.wav", "duration": f"{duration_seconds:.1f}s", "color": "amber"})
+
     elapsed = round(time.perf_counter() - t0, 2)
     logger.info(f"local_video_produced: {out_mp4.name} in {elapsed}s, size={out_mp4.stat().st_size}b")
     return {
@@ -266,4 +276,5 @@ async def produce_local_video_episode(
         "title": title, "video_url": f"{base_url}/master_renders/{out_mp4.name}", "storage_path": str(out_mp4),
         "file_size_bytes": out_mp4.stat().st_size, "duration_seconds": duration_seconds,
         "render_time_seconds": elapsed, "artifacts": artifacts,
+        "keyframes": kfs, "audio_stems": stems, "motion_clips": [],
     }

@@ -1,0 +1,59 @@
+<!-- LIVE PRODUCTION LOG CONSOLE DRAWER -->
+<div id="studio-log-console-drawer" class="fixed bottom-0 right-0 left-0 md:left-64 z-40 bg-[#080d1a] border-t-2 border-indigo-500/50 shadow-2xl transition-all duration-300 transform translate-y-full flex flex-col font-mono" style="height: 320px;">
+  <!-- CONSOLE HEADER BAR -->
+  <div class="h-9 bg-[#0b1222] border-b border-slate-800 px-3 flex items-center justify-between select-none shrink-0">
+    <div class="flex items-center gap-2.5">
+      <div class="flex items-center gap-1.5">
+        <span id="log-console-status-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+          <i class="fa-solid fa-terminal text-emerald-400 text-[11px]"></i>
+          <span>Production Console</span>
+        </span>
+      </div>
+      <span id="log-console-status-text" class="text-[10px] px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 font-medium">Streaming Live</span>
+      <span id="log-console-count" class="text-[10px] text-slate-400">0 logs</span>
+    </div>
+
+    <!-- CONTROLS & FILTERS -->
+    <div class="flex items-center gap-2 text-xs">
+      <!-- Search Filter -->
+      <div class="relative hidden sm:block">
+        <input type="text" id="log-console-search" placeholder="Filter logs..." oninput="filterConsoleLogs()" class="w-36 h-6 px-2 pl-6 bg-slate-900 border border-slate-700 rounded text-[11px] text-gray-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+        <i class="fa-solid fa-magnifying-glass text-[9px] text-slate-500 absolute left-2 top-1.5"></i>
+      </div>
+
+      <!-- Level Filter Pills -->
+      <div class="inline-flex items-center p-0.5 bg-slate-900 border border-slate-800 rounded text-[10px]">
+        <button type="button" onclick="setConsoleLevelFilter('ALL')" id="filter-btn-ALL" class="px-2 py-0.5 rounded font-bold bg-indigo-600 text-white">ALL</button>
+        <button type="button" onclick="setConsoleLevelFilter('DECISION')" id="filter-btn-DECISION" class="px-2 py-0.5 rounded text-slate-400 hover:text-white">DECISIONS</button>
+        <button type="button" onclick="setConsoleLevelFilter('STAGE')" id="filter-btn-STAGE" class="px-2 py-0.5 rounded text-slate-400 hover:text-white">STAGES</button>
+        <button type="button" onclick="setConsoleLevelFilter('ERROR')" id="filter-btn-ERROR" class="px-2 py-0.5 rounded text-slate-400 hover:text-white">ERRORS</button>
+      </div>
+
+      <!-- Auto-scroll Checkbox -->
+      <label class="flex items-center gap-1 text-[10px] text-slate-300 cursor-pointer select-none">
+        <input type="checkbox" id="log-console-autoscroll" checked class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0">
+        <span>Auto-Scroll</span>
+      </label>
+
+      <!-- Action Buttons -->
+      <button type="button" onclick="copyConsoleLogs()" class="p-1 px-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded" title="Copy Logs to Clipboard">
+        <i class="fa-solid fa-copy text-[11px]"></i>
+      </button>
+      <button type="button" onclick="clearConsoleLogs()" class="p-1 px-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded" title="Clear Console">
+        <i class="fa-solid fa-trash text-[11px]"></i>
+      </button>
+      <button type="button" onclick="toggleConsoleExpand()" id="btn-console-expand" class="p-1 px-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded" title="Maximize / Restore Height">
+        <i class="fa-solid fa-up-right-and-down-left-from-center text-[11px]"></i>
+      </button>
+      <button type="button" onclick="toggleLogConsoleDrawer(false)" class="p-1 px-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded" title="Close Console">
+        <i class="fa-solid fa-xmark text-xs"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- TERMINAL LOG BODY -->
+  <div id="log-console-terminal" class="flex-1 overflow-y-auto p-3 text-[11px] leading-relaxed space-y-1 bg-[#050811] select-text custom-scrollbar font-mono">
+    <div class="text-slate-500 italic">Connected to CineAI Video Studio Production Telemetry Stream...</div>
+  </div>
+</div>

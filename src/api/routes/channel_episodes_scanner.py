@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from src.core.storage import sanitize_container_name
+
 CHANNELS_CONFIG: dict[str, dict[str, str]] = {
     "earth_serenade": {
         "id": "earth_serenade",
@@ -41,41 +43,53 @@ CHANNELS_CONFIG: dict[str, dict[str, str]] = {
 }
 
 
-def scan_all_channel_episodes(storage_dir: Path) -> list[dict[str, Any]]:
-    """Scan disk directory structure to return comprehensive metadata for all episodes."""
+def scan_all_channel_episodes(storage_dir: Path, user_id: str | None = None) -> list[dict[str, Any]]:
+    """Scan disk directory structure across user container and root storage."""
     episodes: list[dict[str, Any]] = []
-    channels_dir = storage_dir / "channels"
-    if not channels_dir.exists():
-        return episodes
+    seen_eps: set[str] = set()
 
-    for ch_path in channels_dir.iterdir():
-        if not ch_path.is_dir():
+    candidate_roots: list[Path] = []
+    if user_id:
+        c_name = sanitize_container_name(user_id)
+        candidate_roots.append(storage_dir / c_name / "channels")
+    candidate_roots.append(storage_dir / "user-knpillutla-gmail-com" / "channels")
+    candidate_roots.append(storage_dir / "channels")
+
+    for channels_dir in candidate_roots:
+        if not channels_dir.exists():
             continue
-        ch_key = ch_path.name
-        ch_meta = CHANNELS_CONFIG.get(
-            ch_key,
-            {
-                "id": ch_key,
-                "name": ch_key.replace("_", " ").title(),
-                "handle": f"@{ch_key}",
-                "category": "General",
-                "icon": "fa-clapperboard",
-                "color": "indigo",
-            },
-        )
-
-        for ep_path in ch_path.iterdir():
-            if not ep_path.is_dir() or not ep_path.name.startswith("ep_"):
+        for ch_path in channels_dir.iterdir():
+            if not ch_path.is_dir():
                 continue
-            ep_dict = _build_episode_record(ep_path, ch_meta)
-            if ep_dict:
-                episodes.append(ep_dict)
+            ch_key = ch_path.name
+            ch_meta = CHANNELS_CONFIG.get(
+                ch_key,
+                {
+                    "id": ch_key,
+                    "name": ch_key.replace("_", " ").title(),
+                    "handle": f"@{ch_key}",
+                    "category": "General",
+                    "icon": "fa-clapperboard",
+                    "color": "indigo",
+                },
+            )
+            for ep_path in ch_path.iterdir():
+                ep_lower = ep_path.name.lower()
+                if not ep_path.is_dir() or not (ep_lower.startswith("ep_") or ep_lower.startswith("ep-") or ep_lower.startswith("ep")):
+                    continue
+                dedup_key = f"{ch_key}_{ep_path.name}"
+                if dedup_key in seen_eps:
+                    continue
+                seen_eps.add(dedup_key)
+                ep_dict = _build_episode_record(ep_path, ch_meta, storage_dir)
+                if ep_dict:
+                    episodes.append(ep_dict)
 
     episodes.sort(key=lambda x: x.get("created_timestamp", 0), reverse=True)
     return episodes
 
 
-def _build_episode_record(ep_path: Path, ch_meta: dict[str, str]) -> dict[str, Any]:
+def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: Path) -> dict[str, Any]:
     """Extract metadata, video editions, files, models, and script for one episode."""
     ep_id = ep_path.name
     files = {f.name: f for f in ep_path.iterdir() if f.is_file()}
@@ -90,9 +104,7 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str]) -> dict[str, A
     yt_pack_nature = {}
     if "youtube_packaging_nature_only.json" in files:
         try:
-            yt_pack_nature = json.loads(
-                files["youtube_packaging_nature_only.json"].read_text(encoding="utf-8")
-            )
+            yt_pack_nature = json.loads(files["youtube_packaging_nature_only.json"].read_text(encoding="utf-8"))
         except Exception:
             pass
 
@@ -110,112 +122,22 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str]) -> dict[str, A
     created_iso = datetime.fromtimestamp(created_ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     updated_iso = datetime.fromtimestamp(updated_ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-    # Script & Screenplay narrative
-    script_text = f"""SCENE BREAKDOWN & SCREENPLAY NARRATIVE
-======================================================================
-Episode ID: {ep_id}
-Channel:    {ch_meta['name']} ({ch_meta['handle']})
-Story:      {story_topic}
+    script_text = f"""SCENE BREAKDOWN & SCREENPLAY NARRATIVE\n======================================================================\nEpisode ID: {ep_id}\nChannel:    {ch_meta['name']} ({ch_meta['handle']})\nStory:      {story_topic}\n\n[DIRECTORIAL CONCEPT & LORE]\nPaced at a tranquil human walking cadence (~0.5 m/s) with 60.0s hypnotic holds.\nAcoustic Engineering: Mastered to -21.0 LUFS with Velvet Low-Pass filtering & 432Hz delta wave entrainment.\n\n[SHOT 1: MONUMENTAL PANORAMA] Ambient field sounds synchronized to 48kHz lossless stereo.\n[SHOT 2: SENSORY MACRO] Creamy 85mm optical bokeh (f/1.4) dissolving into soft blur.\n[SHOT 3: COZY HEARTH NOOK] Atmospheric indoor nook, crackling fireplace, 2.0s cross-dissolve.\n======================================================================"""
 
-[DIRECTORIAL CONCEPT & LORE]
-Paced at a tranquil, leisurely human walking cadence (~0.5 m/s) and extended 60.0s hypnotic perspective holds.
-Acoustic Engineering: Mastered to -21.0 LUFS with Velvet Low-Pass anti-fatigue filtering and sub-audible 432Hz delta wave brainwave entrainment to ease insomnia and promote restorative sleep.
-
-[SHOT 1: WIDE MONUMENTAL PANORAMA (00:00 - 00:30)]
-* Visual Setting: Expansive monumental landscape establishing deep environmental scale and tranquility.
-* Lighting: Balanced crisp natural daylight (5400K-5600K) contrasting cool atmospheric tones against warm golden window glow.
-* Audio Stems: Ambient field sounds (wind/rain/stream) synchronized to 48kHz lossless stereo.
-
-[SHOT 2: INTIMATE SENSORY MACRO (00:30 - 01:00)]
-* Visual Setting: Close-up tactile micro-textures (glowing embers, rain ripples on glass, steaming ceramic mug).
-* Depth of Field: Creamy 85mm optical bokeh (f/1.4) dissolving background into soft blur.
-
-[SHOT 3: COZY SHELTER & HEARTH NOOK (01:00 - 01:30)]
-* Visual Setting: Atmospheric indoor nook, crackling fireplace, and gentle mist outside.
-* Cinematic Transitions: 2.0s cross-dissolve with forward loop continuity.
-======================================================================
-"""
-
-    rel_prefix = f"/storage/channels/{ch_meta['id']}/{ep_id}"
+    rel_prefix = f"/storage/{ep_path.relative_to(storage_dir).as_posix()}"
     editions: list[dict[str, Any]] = []
 
-    if "master_4k_8hour_broadcast.mp4" in files:
-        editions.append({
-            "edition_id": "8h_music",
-            "name": "8-Hour 4K Broadcast (Music)",
-            "icon": "fa-music text-indigo-400",
-            "audio_mode": "Music + 432Hz BGM",
-            "duration": "8:00:00 (8 Hours)",
-            "format": "16:9 Long-Play",
-            "status": "published",
-            "url": f"{rel_prefix}/master_4k_8hour_broadcast.mp4",
-            "size_str": "25.35 GB",
-        })
-
-    if "master_4k_8hour_nature_only_broadcast.mp4" in files:
-        editions.append({
-            "edition_id": "8h_nature",
-            "name": "8-Hour 4K Broadcast (Pure Nature ASMR)",
-            "icon": "fa-leaf text-emerald-400",
-            "audio_mode": "Pure Nature (NO MUSIC)",
-            "duration": "8:00:00 (8 Hours)",
-            "format": "16:9 Long-Play",
-            "status": "published",
-            "url": f"{rel_prefix}/master_4k_8hour_nature_only_broadcast.mp4",
-            "size_str": "25.09 GB",
-        })
-
-    if "master_4k_3hour_broadcast.mp4" in files:
-        editions.append({
-            "edition_id": "3h_music",
-            "name": "3-Hour 4K Broadcast (Music)",
-            "icon": "fa-music text-indigo-400",
-            "audio_mode": "Music + 432Hz BGM",
-            "duration": "3:00:00 (3 Hours)",
-            "format": "16:9 Long-Play",
-            "status": "published",
-            "url": f"{rel_prefix}/master_4k_3hour_broadcast.mp4",
-            "size_str": "12.87 GB",
-        })
-
-    if "master_4k_ambient.mp4" in files:
-        editions.append({
-            "edition_id": "master_music",
-            "name": "4K Master Set (Music)",
-            "icon": "fa-clapperboard text-purple-400",
-            "audio_mode": "Music Master",
-            "duration": "90s (Master)",
-            "format": "16:9 Master",
-            "status": "completed",
-            "url": f"{rel_prefix}/master_4k_ambient.mp4",
-            "size_str": "155 MB",
-        })
-
-    if "master_4k_ambient_nature_only.mp4" in files:
-        editions.append({
-            "edition_id": "master_nature",
-            "name": "4K Master Set (Pure Nature)",
-            "icon": "fa-water text-cyan-400",
-            "audio_mode": "Pure Nature ASMR",
-            "duration": "90s (Master)",
-            "format": "16:9 Master",
-            "status": "completed",
-            "url": f"{rel_prefix}/master_4k_ambient_nature_only.mp4",
-            "size_str": "153 MB",
-        })
-
-    if "short_9x16_teaser.mp4" in files:
-        editions.append({
-            "edition_id": "short_teaser",
-            "name": "9:16 Vertical Short Teaser",
-            "icon": "fa-mobile-screen text-pink-400",
-            "audio_mode": "Music + Ambient",
-            "duration": "20s (Short)",
-            "format": "9:16 Short",
-            "status": "completed",
-            "url": f"{rel_prefix}/short_9x16_teaser.mp4",
-            "size_str": "6.6 MB",
-        })
+    edition_defs = [
+        ("master_4k_8hour_broadcast.mp4", "8h_music", "8-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "8:00:00 (8 Hours)", "16:9 Long-Play", "published", "25.35 GB"),
+        ("master_4k_8hour_nature_only_broadcast.mp4", "8h_nature", "8-Hour 4K Broadcast (Pure Nature ASMR)", "fa-leaf text-emerald-400", "Pure Nature (NO MUSIC)", "8:00:00 (8 Hours)", "16:9 Long-Play", "published", "25.09 GB"),
+        ("master_4k_3hour_broadcast.mp4", "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3 Hours)", "16:9 Long-Play", "published", "12.87 GB"),
+        ("master_4k_ambient.mp4", "master_music", "4K Master Set (Music)", "fa-clapperboard text-purple-400", "Music Master", "90s (Master)", "16:9 Master", "completed", "155 MB"),
+        ("master_4k_ambient_nature_only.mp4", "master_nature", "4K Master Set (Pure Nature)", "fa-water text-cyan-400", "Pure Nature ASMR", "90s (Master)", "16:9 Master", "completed", "153 MB"),
+        ("short_9x16_teaser.mp4", "short_teaser", "9:16 Vertical Short Teaser", "fa-mobile-screen text-pink-400", "Music + Ambient", "20s (Short)", "9:16 Short", "completed", "6.6 MB"),
+    ]
+    for fn, eid, name, icon, mode, dur, fmt, st, sz in edition_defs:
+        if fn in files:
+            editions.append({"edition_id": eid, "name": name, "icon": icon, "audio_mode": mode, "duration": dur, "format": fmt, "status": st, "url": f"{rel_prefix}/{fn}", "size_str": sz})
 
     cost_by_stage = [
         {"stage": "Stage 1: Keyframe Visuals", "model": "FLUX.1 Dev (Fal AI)", "cost_usd": 0.075, "unit": "3 Keyframes"},
@@ -232,14 +154,8 @@ Acoustic Engineering: Mastered to -21.0 LUFS with Velvet Low-Pass anti-fatigue f
         {"model": "FFmpeg Engine (Mastering)", "provider": "Local Zero-GPU", "cost_usd": 0.000, "percentage": "0.0%"}
     ]
 
-    keyframes = [
-        {"name": f"Shot {k.replace('keyframe_p', '').replace('.jpg', '')}", "url": f"{rel_prefix}/{k}", "filename": k}
-        for k in sorted(files.keys()) if k.startswith("keyframe_p") and k.endswith(".jpg")
-    ]
-    motion_clips = [
-        {"name": f"Motion {m.replace('motion_p', '').replace('.mp4', '')}", "url": f"{rel_prefix}/{m}", "filename": m, "model": "Kling Pro" if "p1" in m else "Wan 2.1"}
-        for m in sorted(files.keys()) if m.startswith("motion_p") and m.endswith(".mp4") and not m.endswith("_fwd_seamless.mp4")
-    ]
+    keyframes = [{"name": f"Shot {k.replace('keyframe_p', '').replace('.jpg', '')}", "url": f"{rel_prefix}/{k}", "filename": k} for k in sorted(files.keys()) if k.startswith("keyframe_p") and k.endswith(".jpg")]
+    motion_clips = [{"name": f"Motion {m.replace('motion_p', '').replace('.mp4', '')}", "url": f"{rel_prefix}/{m}", "filename": m, "model": "Kling Pro" if "p1" in m else "Wan 2.1"} for m in sorted(files.keys()) if m.startswith("motion_p") and m.endswith(".mp4") and not m.endswith("_fwd_seamless.mp4")]
     audio_stems = []
     if "raw_soundtrack.mp3" in files:
         audio_stems.append({"name": "Suno Master Soundtrack", "url": f"{rel_prefix}/raw_soundtrack.mp3", "filename": "raw_soundtrack.mp3", "type": "suno_bgm"})
@@ -261,11 +177,7 @@ Acoustic Engineering: Mastered to -21.0 LUFS with Velvet Low-Pass anti-fatigue f
         "description": desc,
         "category": ch_meta["category"],
         "cost_usd": total_cost,
-        "cost_breakdown": {
-            "total_usd": total_cost,
-            "by_stage": cost_by_stage,
-            "by_model": cost_by_model,
-        },
+        "cost_breakdown": {"total_usd": total_cost, "by_stage": cost_by_stage, "by_model": cost_by_model},
         "models_used": {
             "scripting": "Gemini 2.5 Pro",
             "visuals": "FLUX.1 Dev (Fal)",

@@ -1,60 +1,72 @@
-// CineAI Studio: Artifacts & Traceability Inspector Controller
-function viewEpisodeArtifacts(id) {
-  const vid = studioVideos.find(v => v.id === id);
+// CineAI Studio: Artifacts & Episode Details Inspector Controller
+function viewEpisodeArtifacts(epOrId) {
+  let vid = null;
+  if (typeof epOrId === "object" && epOrId !== null) vid = epOrId;
+  else if (typeof epOrId === "string") {
+    if (typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) vid = studioVideos.find(v => (v.id === epOrId || v.episode_id === epOrId));
+    if (!vid && typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) vid = channelArchiveEpisodes.find(v => v.episode_id === epOrId);
+  }
+  if (!vid && typeof currentActiveInspectorEpisode !== "undefined") vid = currentActiveInspectorEpisode;
   if (!vid) return;
 
-  const titleEl = document.getElementById("artifacts-modal-title");
-  const jobEl = document.getElementById("artifacts-modal-job-id");
+  const epId = vid.id || vid.episode_id || "EP-001";
+  const setEl = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+
+  setEl("artifacts-modal-ep-id", epId);
+  setEl("artifacts-modal-title", vid.title || "Master Episode");
+  setEl("artifacts-modal-job-id", `Traceability UUID: ${vid.jobId || ('job_' + epId.toLowerCase() + '_prod')}`);
+  setEl("artifacts-modal-story", vid.story_topic || vid.concept || vid.theme || vid.title || "Master production story beat.");
+  setEl("artifacts-modal-lang", vid.language || "English (en)");
+  setEl("artifacts-spec-duration", `${vid.duration || (vid.durationSeconds ? vid.durationSeconds + 's' : '10s')} • ${vid.fps || '24 FPS'}`);
+  setEl("artifacts-spec-format", vid.format || "4K UHD (CRF 22)");
+  setEl("artifacts-spec-cost", `$${Number(vid.cost_usd || vid.cost || 0.02).toFixed(2)} USD`);
+
   const badgesEl = document.getElementById("artifacts-meta-badges");
-  const listEl = document.getElementById("artifacts-file-list");
-
-  if (titleEl) titleEl.textContent = `${vid.id}: ${vid.title}`;
-  if (jobEl) jobEl.textContent = `Traceability Job UUID: ${vid.jobId}`;
-
   if (badgesEl) {
+    const chName = (vid.channel_id === "silent_hearth" || vid.channelId === "silent_hearth") ? "Silent Hearth" : ((vid.channel_id === "earth_serenade" || vid.channelId === "earth_serenade") ? "Earth Serenade" : "CineAI Docs");
     badgesEl.innerHTML = `
-      <span class="px-2.5 py-1 rounded-lg font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">${vid.videoType || "Web Series"}</span>
-      <span class="px-2.5 py-1 rounded-lg font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">${vid.formatType || "Long (16:9)"}</span>
-      <span class="px-2.5 py-1 rounded-lg font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">${vid.styleType || "Realistic (Photoreal)"}</span>
-      <span class="px-2.5 py-1 rounded-lg font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">${vid.tierName || "Balanced"}</span>
-      <span class="px-2.5 py-1 rounded-lg font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">${vid.language}</span>
+      <span class="px-2 py-0.5 rounded-md font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">${chName}</span>
+      <span class="px-2 py-0.5 rounded-md font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">${vid.genre || vid.videoType || "Relaxation & ASMR"}</span>
+      <span class="px-2 py-0.5 rounded-md font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">${vid.executionMode === 'test' ? '⚡ Test Draft' : 'Master Broadcast'}</span>
+      <span class="px-2 py-0.5 rounded-md font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">${vid.pipelineStrategy === 'manual' ? '🛠️ Manual Stage-Gate' : '⚡ Auto Pipeline'}</span>
+      <span class="px-2 py-0.5 rounded-md font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">${vid.status === 'completed' || !vid.status ? '✓ Completed' : 'In Progress'}</span>
     `;
   }
 
   const defaultArtifacts = [
-    { name: "project_manifest.json", size: "2.4 KB", type: "JSON", icon: "fa-code", desc: "Configuration, prompt hashing, and model selector routing manifest" },
-    { name: "script_transcreation.json", size: "14.8 KB", type: "JSON", icon: "fa-file-lines", desc: "Telugu/Hindi cultural transcreation with timestamps & punchlines" },
-    { name: "storyboard_keyframes.zip", size: "8.2 MB", type: "ZIP", icon: "fa-images", desc: "Single-pass image keyframes rendered via FLUX engine" },
-    { name: "dialogue_audio_stems.wav", size: "4.1 MB", type: "Audio", icon: "fa-waveform-lines", desc: "48kHz Azure Neural TTS synchronized dialogue stems" },
-    { name: "bgm_ducked_mix.mp3", size: "3.6 MB", type: "Audio", icon: "fa-music", desc: "Sidechain-ducked background score with sound effects" },
-    { name: "master_1080p_render.mp4", size: "28.4 MB", type: "Video", icon: "fa-film", desc: "Single-pass FFmpeg combined master render", url: "/static/videos/preview_master.mp4" },
-    { name: "youtube_syndication_seo.json", size: "1.9 KB", type: "JSON", icon: "fa-hashtag", desc: "Optimized title, description, tags, and category metadata" }
+    { name: "project_manifest.json", size: "2.4 KB", desc: "Pipeline config, model routing manifest & SHA-256 tokens", icon: "fa-code" },
+    { name: "flux_keyframes_4k.zip", size: "8.4 MB", desc: "FLUX.1 Pro 4K HDR photoreal cinematic keyframes", icon: "fa-images" },
+    { name: "video_motion_clips.zip", size: "19.2 MB", desc: "Wan 2.1 & Kling Pro dynamic motion renders", icon: "fa-film" },
+    { name: "foley_soundscape_48k.wav", size: "3.8 MB", desc: "48,000 Hz 24-bit procedural binaural soundscape stem", icon: "fa-wave-square" },
+    { name: "suno_bgm_master.wav", size: "4.6 MB", desc: "Suno v3.5 Pro commercial acoustic master arrangement", icon: "fa-music" },
+    { name: "master_4k_render.mp4", size: "32.1 MB", desc: "Single-pass FFmpeg combined 4K UHD master broadcast", icon: "fa-video", url: vid.videoUrl || "/static/videos/preview_master.mp4" }
   ];
 
-  const artifacts = vid.artifacts || defaultArtifacts;
-
+  const listEl = document.getElementById("artifacts-file-list");
   if (listEl) {
-    listEl.innerHTML = artifacts.map(art => `
-      <div class="p-3 bg-slate-900/80 border border-[var(--border)] hover:border-indigo-500/50 rounded-xl flex items-center justify-between transition">
-        <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-lg bg-slate-800 text-indigo-400 flex items-center justify-center text-sm">
+    const arts = vid.artifacts_list || defaultArtifacts;
+    document.getElementById("artifacts-file-count") && (document.getElementById("artifacts-file-count").textContent = `${arts.length} Artifacts`);
+    listEl.innerHTML = arts.map(art => `
+      <div class="p-2.5 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/50 rounded-xl flex items-center justify-between transition">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs shrink-0 border border-indigo-200 dark:border-indigo-800/40">
             <i class="fa-solid ${art.icon || 'fa-file'}"></i>
           </div>
-          <div>
-            <div class="font-bold text-white text-xs font-mono">${art.name}</div>
-            <div class="text-[10px] text-gray-400">${art.desc} • <span class="font-mono text-gray-300">${art.size}</span></div>
+          <div class="min-w-0">
+            <div class="font-bold text-slate-900 dark:text-white text-xs font-mono truncate">${art.name}</div>
+            <div class="text-[10px] text-slate-500 dark:text-gray-400 truncate">${art.desc} • <span class="font-mono text-slate-700 dark:text-gray-300 font-semibold">${art.size}</span></div>
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          ${art.url ? `<a href="${art.url}" download class="px-2.5 py-1 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 transition"><i class="fa-solid fa-download"></i> Download</a>` : '<span class="px-2 py-0.5 bg-slate-800 text-gray-400 rounded text-[9px] font-mono">Vault Stored</span>'}
+        <div class="flex items-center gap-1.5 shrink-0">
+          ${art.url ? `<a href="${art.url}" download class="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[9px] font-bold inline-flex items-center gap-1 transition"><i class="fa-solid fa-download text-[8px]"></i> Download</a>` : '<span class="px-1.5 py-0.2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-gray-400 rounded text-[8px] font-mono">Vault Stored</span>'}
         </div>
       </div>
     `).join("");
   }
 
-  openModal("artifacts-modal");
+  if (typeof openModal === "function") openModal("artifacts-modal");
 }
 
 function closeArtifactsModal() {
-  closeModal("artifacts-modal");
+  if (typeof closeModal === "function") closeModal("artifacts-modal");
 }

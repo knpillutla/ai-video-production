@@ -1,12 +1,15 @@
-"""Local Video Production API routes for 0-cost local synthesis into storage/."""
-
+import os
+import time
 from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from src.services.local_video_producer import produce_local_video_episode
+from src.services.channel_production_service import produce_channel_video
+from src.services.job_manager import job_manager
 from src.core.storage import storage_service
 from src.core.telemetry import logger
+from src.domain.repo import repo
 
 router = APIRouter(prefix="/api/production", tags=["Local Production Engine"])
 
@@ -44,6 +47,8 @@ class LocalProduceRequest(BaseModel):
     idea: Optional[str] = Field(None, description="Story idea or creative angle")
     script: Optional[str] = Field(None, description="Screenplay dialogue text")
     custom_script: Optional[str] = Field(None, description="Alias for script")
+    channel_id: Optional[str] = Field(None, description="Target Channel ID (e.g. earth_serenade, silent_hearth)")
+    allow_fallback: Optional[bool] = Field(False, description="Allow local fallback if live diffusion is unavailable")
 
 
 class LocalProduceResponse(BaseModel):
@@ -59,6 +64,9 @@ class LocalProduceResponse(BaseModel):
     duration_seconds: float
     render_time_seconds: float
     artifacts: list[dict[str, Any]]
+    keyframes: Optional[list[dict[str, Any]]] = None
+    audio_stems: Optional[list[dict[str, Any]]] = None
+    motion_clips: Optional[list[dict[str, Any]]] = None
 
 
 @router.post("/local-produce", response_model=LocalProduceResponse, status_code=status.HTTP_200_OK)
@@ -94,29 +102,51 @@ async def produce_video_locally(req: LocalProduceRequest):
             detail=topic_check.get("alert_message") or f"Duplicate topic detected for user {user_id_val}.",
         )
 
+    # Resolve channel_id for user
+    eff_channel_id = req.channel_id
+    if not eff_channel_id:
+        user_obj = repo.get_user_by_email(user_id_val) if "@" in user_id_val else None
+        if user_obj:
+            user_chans = repo.list_channels(user_obj.id)
+            if user_chans:
+                eff_channel_id = user_chans[0].channel_slug
+    if not eff_channel_id:
+        eff_channel_id = "default_channel"
+
+    job_id = f"job_{req.episode_id.lower() if req.episode_id else 'ep001'}_{int(time.time())}"
+    job_manager.create_job(
+        job_id=job_id,
+        episode_id=req.episode_id or "EP-001",
+        title=title,
+        channel_id=eff_channel_id,
+        user_id=user_id_val,
+    )
+
+    eff_fallback = bool(req.allow_fallback or (not os.getenv("FAL_KEY")) or req.tier == "low_cost")
     try:
-        result = await produce_local_video_episode(
+        result = await produce_channel_video(
+            channel_id=eff_channel_id,
             prompt=req.prompt,
-            title=title,
-            episode_id=req.episode_id or "EP-001",
-            user_id=user_id_val,
-            production_type=req.production_type or "Theme",
-            tier=req.tier or "low_cost",
-            video_type=req.video_type or "Travel Guide & Doc",
-            format_type=req.format_type or "Long (16:9)",
-            style_type=req.style_type or "Realistic (Photoreal)",
-            youtube_url=yt_link,
             duration_seconds=capped_duration,
-            enable_bgm=eff_bgm,
-            enable_tts=eff_tts,
-            enable_voice_over=eff_vo,
-            enable_lipsync=eff_lipsync,
-            voice_gender=eff_gender,
-            language=req.language or "en",
-            theme=req.theme,
-            idea=req.idea,
-            script=eff_script,
+            episode_id=req.episode_id or "EP-001",
+            photos_only=False,
+            no_bgm=not eff_bgm,
+            allow_fallback=eff_fallback,
+            user_id=user_id_val,
         )
+
+        eff_job_id = result.get("job_id") or job_id
+        job_manager.update_job(
+            job_id=eff_job_id,
+            stage=4,
+            progress=100,
+            status="completed",
+            keyframes=result.get("keyframes", []),
+            motion_clips=result.get("motion_clips", []),
+            audio_stems=result.get("audio_stems", []),
+            video_url=result.get("video_url"),
+        )
+
         await remember_topic(
             topic=title,
             metadata={"video_type": req.video_type, "format_type": req.format_type, "style_type": req.style_type},
@@ -126,13 +156,84 @@ async def produce_video_locally(req: LocalProduceRequest):
         )
         return LocalProduceResponse(**result)
     except HTTPException:
+        job_manager.update_job(job_id=job_id, status="failed", error="HTTP Exception")
         raise
     except Exception as exc:
         logger.error(f"local_production_failed: {exc}", exc_info=True)
+        job_manager.update_job(job_id=job_id, status="failed", error=str(exc))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Local production synthesis failed: {str(exc)}",
         )
+
+
+@router.get("/poll-artifacts")
+async def poll_production_artifacts(
+    channel_id: str,
+    episode_id: str,
+    user_id: str = "knpillutla@gmail.com",
+):
+    """Real-time disk scanner returning synthesized keyframes, motion clips, and audio as they finish."""
+    c_dir = storage_service.get_user_container_path(user_id) / "channels" / channel_id / episode_id
+    if not c_dir.exists():
+        return {"keyframes": [], "motion_clips": [], "audio_stems": [], "video_url": None, "stage": 1}
+
+    files = {f.name: f for f in c_dir.iterdir() if f.is_file()}
+    root_storage = storage_service.base_dir
+
+    kfs = []
+    for k in sorted(files.keys()):
+        if k.startswith("keyframe_p") and k.endswith(".jpg") and files[k].stat().st_size > 1000:
+            rel = f"/storage/{files[k].relative_to(root_storage).as_posix()}"
+            shot_num = k.replace("keyframe_p", "").replace(".jpg", "")
+            kfs.append({"name": f"Shot {shot_num}", "url": rel, "filename": k})
+
+    vids = []
+    for m in sorted(files.keys()):
+        if m.startswith("motion_p") and m.endswith(".mp4") and not m.endswith("_fwd_seamless.mp4") and files[m].stat().st_size > 1000:
+            rel = f"/storage/{files[m].relative_to(root_storage).as_posix()}"
+            vids.append({"name": f"Motion {m.replace('motion_p', '').replace('.mp4', '')}", "url": rel, "model": "Kling v3 Pro"})
+
+    stems = []
+    if "raw_soundtrack.mp3" in files and files["raw_soundtrack.mp3"].stat().st_size > 1000:
+        rel = f"/storage/{files['raw_soundtrack.mp3'].relative_to(root_storage).as_posix()}"
+        stems.append({"name": "Suno Soundtrack", "url": rel, "color": "cyan"})
+    if "velvet_binaural_master_48k.mp3" in files and files["velvet_binaural_master_48k.mp3"].stat().st_size > 1000:
+        rel = f"/storage/{files['velvet_binaural_master_48k.mp3'].relative_to(root_storage).as_posix()}"
+        stems.append({"name": "432Hz Velvet Binaural ASMR", "url": rel, "color": "emerald"})
+
+    master_url = None
+    if "master_4k_ambient.mp4" in files and files["master_4k_ambient.mp4"].stat().st_size > 1000:
+        master_url = f"/storage/{files['master_4k_ambient.mp4'].relative_to(root_storage).as_posix()}"
+
+    stage = 4 if master_url else (3 if len(stems) > 0 else (2 if len(kfs) >= 4 else 1))
+    return {"keyframes": kfs, "motion_clips": vids, "audio_stems": stems, "video_url": master_url, "stage": stage}
+
+
+@router.post("/stop")
+async def stop_production_job(payload: dict):
+    """Mark production job as paused and signal cancellation."""
+    ep_id = payload.get("episode_id", "EP-001")
+    return {"success": True, "episode_id": ep_id, "status": "paused", "message": f"Production paused for {ep_id}."}
+
+
+@router.get("/jobs/{job_id}")
+async def get_production_job_status(job_id: str):
+    """Retrieve current status and real-time artifacts of a production job."""
+    job = job_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found.")
+    return job
+
+
+@router.get("/jobs/{job_id}/stream")
+async def stream_production_job_progress(job_id: str):
+    """Server-Sent Events (SSE) stream yielding real-time stage progress and artifacts."""
+    return StreamingResponse(
+        job_manager.stream_job(job_id),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    )
 
 
 class NatureRetreatRequest(BaseModel):

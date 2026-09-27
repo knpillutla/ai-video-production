@@ -11,8 +11,13 @@ class ChannelBase(BaseModel):
     platform: str = "youtube"  # youtube | tiktok | instagram
     channel_name: str
     channel_handle: str | None = None
+    channel_slug: str | None = None
     primary_genre: str | None = None  # e.g. telugu_comedy, nature_wildlife
-    primary_language: str = "te"  # default audio language
+    primary_language: str = "en"  # default audio language
+    category: str = "General"
+    icon: str = "fa-clapperboard"
+    color: str = "indigo"
+    description: str = ""
     avatar_url: str | None = None
     default_tags: list[str] = Field(default_factory=list)
 
@@ -24,6 +29,22 @@ class ChannelCreate(ChannelBase):
     client_id: str | None = None
     client_secret: str | None = None
     refresh_token: str | None = None
+
+
+class ChannelUpdate(BaseModel):
+    """Payload to update an existing distribution channel."""
+
+    channel_name: str | None = None
+    channel_handle: str | None = None
+    channel_slug: str | None = None
+    primary_genre: str | None = None
+    primary_language: str | None = None
+    category: str | None = None
+    icon: str | None = None
+    color: str | None = None
+    description: str | None = None
+    default_tags: list[str] | None = None
+    is_active: bool | None = None
 
 
 class Channel(ChannelBase):

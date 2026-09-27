@@ -8,8 +8,8 @@
         <span>New</span>
       </button>
       <button type="button" onclick="switchCreationTab('archive')" id="btn-tab-creation-archive" class="px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded transition flex items-center gap-1">
-        <i class="fa-solid fa-folder-open text-[8px]"></i>
-        <span>Archive</span>
+        <i class="fa-solid fa-film text-[8px]"></i>
+        <span>Episodes &amp; Queue</span>
         <span id="channel-archive-badge-count" class="px-1 py-0.1 rounded-full text-[8px] bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-gray-300 font-mono">0</span>
       </button>
     </div>
@@ -132,11 +132,12 @@
       <div class="flex items-center justify-between">
         <label for="youtube-prompt-input" id="prompt-input-label" class="text-[10px] font-bold text-slate-900 dark:text-gray-200 flex items-center gap-1">
           <i class="fa-solid fa-compass text-emerald-500 text-[10px]"></i>
-          <span>Topic / Prompt:</span>
+          <span>Topic / Prompt (Optional):</span>
         </label>
+        <span class="text-[8px] font-mono text-slate-500 dark:text-gray-400">Autonomously derived if empty</span>
       </div>
       <div class="relative flex-1 min-h-[55px]">
-        <textarea id="youtube-prompt-input" rows="2" placeholder="Describe topic or pick a niche above..." class="w-full h-full min-h-[55px] p-2 bg-slate-50 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-700/60 rounded-xl text-slate-900 dark:text-white text-[11px] placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
+        <textarea id="youtube-prompt-input" rows="2" placeholder="Optional: Enter custom theme, mood, or leave empty to use channel default..." class="w-full h-full min-h-[55px] p-2 bg-slate-50 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-700/60 rounded-xl text-slate-900 dark:text-white text-[11px] placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
       </div>
     </div>
 

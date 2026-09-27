@@ -116,67 +116,31 @@ function wizardConfirmAndProduce() {
   const enableTts = enableTtsToggle ? enableTtsToggle.checked : false;
   const enableLipsync = enableLipsyncToggle ? enableLipsyncToggle.checked : false;
 
+  const chId = (typeof currentActiveChannelId !== "undefined" && currentActiveChannelId !== "all") ? currentActiveChannelId : "silent_hearth";
+  const isTestMode = (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test");
+  const effCost = isTestMode ? 0.02 : tier.priceUsd;
   const newVid = {
-    id: newId,
-    jobId: uniqueJobId,
-    title: title,
-    concept: concept,
-    videoType: videoType,
-    formatType: formatType,
+    id: newId, episode_id: newId, jobId: uniqueJobId, title: title, concept: concept, story_topic: concept,
+    channel_id: chId, channelId: chId, genre: videoType || "Relaxation & ASMR",
+    videoType: videoType, formatType: formatType,
     styleType: sty.includes("Pixar") ? "3D Animation" : (sty.includes("Anime") ? "Anime (Shonen)" : "Realistic (Photoreal)"),
-    productionType: prodType,
-    durationSeconds: durationSec,
-    duration: `${durationSec}s`,
-    status: "queued",
-    youtubeStatus: "unpublished",
-    youtubeChannel: null,
-    youtubeUrl: null,
-    youtubeReferenceUrl: url || null,
-    videoUrl: "/static/videos/preview_master.mp4",
-    language: lang,
-    format: fmt,
-    style: sty,
-    tierKey: tier.key,
-    tierName: tier.name + ` (${tier.priceStr})`,
-    cost: tier.priceUsd,
-    costStr: tier.priceStr,
-    voiceGender: voiceGender,
-    enableBgm: enableBgm,
-    enableVoiceOver: enableVoiceOver,
-    enableTts: enableTts,
-    enableLipsync: enableLipsync,
-    createdAt: Date.now(),
-    startedAt: null,
-    completedAt: null,
-    publishedAt: null
+    productionType: prodType, durationSeconds: durationSec, duration: `${durationSec}s`, executionMode: isTestMode ? "test" : "prod",
+    status: "queued", youtubeStatus: "unpublished", youtubeChannel: null, youtubeUrl: null,
+    youtubeReferenceUrl: url || null, videoUrl: "/static/videos/preview_master.mp4",
+    language: lang, format: fmt, style: sty, tierKey: tier.key, tierName: tier.name + ` (${tier.priceStr})`,
+    cost: effCost, cost_usd: effCost, costStr: `$${effCost.toFixed(2)} USD`,
+    voiceGender: voiceGender, enableBgm: enableBgm, enableVoiceOver: enableVoiceOver,
+    enableTts: enableTts, enableLipsync: enableLipsync,
+    pipelineStrategy: typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "auto",
+    createdAt: Date.now(), startedAt: null, completedAt: null, publishedAt: null
   };
 
   studioVideos.unshift(newVid);
   if (typeof saveVideosState === "function") saveVideosState();
-  switchTab("ledger");
-  const mainEl = document.querySelector("main");
-  if (mainEl) mainEl.scrollTop = 0;
-
-  renderStudioVideoHistory();
-  if (typeof selectLedgerVideo === "function") selectLedgerVideo(newId);
-
-  const banner = document.getElementById("ledger-queued-banner");
-  const bannerId = document.getElementById("banner-request-id");
-  const bannerDetail = document.getElementById("banner-request-detail");
-  if (banner) {
-    if (bannerId) bannerId.textContent = uniqueJobId;
-    if (bannerDetail) bannerDetail.textContent = `Episode ${newId} ("${title}") is now queued. Production Type: ${prodType} • Billed: ${tier.priceStr}. Track live progress below.`;
-    banner.classList.remove("hidden");
-  }
-
-  showStudioModal({
-    title: "Request Queued",
-    message: `Request is queued with Request ID: ${uniqueJobId}\n\nEpisode: ${newId} — "${title}"\nProduction Type: ${prodType}\nTier: ${tier.name} (${tier.priceStr})`,
-    nextStep: "Redirected to Video Ledger to monitor live synthesis."
-  });
-
-  if (typeof startLocalVideoProductionJob === "function") {
-    startLocalVideoProductionJob(newVid);
+  if (typeof switchCreationTab === "function") switchCreationTab("archive");
+  if (typeof renderStudioVideoHistory === "function") renderStudioVideoHistory();
+  if (typeof startStudioLiveStageProgress === "function") {
+    startStudioLiveStageProgress(newVid, newVid.pipelineStrategy);
   }
 }
 

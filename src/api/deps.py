@@ -11,32 +11,41 @@ from src.domain.user import User
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme)) -> User:
-    """Validate JWT token and inject current authenticated user into route."""
-    if not credentials or not credentials.credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
+DEFAULT_USER_EMAIL = "knpillutla@gmail.com"
+DEFAULT_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
+
+
+def get_or_create_default_user() -> User:
+    """Ensure default workspace user knpillutla@gmail.com exists in repo."""
+    user = repo.get_user(DEFAULT_USER_ID) or repo.get_user_by_email(DEFAULT_USER_EMAIL)
+    if not user:
+        user = User(
+            id=DEFAULT_USER_ID,
+            email=DEFAULT_USER_EMAIL,
+            display_name="Krishna Pillutla",
+            google_sub="google_sub_knpillutla",
+            storage_container_name="user-knpillutla-gmail-com",
+            api_credit_balance_usd=100.0,
         )
+        repo.save_user(user)
+    return user
+
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme)) -> User:
+    """Validate JWT token or inject default user knpillutla@gmail.com for local studio."""
+    if not credentials or not credentials.credentials:
+        return get_or_create_default_user()
+
     token = credentials.credentials
     try:
         payload = decode_access_token(token)
         user_id = UUID(payload.get("sub"))
+        user = repo.users.get(user_id)
+        if user:
+            return user
     except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired session token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    user = repo.users.get(user_id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User account not found",
-        )
-    return user
+        pass
+    return get_or_create_default_user()
 
 
-__all__ = ["get_current_user", "bearer_scheme"]
+__all__ = ["get_current_user", "bearer_scheme", "get_or_create_default_user"]

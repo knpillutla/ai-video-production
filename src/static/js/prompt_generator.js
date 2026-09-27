@@ -4,8 +4,7 @@ let currentCreationMode = "theme";
 function selectProductionTier(tierKey) {
   currentTier = tierKey;
   ["low_cost", "balanced", "cinematic"].forEach(t => {
-    const card = document.getElementById("tier-card-" + t);
-    const radio = document.getElementById("tier-radio-" + t);
+    const card = document.getElementById("tier-card-" + t), radio = document.getElementById("tier-radio-" + t);
     if (!card) return;
     const isSel = t === tierKey;
     card.className = isSel
@@ -13,8 +12,7 @@ function selectProductionTier(tierKey) {
       : "p-3 bg-slate-950/70 border border-slate-800 hover:border-indigo-500/50 rounded-xl cursor-pointer transition";
     if (radio) radio.checked = isSel;
   });
-  const sel = document.getElementById("studio-tier-select");
-  const pill = document.getElementById("sidebar-tier-price-pill");
+  const sel = document.getElementById("studio-tier-select"), pill = document.getElementById("sidebar-tier-price-pill");
   const tier = PRODUCTION_TIERS[tierKey] || PRODUCTION_TIERS.balanced;
   if (sel) sel.value = tierKey;
   if (pill) pill.textContent = tier.priceStr;
@@ -23,49 +21,36 @@ function selectProductionTier(tierKey) {
 function selectNicheRadio(nicheKey) {
   const cfg = (typeof NICHE_RADIO_CONFIGS !== "undefined" ? NICHE_RADIO_CONFIGS : {})[nicheKey];
   if (!cfg) return;
-
   const promptInput = document.getElementById("youtube-prompt-input");
-  if (promptInput) {
-    promptInput.value = cfg.prompt;
-    flashPromptInput(promptInput);
-  }
-
+  if (promptInput) { promptInput.value = cfg.prompt; flashPromptInput(promptInput); }
   const setC = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
   const setV = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-
-  setC("studio-toggle-bgm", cfg.bgm);
-  setC("studio-toggle-voice-over", cfg.voice);
-  setC("studio-toggle-pure-nature", cfg.pureNature);
-  setV("studio-fps", cfg.fps || "24");
-
-  if (typeof togglePureNatureMode === "function") {
-    togglePureNatureMode(cfg.pureNature);
-  }
+  setC("studio-toggle-bgm", cfg.bgm); setC("studio-toggle-voice-over", cfg.voice); setV("studio-fps", cfg.fps || "24");
 }
 
 const MODE_CONFIG = {
   theme: {
-    labelHtml: '<i class="fa-solid fa-compass text-emerald-500 text-xs"></i> <span>Enter Your Theme / Topic Description:</span>',
+    labelHtml: '<i class="fa-solid fa-compass text-emerald-500 text-xs"></i> <span>Theme / Topic Description (Optional):</span>',
     sublabel: "World Cities, Nature, Mountains, Oceans & Architecture",
-    ph: "Describe your theme or select a niche radio button above...",
+    ph: "Optional: Describe custom theme, mood, or leave empty to use channel default...",
     hint: "Theme active • World Cities, Villages, Mountains, Oceans & Architecture"
   },
   idea: {
-    labelHtml: '<i class="fa-solid fa-lightbulb text-yellow-500 text-xs"></i> <span>Enter Your Creative Story Idea / Concept:</span>',
+    labelHtml: '<i class="fa-solid fa-lightbulb text-yellow-500 text-xs"></i> <span>Story Idea / Concept (Optional):</span>',
     sublabel: "Character arcs, satirical situations, narrative premise",
-    ph: "Describe your creative story concept, characters, comedic angle...",
+    ph: "Optional: Describe story concept, characters, comedic angle, or leave empty...",
     hint: "Idea active • Narrative concepts, characters & comedy"
   },
   script: {
-    labelHtml: '<i class="fa-solid fa-scroll text-purple-500 text-xs"></i> <span>Enter Your Script / Screenplay / Dialogue:</span>',
+    labelHtml: '<i class="fa-solid fa-scroll text-purple-500 text-xs"></i> <span>Script / Screenplay (Optional):</span>',
     sublabel: "Full scene screenplay, voiceover narration, dialogue beats",
-    ph: "Paste your screenplay, dialogue lines, voiceover narration, or scene breakdown...",
+    ph: "Optional: Paste screenplay, dialogue lines, or leave empty...",
     hint: "Script active • Full screenplay, scene beats or dialogue stems"
   },
   youtube: {
-    labelHtml: '<i class="fa-solid fa-wand-magic-sparkles text-indigo-500 text-xs"></i> <span>Enter Your Prompt / Reference Adaptation Styling:</span>',
+    labelHtml: '<i class="fa-brands fa-youtube text-red-500 text-xs"></i> <span>Reference Adaptation Styling (Optional):</span>',
     sublabel: "Styling directions, camera motion, cinematic treatment",
-    ph: "Enter prompt or styling directions to apply from reference video...",
+    ph: "Optional: Enter styling directions to apply from reference video...",
     hint: "YouTube Reference active • Paste video link & prompt to apply reference styling"
   }
 };
@@ -89,22 +74,16 @@ function renderTemplatesForMode(mode) {
       </div>
       <div class="font-bold text-slate-900 dark:text-white text-xs group-hover:text-indigo-300">${t.title}</div>
       <div class="text-[10px] text-slate-600 dark:text-gray-400 leading-tight">${t.desc}</div>
-    </div>
-  `).join("");
+    </div>`).join("");
 }
 
 function applyTemplate(mode, idxOrObj) {
   const list = TEMPLATES_BY_MODE[mode] || TEMPLATES_BY_MODE.theme;
   const t = typeof idxOrObj === "number" ? list[idxOrObj] : idxOrObj;
   if (!t) return;
-  const pInput = document.getElementById("youtube-prompt-input");
-  const uInput = document.getElementById("youtube-url-input");
-
-  if (mode === "youtube") {
-    if (uInput) { uInput.value = t.url || ""; flashPromptInput(uInput); }
-  } else if (uInput) { uInput.value = ""; }
+  const pInput = document.getElementById("youtube-prompt-input"), uInput = document.getElementById("youtube-url-input");
+  if (mode === "youtube") { if (uInput) { uInput.value = t.url || ""; flashPromptInput(uInput); } } else if (uInput) { uInput.value = ""; }
   if (pInput) { pInput.value = t.prompt; flashPromptInput(pInput); }
-
   clearTemplateCardHighlights();
   document.getElementById("creative-card-" + t.id)?.classList.add("ring-2", "ring-indigo-500");
 }
@@ -113,53 +92,24 @@ function setCreationMode(mode, autoPopulate = false) {
   currentCreationMode = mode;
   ["theme", "idea", "script", "youtube"].forEach(m => {
     const btn = document.getElementById("mode-pill-" + m);
-    if (btn) {
-      btn.className = m === mode
-        ? "px-3.5 py-1 text-xs font-bold rounded-lg transition bg-indigo-600 text-white shadow flex items-center gap-1.5 ring-1 ring-indigo-400"
-        : "px-3.5 py-1 text-xs font-medium text-gray-400 hover:text-white rounded-lg transition flex items-center gap-1.5";
-    }
+    if (btn) btn.className = m === mode
+      ? "px-3.5 py-1 text-xs font-bold rounded-lg transition bg-indigo-600 text-white shadow flex items-center gap-1.5 ring-1 ring-indigo-400"
+      : "px-3.5 py-1 text-xs font-medium text-gray-400 hover:text-white rounded-lg transition flex items-center gap-1.5";
   });
 
-  const textarea = document.getElementById("youtube-prompt-input");
-  const urlInput = document.getElementById("youtube-url-input");
-  const urlContainer = document.getElementById("youtube-url-container");
-  const genreShelf = document.getElementById("theme-genre-shelf");
-  const hint = document.getElementById("creation-mode-hint");
-  const labelEl = document.getElementById("prompt-input-label");
-  const sublabelEl = document.getElementById("prompt-input-sublabel");
+  const textarea = document.getElementById("youtube-prompt-input"), urlInput = document.getElementById("youtube-url-input");
+  const urlContainer = document.getElementById("youtube-url-container"), genreShelf = document.getElementById("theme-genre-shelf");
+  const hint = document.getElementById("creation-mode-hint"), labelEl = document.getElementById("prompt-input-label"), sublabelEl = document.getElementById("prompt-input-sublabel");
   const cfg = MODE_CONFIG[mode] || MODE_CONFIG.theme;
 
   if (labelEl && cfg.labelHtml) labelEl.innerHTML = cfg.labelHtml;
   if (sublabelEl && cfg.sublabel) sublabelEl.textContent = cfg.sublabel;
-
-  if (textarea) {
-    textarea.placeholder = cfg.ph;
-    if (hint) hint.textContent = cfg.hint;
-    if (autoPopulate) {
-      if (mode === "youtube") {
-        if (urlInput && !urlInput.value) urlInput.value = MODE_STARTERS.youtube;
-        textarea.value = "India in 4K - Apply drone aerials, golden-hour temple lighting, and sitar soundtrack";
-        flashPromptInput(urlInput);
-      } else {
-        textarea.value = MODE_STARTERS[mode] || "";
-      }
-      flashPromptInput(textarea);
-    }
-  }
-
-  if (genreShelf) {
-    genreShelf.classList.toggle("hidden", mode !== "theme");
-  }
-
+  if (textarea) { textarea.placeholder = cfg.ph; if (hint) hint.textContent = cfg.hint; }
+  if (genreShelf) genreShelf.classList.toggle("hidden", mode !== "theme");
   if (urlContainer) {
-    if (mode === "youtube") {
-      urlContainer.classList.remove("hidden");
-    } else {
-      urlContainer.classList.add("hidden");
-      if (urlInput) urlInput.value = "";
-    }
+    urlContainer.classList.toggle("hidden", mode !== "youtube");
+    if (mode !== "youtube" && urlInput) urlInput.value = "";
   }
-
   renderTemplatesForMode(mode);
 }
 
@@ -170,8 +120,7 @@ function flashPromptInput(el) {
 }
 
 function clearStudioInputs() {
-  const pInput = document.getElementById("youtube-prompt-input");
-  const uInput = document.getElementById("youtube-url-input");
+  const pInput = document.getElementById("youtube-prompt-input"), uInput = document.getElementById("youtube-url-input");
   if (pInput) { pInput.value = ""; pInput.focus(); flashPromptInput(pInput); }
   if (uInput) uInput.value = "";
   document.querySelectorAll("input[name='niche_theme_radio']").forEach(r => r.checked = false);
@@ -180,24 +129,42 @@ function clearStudioInputs() {
   setV("studio-duration", "10"); setC("studio-toggle-bgm", true); setC("studio-toggle-voice-over", true);
   setC("studio-toggle-tts", false); setC("studio-toggle-lipsync", false);
   setV("studio-voice-gender", "female"); setV("studio-language", "en");
-  clearTemplateCardHighlights();
-  selectProductionTier("low_cost");
+  clearTemplateCardHighlights(); selectProductionTier("low_cost");
 }
 
 function deriveTitleFromInput(text, mode) {
-  if (!text) return mode === "youtube" ? "Adaptive Remake" : "Explore Niagara Falls";
+  if (!text) return mode === "youtube" ? "Adaptive Remake" : "Scenic Nature Sanctuary";
   const firstLine = text.split("\n").map(l => l.trim()).find(l => l.length > 0) || text;
   const clean = firstLine.replace(/^(title|theme|idea|script|scene\s*\d*)\s*[:\-]\s*/i, "").trim();
   return clean.length > 40 ? clean.slice(0, 38) + "..." : clean;
 }
 
 function quickTestProduceFromPrompt() {
-  const promptInput = document.getElementById("youtube-prompt-input");
-  const urlInput = document.getElementById("youtube-url-input");
+  const promptInput = document.getElementById("youtube-prompt-input"), urlInput = document.getElementById("youtube-url-input");
   let userPrompt = (promptInput?.value || "").trim();
   const userUrl = (urlInput?.value || "").trim();
 
-  if (!userPrompt && !userUrl) userPrompt = MODE_STARTERS[currentCreationMode] || "Untamed Rainforests";
+  const selChan = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel && selectedStudioChannel !== "all")
+    ? selectedStudioChannel
+    : ((typeof currentActiveChannelId !== "undefined" && currentActiveChannelId && currentActiveChannelId !== "all") ? currentActiveChannelId : null);
+
+  if (!userPrompt && !userUrl) {
+    const checkedRadio = document.querySelector("input[name='niche_theme_radio']:checked");
+    if (checkedRadio && typeof NICHE_RADIO_CONFIGS !== "undefined" && NICHE_RADIO_CONFIGS[checkedRadio.value]) {
+      userPrompt = NICHE_RADIO_CONFIGS[checkedRadio.value].prompt;
+    } else if (selChan === "earth_serenade") {
+      userPrompt = "Scenic Nature Sanctuary & Alpine Streams";
+    } else if (selChan === "silent_hearth") {
+      userPrompt = "Cozy Fireplace Hearth & Snowy Cabin ASMR";
+    } else if (selChan === "rain_retreat") {
+      userPrompt = "Forest River Rain & Relaxing Water Ripples";
+    } else if (selChan === "cineai_docs") {
+      userPrompt = "Blue-Chip Nature Wildlife & Mountain Documentary";
+    } else {
+      userPrompt = "4K Cinematic Visual Landscape";
+    }
+  }
+
   if (promptInput) promptInput.value = "";
   if (urlInput) urlInput.value = "";
   clearTemplateCardHighlights();
@@ -220,62 +187,59 @@ function quickTestProduceFromPrompt() {
   } else if (currentCreationMode === "script") { vType = "Web Series"; }
 
   const tier = PRODUCTION_TIERS[currentTier] || PRODUCTION_TIERS.low_cost;
-  currentUser.balance_usd = Math.max(0, currentUser.balance_usd - tier.priceUsd);
+  const isTestMode = (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test");
+  const effCost = isTestMode ? 0.02 : tier.priceUsd;
+  currentUser.balance_usd = Math.max(0, currentUser.balance_usd - effCost);
   saveUserState();
 
   const getChk = id => { const el = document.getElementById(id); return el ? el.checked : true; };
   const getVal = (id, fallback) => { const el = document.getElementById(id); return el?.value || fallback; };
+  const durationSec = isTestMode ? (typeof activeTestDuration !== "undefined" ? activeTestDuration : 5) : parseInt(getVal("studio-duration", "90"), 10);
+  const numShots = isTestMode ? (durationSec <= 5 ? 1 : 2) : 4;
   const langVal = getVal("studio-language", "en");
-  const durationSec = parseInt(getVal("studio-duration", "10"), 10);
+
+  if (!selChan) {
+    alert("⚠️ Action Required: You must create and select a YouTube channel before producing or testing a video.\n\nPlease click '+ Create Channel' in the top bar to set up your channel handle and isolated storage.");
+    if (typeof openChannelInspectorModal === "function") openChannelInspectorModal();
+    else if (typeof switchTab === "function") switchTab("channels");
+    return;
+  }
+
+  const chId = selChan;
+  const chGenre = (chId === "silent_hearth") ? "Fireplace & ASMR" : (chId === "earth_serenade" ? "4K Nature Ambiance" : (chId === "cineai_docs" ? "24fps BBC Nature Doc" : (chId === "telugu_comedy" ? "Comedy Satire Shorts" : vType)));
 
   const newId = `EP-00${studioVideos.length + 1}`;
   const uniqueJobId = `job_${newId.toLowerCase()}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
   const newVid = {
-    id: newId, jobId: uniqueJobId, title, concept,
-    videoType: vType, formatType: fmtType, styleType: styType, productionType: prodType,
+    id: newId, episode_id: newId, jobId: uniqueJobId, title, concept, story_topic: concept,
+    channel_id: chId, channelId: chId, genre: chGenre,
+    videoType: chGenre, formatType: fmtType, styleType: styType, productionType: prodType,
     status: "queued", youtubeStatus: "unpublished", youtubeChannel: null, youtubeUrl: null,
     youtubeReferenceUrl: ytUrl, videoUrl: "/static/videos/preview_master.mp4",
-    durationSeconds: durationSec, duration: `${durationSec}s`,
+    durationSeconds: durationSec, duration: `${durationSec}s`, numShots, num_shots: numShots, executionMode: isTestMode ? "test" : "prod",
     language: langVal === "te" ? "Telugu (te)" : (langVal === "hi" ? "Hindi (hi)" : "English (en)"),
     langCode: langVal, format: fmtStr, style: "Cinematic Photoreal",
     tierKey: tier.key, tierName: `${tier.name} (${tier.priceStr})`,
-    cost: tier.priceUsd, costStr: tier.priceStr,
+    cost: effCost, cost_usd: effCost, costStr: `$${effCost.toFixed(2)} USD`,
     theme: themeVal, idea: ideaVal, script: scriptVal,
     enableBgm: getChk("studio-toggle-bgm"), enableVoiceOver: getChk("studio-toggle-voice-over"),
     enableTts: document.getElementById("studio-toggle-tts")?.checked || false,
     enableLipsync: document.getElementById("studio-toggle-lipsync")?.checked || false,
+    allowFallback: document.getElementById("studio-toggle-fallback")?.checked || false,
     voiceGender: getVal("studio-voice-gender", "female"),
+    pipelineStrategy: typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "auto",
     createdAt: Date.now(), startedAt: null, completedAt: null, publishedAt: null
   };
 
   studioVideos.unshift(newVid);
   if (typeof saveVideosState === "function") saveVideosState();
-  if (typeof switchTab === "function") switchTab("ledger");
-  document.querySelector("main")?.scrollTo(0, 0);
-
-  renderStudioVideoHistory();
-  if (typeof selectLedgerVideo === "function") selectLedgerVideo(newId);
-
-  const banner = document.getElementById("ledger-queued-banner");
-  if (banner) {
-    document.getElementById("banner-request-id")?.replaceChildren(uniqueJobId);
-    const detail = document.getElementById("banner-request-detail");
-    if (detail) detail.textContent = `Episode ${newId} ("${title}") is now queued. Production Type: ${prodType} • Billed: ${tier.priceStr}.`;
-    banner.classList.remove("hidden");
-  }
-
-  showStudioModal({
-    title: "Request Queued",
-    message: `Request is queued with Request ID: ${uniqueJobId}\n\nEpisode: ${newId} — "${title}"\nProduction Type: ${prodType}\nTier: ${tier.name} (${tier.priceStr})`,
-    nextStep: "Redirected to Video Ledger to monitor live synthesis."
-  });
-
-  if (typeof startLocalVideoProductionJob === "function") startLocalVideoProductionJob(newVid);
+  if (typeof switchCreationTab === "function") switchCreationTab("archive");
+  if (typeof renderStudioVideoHistory === "function") renderStudioVideoHistory();
+  if (typeof startStudioLiveStageProgress === "function") startStudioLiveStageProgress(newVid, newVid.pipelineStrategy);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const pInput = document.getElementById("youtube-prompt-input");
-  const uInput = document.getElementById("youtube-url-input");
+  const pInput = document.getElementById("youtube-prompt-input"), uInput = document.getElementById("youtube-url-input");
   if (pInput) pInput.addEventListener("input", clearTemplateCardHighlights);
   if (uInput) uInput.addEventListener("input", clearTemplateCardHighlights);
   setCreationMode("theme", false);

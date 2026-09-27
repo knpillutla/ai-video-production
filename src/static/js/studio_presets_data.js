@@ -93,7 +93,7 @@ const TEMPLATES_BY_MODE = {
 };
 
 const MODE_STARTERS = {
-  theme: "Walking in the Rain",
+  theme: "Gentle Ocean Waves & Coastal Sunset - Rolling crystalline swells, golden horizon reflections, soothing binaural tide ebb and flow",
   idea: "Delhi techie juggling dual remote jobs comedy satire",
   script: "SCENE 1: EXT. KITCHEN - DAY\nBoiling spiced masala chai heat transfer in 60s",
   youtube: "https://www.youtube.com/watch?v=-BLxlHRYpac"

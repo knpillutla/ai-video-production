@@ -24,6 +24,13 @@
       <span>New Video</span>
     </button>
 
+    <!-- Live Log Console Toggle -->
+    <button onclick="toggleLogConsoleDrawer()" id="btn-top-log-console" class="px-2 py-1 bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 text-[11px] rounded-lg text-emerald-400 font-mono transition flex items-center gap-1.5 shadow-sm" title="Toggle Real-Time Production Log Console (Ctrl+`)">
+      <i class="fa-solid fa-terminal text-[10px] text-emerald-400"></i>
+      <span>Console</span>
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+    </button>
+
     <!-- Theme Switcher -->
     <button onclick="toggleTheme()" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700 border border-[var(--border)] text-[11px] rounded-lg text-gray-200 transition flex items-center gap-1" title="Toggle Theme">
       <i id="theme-toggle-icon" class="fa-solid fa-circle-half-stroke text-indigo-400 text-[10px]"></i>
@@ -42,8 +49,8 @@
     </div>
 
     <!-- User Profile Badge -->
-    <div onclick="openModal('auth-modal')" class="flex items-center gap-1.5 px-2 py-0.5 bg-slate-800/80 border border-[var(--border)] rounded-lg cursor-pointer hover:border-indigo-500/60 transition" title="Google Account Profile">
-      <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-bold text-[9px] flex items-center justify-center border border-indigo-400">KP</div>
+    <div onclick="openAuthOrProfileModal()" class="flex items-center gap-1.5 px-2 py-0.5 bg-slate-800/80 border border-[var(--border)] rounded-lg cursor-pointer hover:border-indigo-500/60 transition" title="Google Account Profile">
+      <div id="user-avatar-display" class="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-bold text-[9px] flex items-center justify-center border border-indigo-400">KP</div>
       <span id="user-name-display" class="font-semibold text-white text-[11px]">Krishna P.</span>
     </div>
   </div>

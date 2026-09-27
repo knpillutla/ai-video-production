@@ -12,52 +12,18 @@ function loadSavedVideos() {
   try {
     const saved = localStorage.getItem("cineai_videos");
     let videos = (saved) ? JSON.parse(saved) : [];
-    if (!Array.isArray(videos) || videos.length === 0) {
-      videos = [...SEED_VIDEOS];
-    }
-    // Merge all seed records
-    SEED_VIDEOS.forEach(sv => {
-      const idx = videos.findIndex(v => v.id === sv.id);
-      if (idx === -1) {
-        videos.push({ ...sv });
-      } else {
-        // Enforce channelId from seed record
-        if (sv.channelId) videos[idx].channelId = sv.channelId;
-      }
-    });
-
-    videos.forEach(v => {
-      if (!v.jobId) v.jobId = `job_${v.id.toLowerCase()}_${Date.now().toString(36)}`;
-      if (!v.videoType) v.videoType = (v.format && v.format.includes("Short")) ? "Comedy Reel" : "Web Series";
-      if (!v.formatType) v.formatType = (v.format && v.format.includes("Short")) ? "Short (9:16)" : "Long (16:9)";
-      if (!v.styleType) v.styleType = v.style || "Realistic (Photoreal)";
-      if (!v.productionType) v.productionType = v.youtubeReferenceUrl ? "YouTube Reference" : "Prompt";
-
+    if (!Array.isArray(videos)) videos = [];
+    
+    // Purge legacy mock seed records that are not real user productions
+    videos = videos.filter(v => {
       const vidId = (v.id || "").toLowerCase();
-      const title = (v.title || "").toLowerCase();
-      if (vidId.includes("swiss_alps") || title.includes("swiss") || title.includes("lauterbrunnen") || vidId === "ep-004") {
-        v.channelId = "earth_serenade";
-      } else if (vidId.includes("blizzard") || title.includes("blizzard") || title.includes("hearth") || title.includes("fireplace") || vidId === "ep-005") {
-        v.channelId = "silent_hearth";
-      } else if (vidId.includes("cable") || vidId === "ep-002" || title.includes("ocean") || title.includes("documentary")) {
-        v.channelId = "cineai_docs";
-      } else if (vidId === "ep-001" || vidId === "ep-003" || title.includes("chai") || title.includes("techie") || title.includes("comedy")) {
-        v.channelId = "telugu_comedy";
-      } else if (!v.channelId) {
-        v.channelId = "earth_serenade";
-      }
-
-      if (v.status === "processing" || v.status === "queued") {
-        v.status = "completed";
-        v.startedAt = v.startedAt || (v.createdAt + 2000);
-        v.completedAt = v.completedAt || (v.createdAt + 6500);
-        v.videoUrl = v.videoUrl || "/static/videos/preview_master.mp4";
-      }
+      if (vidId.startsWith("ep_swiss_alps_") || vidId.startsWith("ep_blizzard_")) return false;
+      return true;
     });
     return videos;
   } catch (e) {
     console.warn("Storage read error:", e);
-    return [...SEED_VIDEOS];
+    return [];
   }
 }
 
@@ -77,10 +43,12 @@ async function syncChannelEpisodesFromBackend() {
     const res = await fetch("/api/channels/episodes");
     const data = await res.json();
     if (data.status === "ok" && Array.isArray(data.episodes)) {
-      let updated = false;
-      data.episodes.forEach(ep => {
+      const backendEpIds = new Set(data.episodes.map(e => e.episode_id));
+      const inFlight = studioVideos.filter(v => (v.status === "processing" || v.status === "queued") && !backendEpIds.has(v.id));
+
+      const backendRecords = data.episodes.map(ep => {
         const costVal = ep.cost_usd || 1.64;
-        const record = {
+        return {
           id: ep.episode_id, jobId: `job_${ep.episode_id}`, title: ep.title || ep.story_topic,
           concept: ep.story_topic || ep.title, videoType: ep.category === "Music" ? "Relaxation & ASMR" : "Nature Soundscape",
           formatType: "Long (16:9)", styleType: "Cinematic 4K", productionType: "Theme",
@@ -95,16 +63,12 @@ async function syncChannelEpisodesFromBackend() {
           completedAt: ep.created_timestamp ? ep.created_timestamp * 1000 + 8500 : Date.now() - 3590000,
           publishedAt: ep.created_timestamp ? ep.created_timestamp * 1000 + 15000 : Date.now() - 3580000
         };
-        const idx = studioVideos.findIndex(v => v.id === ep.episode_id);
-        if (idx === -1) {
-          studioVideos.push(record);
-          updated = true;
-        } else {
-          studioVideos[idx] = { ...studioVideos[idx], ...record };
-          updated = true;
-        }
       });
-      if (updated) { saveVideosState(); renderStudioVideoHistory(); }
+
+      studioVideos = [...inFlight, ...backendRecords];
+      saveVideosState();
+      renderStudioVideoHistory();
+      if (typeof filterChannelArchive === "function") filterChannelArchive();
     }
   } catch (e) { console.debug("Backend episode sync notice:", e); }
 }
@@ -140,47 +104,43 @@ function renderStudioVideoHistory() {
   }
 
   tbody.innerHTML = filtered.map(v => {
-    const statusBadges = { completed: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40", processing: "bg-blue-500/20 text-blue-400 border border-blue-500/40 animate-pulse", queued: "bg-amber-500/20 text-amber-400 border border-amber-500/40" };
-    const statusBadge = statusBadges[v.status] || "bg-gray-500/20 text-gray-400 border border-gray-500/30";
-    const typeBadge = (v.productionType === "Theme") ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30";
+    const statusBadges = {
+      completed: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40",
+      processing: "bg-blue-500/15 text-blue-800 dark:text-blue-300 border border-blue-500/40 animate-pulse",
+      queued: "bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/40"
+    };
+    const statusBadge = statusBadges[v.status] || "bg-slate-100 text-slate-700 dark:bg-gray-500/20 dark:text-gray-400 border border-slate-300 dark:border-gray-500/30";
+    const typeBadge = (v.productionType === "Theme") ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30" : "bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border border-indigo-500/30";
     const isShort = (v.formatType && v.formatType.includes("Short")) || (v.format && v.format.includes("Short"));
-    const fmtBadge = isShort ? "bg-amber-500/20 text-amber-300 border border-amber-500/40" : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40";
+    const fmtBadge = isShort ? "bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/40" : "bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-500/40";
     const ytBadge = v.youtubeStatus === "published"
-      ? `<div class="space-y-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-900/40 text-red-300 border border-red-500/40"><i class="fa-brands fa-youtube text-red-500"></i> Published</span><div class="font-mono text-[9px] text-red-300">${formatTimestamp(v.publishedAt)}</div></div>`
-      : `<div class="space-y-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-800 text-gray-400 border border-slate-700">Unpublished</span><div class="font-mono text-[9px] text-gray-500">—</div></div>`;
-    const playBtn = `<button onclick="playStudioVideo('${v.id}')" class="px-2 py-1 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 text-indigo-300 hover:text-white rounded-lg text-[10px] font-bold inline-flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-play text-[9px]"></i> Watch</button>`;
+      ? `<div class="space-y-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border border-red-300 dark:border-red-500/40"><i class="fa-brands fa-youtube text-red-600"></i> Published</span><div class="font-mono text-[9px] text-red-700 dark:text-red-300">${formatTimestamp(v.publishedAt)}</div></div>`
+      : `<div class="space-y-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-gray-400 border border-slate-300 dark:border-slate-700">Unpublished</span><div class="font-mono text-[9px] text-slate-400 dark:text-gray-500">—</div></div>`;
+    const playBtn = `<button onclick="playStudioVideo('${v.id}')" class="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-600/30 hover:bg-indigo-100 dark:hover:bg-indigo-600/50 border border-indigo-300 dark:border-indigo-500/50 text-indigo-700 dark:text-indigo-300 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-play text-[9px]"></i> Watch</button>`;
     const ytBtn = v.youtubeStatus === "published"
-      ? `<a href="${v.youtubeUrl || '#'}" target="_blank" class="px-2 py-1 bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-300 rounded-lg text-[10px] font-bold inline-flex items-center gap-1"><i class="fa-brands fa-youtube"></i> View</a>`
-      : `<button onclick="publishVideoToYouTube('${v.jobId}')" class="px-2 py-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold rounded-lg text-[10px] inline-flex items-center gap-1 shadow"><i class="fa-brands fa-youtube"></i> 1-Click</button>`;
-    const actionCell = v.status === "completed" ? `<div class="flex items-center justify-center gap-1">${playBtn}${ytBtn}</div>` : (v.status === "processing" ? '<span class="text-[11px] text-blue-400 font-semibold animate-pulse"><i class="fa-solid fa-spinner fa-spin"></i> Processing</span>' : '<span class="text-[11px] text-amber-400 font-semibold"><i class="fa-solid fa-clock"></i> Queued</span>');
-    const isSelected = (typeof selectedLedgerVideoId !== "undefined" && selectedLedgerVideoId === v.id);
-    const rowSelectClass = isSelected ? "bg-indigo-950/40 border-l-4 border-indigo-500 ring-1 ring-indigo-500/30" : "hover:bg-slate-800/40";
+      ? `<a href="${v.youtubeUrl || '#'}" target="_blank" class="px-2.5 py-1 bg-red-50 dark:bg-red-600/20 hover:bg-red-100 dark:hover:bg-red-600/30 border border-red-300 dark:border-red-500/40 text-red-700 dark:text-red-300 rounded-lg text-[10px] font-bold inline-flex items-center gap-1"><i class="fa-brands fa-youtube"></i> View</a>`
+      : `<button onclick="publishVideoToYouTube('${v.jobId}')" class="px-2.5 py-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold rounded-lg text-[10px] inline-flex items-center gap-1 shadow"><i class="fa-brands fa-youtube"></i> 1-Click</button>`;
+    const actionCell = v.status === "completed" ? `<div class="flex items-center justify-center gap-1.5">${playBtn}${ytBtn}</div>` : (v.status === "processing" ? '<span class="text-[11px] text-blue-600 dark:text-blue-400 font-semibold animate-pulse"><i class="fa-solid fa-spinner fa-spin"></i> Processing</span>' : '<span class="text-[11px] text-amber-600 dark:text-amber-400 font-semibold"><i class="fa-solid fa-clock"></i> Queued</span>');
 
     return `
-      <tr data-video-id="${v.id}" onclick="onLedgerRowClick(event, '${v.id}')" class="${rowSelectClass} cursor-pointer transition">
-        <td class="p-2.5"><div class="font-mono font-bold text-white text-xs">${v.id}</div><div class="font-mono text-[9px] text-indigo-400/80 cursor-pointer hover:underline truncate max-w-[100px]" onclick="viewEpisodeArtifacts('${v.id}')">${v.jobId}</div></td>
-        <td class="p-2.5"><div class="font-bold text-white text-xs">${v.title}</div><div class="text-[10px] text-gray-400 truncate max-w-xs">${v.concept}</div></td>
-        <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300">${v.videoType || "Series"}</span></td>
-        <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${fmtBadge}">${v.formatType || "16:9"}</span></td>
-        <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-300">${v.styleType || "Realistic"}</span></td>
-        <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold ${typeBadge}">${v.productionType || "Prompt"}</span></td>
-        <td class="p-2.5 text-center font-semibold text-gray-300 text-xs">${v.tierName || "Standard"}</td>
-        <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${statusBadge}">${v.status}</span></td>
-        <td class="p-2.5 text-right font-mono font-bold text-emerald-400 text-xs">${v.costStr}</td>
-        <td class="p-2.5 text-center text-gray-300 text-[10px] font-mono">${formatTimestamp(v.createdAt)}</td>
-        <td class="p-2.5 text-center text-gray-300 text-[10px] font-mono">${formatTimestamp(v.startedAt)}</td>
-        <td class="p-2.5 text-center text-emerald-300 text-[10px] font-mono">${formatTimestamp(v.completedAt)}</td>
-        <td class="p-2.5 text-center">${ytBadge}</td>
-        <td class="p-2.5 text-center"><div class="flex items-center justify-center gap-1"><button onclick="viewEpisodeArtifacts('${v.id}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 rounded text-[10px] font-bold inline-flex items-center gap-1"><i class="fa-solid fa-box-archive text-[9px]"></i> Artifacts</button>${actionCell}</div></td>
+      <tr data-video-id="${v.id}" class="hover:bg-slate-100/70 dark:hover:bg-slate-800/40 transition">
+        <td class="p-3"><div class="font-mono font-bold text-slate-900 dark:text-white text-xs">${v.id}</div><div class="font-mono text-[9px] text-indigo-600 dark:text-indigo-400 cursor-pointer hover:underline truncate max-w-[120px]" onclick="viewEpisodeArtifacts('${v.id}')">${v.jobId}</div></td>
+        <td class="p-3"><div class="font-bold text-slate-900 dark:text-white text-xs">${v.title}</div><div class="text-[10px] text-slate-500 dark:text-gray-400 max-w-md">${v.concept}</div></td>
+        <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-800 dark:text-blue-300 border border-blue-500/30">${v.videoType || "Series"}</span></td>
+        <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${fmtBadge}">${v.formatType || "16:9"}</span></td>
+        <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-500/15 text-purple-800 dark:text-purple-300 border border-purple-500/30">${v.styleType || "Realistic"}</span></td>
+        <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold ${typeBadge}">${v.productionType || "Prompt"}</span></td>
+        <td class="p-3 text-center font-semibold text-slate-700 dark:text-gray-300 text-xs">${v.tierName || "Standard"}</td>
+        <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${statusBadge}">${v.status}</span></td>
+        <td class="p-3 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400 text-xs">${v.costStr}</td>
+        <td class="p-3 text-center text-slate-600 dark:text-gray-300 text-[10px] font-mono">${formatTimestamp(v.createdAt)}</td>
+        <td class="p-3 text-center text-slate-600 dark:text-gray-300 text-[10px] font-mono">${formatTimestamp(v.startedAt)}</td>
+        <td class="p-3 text-center text-emerald-700 dark:text-emerald-300 text-[10px] font-mono">${formatTimestamp(v.completedAt)}</td>
+        <td class="p-3 text-center">${ytBadge}</td>
+        <td class="p-3 text-center"><div class="flex items-center justify-center gap-1.5"><button onclick="viewEpisodeArtifacts('${v.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-purple-700 dark:text-purple-300 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 shadow-sm transition"><i class="fa-solid fa-box-archive text-[9px]"></i> Artifacts</button>${actionCell}</div></td>
       </tr>
     `;
   }).join("");
-
-  if (typeof selectLedgerVideo === "function") {
-    const activeId = (typeof selectedLedgerVideoId !== "undefined" && filtered.some(v => v.id === selectedLedgerVideoId))
-      ? selectedLedgerVideoId : (filtered[0] ? filtered[0].id : null);
-    if (activeId) selectLedgerVideo(activeId);
-  }
 }
 
 function onLedgerRowClick(event, id) {
