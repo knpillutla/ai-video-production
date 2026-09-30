@@ -43,21 +43,40 @@ async function syncChannelEpisodesFromBackend() {
     const res = await fetch("/api/channels/episodes");
     const data = await res.json();
     if (data.status === "ok" && Array.isArray(data.episodes)) {
-      const backendEpIds = new Set(data.episodes.map(e => e.episode_id));
-      const inFlight = studioVideos.filter(v => (v.status === "processing" || v.status === "queued") && !backendEpIds.has(v.id));
-
       const backendRecords = data.episodes.map(ep => {
-        const costVal = ep.cost_usd || 1.64;
+        const costVal = ep.cost_usd || 0.14;
+        const eds = (ep.editions && ep.editions.length > 0) ? ep.editions : [];
+        const hasMaster = Boolean(eds.length > 0 && eds[0]?.url && !eds[0].url.includes("preview_master"));
+        const masterUrl = hasMaster ? eds[0].url : null;
+        const curStage = hasMaster ? 5 : ((ep.motion_clips && ep.motion_clips.length > 0) ? 3 : ((ep.keyframes && ep.keyframes.length > 0) ? 2 : 1));
+
         return {
           id: ep.episode_id, jobId: `job_${ep.episode_id}`, title: ep.title || ep.story_topic,
           concept: ep.story_topic || ep.title, videoType: ep.category === "Music" ? "Relaxation & ASMR" : "Nature Soundscape",
           formatType: "Long (16:9)", styleType: "Cinematic 4K", productionType: "Theme",
-          channelId: ep.channel_id, status: "completed", youtubeStatus: "published",
-          youtubeChannel: ep.channel_handle || `@${ep.channel_id}`, youtubeUrl: ep.editions?.[0]?.url || "/static/videos/preview_master.mp4",
-          videoUrl: ep.editions?.[0]?.url || "/static/videos/preview_master.mp4", language: "English (en)", format: "Long (16:9)",
+          channelId: ep.channel_id,
+          status: hasMaster ? "completed" : "ready",
+          currentStage: curStage,
+          progress: hasMaster ? 100 : (curStage === 3 ? 50 : (curStage === 2 ? 35 : 15)),
+          youtubeStatus: hasMaster ? "published" : "draft",
+          youtubeChannel: ep.channel_handle || `@${ep.channel_id}`,
+          youtubeUrl: masterUrl,
+          videoUrl: masterUrl,
+          video_url: masterUrl,
+          language: "English (en)", format: "Long (16:9)",
           style: "Cinematic Photoreal", tierKey: "cinematic", tierName: "Cinematic 4K ($0.45)",
           cost: costVal, costStr: `$${costVal.toFixed(4)} USD`,
-          keyframes: ep.keyframes || [], motion_clips: ep.motion_clips || [], audio_stems: ep.audio_stems || [], editions: ep.editions || [],
+          keyframes: ep.keyframes || [], motion_clips: ep.motion_clips || [], audio_stems: ep.audio_stems || [],
+          editions: eds,
+          long_play_editions: ep.long_play_editions || [],
+          script: ep.script || ep.screenplay || ep.manifest || null,
+          screenplay: ep.screenplay || ep.script || null,
+          user_inputs: ep.user_inputs || null,
+          pipeline_state: ep.pipeline_state || null,
+          manifest: ep.manifest || ep.script || null,
+          scenes: ep.scenes || ep.screenplay?.scenes || ep.script?.scenes || [],
+          cluster: ep.cluster || ep.screenplay?.cluster || ep.script?.cluster || "",
+          audio_tags: ep.audio_tags || ep.screenplay?.audio_tags || ep.script?.audio_tags || "",
           createdAt: ep.created_timestamp ? ep.created_timestamp * 1000 : Date.now() - 3600000,
           startedAt: ep.created_timestamp ? ep.created_timestamp * 1000 + 2000 : Date.now() - 3598000,
           completedAt: ep.created_timestamp ? ep.created_timestamp * 1000 + 8500 : Date.now() - 3590000,
@@ -65,9 +84,12 @@ async function syncChannelEpisodesFromBackend() {
         };
       });
 
-      studioVideos = [...inFlight, ...backendRecords];
+      studioVideos = backendRecords;
       saveVideosState();
       renderStudioVideoHistory();
+      if (typeof channelArchiveEpisodes !== "undefined") {
+        channelArchiveEpisodes = data.episodes;
+      }
       if (typeof filterChannelArchive === "function") filterChannelArchive();
     }
   } catch (e) { console.debug("Backend episode sync notice:", e); }
@@ -137,10 +159,45 @@ function renderStudioVideoHistory() {
         <td class="p-3 text-center text-slate-600 dark:text-gray-300 text-[10px] font-mono">${formatTimestamp(v.startedAt)}</td>
         <td class="p-3 text-center text-emerald-700 dark:text-emerald-300 text-[10px] font-mono">${formatTimestamp(v.completedAt)}</td>
         <td class="p-3 text-center">${ytBadge}</td>
-        <td class="p-3 text-center"><div class="flex items-center justify-center gap-1.5"><button onclick="viewEpisodeArtifacts('${v.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-purple-700 dark:text-purple-300 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 shadow-sm transition"><i class="fa-solid fa-box-archive text-[9px]"></i> Artifacts</button>${actionCell}</div></td>
+        <td class="p-3 text-center">
+          <div class="flex items-center justify-center gap-1.5">
+            <button onclick="viewEpisodeArtifacts('${v.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-purple-700 dark:text-purple-300 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 shadow-sm transition"><i class="fa-solid fa-box-archive text-[9px]"></i> Artifacts</button>
+            ${actionCell}
+            <button type="button" onclick="event.stopPropagation(); deleteLedgerEpisode('${v.id}', event);" class="p-1.5 bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-900/40 border border-slate-300 dark:border-slate-700 hover:border-rose-400 text-slate-500 hover:text-rose-600 dark:text-gray-400 dark:hover:text-rose-400 rounded-lg text-xs transition" title="Delete Episode from disk">
+              <i class="fa-solid fa-trash-can text-[10px]"></i>
+            </button>
+          </div>
+        </td>
       </tr>
     `;
   }).join("");
+}
+
+async function deleteLedgerEpisode(epId, event) {
+  if (event) event.stopPropagation();
+  const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
+  const vid = studioVideos.find(x => x.id === epId || x.episode_id === epId);
+  const chSlug = vid?.channelId || vid?.channel_id || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : "earth_serenade");
+
+  try {
+    await fetch(`/api/production/episodes/${epId}?channel_id=${chSlug}&user_id=${encodeURIComponent(uEmail)}`, { method: "DELETE" });
+  } catch (e) {
+    console.warn("Delete episode notice:", e);
+  }
+
+  const idx = studioVideos.findIndex(x => x.id === epId || x.episode_id === epId);
+  if (idx >= 0) studioVideos.splice(idx, 1);
+  if (typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) {
+    channelArchiveEpisodes = channelArchiveEpisodes.filter(x => x.episode_id !== epId);
+  }
+
+  saveVideosState();
+  renderStudioVideoHistory();
+  if (typeof filterChannelArchive === "function") filterChannelArchive();
+  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id === epId || currentActiveInspectorEpisode.episode_id === epId)) {
+    if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
+  }
+  if (typeof showProfileStatusToast === "function") showProfileStatusToast(`Episode ${epId} deleted.`);
 }
 
 function onLedgerRowClick(event, id) {

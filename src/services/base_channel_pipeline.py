@@ -47,25 +47,29 @@ class BaseChannelPipeline:
         fade_to_black_hours: Optional[float] = None,
         generate_short: bool = True,
         photos_only: bool = False,
+        motion_only: bool = False,
+        audio_only: bool = False,
+        master_only: bool = False,
         no_bgm: bool = False,
         auto_stretch: bool = False,
         allow_fallback: bool = False,
         uncompressed: bool = False,
+        force_rerun: bool = False,
     ) -> Dict[str, Any]:
-        """Execute standardized 3-stage pipeline workflow with review gates and --id banners."""
+        """Execute standardized multi-stage pipeline workflow with review gates and --id banners."""
         effective_hours = long_play_hours or self.config.default_hours
         effective_fade = fade_to_black_hours or self.config.default_fade_black_hours
         eff_model = motion_model or self.config.default_motion_model
         crf_val = 16 if uncompressed else 22
 
-        logger.info(f"starting_channel_job: {self.config.channel_name} id={episode_id} motion={eff_model} photos_only={photos_only} no_bgm={no_bgm}")
+        logger.info(f"starting_channel_job: {self.config.channel_name} id={episode_id} motion={eff_model} photos_only={photos_only} motion_only={motion_only} no_bgm={no_bgm}")
         print(f"\n[DECISION - CHANNEL PIPELINE INITIALIZED]")
         print(f"   * Channel:  {self.config.channel_name} ({self.config.channel_handle})")
         print(f"   * Title:    {sb.title}")
         if self.config.strategy_description:
             print(f"   * Strategy: {self.config.strategy_description}")
 
-        # Stage 1: Keyframe Photos or Full Master
+        # Stage Execution via Producer
         result = await self.producer.produce(
             sb=sb,
             episode_id=episode_id,
@@ -74,8 +78,12 @@ class BaseChannelPipeline:
             fade_to_black_hours=None,
             generate_short=generate_short,
             photos_only=photos_only,
+            motion_only=motion_only,
+            audio_only=audio_only,
+            master_only=master_only,
             no_bgm=no_bgm,
             allow_fallback=allow_fallback,
+            force_rerun=force_rerun,
         )
 
         ep_id = result["episode_id"]
@@ -96,6 +104,27 @@ class BaseChannelPipeline:
                 print(f"Shot {idx} Photo: {kf}")
             print(f"\n[NEXT STEPS] TO PROCEED TO STAGE 2 (Generate 4K Video Motion & Master Audio):")
             print(f"   python scripts/channels/{self.config.script_name} --id {ep_id}")
+            print("=" * 70 + "\n")
+            return result
+
+        # Stage 2 Gate: Motion Clips Review
+        if motion_only:
+            print("\n" + "=" * 70)
+            print(f"[STAGE 2 COMPLETE] 4K RAW VIDEO MOTION CLIPS READY ({len(result.get('raw_videos', []))} Clips)!")
+            print(f"Episode ID:  {ep_id}")
+            for idx, mv in enumerate(result.get("raw_videos", []), 1):
+                print(f"Motion Clip {idx}: {mv}")
+            print(f"\n[NEXT STEPS] TO PROCEED TO STAGE 3 (Compose Audio & Velvet Master):")
+            print(f"   python scripts/channels/{self.config.script_name} --id {ep_id}")
+            print("=" * 70 + "\n")
+            return result
+
+        # Stage 3 Gate: Audio Review
+        if audio_only:
+            print("\n" + "=" * 70)
+            print(f"[STAGE 3 COMPLETE] 432HZ VELVET AUDIO STEMS READY!")
+            print(f"Episode ID:  {ep_id}")
+            print(f"BGM Path:    {result.get('bgm_path')}")
             print("=" * 70 + "\n")
             return result
 

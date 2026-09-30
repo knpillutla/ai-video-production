@@ -45,13 +45,11 @@ All AI agents working within this workspace must adhere strictly to the engineer
 * When a user submits a video for production from the UI, the system must first calculate and display the total estimated cost and an itemized breakdown (tokens, voice characters, images/clips, compute).
 * Generation jobs must remain blocked until the user explicitly clicks the confirmation button.
 
-### 8. Model Testing Safety & Cost Guard (Strict Ban on Bulk Tests, Single Test Only, Max 10s Duration)
-* **STRICT BAN ON RUNNING ALL TESTS:** **NEVER, EVER automatically run all tests.** Running full test suites (`pytest tests/` or bulk passes) consumes enormous CPU/time and poses high accidental API cost risks. Agents must **NEVER run all tests** unless explicitly and verbatim instructed by the user to run all tests.
-* **Targeted Single-Test Execution Only:** When verifying a code change, run **ONLY the single specific test file or specific test function** related directly to that change (e.g., `pytest tests/test_specific.py -k test_target`).
-* **Automated Tests Core Mandate:** When testing models as part of automated tests, **only run one test only with 10 sec duration**, to ensure we do not call more than one test, to save on costs.
-* **Zero Paid Calls in Default Test Suite:** The standard test suite must ALWAYS run 100% locally with offline deterministic mocks/fallbacks. Even if paid API keys are present in `.env` or system environment, tests must NEVER call external AI models without explicit flags.
-* **Strict Single Test Limit for Live Models:** When testing actual/live external AI models (Gemini, Together Flux, Azure Speech, Suno, Fal), you must **run only ONE test only**. Never call or run more than one test against live models.
-* **Hard 10-Second Duration Cap:** Any test that calls an actual model or synthesizes video/audio must be strictly capped to a **maximum duration of 10 seconds** (and minimal token/character count) to prevent API expenditures.
+### 8. Model Testing Safety & Cost Guard (Strict Ban on Bulk Tests & Strict Ban on Live Models in Automated Tests)
+* **STRICT BAN ON RUNNING AUTOMATED TESTS WITH LIVE MODELS:** **NEVER run any automated test with live external models.** Automated tests must ALWAYS run 100% locally and offline with deterministic mocks, local fallbacks, and test fixtures to guarantee $0.00 API expenditure. Live external models (Gemini, Flux, Fal.ai, Suno, Azure Speech) must NEVER be invoked during automated test runs.
+* **STRICT BAN ON RUNNING ALL TESTS:** **NEVER, EVER automatically run all tests.** Running full test suites (`pytest tests/` or bulk passes) consumes enormous CPU/time and poses accidental cost risks. Agents must **NEVER run all tests** unless explicitly and verbatim instructed by the user.
+* **Targeted Single-Test Execution Only:** When verifying a code change, run **ONLY the single specific local test file or specific test function** related directly to that change (e.g., `pytest tests/test_specific.py -k test_target`).
+* **Zero Paid Calls in Test Suite:** The test suite must ALWAYS run 100% locally with offline deterministic mocks/fallbacks. Even if paid API keys are present in `.env` or system environment, automated tests must NEVER call external AI models.
 
 
 
@@ -166,7 +164,63 @@ All studio agents, generation pipelines, and scratch production scripts must str
 * **Forward-Flowing Continuous Cineloop Engine (Zero Reverse / Zero Seam Jumps):** All short AI video diffusion clips (5s/10s) must be transformed via `build_seamless_forward_cineloop` (1.2s head-to-tail forward cross-fade with `format=yuv420p`) prior to hold assembly. This guarantees water, rain, mist, and smoke **ALWAYS flow in their natural forward direction 100% of the time** while dissolving loop boundaries with **zero seam jump cuts, zero flicker, and zero backward flow**.
 * **YouTube Ingest Compliance (Monotonic Timestamps & CRF 22):** All long-play stretch broadcasts (1h, 3h, 8h) MUST encode with continuous, monotonically increasing DTS/PTS timestamps (`-preset veryfast -threads 4 -crf 22 -c:a aac -b:a 320k -movflags +faststart`) to eliminate timestamp discontinuities across loop boundaries and guarantee 100% YouTube cloud ingest compliance with zero "Processing abandoned" errors.
 
+### 27. Mandatory Agentic Context Enrichment & Gemini Directorial Scripting Standard (All Studios & Channels)
+* **Never Dispatch Raw Prompts or Rely on Static Catalog Fallbacks:** An AI studio agent must NEVER blindly forward raw, sparse user prompt strings to image/video synthesis models, nor rely on static, generic hardcoded templates when custom topics are provided.
+* **Autonomous Agentic Context Enrichment Before LLM Dispatch:** The specific studio agent for each domain (Ambient World, Cozy Ambiance, Healing Relaxation, Rain Retreat, Blue-Chip Nature / Wildlife, Mountain Survival, Dance Music, Comedy) must first autonomously enrich the narrative context with:
+  - **Geographic & Environmental Lore:** Archetype-specific architectural styles, botany, geology, and authentic cultural materials (e.g. Bernese Oberland chalets, wooden shingle eaves, mist-shrouded limestone peaks).
+  - **Atmospheric & Fluid Dynamics:** Specific fluid kinematics (e.g. gentle vertical rain streaks, water droplets glistening on timber eaves, specular puddle reflections, rising steam, chimney smoke).
+  - **Strict 35mm Optical Specifications:** Focal length (24mm/35mm/50mm/85mm), depth-of-field, balanced 5600K daylight or warm interior lighting, neutral natural contrast.
+  - **Proactive Negative Purity Tokens:** Mandatory proactive suppression of modern urban clutter, moving vehicles, vans, cars, trucks, asphalt roads, and crowds in natural/rural settings.
+  - **Acoustic Scoring & Soundscape Tags:** Instruments, natural foley layers, BPM, and mood parameters.
+* **Structured Gemini Screenplay & Storyboard Contract:** Dispatches the enriched context to Gemini LLM (`gemini-1.5-pro` / `gemini-2.0-flash`) via structured JSON schema to synthesize the full directorial storyboard: rich visual prompts ($\ge 130$ words), tailored motion dynamics prompts aligned to active diffusion engines (Wan 2.1, Kling 1.6 Pro, Hunyuan), camera framing, dynamic story FPS, and lyrical/narration scripts.
+* **Transparent Logging & Episode Manifest Persistence:**
+  - Every agent MUST log the exact prompt dispatched (`[GEMINI STORYBOARD REQUEST DISPATCHED]`) and the structured screenplay returned (`[GEMINI STORYBOARD RESPONSE RECEIVED]`).
+### 28. Mandatory Anti-Fatigue Music & Video Motion Standards (All Relaxation Channels & Options)
+* **Natural Gentle Micro-Kinematics (Water, Clouds, Flowers, Grass):** For all relaxation, sleep, meditation, ambient, nature, and cozy channels, environmental motion prompts MUST enforce tranquil, hypnotic, and organic micro-movements:
+  - **Water Fluid:** Gentle continuous ripples, slow tranquil streams, soft expanding circular ripples from droplets (zero violent splashes, zero boiling waves).
+  - **Clouds & Mist:** Slow, dreamy, continuous drifting clouds and soft mountain mist (zero fast storm rushes or jarring time-lapse jumps).
+  - **Flowers & Foliage:** Delicate, rhythmic swaying of wildflowers and pine boughs in a faint, soothing mountain breeze (zero unnatural whipping).
+  - **Grass & Lawns:** Subtle, gentle undulating wave motion across alpine meadows matching a light natural breeze.
+* **Seamless Forward Stitching for Multi-Hour Stretched Broadcasts (1h, 3h, 8h):**
+  - Because 5s/10s AI video clips are forward-crossfaded (`build_seamless_forward_cineloop` with 1.2s head-to-tail dissolve) and stretched into multi-hour living wallpapers, motion vectors MUST be constant, forward-directional, and seam-free.
+  - Pacing must be locked tripod framing (or ultra-slow steadycam drift $\le 0.5$ m/s / 1.5 km/h) with 100% rock-solid background structures (chalets, mountains, rocks, architectural walls) so only the natural fluid elements gently move.
+  - Strictly prohibit rapid panning, sudden zooms, fast object movements, erratic rotations, high-frequency camera jitters, or flashing/strobing lights that cause cognitive arousal or visual fatigue.
+* **Zero Acoustic Ear Fatigue in Music & Foley:** Audio stems and musical scores for all relaxation productions MUST be mastered to velvet acoustic standards:
+  - Soft, warm acoustic textures (432Hz tuning, warm piano, bamboo flute, Celtic harp, gentle cello/synth pads, binaural nature foley).
+  - Strictly prohibit harsh high-frequency spikes (>8 kHz sharp sizzle/hiss), jarring percussion transients, loud claps of thunder, sudden dramatic volume shifts, repetitive sharp loops, or discordant intervals that trigger sensory arousal or ear fatigue during extended listening and sleep.
+  - Master with gentle low-pass rolloff and normalized to -14.0 LUFS velvet integrated loudness.
+
+### 29. Mandatory Relaxation Agent Creation Contract & Invariant Blueprint (Applied Every Time a Relax Agent is Created)
+Every time a relaxation, ambient, nature, sleep, meditation, or cozy studio agent or pipeline is created or implemented, it MUST strictly adhere to this 5-point contract:
+1. **Natural Micro-Kinematics Mandate:** Base prompts MUST explicitly instruct models to animate gentle movement for fluid water (soft ripples, tranquil streams, circular droplet ripples), drifting clouds/mist, gently swaying wildflowers/pine boughs, and undulating grass meadows.
+2. **Seamless 3-Hour Forward-Stitching Guarantee:** All 5s/10s diffusion motion prompts MUST enforce locked framing, static structural backgrounds, and unidirectional motion vectors compatible with `build_seamless_forward_cineloop` (1.2s head-to-tail forward dissolve) for zero-seam multi-hour stretching.
+3. **Anti-Fatigue Guardrails:** Explicitly prohibit rapid pans, abrupt zooms, high-frequency jitters, flashing lights, and harsh audio frequencies (>8 kHz sizzle/hiss, jarring drum hits, loud thunder) to guarantee zero visual and auditory fatigue.
+4. **Mandatory Pure Nature Purity Guard (Zero Vehicles, Zero Humans, Zero Animals by Default):** Auto-enrich regional architecture, natural lighting (5400K daylight / warm amber glow), and proactive negative purity tokens (`zero humans, zero people, zero characters, zero crowds, zero cars, zero vehicles, zero vans, zero trucks, zero modern traffic, zero asphalt highways, zero modern clutter, zero animals, zero wildlife, zero birds, zero pets, zero livestock`) unless explicitly requested in the user's prompt.
+5. **Directorial Screenplay & Manifest Contract:** Query Gemini LLM with structured JSON output, log dispatched prompt and response, and persist complete directorial decisions to `episode_manifest.json`.
+
+### 30. Mandatory Genre-Specific Studio Platform (Strict Ban on Universal Platform, Schemas & Global Screenplay Caching)
+* **Strict Ban on Universal Platform & Universal Schemas:** Never create, import, or maintain generic "universal" platform schemas, universal models, or universal directorial engines. The architecture is strictly **Genre-Specific**.
+* **Self-Contained Genre Studios:** Every genre and studio category (Relaxation/Living Wallpapers, BBC Documentaries, Telugu Comedy, Mass Dance Music, Travel Walking Tours) MUST maintain its own dedicated, self-contained:
+  - **Genre Schema Models** (e.g., `src/studios/ambient_world/relax_models.py` defining `RelaxScreenplay`, `RelaxSceneDirective`, `LoopStrategySpec`).
+  - **Genre Directorial Prompt Builder** (e.g., `src/studios/ambient_world/ambient_directorial_prompt.py`).
+  - **Genre Director Engine** (e.g., `src/studios/ambient_world/relax_director.py`).
+* **Zero Cross-Genre Contamination:** Relaxation rules (such as Living Wallpaper framing, locked tripod, zero humans, 5500K uniform overcast daylight, cyclic loop crossfades) must never pollute global domain models or non-relaxation genres.
+* **Fresh Screenplay Generation (Zero Global Screenplay Caching):** Screenplays are creative directorial outputs generated by Gemini Flash ($0.0001 cost, ~1s execution). Never cache screenplays globally across runs. Every production run must synthesize a fresh, creative, and distinct screenplay directly tailored to the user's concept. Caching is strictly reserved for downstream heavy media assets (images, audio stems, video diffusion renders) during `--id` episode resumption.
+
+### 31. Mandatory 100% Autonomous Geographic & Ecosystem Derivation (Strict Ban on Hardcoded Templates, Regional Fallbacks & Geographic Vocabulary Contamination)
+* **Zero Hardcoded Geographic Defaults or Fallbacks:** Never hardcode regional defaults (such as defaulting unmapped prompts to `"swiss_alps"` or hardcoding `"Glacial Alpine Valley"` in prompt builders or schema examples).
+* **100% Autonomous Ecosystem & Landmark Derivation:** The directorial engine and prompt builder MUST instruct the LLM (Gemini) to **autonomously derive** all topographical, ecological, and cultural parameters directly from the user's prompt or chosen landmark:
+  - `sub_genre`: Exact ecological category (e.g., `waterfall_gorge`, `river_canyon`, `coastal_ocean`, `alpine_mountains`, `temperate_forest`, `zen_waters`, `cozy_hearth`).
+  - `continent_region`: True continent/region (e.g., `Great Lakes Basin / North America`, `Alpine Central Europe`, `Scandinavia / Arctic Fjords`).
+  - `culture_heritage`: Authentic regional natural and conservation heritage.
+  - `attraction_type`: Authentic geological/topographical structure (e.g., `River Escarpment & Waterfall Cascade`, `Glacial Fjord`, `Granite Canyon & Whitewater Rapids`).
+  - `audio_master.suno_musical_tags`: Foley and musical textures strictly matching the authentic terrain (e.g., thunderous waterfall roar for waterfalls, ocean surf for coasts, mountain breeze for peaks).
+* **Strict Ban on Vocabulary Contamination:** Never inject or permit vocabulary from one geographic archetype to contaminate another:
+  - Strictly prohibit words like `"alpine"`, `"meadow"`, `"chalet"`, `"glacier"` in river gorge, escarpment, ocean coast, canyon, or woodland environments (e.g. Niagara Falls, Iguazu, Redwoods, Big Sur).
+  - Use terrain-authentic affirmative descriptors: `"empty river gorge"`, `"canyon basin"`, `"wild stone riverbank"`, `"natural gravel and boulder shoreline"`, `"primeval forest sanctuary"`, `"untouched natural terrain"`.
+
 Refer to [AGENT_INSTRUCTIONS.md](file:///c:/neel-1/projects/content-generation/AGENT_INSTRUCTIONS.md) for detailed architecture, code patterns, and the pre-commit self-audit checklist.
+
 
 
 

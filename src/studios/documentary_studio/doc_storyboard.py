@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+import json
 from typing import Any, Dict, List, Optional
 
 
@@ -170,3 +171,100 @@ def generate_documentary_storyboard(
         language=language,
         audio_tags=tmpl["audio_tags"],
     )
+
+
+async def generate_documentary_storyboard_gemini(
+    genre: DocGenre = DocGenre.WILDLIFE,
+    custom_prompt: Optional[str] = None,
+    duration_seconds: float = 60.0,
+    language: str = "en",
+    user_id: str = "user_krishna_01",
+) -> DocStoryboard:
+    """Dynamically generate authoritative BBC/NatGeo documentary script and storyboard via Gemini."""
+    theme_seed = custom_prompt or genre.value
+    num_scenes = 4
+    dur_per_scene = round(duration_seconds / num_scenes, 2)
+    domain_tag, default_model = GENRE_MODEL_DEFAULTS.get(genre, ("landscape_solid", "kling_v3"))
+
+    print(f"\n[GEMINI DOCUMENTARY AGENT INVOKED]")
+    print(f"   * Genre / Theme:      {genre.value.upper()} ~ \"{theme_seed}\"")
+    print(f"   * Duration:           {duration_seconds}s (4 Scenes @ {dur_per_scene}s each)")
+    print(f"   * Language:           {language.upper()}")
+
+    try:
+        import json
+        from src.providers.llm.gemini_adapter import GeminiLLMAdapter
+        from src.core.telemetry import logger
+        llm = GeminiLLMAdapter()
+
+        system_prompt = (
+            "You are a world-renowned BBC / National Geographic documentary showrunner and authoritative science communicator. "
+            "Your task is to write a compelling, educational, and visually majestic 8K UHD 4-scene documentary script and storyboard. "
+            "CRITICAL ANTI-FATIGUE DIRECTIVES:\n"
+            "- ANTI-FATIGUE CAMERA MOTION: Slow, sweeping, majestic 24fps documentary movements. Strictly prohibit aggressive zooms, rapid pans, jerky handheld shake, or disorienting camera speed.\n"
+            "- ANTI-FATIGUE ACOUSTIC SCORE: Warm cinematic orchestral textures, gentle natural environmental foley, zero harsh high-frequency spikes, deterministic sidechain ducking (-18dB) under narration, velvet -14 LUFS mastering.\n"
+            "For narration: Measured, poetic, authoritative cadence (~120 wpm) rich in geographic, ecological, and evolutionary lore. "
+            "For visual prompts: Arri Alexa 35mm Master Prime specifications, 8K UHD master resolution, exact focal lengths, f-stops (f/2.8, f/4.0), natural balanced lighting, zero CGI sheen. "
+            "For motion prompts: Majestic 24fps documentary camera motion, steady forward glides, natural animal behaviors or environmental physics. "
+            "Return valid JSON matching the schema."
+        )
+
+        user_msg = (
+            f"Write a 4-scene 8K UHD anti-fatigue documentary storyboard on: '{theme_seed}'.\n"
+            f"Genre: {genre.value}. Duration: {duration_seconds}s ({dur_per_scene}s per scene). Language: {language}.\n\n"
+            f"Output JSON with fields:\n"
+            f"- 'title': Evocative, high-CTR NatGeo documentary title\n"
+            f"- 'story_topic': Educational overview and scientific/lore thesis\n"
+            f"- 'audio_tags': Sweeping anti-fatigue orchestral score and natural foley tags\n"
+            f"- 'scenes': Array of 4 scenes each containing:\n"
+            f"    - 'scene_index': int (1..4)\n"
+            f"    - 'shot_type': 'wide', 'medium', or 'close_up'\n"
+            f"    - 'visual_prompt': 35mm Arri 8K photoreal prompt for Fal FLUX 1.1 Pro\n"
+            f"    - 'motion_prompt': smooth 24fps cinematic camera motion prompt for Kling v3 Pro / Wan 2.1\n"
+            f"    - 'narration_text': authoritative voiceover narration lines in {language}\n"
+        )
+
+        full_prompt = f"{system_prompt}\n\n{user_msg}"
+        logger.info(f"gemini_doc_request_sent: genre='{genre.value}' theme='{theme_seed}'\n--- PROMPT SENT TO GEMINI ---\n{full_prompt}\n-----------------------------")
+        print(f"\n[GEMINI DOC DIRECTORIAL REQUEST DISPATCHED]")
+        print(f"--- PROMPT SENT TO GEMINI ---\n{full_prompt}\n-----------------------------")
+
+        data = await llm.generate_structured(full_prompt)
+        logger.info(f"gemini_doc_response_received:\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}")
+        print(f"\n[GEMINI DOC DIRECTORIAL RESPONSE RECEIVED]\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}\n")
+
+        if data and isinstance(data, dict) and data.get("scenes") and len(data["scenes"]) >= 4:
+            doc_scenes = []
+            for idx, sc in enumerate(data["scenes"][:4]):
+                doc_scenes.append(
+                    DocScene(
+                        scene_index=idx + 1,
+                        duration_seconds=dur_per_scene,
+                        shot_type=sc.get("shot_type", "wide" if idx in (0, 3) else "medium"),
+                        motion_domain=domain_tag,
+                        recommended_model=default_model,
+                        visual_prompt=sc.get("visual_prompt", ""),
+                        motion_prompt=sc.get("motion_prompt", ""),
+                        narration_text=sc.get("narration_text", ""),
+                    )
+                )
+
+            sb = DocStoryboard(
+                title=data.get("title") or theme_seed.title(),
+                genre=genre,
+                total_duration=duration_seconds,
+                scenes=doc_scenes,
+                language=language,
+                audio_tags=data.get("audio_tags") or "cinematic orchestral documentary, sparse ambient foley, 48kHz broadcast master",
+            )
+            print(f"[GEMINI DOC STORYBOARD SUCCESS] Synthesized '{sb.title}' with {len(sb.scenes)} authoritative documentary scenes.")
+            return sb
+        raise RuntimeError(f"Gemini LLM returned empty or malformed documentary storyboard data: {data}")
+    except Exception as ex:
+        from src.core.telemetry import logger
+        logger.error(f"gemini_doc_storyboard_fatal_error: {ex}")
+        print(f"\n[GEMINI FATAL ERROR] Documentary directorial screenplay synthesis failed: {ex}\n")
+        raise RuntimeError(f"Gemini documentary directorial screenplay generation failed: {ex}") from ex
+
+
+__all__ = ["DocGenre", "DocScene", "DocStoryboard", "generate_documentary_storyboard", "generate_documentary_storyboard_gemini"]

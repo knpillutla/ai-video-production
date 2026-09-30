@@ -30,6 +30,10 @@
 
     <!-- Duration, Specs & Live Status -->
     <div class="flex items-center gap-2 shrink-0">
+      <button type="button" onclick="reprocessActiveEpisodeId()" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95" title="Reprocess / Resume Active Episode using --id to pick up Fal.ai motion">
+        <i class="fa-solid fa-arrows-rotate text-[9px]"></i>
+        <span>Reprocess (--id)</span>
+      </button>
       <div class="flex items-center gap-1 text-[10px] font-mono">
         <span class="font-bold text-slate-400 uppercase tracking-wide">Duration:</span>
         <span id="top-ep-duration" class="font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-800">10s (Draft)</span>
@@ -53,9 +57,15 @@
         <span id="studio-banner-detail" class="text-[10px] text-emerald-900 dark:text-gray-200 font-medium truncate">Rendering 4K Flux Photos...</span>
       </div>
     </div>
-    <button type="button" onclick="document.getElementById('studio-queued-banner').classList.add('hidden')" class="text-emerald-700 hover:text-emerald-950 dark:text-gray-400 dark:hover:text-white text-xs p-1 rounded-lg hover:bg-emerald-100 dark:hover:bg-slate-800 transition shrink-0" title="Dismiss">
-      <i class="fa-solid fa-xmark"></i>
-    </button>
+    <div class="flex items-center gap-1.5 shrink-0">
+      <button type="button" onclick="reprocessActiveEpisodeId()" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold transition flex items-center gap-1 shadow-sm active:scale-95" title="Reprocess / Resume (--id)">
+        <i class="fa-solid fa-arrows-rotate text-[8px]"></i>
+        <span>Reprocess (--id)</span>
+      </button>
+      <button type="button" onclick="document.getElementById('studio-queued-banner').classList.add('hidden')" class="text-emerald-700 hover:text-emerald-950 dark:text-gray-400 dark:hover:text-white text-xs p-1 rounded-lg hover:bg-emerald-100 dark:hover:bg-slate-800 transition shrink-0" title="Dismiss">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
   </div>
 
   <!-- 3-VERTICAL-PANEL RESPONSIVE SAAS GRID (20% Left | 20% Center | 60% Right) -->

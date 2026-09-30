@@ -55,6 +55,8 @@ class FalKlingV3Adapter:
         output_path: Path | str,
         duration: int = 5,
         force_live: bool = False,
+        negative_prompt: str | None = None,
+        settings: dict[str, Any] | None = None,
     ) -> tuple[str, Path]:
         """Synthesize native 4K video motion from a static start image using Kling v3 4K."""
         out = Path(output_path)
@@ -79,11 +81,16 @@ class FalKlingV3Adapter:
             actual_url = await upload_to_fal(local_p, api_key=self.api_key)
 
         headers = {"Authorization": f"Key {self.api_key}", "Content-Type": "application/json"}
-        payload = {
-            "prompt": motion_prompt,
+        payload: dict[str, Any] = {
+            "prompt": motion_prompt.strip(),
             "start_image_url": actual_url,
-            "negative_prompt": "rapid motion, fast moving clouds, timelapse, morphing clouds, cloud rolling, warping, high speed, turbulent wind, jerky motion, flickering, blurry, distortion, artificial structures, buildings",
         }
+        if negative_prompt and negative_prompt.strip():
+            payload["negative_prompt"] = negative_prompt.strip()
+        if settings and isinstance(settings, dict):
+            for k, v in settings.items():
+                if k not in payload and v is not None:
+                    payload[k] = v
 
         job_sidecar = out.with_suffix(out.suffix + ".fal_job.json")
         status_url, response_url = None, None
@@ -95,7 +102,7 @@ class FalKlingV3Adapter:
             except Exception:
                 status_url, response_url = None, None
 
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=15.0)) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0, read=300.0)) as client:
             if not status_url or not response_url:
                 sub = await client.post(self.endpoint, headers=headers, json=payload)
                 if sub.status_code not in (200, 201, 202):
@@ -105,39 +112,47 @@ class FalKlingV3Adapter:
                 response_url = sub_data.get("response_url")
                 job_sidecar.write_text(json.dumps({"status_url": status_url, "response_url": response_url}), encoding="utf-8")
 
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=15.0)) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0, read=300.0)) as client:
             for i in range(_POLL_MAX_ATTEMPTS):
                 await asyncio.sleep(_POLL_INTERVAL_S)
-                s_resp = await client.get(status_url, headers=headers, params={"logs": "1"})
-                res_data = s_resp.json()
-                status = res_data.get("status")
-
-                if status == "COMPLETED":
+                try:
+                    # Check response_url first: if 200, Kling v3 generation is complete and has video URL
                     r_resp = await client.get(response_url, headers=headers)
-                    final_res = r_resp.json()
-                    vid_url = _extract_video_url(final_res) or _extract_video_url(res_data)
-                    if not vid_url:
-                        raise RuntimeError(f"Could not extract Kling v3 video url: {final_res}")
+                    if r_resp.status_code == 200:
+                        final_res = r_resp.json()
+                        vid_url = _extract_video_url(final_res)
+                        if not vid_url:
+                            raise RuntimeError(f"Could not extract Kling v3 video url: {final_res}")
 
-                    for attempt in range(3):
-                        try:
-                            v_bytes = (await client.get(vid_url, timeout=120.0)).content
-                            if len(v_bytes) > 5000:
-                                out.write_bytes(v_bytes)
-                                job_sidecar.unlink(missing_ok=True)
-                                logger.info(f"fal_kling_v3_ok: {out.name} ({len(v_bytes)} B)")
-                                return vid_url, out
-                        except Exception as dl_err:
-                            logger.warning(f"fal_kling_v3_download_retry: attempt {attempt+1}/3 failed ({dl_err}). Retrying...")
-                            await asyncio.sleep(2.0)
-                    raise RuntimeError(f"Failed to download Kling v3 video after 3 attempts from {vid_url}")
+                        for attempt in range(5):
+                            try:
+                                v_bytes = (await client.get(vid_url, timeout=180.0)).content
+                                if len(v_bytes) > 5000:
+                                    out.write_bytes(v_bytes)
+                                    job_sidecar.unlink(missing_ok=True)
+                                    logger.info(f"fal_kling_v3_ok: {out.name} ({len(v_bytes)} B)")
+                                    return vid_url, out
+                            except Exception as dl_err:
+                                logger.warning(f"fal_kling_v3_download_retry: attempt {attempt+1}/5 failed ({dl_err}). Retrying...")
+                                await asyncio.sleep(3.0)
+                        raise RuntimeError(f"Failed to download Kling v3 video after 5 attempts from {vid_url}")
 
-                if status in ("FAILED", "CANCELLED"):
-                    job_sidecar.unlink(missing_ok=True)
-                    raise RuntimeError(f"Kling v3 4K task failed: {res_data}")
+                    # If not yet complete, check status_url for failures
+                    s_resp = await client.get(status_url, headers=headers)
+                    if s_resp.status_code in (200, 202):
+                        res_data = s_resp.json()
+                        status = res_data.get("status")
+                        if status in ("FAILED", "CANCELLED"):
+                            job_sidecar.unlink(missing_ok=True)
+                            raise RuntimeError(f"Kling v3 4K task failed: {res_data}")
+                except Exception as poll_err:
+                    if "Kling v3 4K task failed" in str(poll_err):
+                        raise
+                    logger.debug(f"fal_kling_v3_poll_status: {poll_err}")
+                    continue
 
             job_sidecar.unlink(missing_ok=True)
-            raise TimeoutError("Kling v3 4K generation timed out")
+            raise TimeoutError("Kling v3 4K generation timed out after 5 minutes")
 
     async def _fallback_local(self, out: Path, duration: int) -> tuple[str, Path]:
         import subprocess

@@ -108,19 +108,19 @@ def setup_logger(name: str = "video_studio", level: int = logging.INFO) -> loggi
         # In-Memory Buffer Handler for UI Console
         l.addHandler(log_buffer_handler)
 
-        # Persistent File Handler in logs/studio.log
+        # Persistent File Handlers in logs/studio.log and logs/studio_server.log
         logs_dir = Path("logs")
         try:
             logs_dir.mkdir(parents=True, exist_ok=True)
-            file_path = logs_dir / "studio.log"
-            file_handler = RotatingFileHandler(
-                file_path,
-                maxBytes=10 * 1024 * 1024,
-                backupCount=5,
-                encoding="utf-8",
-            )
-            file_handler.setFormatter(formatter)
-            l.addHandler(file_handler)
+            for fname in ("studio.log", "studio_server.log"):
+                file_handler = RotatingFileHandler(
+                    logs_dir / fname,
+                    maxBytes=10 * 1024 * 1024,
+                    backupCount=5,
+                    encoding="utf-8",
+                )
+                file_handler.setFormatter(formatter)
+                l.addHandler(file_handler)
         except Exception:
             pass
 

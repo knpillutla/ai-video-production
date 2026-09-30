@@ -1,0 +1,207 @@
+<!-- TAB: STUDIO PRO (Next-Gen Zero-Scroll Split-Deck & Progressive Chronological Timeline) -->
+<div id="tab-studio-pro" class="space-y-1.5 h-[calc(100vh-80px)] flex flex-col overflow-hidden hidden">
+  <!-- TOP SLIM CONTEXT STRIP (32px High-Density Status & Channel HUD) -->
+  <div class="shrink-0 px-3 py-1 bg-[var(--card)] border border-[var(--border)] rounded-xl flex items-center justify-between gap-2 shadow-sm text-xs">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <span class="px-2 py-0.5 rounded-md bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-[10px] uppercase font-mono shadow-sm flex items-center gap-1">
+        <i class="fa-solid fa-layer-group text-[9px]"></i> Studio Pro
+      </span>
+      <div class="flex items-center gap-1.5 text-slate-700 dark:text-gray-300 font-bold text-[11px] truncate">
+        <i class="fa-solid fa-water text-cyan-400 text-[10px]"></i>
+        <span id="pro-channel-name">Earth Serenade</span>
+        <span class="text-slate-400 font-mono text-[9px]">(@earth_serenade)</span>
+      </div>
+      <span class="text-slate-300 dark:text-slate-700">•</span>
+      <span id="pro-ep-badge" class="font-mono font-bold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.2 rounded border border-indigo-500/20 text-[10px]">EP-001</span>
+      <span id="pro-story-title" class="truncate max-w-[280px] font-medium text-slate-800 dark:text-gray-300 text-[10px]">Scenic River &amp; Forest Soundscape</span>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <span id="pro-status-pill" class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+        <i class="fa-solid fa-circle-check text-[7px]"></i><span>Master Ready</span>
+      </span>
+      <button type="button" onclick="switchTab('studio')" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded text-[10px] font-bold transition flex items-center gap-1" title="Switch back to Classic 3-Panel Studio">
+        <i class="fa-solid fa-arrow-right-arrow-left text-[8px]"></i><span>Classic Studio</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TOP SPLIT-DECK ROW: 28% Controls (Left) | 72% 4K Master Player & Dual Audio Switchers (Right) -->
+  <div class="grid grid-cols-1 lg:grid-cols-[30%_1fr] gap-2 h-[52%] min-h-0">
+    <!-- TOP LEFT: COMPACT PROMPT & SYNTHESIS DECK -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-2.5 flex flex-col justify-between overflow-hidden shadow-sm space-y-1.5">
+      <div class="space-y-1.5 overflow-y-auto custom-scrollbar pr-0.5">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 font-mono flex items-center gap-1">
+            <i class="fa-solid fa-sliders text-[9px]"></i> Prompt &amp; Niche
+          </span>
+          <span class="text-[9px] font-mono text-emerald-400 font-bold">$0.08 - $1.64</span>
+        </div>
+        <textarea id="pro-prompt-input" rows="2" placeholder="Optional: Enter custom prompt or leave empty to auto-curate world's best spots..." class="w-full text-[11px] bg-slate-900/90 text-white rounded-lg p-2 border border-slate-700 focus:border-indigo-500 outline-none resize-none placeholder-slate-500 leading-snug"></textarea>
+
+        <!-- Compact Niche Theme Quick Selector -->
+        <div class="flex items-center gap-1 flex-wrap text-[9px] font-medium">
+          <button type="button" onclick="proSelectNiche('nature')" class="px-1.5 py-0.5 bg-cyan-950/80 hover:bg-cyan-900 text-cyan-200 border border-cyan-500/40 rounded">🌊 River Nature</button>
+          <button type="button" onclick="proSelectNiche('rain')" class="px-1.5 py-0.5 bg-blue-950/80 hover:bg-blue-900 text-blue-200 border border-blue-500/40 rounded">🌧️ Forest Rain</button>
+          <button type="button" onclick="proSelectNiche('fireplace')" class="px-1.5 py-0.5 bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-500/40 rounded">🔥 Cozy Hearth</button>
+          <button type="button" onclick="proSelectNiche('healing')" class="px-1.5 py-0.5 bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-500/40 rounded">🧘 Zen Garden</button>
+        </div>
+
+        <!-- Tier & Duration Row -->
+        <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+          <div class="p-1 bg-slate-900/80 border border-slate-800 rounded-lg">
+            <span class="text-[8px] font-mono text-slate-400 block uppercase">Motion Model</span>
+            <select id="pro-motion-model" class="w-full bg-transparent text-[10px] text-white font-bold outline-none cursor-pointer">
+              <option value="wan" selected>Wan 2.1 (Fast Preview)</option>
+              <option value="kling">Kling v3 Pro (Cinema 4K)</option>
+            </select>
+          </div>
+          <div class="p-1 bg-slate-900/80 border border-slate-800 rounded-lg">
+            <span class="text-[8px] font-mono text-slate-400 block uppercase">Duration Mode</span>
+            <select id="pro-duration-mode" class="w-full bg-transparent text-[10px] text-white font-bold outline-none cursor-pointer">
+              <option value="5">5s (1-Shot Test)</option>
+              <option value="10">10s (2-Shot Preview)</option>
+              <option value="60" selected>60s (Broadcast Master)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Produce Video Trigger Button -->
+      <button type="button" id="btn-pro-produce" onclick="proTriggerProduction()" class="w-full py-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-black text-[11px] rounded-lg shadow shadow-indigo-600/30 flex items-center justify-center gap-1.5 transition active:scale-98">
+        <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+        <span id="btn-pro-produce-text">Produce 4K Video Masters ⚡</span>
+      </button>
+    </div>
+
+    <!-- TOP RIGHT: 16:9 MASTER 4K PLAYER & DUAL AUDIO SWITCHER -->
+    <div class="bg-black border border-slate-800 rounded-xl overflow-hidden flex flex-col justify-between shadow-2xl relative group">
+      <!-- Master Video Player Element -->
+      <div class="relative w-full flex-1 overflow-hidden bg-black flex items-center justify-center">
+        <video id="pro-master-video" controls playsinline preload="none" class="w-full h-full object-contain max-h-[260px]"></video>
+        <button type="button" onclick="openActiveProVideoPopup()" class="absolute top-2 right-2 p-1.5 bg-black/80 hover:bg-indigo-600 text-white rounded-lg text-[10px] font-bold transition opacity-0 group-hover:opacity-100 flex items-center gap-1 z-20 shadow-md">
+          <i class="fa-solid fa-expand text-[9px]"></i><span>Fullscreen Popup</span>
+        </button>
+      </div>
+
+      <!-- Bottom Audio Mode Switcher Bar -->
+      <div class="shrink-0 p-1.5 bg-slate-950/95 border-t border-slate-800 flex items-center justify-between gap-2 px-3">
+        <div class="flex items-center gap-1 text-[10px] font-bold text-slate-400 font-mono uppercase">
+          <i class="fa-solid fa-sliders text-indigo-400"></i>
+          <span>Audio Master Track:</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <!-- Ambient Music Track Toggle -->
+          <button type="button" id="btn-pro-audio-ambient" onclick="proSwitchAudioMode('ambient')" class="px-2.5 py-1 bg-indigo-600/30 border border-indigo-500 text-indigo-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-music text-[9px] text-indigo-400"></i>
+            <span>🎵 Ambient Soundtrack (Music + 432Hz BGM)</span>
+          </button>
+          <!-- Pure Nature ASMR Track Toggle -->
+          <button type="button" id="btn-pro-audio-nature" onclick="proSwitchAudioMode('nature')" class="px-2.5 py-1 bg-slate-900 hover:bg-cyan-950/60 border border-slate-700 hover:border-cyan-500 text-slate-300 hover:text-cyan-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-leaf text-[9px] text-emerald-400"></i>
+            <span>🌊 Pure Nature ASMR (100% Nature, No Music)</span>
+          </button>
+        </div>
+        <div class="flex items-center gap-1 font-mono text-[9px] text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">
+          <i class="fa-solid fa-crown text-[8px]"></i>
+          <span id="pro-active-master-badge">CRF 22 Master</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM ROW: 6-STAGE PROGRESSIVE CHRONOLOGICAL TIMELINE (48% Height) -->
+  <div class="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-xl p-2 flex flex-col justify-between overflow-hidden shadow-sm min-h-0">
+    <div class="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold">
+      <div class="flex items-center gap-1.5 uppercase font-mono text-indigo-400">
+        <i class="fa-solid fa-timeline text-[10px]"></i>
+        <span>Chronological Production Timeline (Stages 1 ➔ 6)</span>
+      </div>
+      <span class="text-[9px] text-slate-500 font-mono">Horizontal Streamlined Pipeline</span>
+    </div>
+
+    <!-- 6 Sequential Chronological Stage Cards Grid with Horizontal Scrolling -->
+    <div class="grid grid-cols-6 gap-2 flex-1 pt-1 overflow-x-auto custom-scrollbar min-h-0">
+      <!-- STAGE 1: KEYFRAME PHOTOS (FLUX 1.1 PRO) -->
+      <div id="pro-stage-card-1" class="bg-slate-900/60 border border-slate-800 rounded-xl p-1.5 flex flex-col justify-between overflow-hidden relative">
+        <div class="flex items-center justify-between text-[9px] font-mono font-bold mb-1">
+          <span class="text-blue-400 flex items-center gap-1"><i class="fa-solid fa-images text-[8px]"></i> 1. Photos</span>
+          <span id="pro-s1-badge" class="px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 text-[7px]">FLUX Pro</span>
+        </div>
+        <div id="pro-s1-container" class="flex-1 flex items-center gap-1 overflow-x-auto custom-scrollbar py-0.5">
+          <div class="w-full text-center text-[8px] text-slate-500 font-mono py-4">No Photos Yet</div>
+        </div>
+        <div id="pro-s1-progress" class="w-full bg-slate-800 h-1 rounded-full overflow-hidden mt-1 hidden">
+          <div class="h-full bg-blue-500 rounded-full animate-pulse" style="width: 50%"></div>
+        </div>
+      </div>
+
+      <!-- STAGE 2: VIDEO MOTION (WAN 2.1 / KLING) -->
+      <div id="pro-stage-card-2" class="bg-slate-900/60 border border-slate-800 rounded-xl p-1.5 flex flex-col justify-between overflow-hidden relative">
+        <div class="flex items-center justify-between text-[9px] font-mono font-bold mb-1">
+          <span class="text-purple-400 flex items-center gap-1"><i class="fa-solid fa-film text-[8px]"></i> 2. Motion</span>
+          <span id="pro-s2-badge" class="px-1 py-0.2 rounded bg-purple-500/20 text-purple-300 text-[7px]">Kling/Wan</span>
+        </div>
+        <div id="pro-s2-container" class="flex-1 flex items-center gap-1 overflow-x-auto custom-scrollbar py-0.5">
+          <div class="w-full text-center text-[8px] text-slate-500 font-mono py-4">Queued</div>
+        </div>
+        <div id="pro-s2-progress" class="w-full bg-slate-800 h-1 rounded-full overflow-hidden mt-1 hidden">
+          <div class="h-full bg-purple-500 rounded-full animate-pulse" style="width: 50%"></div>
+        </div>
+      </div>
+
+      <!-- STAGE 3: AUDIO STEMS (SUNO & VELVET DSP) -->
+      <div id="pro-stage-card-3" class="bg-slate-900/60 border border-slate-800 rounded-xl p-1.5 flex flex-col justify-between overflow-hidden relative">
+        <div class="flex items-center justify-between text-[9px] font-mono font-bold mb-1">
+          <span class="text-cyan-400 flex items-center gap-1"><i class="fa-solid fa-wave-square text-[8px]"></i> 3. Audio</span>
+          <span id="pro-s3-badge" class="px-1 py-0.2 rounded bg-cyan-500/20 text-cyan-300 text-[7px]">Suno+DSP</span>
+        </div>
+        <div id="pro-s3-container" class="flex-1 flex flex-col justify-center gap-1 overflow-y-auto custom-scrollbar py-0.5">
+          <div class="w-full text-center text-[8px] text-slate-500 font-mono py-4">Queued</div>
+        </div>
+        <div id="pro-s3-progress" class="w-full bg-slate-800 h-1 rounded-full overflow-hidden mt-1 hidden">
+          <div class="h-full bg-cyan-500 rounded-full animate-pulse" style="width: 50%"></div>
+        </div>
+      </div>
+
+      <!-- STAGE 4: NARRATION & TIMED SUBTITLES -->
+      <div id="pro-stage-card-4" class="bg-slate-900/60 border border-slate-800 rounded-xl p-1.5 flex flex-col justify-between overflow-hidden relative">
+        <div class="flex items-center justify-between text-[9px] font-mono font-bold mb-1">
+          <span class="text-pink-400 flex items-center gap-1"><i class="fa-solid fa-closed-captioning text-[8px]"></i> 4. Subtitles</span>
+          <span id="pro-s4-badge" class="px-1 py-0.2 rounded bg-pink-500/20 text-pink-300 text-[7px]">SRT / TTS</span>
+        </div>
+        <div id="pro-s4-container" class="flex-1 flex flex-col justify-center items-center gap-0.5 text-center p-1">
+          <i class="fa-solid fa-microphone-lines text-pink-400/60 text-xs mb-0.5"></i>
+          <span class="text-[8px] text-slate-400 font-mono">Ambient Audio Active</span>
+          <span class="text-[7px] text-slate-500">(Zero Spoken Dialogue)</span>
+        </div>
+      </div>
+
+      <!-- STAGE 5: 4K DUAL MASTERS (AMBIENT & PURE NATURE) -->
+      <div id="pro-stage-card-5" class="bg-slate-900/60 border border-slate-800 rounded-xl p-1.5 flex flex-col justify-between overflow-hidden relative">
+        <div class="flex items-center justify-between text-[9px] font-mono font-bold mb-1">
+          <span class="text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-crown text-[8px]"></i> 5. Masters</span>
+          <span id="pro-s5-badge" class="px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[7px]">Dual 4K</span>
+        </div>
+        <div id="pro-s5-container" class="flex-1 flex flex-col justify-center gap-1 overflow-y-auto custom-scrollbar py-0.5">
+          <div class="w-full text-center text-[8px] text-slate-500 font-mono py-4">Awaiting Render</div>
+        </div>
+      </div>
+
+      <!-- STAGE 6: LONG-PLAY BROADCAST STRETCH (3H / 8H) -->
+      <div id="pro-stage-card-6" class="bg-indigo-950/20 border border-indigo-500/30 rounded-xl p-1.5 flex flex-col justify-between overflow-hidden relative">
+        <div class="flex items-center justify-between text-[9px] font-mono font-bold mb-1">
+          <span class="text-indigo-300 flex items-center gap-1"><i class="fa-solid fa-hourglass-half text-[8px]"></i> 6. Long-Play</span>
+          <select id="pro-lp-hours" class="bg-slate-900 border border-slate-700 text-[8px] text-indigo-200 rounded px-1 font-mono outline-none">
+            <option value="3.0" selected>3 Hours</option>
+            <option value="8.0">8 Hours</option>
+          </select>
+        </div>
+        <div id="pro-s6-container" class="flex-1 flex flex-col justify-center gap-1 p-0.5">
+          <button type="button" onclick="proApproveLongPlay()" class="w-full py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded text-[8px] font-bold transition shadow">
+            Approve &amp; Stretch
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

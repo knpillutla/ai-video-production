@@ -118,21 +118,47 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
     
     if n == 1:
         if audio_path and audio_path.is_file():
-            cmd = [ffmpeg_bin, "-y", "-stream_loop", "-1", "-t", str(scene_hold_sec), "-i", str(seamless_clips[0]), "-stream_loop", "-1", "-i", str(audio_path), "-t", str(scene_hold_sec), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
+            cmd = [
+                ffmpeg_bin, "-y",
+                "-stream_loop", "-1", "-i", str(seamless_clips[0]),
+                "-stream_loop", "-1", "-i", str(audio_path),
+                "-map", "0:v:0", "-map", "1:a:0",
+                "-t", str(scene_hold_sec),
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4",
+                "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
+                "-movflags", "+faststart", str(out_master)
+            ]
         else:
             check = subprocess.run([ffmpeg_bin, "-i", str(seamless_clips[0])], capture_output=True, text=True, errors="ignore")
             if "Audio:" in check.stderr:
-                cmd = [ffmpeg_bin, "-y", "-stream_loop", "-1", "-t", str(scene_hold_sec), "-i", str(seamless_clips[0]), "-t", str(scene_hold_sec), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
+                cmd = [
+                    ffmpeg_bin, "-y",
+                    "-stream_loop", "-1", "-i", str(seamless_clips[0]),
+                    "-map", "0:v:0", "-map", "0:a:0",
+                    "-t", str(scene_hold_sec),
+                    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4",
+                    "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
+                    "-movflags", "+faststart", str(out_master)
+                ]
             else:
                 foley_wav = out_master.parent / "procedural_nature_foley.wav"
                 if not foley_wav.is_file() or foley_wav.stat().st_size < 1000:
                     synthesize_foley_stem(weather_type="water stream alpine breeze", setting_type="nature", space="outdoor", duration_seconds=total_vid_dur + 5.0, output_path=foley_wav)
-                cmd = [ffmpeg_bin, "-y", "-stream_loop", "-1", "-t", str(scene_hold_sec), "-i", str(seamless_clips[0]), "-stream_loop", "-1", "-i", str(foley_wav), "-t", str(scene_hold_sec), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
+                cmd = [
+                    ffmpeg_bin, "-y",
+                    "-stream_loop", "-1", "-i", str(seamless_clips[0]),
+                    "-stream_loop", "-1", "-i", str(foley_wav),
+                    "-map", "0:v:0", "-map", "1:a:0",
+                    "-t", str(scene_hold_sec),
+                    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4",
+                    "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
+                    "-movflags", "+faststart", str(out_master)
+                ]
     else:
         # Multi-Shot: Hold each forward cineloop for 60.0 seconds before slow 2.0s cross-dissolve
         inputs = []
         for c in seamless_clips:
-            inputs.extend(["-stream_loop", "-1", "-t", str(scene_hold_sec), "-i", str(c)])
+            inputs.extend(["-stream_loop", "-1", "-i", str(c)])
         
         scales = [f"[{i}:v]scale=3840:2160,setsar=1[s{i}]" for i in range(n)]
         filter_parts = list(scales)
@@ -168,10 +194,11 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
                 cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", full_filter, "-map", "[v]", "-map", f"{n}:a", "-t", f"{total_vid_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
 
     try:
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
     except subprocess.CalledProcessError as err:
-        logger.error(f"failed_to_assemble_4k_master: {err}")
-        raise
+        err_msg = (err.stderr or err.stdout or str(err)).strip()
+        logger.error(f"failed_to_assemble_4k_master: {err_msg}")
+        raise RuntimeError(f"FFmpeg assembly failed: {err_msg}") from err
 
     return out_master
 
@@ -202,30 +229,18 @@ def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], e
 
     # If specifically --no-bgm (audio_path is None), only produce the single master above
     if not audio_path:
-        return {
-            "music_master": master_music,
-            "nature_master": None,
-        }
+        return {"music_master": master_music, "nature_master": None}
 
     # Otherwise assemble dual version: Pure Nature Master (No Music)
     master_nature = ep_dir / "master_4k_ambient_nature_only.mp4"
-    needs_nature_rebuild = (
-        not master_nature.is_file()
-        or master_nature.stat().st_size < 1000
-        or any(sc.stat().st_mtime > master_nature.stat().st_mtime for sc in seamless_clips)
-    )
+    needs_nature_rebuild = not master_nature.is_file() or master_nature.stat().st_size < 1000 or any(sc.stat().st_mtime > master_nature.stat().st_mtime for sc in seamless_clips)
     if needs_nature_rebuild:
-        print(f"[STAGE 2 - DUAL MASTER ASSEMBLY] Assembling Pure Nature Master (No Music, Forward Cineloop, CRF {crf}) -> {master_nature.name}")
+        print(f"[STAGE 2 - DUAL MASTER ASSEMBLY] Assembling Pure Nature Master (CRF {crf}) -> {master_nature.name}")
         assemble_4k_master(seamless_clips, None, master_nature, crf=crf)
     else:
         logger.info(f"decision_nature_master_cache_hit: Reusing {master_nature.name} ($0.00 spend)")
-        print(f"[DECISION - NATURE MASTER CACHE HIT] Pure Nature 4K video already exists ({master_nature.name}). Reusing asset ($0.00 spend).")
 
-    return {
-        "music_master": master_music,
-        "nature_master": master_nature,
-    }
-
+    return {"music_master": master_music, "nature_master": master_nature}
 
 
 def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], fade_hours: Optional[float]) -> Optional[Path]:
@@ -234,21 +249,16 @@ def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], 
         return None
     suffix = f"_{int(fade_hours)}h_black" if fade_hours else ""
     label = int(hours) if hours.is_integer() else hours
-    
-    # 1. Stretch standard / music master
     lp_path = ep_dir / f"master_4k_{label}hour{suffix}_sleep.mp4"
     if master.is_file() and (not lp_path.is_file() or lp_path.stat().st_size < 1000):
         export_long_play_broadcast(source_4k_video=master, output_long_play=lp_path, target_duration_seconds=hours * 3600.0, fade_to_black_hours=fade_hours)
     
-    # 2. Automatically stretch pure nature / no-bgm master if it exists
     nature_master = ep_dir / "master_4k_ambient_nature_only.mp4"
     if nature_master.is_file() and nature_master.resolve() != master.resolve():
         lp_nature_path = ep_dir / f"master_4k_{label}hour_nature_only{suffix}_sleep.mp4"
         if not lp_nature_path.is_file() or lp_nature_path.stat().st_size < 1000:
             logger.info(f"stretching_dual_nature_master: {lp_nature_path.name}")
-            print(f"[STAGE 3 - DUAL LONG-PLAY STRETCH] Stretching Pure Nature Master (No Music) -> {lp_nature_path.name}")
             export_long_play_broadcast(source_4k_video=nature_master, output_long_play=lp_nature_path, target_duration_seconds=hours * 3600.0, fade_to_black_hours=fade_hours)
-
     return lp_path
 
 
@@ -269,7 +279,6 @@ def export_metadata_packages(
     pkg_music = generate_youtube_ambient_package(sb.primary_archetype, hours or 1.0, sb.secondary_archetype, fade_h)
     (ep_dir / "youtube_packaging.json").write_text(json.dumps(pkg_music.model_dump(), indent=2), encoding="utf-8")
     
-    # Generate dedicated Nature-Only metadata package for dual-upload
     pkg_nature = generate_youtube_ambient_package(sb.primary_archetype, hours or 1.0, sb.secondary_archetype, fade_h)
     pkg_nature.title = f"{pkg_nature.title} | Pure Nature Sounds (NO MUSIC) [4K ASMR]"
     pkg_nature.description = f"100% pure natural ambient soundscape without background music.\n\n{pkg_nature.description}"

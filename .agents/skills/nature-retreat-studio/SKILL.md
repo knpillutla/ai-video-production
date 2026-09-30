@@ -21,10 +21,14 @@ Direct and produce broadcast-grade 4K UHD biophilic nature retreats, cozy sounds
    - Audio must be 48,000 Hz 24-bit stereo at -14.0 LUFS.
    - Always check `AudioVault` first to reuse existing matching ambient stems ($0.00 cost).
    - Fall back on-the-fly to **MusicAPI.ai / Suno v3.5 Pro** with organic tags (`[ambient nature], crystal-clear mountain waterfall, soothing gentle water splash and babbling brook, soft acoustic meditative harp and bamboo flute, zero hiss, 48kHz broadcast master`).
-4. **Single-Pass 4K Mastering**:
-   - Master in 4K UHD (3840×2160 @ 24fps) at CRF 18 visually lossless via Lanczos filtering and `+faststart`.
+4. **Mandatory Relaxation Micro-Kinematics & Seamless 3h Loop Blueprint**:
+   - Gentle movement for fluid water (laminar flow, delicate droplet ripples), slow drifting clouds/mist, gently swaying wildflowers/pine boughs, and undulating grass.
+   - Locked tripod framing with static structural anchors and constant forward vectors for seamless `build_seamless_forward_cineloop` 3-hour long-play stretching.
+   - Zero visual fatigue (no rapid pans/zooms) and zero ear fatigue (432Hz velvet audio, zero >8kHz harshness).
+5. **Single-Pass 4K Mastering**:
+   - Master in 4K UHD (3840×2160 @ 24fps) at CRF 18–22 visually lossless via Lanczos filtering and `+faststart`.
 
-## Workflow & CLI Commands
+---
 
 ```bash
 # Run standalone nature retreat generation

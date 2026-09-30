@@ -146,7 +146,18 @@ function selectLedgerVideo(id) {
 
   const masterGrid = document.getElementById("ledger-panel-master-videos");
   if (masterGrid) {
-    const eds = (vid.editions && vid.editions.length > 0) ? vid.editions : (vid.videoUrl ? [{ edition_id: "m_primary", name: "4K Master (90s)", duration: "90s", format: "16:9 Master", url: vid.videoUrl, size_str: "⏱ 24.2s" }] : []);
+    let eds = (vid.editions && vid.editions.length > 0) ? [...vid.editions] : [];
+    if (eds.length === 0 && vid.videoUrl) {
+      eds.push({ edition_id: "m_primary", name: "🎵 Ambient Soundtrack (4K)", duration: vid.duration || "60s", format: "16:9 Master", url: vid.videoUrl, size_str: "⏱ 4K UHD" });
+      if (vid.nature_video_url) {
+        eds.push({ edition_id: "m_nature", name: "🌊 Pure Nature ASMR (4K)", duration: vid.duration || "60s", format: "16:9 Nature", url: vid.nature_video_url, size_str: "⏱ Pure Nature" });
+      }
+    }
+    if (vid.long_play_editions && vid.long_play_editions.length > 0) {
+      vid.long_play_editions.forEach(lp => {
+        if (!eds.find(e => e.url === lp.url)) eds.push(lp);
+      });
+    }
     if (eds.length > 0) {
       masterGrid.innerHTML = eds.map((ed, i) => `
         <div class="flex flex-col items-center gap-0.5 cursor-pointer w-full" onclick="selectLedgerMasterVideoRender('${ed.url}', '${ed.name}', this)">
@@ -155,10 +166,13 @@ function selectLedgerVideo(id) {
               <span class="px-1 py-0.2 rounded bg-emerald-900/90 text-[7px] font-mono text-emerald-200">${ed.format || '16:9'}</span>
               <button type="button" onclick="event.stopPropagation(); openVideoPopup('${ed.url}', '${ed.name}', '${ed.audio_mode || '4K Master'}');" class="p-0.5 rounded bg-black/60 hover:bg-emerald-600 text-white text-[8px] transition" title="Open in Popup"><i class="fa-solid fa-up-right-from-square"></i></button>
             </div>
-            <div class="flex items-center justify-end"><i class="fa-solid fa-play text-[8px] text-emerald-400"></i></div>
+            <div class="flex items-center justify-between">
+              <span class="text-[7px] font-mono font-bold text-white bg-black/60 px-1 py-0.2 rounded truncate max-w-[85px]">${ed.audio_mode || 'Master'}</span>
+              <i class="fa-solid fa-play text-[8px] text-emerald-400"></i>
+            </div>
           </div>
           <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">${ed.name}</span>
-          <span class="text-[8px] font-mono text-emerald-600 dark:text-emerald-400">${ed.size_str || '⏱ 24.2s'}</span>
+          <span class="text-[8px] font-mono text-emerald-600 dark:text-emerald-400">${ed.size_str || ed.duration || '⏱ 4K Master'}</span>
         </div>
       `).join("");
     } else {
@@ -198,22 +212,12 @@ function selectLedgerVideo(id) {
   if (rawVideosContainer) {
     if (motionClips.length > 0) {
       rawVideosContainer.innerHTML = motionClips.map((m, i) => {
-        const url = (typeof m === "object") ? m.url : m;
-        const name = (typeof m === "object") ? (m.name || `Motion ${i + 1}`) : `Motion ${i + 1}`;
-        const model = (typeof m === "object") ? (m.model || (i === 0 ? "Kling Pro" : "Wan 2.1")) : "Kling Pro";
-        return `
-          <div class="flex flex-col items-center gap-0.5 w-full">
-            <div class="relative w-full h-14 rounded-lg overflow-hidden bg-gradient-to-br from-purple-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-purple-500 transition shadow flex flex-col justify-between p-1 group cursor-pointer" onclick="selectLedgerMasterVideoRender('${url}', '${name}', this)">
-              <div class="flex items-center justify-between">
-                <span class="px-1 py-0.2 rounded bg-slate-900/90 text-[7px] font-mono text-purple-200 border border-slate-700">${model}</span>
-                <button type="button" onclick="event.stopPropagation(); openVideoPopup('${url}', '${name} (${model})', '${model} 4K Motion Clip')" class="p-0.5 rounded bg-black/60 hover:bg-purple-600 text-white text-[8px] transition" title="Open in Popup"><i class="fa-solid fa-up-right-from-square"></i></button>
-              </div>
-              <div class="flex items-center justify-end"><i class="fa-solid fa-play text-[8px] text-purple-400"></i></div>
-            </div>
-            <span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">${name}</span>
-            <span class="text-[8px] font-mono text-purple-600 dark:text-purple-400">⏱ ${(11.2 + (i * 3.5)).toFixed(1)}s</span>
-          </div>
-        `;
+        const url = (typeof m === "object") ? m.url : m, name = (typeof m === "object") ? (m.name || `Motion ${i + 1}`) : `Motion ${i + 1}`, model = (typeof m === "object") ? (m.model || (i === 0 ? "Kling Pro" : "Wan 2.1")) : "Kling Pro";
+        const kf = (vid.keyframes && vid.keyframes[i]) ? vid.keyframes[i] : (vid.artifacts?.keyframes?.[i] || null);
+        const kfUrl = (typeof kf === "object" && kf !== null) ? kf.url : (typeof kf === "string" ? kf : "");
+        const posterUrl = (kfUrl && (kfUrl.startsWith("http") || kfUrl.startsWith("/static/") || kfUrl.startsWith("/storage/"))) ? kfUrl : (vid.thumbnailUrl || "");
+        const bgStyle = posterUrl ? `background-image: url('${posterUrl}'); background-size: cover; background-position: center;` : "";
+        return `<div class="flex flex-col items-center gap-0.5 w-full cursor-pointer group" onclick="selectLedgerMasterVideoRender('${url}', '${name}', this); if (typeof openVideoPopup === 'function') openVideoPopup('${url}', '${name} (${model})', '${model} 4K Motion Clip');" title="Click to play in Full Screen modal & preview"><div class="relative w-full h-14 rounded-lg overflow-hidden bg-gradient-to-br from-purple-950 to-slate-900 border border-slate-300 dark:border-slate-700/80 hover:border-purple-500 transition shadow flex flex-col justify-between p-1" style="${bgStyle}">${posterUrl ? '<div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition pointer-events-none"></div>' : ''}<div class="relative z-10 flex items-center justify-between"><span class="px-1 py-0.2 rounded bg-slate-900/90 text-[7px] font-mono text-purple-200 border border-slate-700">${model}</span><span class="px-1 py-0.2 rounded bg-black/70 text-[7px] font-mono text-purple-300">⏱ ${(11.2 + (i * 3.5)).toFixed(1)}s</span></div><div class="relative z-10 flex items-center justify-end"><div class="w-5 h-5 rounded-full bg-purple-600/90 hover:bg-purple-500 text-white flex items-center justify-center text-[7px] shadow transition transform group-hover:scale-110"><i class="fa-solid fa-play ml-0.5"></i></div></div></div><span class="text-[9px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center leading-tight">${name}</span></div>`;
       }).join("");
     } else {
       rawVideosContainer.innerHTML = `<div class="col-span-full py-3 text-center text-xs text-slate-400 dark:text-gray-500 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">No raw motion clips generated.</div>`;
@@ -225,27 +229,8 @@ function selectLedgerVideo(id) {
   if (audioStemsContainer) {
     if (audioStems.length > 0) {
       audioStemsContainer.innerHTML = audioStems.map((s, i) => {
-        const audioId = `audio-stem-${i}`;
-        const iconCls = s.type === 'binaural_nature' ? 'fa-leaf text-emerald-500' : 'fa-music text-amber-500';
-        return `
-          <div class="p-2 bg-slate-50 dark:bg-slate-950/70 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col gap-1.5 shadow-sm">
-            <div class="flex items-center justify-between gap-1 min-w-0">
-              <div class="flex items-center gap-1.5 min-w-0">
-                <i class="fa-solid ${iconCls} text-[11px] shrink-0"></i>
-                <span class="text-[10px] font-bold text-slate-800 dark:text-gray-200 truncate font-mono">${s.name || s.filename}</span>
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                <button type="button" data-audio-id="${audioId}" onclick="toggleAudioStemPlay('${audioId}', this)" class="px-2 py-0.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 rounded text-[9px] font-bold inline-flex items-center gap-1 transition">
-                  <i class="fa-solid fa-play text-amber-500"></i> Play
-                </button>
-                <button type="button" onclick="stopAudioStemPlay('${audioId}')" class="px-1.5 py-0.5 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-700 dark:text-rose-300 rounded text-[9px] font-bold inline-flex items-center gap-1 transition" title="Stop audio">
-                  <i class="fa-solid fa-stop text-rose-500"></i> Stop
-                </button>
-              </div>
-            </div>
-            <audio id="${audioId}" onended="stopAudioStemPlay('${audioId}')" controls preload="none" src="${s.url}" class="h-6 w-full rounded"></audio>
-          </div>
-        `;
+        const audioId = `audio-stem-${i}`, iconCls = s.type === 'binaural_nature' ? 'fa-leaf text-emerald-500' : 'fa-music text-amber-500';
+        return `<div class="p-2 bg-slate-50 dark:bg-slate-950/70 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col gap-1.5 shadow-sm"><div class="flex items-center justify-between gap-1 min-w-0"><div class="flex items-center gap-1.5 min-w-0"><i class="fa-solid ${iconCls} text-[11px] shrink-0"></i><span class="text-[10px] font-bold text-slate-800 dark:text-gray-200 truncate font-mono">${s.name || s.filename}</span></div><div class="flex items-center gap-1 shrink-0"><button type="button" data-audio-id="${audioId}" onclick="toggleAudioStemPlay('${audioId}', this)" class="px-2 py-0.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 rounded text-[9px] font-bold inline-flex items-center gap-1 transition"><i class="fa-solid fa-play text-amber-500"></i> Play</button><button type="button" onclick="stopAudioStemPlay('${audioId}')" class="px-1.5 py-0.5 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-700 dark:text-rose-300 rounded text-[9px] font-bold inline-flex items-center gap-1 transition" title="Stop audio"><i class="fa-solid fa-stop text-rose-500"></i> Stop</button></div></div><audio id="${audioId}" onended="stopAudioStemPlay('${audioId}')" controls preload="none" src="${s.url}" class="h-6 w-full rounded"></audio></div>`;
       }).join("");
     } else {
       audioStemsContainer.innerHTML = `<div class="col-span-full py-2.5 text-center text-xs text-slate-400 dark:text-gray-500 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">No audio stems available for this episode.</div>`;

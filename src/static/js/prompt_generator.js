@@ -3,19 +3,55 @@ let currentCreationMode = "theme";
 
 function selectProductionTier(tierKey) {
   currentTier = tierKey;
+  const tierColors = {
+    low_cost: { border: "border-emerald-500", ring: "ring-emerald-500/40", bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-600 dark:text-emerald-400", label: "Draft ($0.02)" },
+    balanced: { border: "border-indigo-500", ring: "ring-indigo-500/40", bg: "bg-indigo-50 dark:bg-indigo-950/40", text: "text-indigo-600 dark:text-indigo-400", label: "Balanced ($0.14)" },
+    cinematic: { border: "border-purple-500", ring: "ring-purple-500/40", bg: "bg-purple-50 dark:bg-purple-950/40", text: "text-purple-600 dark:text-purple-400", label: "4K Master ($0.45)" }
+  };
+  const activeCfg = tierColors[tierKey] || tierColors.cinematic;
+
   ["low_cost", "balanced", "cinematic"].forEach(t => {
     const card = document.getElementById("tier-card-" + t), radio = document.getElementById("tier-radio-" + t);
     if (!card) return;
     const isSel = t === tierKey;
-    card.className = isSel
-      ? "p-3 bg-indigo-950/40 border-2 border-indigo-500 rounded-xl cursor-pointer transition ring-1 ring-indigo-500/40"
-      : "p-3 bg-slate-950/70 border border-slate-800 hover:border-indigo-500/50 rounded-xl cursor-pointer transition";
+    if (isSel) {
+      card.className = `p-1.5 ${activeCfg.bg} border-2 ${activeCfg.border} rounded-lg cursor-pointer transition text-center space-y-0.2 ring-1 ${activeCfg.ring}`;
+    } else {
+      card.className = "p-1.5 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 hover:border-slate-400 rounded-lg cursor-pointer transition text-center space-y-0.2";
+    }
     if (radio) radio.checked = isSel;
   });
+
+  const badge = document.getElementById("tier-active-badge");
+  if (badge) {
+    badge.textContent = activeCfg.label;
+    badge.className = `font-mono text-[9px] ${activeCfg.text}`;
+  }
+
   const sel = document.getElementById("studio-tier-select"), pill = document.getElementById("sidebar-tier-price-pill");
-  const tier = PRODUCTION_TIERS[tierKey] || PRODUCTION_TIERS.balanced;
+  const tier = PRODUCTION_TIERS[tierKey] || PRODUCTION_TIERS.cinematic;
   if (sel) sel.value = tierKey;
   if (pill) pill.textContent = tier.priceStr;
+}
+
+function syncCameraAngleVisibility(key) {
+  const k = (key || "").toLowerCase();
+  const isRelax = k.startsWith("relax_") || ["earth_serenade", "rain_retreat", "healing_relaxation", "cozy_ambiance", "study_focus_cafe", "default_channel"].includes(k) || k.includes("relax") || k.includes("serenade") || k.includes("retreat");
+  const motionWrap = document.getElementById("studio-camera-motion-wrap");
+  const motionSelect = document.getElementById("studio-camera-motion");
+  const fpsSelect = document.getElementById("studio-fps");
+  
+  if (motionSelect && (!motionSelect.value || isRelax)) {
+    motionSelect.value = "locked_tripod";
+  }
+
+  if (isRelax) {
+    if (motionWrap) motionWrap.classList.add("hidden");
+    if (fpsSelect) fpsSelect.classList.add("col-span-2");
+  } else {
+    if (motionWrap) motionWrap.classList.remove("hidden");
+    if (fpsSelect) fpsSelect.classList.remove("col-span-2");
+  }
 }
 
 function selectNicheRadio(nicheKey) {
@@ -26,6 +62,7 @@ function selectNicheRadio(nicheKey) {
   const setC = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
   const setV = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
   setC("studio-toggle-bgm", cfg.bgm); setC("studio-toggle-voice-over", cfg.voice); setV("studio-fps", cfg.fps || "24");
+  syncCameraAngleVisibility(nicheKey);
 }
 
 const MODE_CONFIG = {
@@ -126,7 +163,7 @@ function clearStudioInputs() {
   document.querySelectorAll("input[name='niche_theme_radio']").forEach(r => r.checked = false);
   const setV = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
   const setC = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
-  setV("studio-duration", "10"); setC("studio-toggle-bgm", true); setC("studio-toggle-voice-over", true);
+  setV("studio-duration", "10"); setC("studio-toggle-bgm", true); setC("studio-toggle-voice-over", false);
   setC("studio-toggle-tts", false); setC("studio-toggle-lipsync", false);
   setV("studio-voice-gender", "female"); setV("studio-language", "en");
   clearTemplateCardHighlights(); selectProductionTier("low_cost");
@@ -194,8 +231,14 @@ function quickTestProduceFromPrompt() {
 
   const getChk = id => { const el = document.getElementById(id); return el ? el.checked : true; };
   const getVal = (id, fallback) => { const el = document.getElementById(id); return el?.value || fallback; };
-  const durationSec = isTestMode ? (typeof activeTestDuration !== "undefined" ? activeTestDuration : 5) : parseInt(getVal("studio-duration", "90"), 10);
-  const numShots = isTestMode ? (durationSec <= 5 ? 1 : 2) : 4;
+  const numShots = isTestMode
+    ? (typeof activeShotsCount !== "undefined" ? activeShotsCount : 1)
+    : parseInt(document.getElementById("studio-prod-shots")?.value || "1", 10);
+  const effective = (typeof getEffectiveProductionDuration === "function")
+    ? getEffectiveProductionDuration()
+    : { durSec: isTestMode ? (activeTestDuration || 5) : 90, lpHours: isTestMode ? (activeBroadcastHours || 0) : 3.0 };
+  const durationSec = isTestMode ? (activeTestDuration || 5) : effective.durSec;
+  const longPlayHours = isTestMode ? (activeBroadcastHours || 0) : effective.lpHours;
   const langVal = getVal("studio-language", "en");
 
   if (!selChan) {
@@ -216,7 +259,8 @@ function quickTestProduceFromPrompt() {
     videoType: chGenre, formatType: fmtType, styleType: styType, productionType: prodType,
     status: "queued", youtubeStatus: "unpublished", youtubeChannel: null, youtubeUrl: null,
     youtubeReferenceUrl: ytUrl, videoUrl: "/static/videos/preview_master.mp4",
-    durationSeconds: durationSec, duration: `${durationSec}s`, numShots, num_shots: numShots, executionMode: isTestMode ? "test" : "prod",
+    durationSeconds: durationSec, duration: longPlayHours > 0 ? `${longPlayHours}h` : `${durationSec}s`, numShots, num_shots: numShots,
+    longPlayHours: longPlayHours, long_play_hours: longPlayHours, executionMode: isTestMode ? "test" : "prod",
     language: langVal === "te" ? "Telugu (te)" : (langVal === "hi" ? "Hindi (hi)" : "English (en)"),
     langCode: langVal, format: fmtStr, style: "Cinematic Photoreal",
     tierKey: tier.key, tierName: `${tier.name} (${tier.priceStr})`,
@@ -226,6 +270,7 @@ function quickTestProduceFromPrompt() {
     enableTts: document.getElementById("studio-toggle-tts")?.checked || false,
     enableLipsync: document.getElementById("studio-toggle-lipsync")?.checked || false,
     allowFallback: document.getElementById("studio-toggle-fallback")?.checked || false,
+    motionModel: isTestMode ? "wan" : "auto",
     voiceGender: getVal("studio-voice-gender", "female"),
     pipelineStrategy: typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "auto",
     createdAt: Date.now(), startedAt: null, completedAt: null, publishedAt: null
@@ -243,4 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (pInput) pInput.addEventListener("input", clearTemplateCardHighlights);
   if (uInput) uInput.addEventListener("input", clearTemplateCardHighlights);
   setCreationMode("theme", false);
+  const natureRadio = document.querySelector("input[name='niche_theme_radio'][value='relax_nature']");
+  if (natureRadio) natureRadio.checked = true;
+  selectNicheRadio("relax_nature");
 });

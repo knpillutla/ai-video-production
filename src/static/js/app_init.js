@@ -19,7 +19,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   updateUserUI();
-  selectProductionTier("balanced");
+  selectProductionTier("cinematic");
+  if (typeof setExecutionMode === "function") {
+    setExecutionMode("test");
+  }
 
   if (typeof renderStudioVideoHistory === "function") {
     renderStudioVideoHistory();
@@ -36,6 +39,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (typeof syncChannelEpisodesFromBackend === "function") {
     syncChannelEpisodesFromBackend();
+  }
+
+  if (typeof updateDurationOptionsForNiche === "function") {
+    updateDurationOptionsForNiche("relaxation");
   }
 
   // Default to studio tab

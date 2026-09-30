@@ -14,6 +14,7 @@ from src.api.routes import (
     channels,
     dashboard,
     local_production,
+    long_play_routes,
     logs,
     production,
     projects,
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(schedules.router)
     app.include_router(analytics.router)
     app.include_router(local_production.router)
+    app.include_router(long_play_routes.router)
     app.include_router(logs.router)
     app.include_router(studio_orchestrator.router)
 

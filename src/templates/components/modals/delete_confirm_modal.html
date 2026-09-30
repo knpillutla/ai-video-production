@@ -1,0 +1,22 @@
+<!-- ARTIFACT DELETION CONFIRMATION MODAL -->
+<div id="delete-confirm-modal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden" onclick="if (event.target === this) closeDeleteConfirmModal();">
+  <div class="bg-[var(--card)] border border-rose-500/40 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl text-center relative">
+    <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-500 mx-auto flex items-center justify-center text-xl border border-rose-500/30">
+      <i class="fa-solid fa-trash-can"></i>
+    </div>
+    <div class="space-y-1">
+      <h3 id="delete-confirm-title" class="text-base font-black text-slate-900 dark:text-white">Confirm Deletion</h3>
+      <p id="delete-confirm-message" class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">Are you sure you want to permanently delete this artifact?</p>
+      <div id="delete-confirm-artifact-name" class="p-2 bg-slate-100 dark:bg-slate-950/80 rounded-lg text-[11px] font-mono text-rose-600 dark:text-rose-400 font-bold truncate">Artifact Name</div>
+    </div>
+    <div class="pt-1 flex items-center justify-center gap-2.5">
+      <button type="button" onclick="closeDeleteConfirmModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-gray-200 font-bold rounded-xl text-xs transition">
+        Cancel
+      </button>
+      <button type="button" id="btn-delete-confirm-action" onclick="executeDeleteConfirmAction()" class="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-rose-600/30 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-trash text-[10px]"></i>
+        <span>Delete</span>
+      </button>
+    </div>
+  </div>
+</div>

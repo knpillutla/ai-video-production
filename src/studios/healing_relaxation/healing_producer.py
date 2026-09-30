@@ -89,7 +89,7 @@ class HealingRelaxationProducer:
         ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
         cmd = [
             ffmpeg_bin, "-y", "-loop", "1", "-i", str(img_path),
-            "-vf", f"scale=3840:2160:flags=lanczos,zoompan=z='min(zoom+0.0003,1.03)':d={int(duration_sec*24)}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=3840x2160",
+            "-vf", f"scale=3840:2160,zoompan=z='min(zoom+0.0003,1.03)':d={int(duration_sec*24)}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':fps=24",
             "-t", str(duration_sec), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "24", str(out_path)
         ]
         subprocess.run(cmd, capture_output=True, check=True)
@@ -126,7 +126,8 @@ async def handle_orchestrated_healing(job_id: str, request: Any) -> Any:
     from src.services.storage import get_storage_provider, ArtifactCategory, StudioArtifactManifest
 
     storage = get_storage_provider()
-    sb = generate_healing_storyboard(theme=request.topic, duration_seconds=float(request.duration_seconds))
+    from src.studios.healing_relaxation.healing_storyboard import generate_healing_storyboard_gemini
+    sb = await generate_healing_storyboard_gemini(theme=request.topic, duration_seconds=float(request.duration_seconds))
     producer = HealingRelaxationProducer()
     result = await producer.produce(sb)
 

@@ -16,10 +16,12 @@ Specialized studio skill for directing and producing 4K broadcast-grade **Healin
 2. **2-Perspective Long-Play Formula ($1.80 – $2.20 Cost)**:
    - **Perspective 1 (Wide Zen Landscape, 0:00–0:30):** Full 35mm view of misty lotus pond with ancient stone lanterns.
    - **Perspective 2 (Intimate Lotus Stream, 0:30–1:00):** Close-up 50mm portrait perspective of blooming pink lotus with translucent water droplets.
-3. **Motion Kinematics Strategy**:
-   - **Tencent Hunyuan Video 1080p ($0.075/s)** / **Wan 2.1**: Glassy water reflections and subtle morning mist drift (`landscape_solid`).
-4. **432Hz Meditative Audio Design**:
-   - Soothing acoustic grand piano, Japanese shakuhachi bamboo flute, Celtic harp, and soft stream foley (48kHz stereo, -14.0 LUFS).
+3. **Motion Kinematics & Seamless 3h Loop Strategy**:
+   - **Tencent Hunyuan Video 1080p ($0.075/s)** / **Wan 2.1**: Glassy water reflections and subtle morning mist drift (`landscape_solid` / `water_fluid`).
+   - Gentle natural micro-kinematics for lotus petals, water ripples, drifting mist, and bamboo swaying with locked tripod framing.
+   - Forward-directional cineloop ensuring seamless, jump-free 3-hour long-play stretching.
+4. **432Hz Meditative Anti-Fatigue Audio Design**:
+   - Soothing acoustic grand piano, Japanese shakuhachi bamboo flute, Celtic harp, and soft stream foley (48kHz stereo, -14.0 LUFS). Zero harsh high-frequency spikes (>8kHz), zero jarring percussion.
 
 ---
 

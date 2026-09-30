@@ -16,11 +16,12 @@ Specialized studio skill for directing and producing 4K broadcast-grade **Cozy L
 2. **The 2-Perspective Long-Play Formula ($1.80 – $2.50 Cost)**:
    - **Perspective 1 (Wide Architectural Anchor, 0:00–0:30):** Full 24mm wide angle capturing the entire luxury room/terrace, glowing hearth, and rolling nature vista.
    - **Perspective 2 (Intimate Hearth & Ambiance, 0:30–1:00):** Closer 50mm portrait perspective focusing on the crackling fire embers, cozy seating, and steaming cup with nature in soft background bokeh.
-3. **Motion Kinematics Strategy**:
-   - **Alibaba Wan 2.1 ($0.080/s)** or **Kling v3 Pro ($0.280/s)**: Animate 10s–15s of fluid rolling ocean swells / rain drips + gentle fire flame flickering.
-   - Single-pass FFmpeg 1.5s–2.0s cross-dissolve loops extending seamlessly to 60s, 3 mins, or long-form.
+3. **Motion Kinematics & Seamless 3h Loop Strategy**:
+   - **Alibaba Wan 2.1 ($0.080/s)** or **Kling v3 Pro ($0.280/s)**: Animate 10s–15s of fluid rolling ocean swells / rain drips + gentle hypnotic flame flickering with locked tripod framing.
+   - Enforce natural gentle micro-kinematics (steam drift, lazy embers, subtle foliage sway outside) and zero visual fatigue.
+   - Single-pass FFmpeg 1.5s–2.0s forward cross-dissolve loops extending seamlessly to 60s, 3 hours, or 8 hours with zero seam jumps.
 4. **Binaural Audio Design (48kHz Stereo, -14.0 LUFS)**:
-   - Layer authentic wood crackles/embers with ocean surf or gentle rainfall. Commercially cleared via Suno v3.5 Pro or cached in `AudioVault`.
+   - Layer authentic warm wood crackles/embers with ocean surf or gentle rainfall. Zero harsh frequencies (>8kHz), zero jarring pops. Commercially cleared via Suno v3.5 Pro or cached in `AudioVault`.
 
 ---
 

@@ -23,11 +23,15 @@ Unified 4K Ambient, Sleep, and Relaxation Studio covering **14 atmospheric arche
 2. **2-Phase AI Video Diffusion & Local Stretch Architecture:**
    - **Phase 1 (60s Master Video):** Synthesizes true generative AI video diffusion motion using **Wan 2.1** (water/rain/snow/ocean), **Kling 1.6 Pro** (fireplaces/waterfalls/steam), or **Hunyuan Video** (mountain landscapes/clouds).
    - **Phase 2 (Long-Play Expansion):** Locally loops the pristine 60s 4K master into 1h, 3h, or 8h broadcasts via single-pass FFmpeg stream-looping with $0 extra compute.
-3. **Circadian Fade-to-Black:** Smooth transition to an OLED pure black screen after 1–2 hours for bedroom comfort while continuous audio plays for 8 hours.
-4. **9:16 Shorts & TikTok Teasers:** Auto-extracts vertical teaser clips with typography hooks for top-of-funnel viral reach.
-5. **3-Variant A/B Thumbnails:** Generates 3 distinct visual compositions (Interior POV, Expansive Sanctuary, Hearth Detail) for YouTube's Test & Compare tool.
-6. **Multi-Language Global SEO:** Localizes titles, descriptions, and tags into Japanese, German, Spanish, Portuguese, French, and Korean.
-7. **24/7 RTMP Live Broadcaster:** Streams continuous video loops directly to YouTube Live via RTMP with auto-reconnect resilience.
+3. **Mandatory Relaxation Micro-Kinematics & Seamless 3h Forward-Looping Blueprint:**
+   - Gentle movement for water fluid (soft ripples), clouds/mist, wildflowers/pine boughs, and grass meadows.
+   - Locked tripod framing with static structural anchors and constant forward vectors for seamless `build_seamless_forward_cineloop` 3-hour long-play stretching.
+   - Zero visual fatigue (no rapid pans/zooms) and zero ear fatigue (432Hz velvet audio, zero >8kHz harshness).
+4. **Circadian Fade-to-Black:** Smooth transition to an OLED pure black screen after 1–2 hours for bedroom comfort while continuous audio plays for 8 hours.
+5. **9:16 Shorts & TikTok Teasers:** Auto-extracts vertical teaser clips with typography hooks for top-of-funnel viral reach.
+6. **3-Variant A/B Thumbnails:** Generates 3 distinct visual compositions (Interior POV, Expansive Sanctuary, Hearth Detail) for YouTube's Test & Compare tool.
+7. **Multi-Language Global SEO:** Localizes titles, descriptions, and tags into Japanese, German, Spanish, Portuguese, French, and Korean.
+8. **24/7 RTMP Live Broadcaster:** Streams continuous video loops directly to YouTube Live via RTMP with auto-reconnect resilience.
 
 ---
 

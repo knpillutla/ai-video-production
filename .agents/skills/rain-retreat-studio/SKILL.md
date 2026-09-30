@@ -17,11 +17,12 @@ Specialized studio skill for directing and producing 4K broadcast-grade **Forest
 2. **2-Perspective Long-Play Formula ($1.80 – $2.20 Cost)**:
    - **Perspective 1 (Wide Forest River, 0:00–0:30):** Panoramic 35mm view of emerald river with thousands of rain droplet ripples.
    - **Perspective 2 (Macro Water Ripples, 0:30–1:00):** Close-up 50mm portrait perspective of circular water ripples and dripping cedar leaves.
-3. **Motion Kinematics Strategy**:
+3. **Motion Kinematics & Seamless 3h Loop Strategy**:
    - **Alibaba Wan 2.1 ($0.080/s)**: Continuous laminar river current + rain ripple physics (`water_fluid`).
-   - Single-pass FFmpeg 1.5s cross-dissolve looping.
+   - Gentle natural micro-kinematics: fine vertical rain streaks, soft circular ripples, wet foliage sway with locked tripod framing.
+   - Forward-directional cineloop ensuring seamless, jump-free 3-hour long-play stretching.
 4. **Binaural Audio Design**:
-   - Pristine natural rain on water surface + babbling brook white noise (48kHz stereo, -14.0 LUFS, zero synthetic hiss).
+   - Pristine natural rain on water surface + babbling brook white noise (48kHz stereo, -14.0 LUFS, zero synthetic hiss, zero >8kHz harshness).
 
 ---
 

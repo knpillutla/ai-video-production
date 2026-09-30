@@ -19,7 +19,7 @@ def main():
     url = f"http://{host}:{port}/ui"
 
     print("=" * 70)
-    print("      🎬 CINEAI STUDIO - AUTONOMOUS VIDEO PRODUCER WEB UI")
+    print("      CINEAI STUDIO - AUTONOMOUS VIDEO PRODUCER WEB UI")
     print("=" * 70)
     print(f" * Project Root:  {PROJECT_ROOT}")
     print(f" * Web UI URL:    {url}")

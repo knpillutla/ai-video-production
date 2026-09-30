@@ -117,7 +117,7 @@ class NatureRetreatProducer:
         ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
         cmd = [
             ffmpeg_bin, "-y", "-loop", "1", "-i", str(img_path),
-            "-vf", "scale=3840:2160:flags=lanczos,zoompan=z='min(zoom+0.0008,1.06)':d=120:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=3840x2160",
+            "-vf", "scale=3840:2160,zoompan=z='min(zoom+0.0008,1.06)':d=120:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':fps=24",
             "-t", str(duration_sec), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "24", str(out_path)
         ]
         subprocess.run(cmd, capture_output=True, check=True)

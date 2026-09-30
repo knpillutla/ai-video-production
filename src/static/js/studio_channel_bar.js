@@ -1,4 +1,4 @@
-// CineAI Studio: Top Channel Bar Controller (Dynamic multi-tenant channels)
+// CineAI Studio: Top Channel Bar & Ledger Channel Chips Controller (Dynamic API integration)
 let selectedStudioChannel = null;
 let studioChannelMetas = {};
 
@@ -25,12 +25,12 @@ function updateStudioChannelMetas(channelsList) {
 
 function renderStudioChannelChips() {
   const container = document.getElementById("studio-channel-chips");
-  if (!container) return;
-
+  const ledgerContainer = document.getElementById("ledger-channel-chips");
   const slugs = Object.keys(studioChannelMetas);
+
   if (slugs.length === 0) {
     selectedStudioChannel = null;
-    container.innerHTML = `
+    const emptyHtml = `
       <div class="flex items-center gap-2">
         <span class="text-xs text-slate-500 dark:text-gray-400 italic">No channels created yet</span>
         <button type="button" onclick="openCreateChannelModal()" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow transition active:scale-95">
@@ -39,6 +39,8 @@ function renderStudioChannelChips() {
         </button>
       </div>
     `;
+    if (container) container.innerHTML = emptyHtml;
+    if (ledgerContainer) ledgerContainer.innerHTML = emptyHtml;
     updateStudioChannelBadge();
     return;
   }
@@ -47,12 +49,12 @@ function renderStudioChannelChips() {
     selectedStudioChannel = slugs[0];
   }
 
-  const html = slugs.map(slug => {
+  const activeCls = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white border-2 border-indigo-600 shadow-md flex items-center gap-1.5 ring-2 ring-indigo-500/40";
+  const inactiveCls = "px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all flex items-center gap-1.5 shadow-sm";
+
+  const studioHtml = slugs.map(slug => {
     const meta = studioChannelMetas[slug];
     const isSelected = slug === selectedStudioChannel;
-    const activeCls = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white border-2 border-indigo-600 shadow-md flex items-center gap-1.5 ring-2 ring-indigo-500/40";
-    const inactiveCls = "px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all flex items-center gap-1.5 shadow-sm";
-
     return `
       <button type="button" onclick="selectStudioChannel('${slug}')" id="studio-ch-${slug}" class="${isSelected ? activeCls : inactiveCls}">
         <i class="fa-solid ${meta.icon} text-[11px] text-${meta.color}-500"></i>
@@ -62,7 +64,30 @@ function renderStudioChannelChips() {
     `;
   }).join("");
 
-  container.innerHTML = html;
+  if (container) container.innerHTML = studioHtml;
+
+  if (ledgerContainer) {
+    const isAll = (selectedStudioChannel === "all");
+    const allChip = `
+      <button type="button" onclick="selectStudioChannel('all')" id="ledger-ch-all" class="${isAll ? activeCls : inactiveCls}">
+        <i class="fa-solid fa-network-wired text-[11px] text-indigo-400"></i>
+        <span>All Channels</span>
+      </button>
+    `;
+    const ledgerChips = slugs.map(slug => {
+      const meta = studioChannelMetas[slug];
+      const isSelected = slug === selectedStudioChannel;
+      return `
+        <button type="button" onclick="selectStudioChannel('${slug}')" id="ledger-ch-${slug}" class="${isSelected ? activeCls : inactiveCls}">
+          <i class="fa-solid ${meta.icon} text-[11px] text-${meta.color}-500"></i>
+          <span>${meta.name}</span>
+          <span class="text-[9px] font-mono opacity-80">${meta.category}</span>
+        </button>
+      `;
+    }).join("");
+    ledgerContainer.innerHTML = allChip + ledgerChips;
+  }
+
   updateStudioChannelBadge();
 }
 
@@ -73,18 +98,23 @@ function selectStudioChannel(channelId) {
     updateStudioChannelBadge();
     return;
   }
-  if (!studioChannelMetas[channelId]) {
+  if (channelId !== "all" && !studioChannelMetas[channelId]) {
     channelId = slugs[0];
   }
   selectedStudioChannel = channelId;
-  const meta = studioChannelMetas[channelId];
+  const meta = (channelId !== "all") ? studioChannelMetas[channelId] : null;
+
+  const activeCls = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white border-2 border-indigo-600 shadow-md flex items-center gap-1.5 ring-2 ring-indigo-500/40";
+  const inactiveCls = "px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all flex items-center gap-1.5 shadow-sm";
 
   slugs.forEach(k => {
-    const activeCls = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white border-2 border-indigo-600 shadow-md flex items-center gap-1.5 ring-2 ring-indigo-500/40";
-    const inactiveCls = "px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all flex items-center gap-1.5 shadow-sm";
-    const btn = document.getElementById("studio-ch-" + k);
-    if (btn) btn.className = (k === channelId) ? activeCls : inactiveCls;
+    const sBtn = document.getElementById("studio-ch-" + k);
+    if (sBtn) sBtn.className = (k === channelId) ? activeCls : inactiveCls;
+    const lBtn = document.getElementById("ledger-ch-" + k);
+    if (lBtn) lBtn.className = (k === channelId) ? activeCls : inactiveCls;
   });
+  const allBtn = document.getElementById("ledger-ch-all");
+  if (allBtn) allBtn.className = (channelId === "all") ? activeCls : inactiveCls;
 
   updateStudioChannelBadge();
 
@@ -95,14 +125,19 @@ function selectStudioChannel(channelId) {
   if (window.StudioBus) {
     window.StudioBus.emit("channel:changed", { channelId, meta });
   }
+  if (typeof syncCameraAngleVisibility === "function") {
+    syncCameraAngleVisibility(channelId);
+  }
 }
 
 function updateStudioChannelBadge() {
   const badge = document.getElementById("studio-channel-meta-badge");
   if (!badge) return;
-  if (selectedStudioChannel && studioChannelMetas[selectedStudioChannel]) {
+  if (selectedStudioChannel && selectedStudioChannel !== "all" && studioChannelMetas[selectedStudioChannel]) {
     const meta = studioChannelMetas[selectedStudioChannel];
     badge.textContent = `${meta.name} (${meta.handle})`;
+  } else if (selectedStudioChannel === "all") {
+    badge.textContent = "All Channels";
   } else {
     badge.textContent = "No Active Channel";
   }

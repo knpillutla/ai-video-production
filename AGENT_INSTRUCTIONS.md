@@ -16,7 +16,7 @@
 6. **Zero Duplication & Single Source of Truth:** Never create or keep duplicate code, redundant helpers, or overlapping documentation files. Maintain exactly one authoritative source file per domain. Delete superseded drafts immediately.
 7. **Fail-Fast & Idempotent (Zero Redundant Spends):** Every pipeline step must be replayable and idempotent. Never regenerate existing media assets or duplicate external paid API expenditures during iterative video improvements.
 8. **Pre-Flight Cost Transparency & Explicit Confirmation:** UI submissions must NEVER immediately trigger generation. The pipeline must first calculate and display an itemized cost breakdown (LLM tokens, TTS characters, visual assets, cloud compute) and require explicit user confirmation before executing billable jobs.
-9. **Model Testing Safety & Cost Guard (STRICT BAN ON BULK TESTS):** **NEVER, EVER automatically run all tests.** Running full test suites consumes excessive compute and risks accidental model cost leakage. Agents must **NEVER run all tests** (`pytest tests/`) unless the user explicitly requests all tests. When verifying code changes, run **ONLY the single specific test file or function** modified. When testing live external models, **run only ONE test only with a maximum 10-second duration**. The default test suite must ALWAYS run 100% locally with offline mocks.
+9. **Model Testing Safety & Cost Guard (STRICT BAN ON LIVE MODELS IN AUTOMATED TESTS & BULK TESTS):** **NEVER, EVER run any automated test with live external models.** Automated tests must ALWAYS run 100% locally and offline using deterministic mocks and test fixtures to guarantee $0.00 API expenditure. Live external models (Gemini, Flux, Fal.ai, Suno, Azure Speech) must NEVER be invoked during automated test runs. Furthermore, agents must **NEVER run all tests** (`pytest tests/`) unless the user explicitly requests all tests. When verifying code changes, run **ONLY the single specific test file or function** modified.
 10. **Terraform-Only IaC:** Always create Terraform scripts only for all cloud platforms (Azure, GCP, AWS, Multi-Cloud). Never use Bicep, ARM, CloudFormation, or platform-specific template languages.
 11. **Topic, Metadata & Story Deduplication & User Alerting:** Every time a video is created, save the topic, metadata information (genre, tags, target audience, format), and the final story created from the script into the persistent Topic Memory vault. When the user creates for similar metadata or topic (cosine similarity $\ge 0.80$ or heavy metadata overlap), do not create duplicate content; block generation immediately and alert the user with a descriptive duplicate alert.
 12. **Mandatory YPP Monetization Standards (Anti-Demonetization Guard):** Never generate uncurated, silent ambient or scenic loops without substantive human/scripted narrative. All productions must incorporate meaningful voiceover commentary, educational trivia, or cultural storytelling (via TTS narration and timed subtitles) to avoid YouTube's "Reused / Repetitive Content" rejections. Ensure 100% commercial master rights for audio/music (Suno v3.5 Pro or local procedural DSP) to prevent Content ID strikes, strictly enforce AdSense advertiser-friendly safety (`local_compliance.py`), and declare synthetic media flags on upload.
@@ -28,6 +28,12 @@
 18. **Mandatory 4-Stage Progressive Quality Gate & Cost Guard:** All studio agents and pipelines must enforce progressive quality gating (Stage 1: Pre-flight deduplication & storyboard review; Stage 2: Keyframe image review with targeted single-scene recreation before video motion compute; Stage 3: AudioVault dynamic cache matching / Suno v3.5 audio; Stage 4: Domain video motion & single-pass 4K master assembly). Prevent expensive video motion spend on unapproved keyframes or duplicate scripts.
 19. **Mandatory 2-Phase AI Video Diffusion & Local Long-Play Stretch Architecture (All Agents & All Channels):** Every production across all channels (ambient retreats, nature documentaries, deep sleep sanctuaries, study focus cafes, and cultural films) MUST synthesize genuine cinematic AI video diffusion motion for the initial master scenes using domain-optimized models (Alibaba Wan 2.1 for laminar water/rain/snow, Kling v1.6 Pro for fireplaces/mist/waterfalls, Tencent Hunyuan Video for mountain landscapes and atmospheric vistas). Static 2D pan-zooms are strictly prohibited for primary retreat masters where organic fluid dynamics, foliage sway, falling snow, and glowing fire embers are required for blue-chip quality. Once the pristine 60-second 4K AI diffusion master is synthesized and approved, all long-play expansions (1h, 3h, 8h broadcasts) MUST be generated locally using single-pass FFmpeg seamless stream looping (`-stream_loop`) with optional Circadian OLED fade-to-black.
 20. **Mandatory Autonomous Goal-Completion & Self-Healing Execution Loop (Zero Stalls / Zero Aborts):** AI agents within this workspace must NEVER halt, give up, or exit prematurely on recoverable hurdles. If a topic duplicate is found, the agent must auto-pivot to a fresh unique sub-theme; if an API request is queued or times out, it must resume polling via persistent tokens; if an intermediate asset fails QA, it must self-heal and re-synthesize. The agent MUST continuously drive the execution loop forward until the final verified 4K video master is rendered and delivered.
+21. **Mandatory Agentic Context Enrichment & Gemini Directorial Scripting (All Studios & Channels):** Studio agents must never dispatch raw user prompts or rely on static catalog fallbacks. Agents must autonomously enrich the narrative context with geographic/architectural lore, fluid and atmospheric dynamics, 35mm optical framing, proactive negative purity tokens (suppressing modern vehicles/clutter in natural/rural settings), and acoustic tags before querying Gemini LLM for structured screenplay and motion storyboard synthesis. All queries, responses, and manifests must be transparently logged and saved to `episode_manifest.json`.
+22. **Mandatory Anti-Fatigue Music & Video Motion Standards (All Relaxation Channels):** Video motion prompts and audio scores across all relaxation, sleep, meditation, ambient, nature, and cozy channels must strictly eliminate visual and acoustic fatigue. Video motion must be slow, hypnotic, and gentle (locked tripod or <=0.5 m/s drift) with zero rapid pans, sudden zooms, or strobing effects. Music and audio stems must feature warm acoustic textures (432Hz tuning, gentle piano/harp/flute pads, binaural foley) with zero harsh high-frequency sizzle (>8kHz), zero jarring percussion, and -14.0 LUFS velvet mastering.
+23. **Mandatory Relaxation Agent Creation Contract & Invariant Blueprint:** Every time a relaxation, ambient, nature, sleep, meditation, or cozy studio agent or pipeline is created or implemented, it MUST strictly adhere to the 5-point contract: (1) Natural micro-kinematics for water, clouds, flowers, and grass; (2) Seamless forward-stitching compatibility for 3-hour stretched broadcasts; (3) Anti-fatigue visual/acoustic guardrails; (4) Autonomous context and negative purity enrichment; (5) Directorial Gemini screenplay with full manifest persistence (`episode_manifest.json`).
+
+
+
 
 ---
 
@@ -310,3 +316,80 @@ The dance video fast-path (`_produce_dance_video`) in `pipeline.py` must apply t
 * **Cinematic 24.0 fps Film Cadence:** Blue-chip wildlife and mountain blizzard survival productions must strictly default to **24.0 fps** with natural motion blur to convey monumental timelessness and heavy blizzard drifts.
 * **Visceral Survival Realism & Contrast:** Contrast sub-zero blizzard gales, drifting powder snow, and stone huts with interior hearth embers and steaming tea kettles. Layer authentic procedural foley (howling wind, snow crunching) with sparse acoustic instruments (rubab, mountain flute, low cello drone).
 * **Authoritative Measured Narration (YPP Guard):** Paced deliberately (~110–125 wpm) with ecological, geographical, and cultural survival lore to ensure 100% YouTube Partner Program monetization clearance.
+
+---
+
+## 16. Mandatory Agentic Context Enrichment & Gemini Directorial Scripting Standard
+
+* **Zero Raw Dispatch & Zero Static Fallbacks:** Studio agents across all genres (Ambient World, Cozy Ambiance, Healing Relaxation, Rain Retreat, Blue-Chip Nature, Survival, Dance, Comedy) must NEVER blindly pass sparse user strings directly to image/video synthesis models or rely on hardcoded fallback storyboards when custom user input is received.
+* **Autonomous Multi-Faceted Context Enrichment:** The active studio agent must autonomously expand the initial prompt into a rich directorial brief prior to calling Gemini:
+  * **Geographic & Architectural Realism:** Authentic regional building materials, roof styles, alpine timber, window shutters, stonework, and local vegetation.
+  * **Fluid & Atmospheric Dynamics:** Fine continuous rain streaks, glistening wet wooden eaves, specular water puddle reflections, rising chimney smoke, or billowing fog.
+  * **35mm Optical Direction:** Specific lens focal lengths (24mm wide panorama, 35mm environmental, 50mm natural human perspective, 85mm portrait bokeh), neutral 5600K daylight, soft overcast diffusion, or amber interior hearth glow.
+  * **Negative Purity & Clutter Suppression:** Mandatory suppression tokens (`zero cars, zero vehicles, zero vans, zero trucks, zero modern traffic, zero asphalt highways, zero modern street clutter`) for rustic, historical, village, and natural environments.
+  * **Soundscape & Acoustic Tags:** Instruments, foley layers, binaural frequencies (432Hz/528Hz), tempo (BPM), and sidechain ducking configuration.
+* **Structured Gemini Directorial Screenplay Synthesis:** Send the enriched brief to Gemini LLM (`gemini-1.5-pro` / `gemini-2.0-flash`) via strict JSON schemas to derive:
+  * Rich visual keyframe descriptions ($\ge 130$ words).
+  * Video motion prompts tailored to the active physics engine (Wan 2.1 for fluids/rain, Kling 1.6 Pro for collisions/mist, Hunyuan for solid vistas).
+  * Dynamic story FPS (24/30/60 fps) and camera pan/tilt/glide directions.
+* **Full Directorial Logging & Episode Manifest Persistence:**
+  * Log `[GEMINI STORYBOARD REQUEST DISPATCHED]` with the full prompt and `[GEMINI STORYBOARD RESPONSE RECEIVED]` with the JSON screenplay in the console and telemetry streams.
+  * Persist the complete directorial specification to `episode_manifest.json` inside the episode's storage folder.
+
+---
+
+## 17. Mandatory Anti-Fatigue Music & Video Motion Standards (All Relaxation Channels)
+
+* **Natural Gentle Micro-Kinematics (Water, Clouds, Flowers, Grass):**
+  * **Water Fluid:** Gentle continuous ripples, slow tranquil streams, soft expanding circular ripples from rain droplets (zero violent splashes, zero boiling waves).
+  * **Clouds & Mist:** Slow, dreamy, continuous drifting clouds and soft mountain mist (zero fast storm rushes or jarring time-lapse jumps).
+  * **Flowers & Foliage:** Delicate, rhythmic swaying of wildflowers and pine boughs in a faint, soothing mountain breeze (zero unnatural whipping).
+  * **Grass & Lawns:** Subtle, gentle undulating wave motion across alpine meadows matching a light natural breeze.
+* **Seamless Forward Stitching for Multi-Hour Stretched Broadcasts (1h, 3h, 8h):**
+  * **Loop Boundary Seam-Free Fidelity:** Short 5s/10s AI video diffusion clips are forward-crossfaded (`build_seamless_forward_cineloop` with 1.2s head-to-tail dissolve) and stitched into multi-hour living wallpapers. All motion vectors MUST be constant, forward-directional, and seam-free with zero reverse jumps.
+  * **Rock-Solid Background Anchors:** Pacing must be locked tripod framing (or ultra-slow steadycam drift $\le 0.5$ m/s / 1.5 km/h) with 100% static background structures (chalets, mountains, rocks, trees) so only the natural fluid elements gently move.
+  * **Prohibited Visual Artifacts:** Strictly prohibit rapid panning, sudden zooms, fast object speeds, rotational swings, high-frequency camera jitters, or flashing/strobing lights that cause cognitive arousal or visual fatigue.
+* **Zero Acoustic Ear Fatigue in Music & Foley:**
+  * **Velvet Warm Acoustic Textures:** Mandate warm piano chords, Celtic harp, bamboo shakuhachi flute, deep cello drones, soft binaural waves (432Hz/528Hz), and organic nature foley.
+  * **Prohibited Acoustic Artifacts:** Strictly prohibit harsh high-frequency spikes (>8 kHz sharp sizzle/hiss), jarring percussion transients, sudden loud claps of thunder, abrupt volume spikes, repetitive sharp loops, or discordant intervals that trigger sensory arousal during multi-hour listening or sleep.
+  * **Mastering:** Gentle low-pass rolloff and normalized to **-14.0 LUFS (±1.0 LUFS)** velvet integrated loudness.
+
+---
+
+## 18. Mandatory Relaxation Agent Creation Contract & Invariant Blueprint
+
+Whenever any relaxation, ambient, nature retreat, cozy hearth, or meditation studio agent or channel pipeline is created or instantiated, the agent MUST enforce this standard invariant blueprint:
+
+1. **Natural Micro-Kinematics Mandate:** Base prompts MUST explicitly instruct models to animate gentle movement for fluid water (soft ripples, tranquil streams, circular droplet ripples), drifting clouds/mist, gently swaying wildflowers/pine boughs, and undulating grass meadows.
+2. **Seamless 3-Hour Forward-Stitching Guarantee:** All 5s/10s diffusion motion prompts MUST enforce locked framing, static structural backgrounds, and unidirectional motion vectors compatible with `build_seamless_forward_cineloop` (1.2s head-to-tail forward dissolve) for zero-seam multi-hour stretching.
+3. **Anti-Fatigue Guardrails:** Explicitly prohibit rapid pans, abrupt zooms, high-frequency jitters, flashing lights, and harsh audio frequencies (>8 kHz sizzle/hiss, jarring drum hits, loud thunder) to guarantee zero visual and auditory fatigue.
+4. **Mandatory Pure Nature Purity Guard (Zero Vehicles, Zero Humans, Zero Animals by Default):** Auto-enrich regional architecture, lighting (5400K natural daylight / warm amber glow), and proactive negative purity tokens (`zero humans, zero people, zero persons, zero characters, zero crowds, zero cars, zero vehicles, zero vans, zero trucks, zero modern traffic, zero asphalt highways, zero modern clutter, zero animals, zero wildlife, zero birds, zero pets, zero livestock`) unless explicitly requested in the user's prompt.
+5. **Directorial Screenplay & Manifest Contract:** Query Gemini LLM with structured JSON output, log dispatched prompt and response, and persist complete directorial decisions to `episode_manifest.json`.
+
+---
+
+## 19. Mandatory Genre-Specific Studio Platform (Strict Ban on Universal Platform, Schemas & Global Screenplay Caching)
+
+* **Strict Ban on Universal Platform & Universal Schemas:** Never create, import, or maintain generic "universal" platform schemas, universal models, or universal directorial engines. The architecture is strictly **Genre-Specific**.
+* **Self-Contained Genre Studios:** Every genre and studio category (Relaxation/Living Wallpapers, BBC Documentaries, Telugu Comedy, Mass Dance Music, Travel Walking Tours) MUST maintain its own dedicated, self-contained:
+  - **Genre Schema Models** (e.g., `src/studios/ambient_world/relax_models.py` defining `RelaxScreenplay`, `RelaxSceneDirective`, `LoopStrategySpec`).
+  - **Genre Directorial Prompt Builder** (e.g., `src/studios/ambient_world/ambient_directorial_prompt.py`).
+---
+
+## 20. Mandatory 100% Autonomous Geographic & Ecosystem Derivation (Strict Ban on Hardcoded Templates, Regional Fallbacks & Geographic Vocabulary Contamination)
+
+* **Zero Hardcoded Geographic Defaults or Fallbacks:** Never hardcode regional defaults (such as defaulting unmapped prompts to `"swiss_alps"` or hardcoding `"Glacial Alpine Valley"` in prompt builders or schema examples).
+* **100% Autonomous Ecosystem & Landmark Derivation:** The directorial engine and prompt builder MUST instruct the LLM (Gemini) to **autonomously derive** all topographical, ecological, and cultural parameters directly from the user's prompt or chosen landmark:
+  - `sub_genre`: Exact ecological category (e.g., `waterfall_gorge`, `river_canyon`, `coastal_ocean`, `alpine_mountains`, `temperate_forest`, `zen_waters`, `cozy_hearth`).
+  - `continent_region`: True continent/region (e.g., `Great Lakes Basin / North America`, `Alpine Central Europe`, `Scandinavia / Arctic Fjords`).
+  - `culture_heritage`: Authentic regional natural and conservation heritage.
+  - `attraction_type`: Authentic geological/topographical structure (e.g., `River Escarpment & Waterfall Cascade`, `Glacial Fjord`, `Granite Canyon & Whitewater Rapids`).
+  - `audio_master.suno_musical_tags`: Foley and musical textures strictly matching the authentic terrain (e.g., thunderous waterfall roar for waterfalls, ocean surf for coasts, mountain breeze for peaks).
+* **Strict Ban on Vocabulary Contamination:** Never inject or permit vocabulary from one geographic archetype to contaminate another:
+  - Strictly prohibit words like `"alpine"`, `"meadow"`, `"chalet"`, `"glacier"` in river gorge, escarpment, ocean coast, canyon, or woodland environments (e.g. Niagara Falls, Iguazu, Redwoods, Big Sur).
+  - Use terrain-authentic affirmative descriptors: `"empty river gorge"`, `"canyon basin"`, `"wild stone riverbank"`, `"natural gravel and boulder shoreline"`, `"primeval forest sanctuary"`, `"untouched natural terrain"`.
+
+
+
+
+

@@ -1,13 +1,14 @@
-"""Persistent Semantic Audio Vault & Ambient Sound Cache (Directive 3 & 15).
+"""Persistent Semantic Audio Vault & Ambient Sound Cache (Directives 3, 11 & 15).
 
 Caches and dynamically retrieves audio stems by semantic theme, genre, and concept
-overlap (>= 0.75 similarity) before invoking external paid music APIs.
+overlap (>= 0.75 similarity) with a mandatory 10-Video Anti-Repetition Cooldown.
 """
 
 import json
 import shutil
+import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 from src.core.telemetry import logger
 
 VAULT_DIR = Path("storage/audio_vault")
@@ -22,7 +23,7 @@ def _tokenize(text: str) -> set[str]:
 
 
 class AudioVaultService:
-    """Manages persistent catalog of reusable ambient, nature, and instrumental stems."""
+    """Manages persistent catalog of reusable ambient, nature, and instrumental stems with 10-video cooldown."""
 
     def __init__(self, vault_dir: Path = VAULT_DIR):
         self.vault_dir = vault_dir
@@ -32,16 +33,16 @@ class AudioVaultService:
 
     def _ensure_index(self) -> None:
         if not self.index_file.exists():
-            self.index_file.write_text(json.dumps({"stems": []}, indent=2), encoding="utf-8")
+            self.index_file.write_text(json.dumps({"stems": [], "production_history": []}, indent=2), encoding="utf-8")
 
-    def _load_index(self) -> list[dict[str, Any]]:
+    def _load_data(self) -> dict[str, Any]:
         try:
-            return json.loads(self.index_file.read_text(encoding="utf-8")).get("stems", [])
+            return json.loads(self.index_file.read_text(encoding="utf-8"))
         except Exception:
-            return []
+            return {"stems": [], "production_history": []}
 
-    def _save_index(self, stems: list[dict[str, Any]]) -> None:
-        self.index_file.write_text(json.dumps({"stems": stems}, indent=2), encoding="utf-8")
+    def _save_data(self, data: dict[str, Any]) -> None:
+        self.index_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     def find_matching_stem(
         self,
@@ -51,17 +52,23 @@ class AudioVaultService:
         tags: str = "",
         vocal_gender: str = "none",
         min_similarity: float = 0.70,
+        current_episode_id: Optional[str] = None,
+        min_cooldown: int = 10,
     ) -> Path | None:
-        """Find a cached audio stem matching the requested theme, genre, and concept."""
+        """Find a cached audio stem matching the requested theme, respecting the 10-video cooldown window."""
         query_text = f"{genre} {theme} {concept} {tags}"
         query_tokens = _tokenize(query_text)
         if not query_tokens:
             return None
 
+        data = self._load_data()
+        stems = data.get("stems", [])
+        history = data.get("production_history", [])
+
         best_match: dict[str, Any] | None = None
         best_score = 0.0
 
-        for entry in self._load_index():
+        for entry in stems:
             stem_path = self.vault_dir / entry.get("filename", "")
             if not (stem_path.is_file() and stem_path.stat().st_size > 1000):
                 continue
@@ -71,6 +78,16 @@ class AudioVaultService:
             if req_gender in ("male", "female") and entry_gender != req_gender:
                 continue
 
+            # Anti-Repetition 10-Video Cooldown Guard
+            filename = entry.get("filename", "")
+            last_used_indices = [idx for idx, h in enumerate(history) if h.get("filename") == filename]
+            if last_used_indices:
+                last_used_offset = len(history) - 1 - last_used_indices[-1]
+                if last_used_offset < min_cooldown:
+                    logger.info(f"audio_vault_cooldown_active: Stem '{entry.get('title')}' was used {last_used_offset} videos ago (< {min_cooldown}). Skipping to ensure musical variety.")
+                    print(f"[DECISION - AUDIO COOLDOWN] Stem '{entry.get('title')}' used in the last {last_used_offset} videos (< {min_cooldown} video limit). Generating fresh music.")
+                    continue
+
             entry_tokens = _tokenize(f"{entry.get('genre', '')} {entry.get('theme', '')} {entry.get('concept', '')} {entry.get('tags', '')}")
             if not entry_tokens:
                 continue
@@ -78,8 +95,6 @@ class AudioVaultService:
             intersection = query_tokens.intersection(entry_tokens)
             union = query_tokens.union(entry_tokens)
             jaccard_score = len(intersection) / len(union) if union else 0.0
-
-            # Combined score weights query concept coverage heavily to identify relevant existing stems
             primary_overlap = len(intersection) / len(query_tokens) if query_tokens else 0.0
             combined_score = max(0.4 * jaccard_score + 0.6 * primary_overlap, primary_overlap)
 
@@ -89,13 +104,23 @@ class AudioVaultService:
 
         if best_match and best_score >= min_similarity:
             matched_path = self.vault_dir / best_match["filename"]
-            logger.info(f"decision_audio_vault_cache_hit: Matched '{best_match.get('title')}' (score={best_score:.2f} >= threshold {min_similarity}) -> {matched_path.name}. Reusing cached stem ($0.00 spend).")
-            print(f"[DECISION - AUDIO CACHE HIT] Matched existing vault stem '{best_match.get('title')}' (semantic similarity: {best_score:.2f} >= {min_similarity}). Reusing {matched_path.name} ($0.00 spend).")
+            logger.info(f"decision_audio_vault_cache_hit: Matched '{best_match.get('title')}' (score={best_score:.2f} >= {min_similarity}) -> {matched_path.name}.")
+            print(f"[DECISION - AUDIO CACHE HIT] Matched existing vault stem '{best_match.get('title')}' (similarity: {best_score:.2f} >= {min_similarity}, cooldown: OK). Reusing asset ($0.00 spend).")
+            self.record_usage(best_match["filename"], current_episode_id or f"ep_{int(time.time())}")
             return matched_path
 
-        logger.info(f"decision_audio_vault_cache_miss: Best match was '{best_match.get('title') if best_match else 'None'}' with score={best_score:.2f} (< threshold {min_similarity}). Calling Suno for fresh composition.")
-        print(f"[DECISION - AUDIO CACHE MISS] Highest audio vault similarity is {best_score:.2f} (below required threshold {min_similarity}). Invoking Suno v3.5 Pro for fresh audio composition.")
+        logger.info(f"decision_audio_vault_cache_miss: Best match was '{best_match.get('title') if best_match else 'None'}' score={best_score:.2f} (< {min_similarity}). Generating fresh music.")
+        print(f"[DECISION - AUDIO CACHE MISS] Highest audio vault similarity is {best_score:.2f} (< threshold {min_similarity}). Invoking Suno v3.5 Pro for fresh audio composition.")
         return None
+
+    def record_usage(self, filename: str, episode_id: str) -> None:
+        """Record stem usage in the global production history for cooldown tracking."""
+        data = self._load_data()
+        history = data.setdefault("production_history", [])
+        history.append({"filename": filename, "episode_id": episode_id, "timestamp": time.time()})
+        if len(history) > 200:
+            data["production_history"] = history[-200:]
+        self._save_data(data)
 
     def register_stem(
         self,
@@ -106,8 +131,9 @@ class AudioVaultService:
         tags: str = "",
         title: str = "",
         vocal_gender: str = "none",
+        episode_id: Optional[str] = None,
     ) -> Path:
-        """Store newly generated Suno/DSP track into the persistent vault for future reuse."""
+        """Store newly generated Suno track into the persistent vault and register its initial usage."""
         src = Path(source_path)
         if not (src.is_file() and src.stat().st_size > 1000):
             return src
@@ -119,8 +145,8 @@ class AudioVaultService:
         if not dest.exists():
             shutil.copy2(src, dest)
 
-        stems = self._load_index()
-        # Avoid duplicate index entries
+        data = self._load_data()
+        stems = data.setdefault("stems", [])
         if not any(s.get("filename") == filename for s in stems):
             stems.append({
                 "filename": filename,
@@ -132,9 +158,10 @@ class AudioVaultService:
                 "vocal_gender": vocal_gender or "none",
                 "file_size": dest.stat().st_size,
             })
-            self._save_index(stems)
+            self._save_data(data)
             logger.info(f"audio_vault_stem_registered: {filename} in vault index ({len(stems)} total stems)")
 
+        self.record_usage(filename, episode_id or f"ep_{int(time.time())}")
         return dest
 
 

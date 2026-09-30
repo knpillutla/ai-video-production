@@ -17,6 +17,7 @@ import imageio_ffmpeg
 from src.core.telemetry import logger
 from src.providers.dance.fal_hunyuan import FalHunyuanAdapter
 from src.providers.dance.fal_kling import FalKlingAdapter
+from src.providers.fal_storage import _fal_api_key
 from src.providers.visual.fal_flux_pro_ultra import FalFluxProUltraAdapter
 from src.providers.visual.fal_kling_v3 import FalKlingV3Adapter
 from src.providers.visual.fal_wan21 import FalWan21Adapter
@@ -34,17 +35,25 @@ class MotionClipTask:
     domain: str = "water_fluid"
     req_file: Optional[Path] = None
     allow_fallback: bool = False
+    force_rerun: bool = False
+    negative_prompt: Optional[str] = None
+    model_configs: Optional[dict[str, Any]] = None
 
 
 def resolve_motion_model(model: str, prompt_context: str, total_shots: int = 4) -> tuple[str, str]:
     """Dynamically route to optimal AI video diffusion model with directorial rationale."""
-    if model in ("hunyuan", "wan", "kling", "kling_v3", "kling_4k", "lanczos"):
+    if model in ("wan", "wan_2_1", "wan21"):
+        return "wan", "Alibaba Wan 2.1 cost-effective motion diffusion selected for fast preview testing"
+    if model in ("hunyuan", "kling", "kling_v3", "kling_4k", "lanczos"):
         return model, f"Direct configuration override ({model})"
     if total_shots <= 5:
         return "kling_v3", f"Kling v3 4K Native selected as default for <=5 shots ({total_shots} shots) for native 4K UHD OLED fidelity"
     p = prompt_context.lower()
     if any(k in p for k in ("fire", "flame", "ember", "hearth", "waterfall", "rapids", "cascade", "chimney")):
         return "kling_v3", "Kling v3 4K Native selected for high volumetric momentum, dynamic fire embers, and fluid splash plumes"
+    return "wan", "Alibaba Wan 2.1 cost-effective motion diffusion selected for fluid landscapes"
+
+
 def _is_clip_4k(video_path: Path) -> bool:
     """Check if video file has 4K UHD dimensions (width >= 3840 and height >= 2160)."""
     try:
@@ -64,22 +73,36 @@ class VisualBatchService:
     """Universal batch rendering utility for keyframes and AI video diffusion."""
 
     def __init__(self, fal_key: Optional[str] = None):
-        self.fal_key = fal_key or os.getenv("FAL_KEY", "")
+        self._fal_key = fal_key or ""
+
+    @property
+    def fal_key(self) -> str:
+        return self._fal_key or _fal_api_key()
+
+    @fal_key.setter
+    def fal_key(self, value: Optional[str]) -> None:
+        self._fal_key = value or ""
 
     async def render_keyframes_batch(
         self,
         tasks: List[Tuple[str, Path, Optional[Path], int]],
         aspect_ratio: str = "16:9",
+        force_rerun: bool = False,
     ) -> List[Path]:
         """Render batch of FLUX 1.1 Pro Ultra keyframes concurrently with disk caching."""
         async def _process_single_keyframe(prompt: str, out_path: Path, req_file: Optional[Path], idx: int) -> Path:
-            if out_path.is_file() and out_path.stat().st_size > 1000:
+            if not force_rerun and out_path.is_file() and out_path.stat().st_size > 1000:
                 logger.info(f"decision_keyframe_cache_hit: Shot {idx} reusing {out_path.name} ($0.00 spend)")
                 print(f"[DECISION - KEYFRAME CACHE HIT] Shot {idx} exists on disk ({out_path.name}). Reusing image ($0.00 spend).")
                 return out_path
 
-            logger.info(f"decision_keyframe_invoke_flux: Shot {idx} cache miss. Synthesizing via FLUX 1.1 Pro Ultra...")
-            print(f"[DECISION - KEYFRAME CACHE MISS] Shot {idx} synthesizing via FLUX 1.1 Pro Ultra concurrently...")
+            if force_rerun:
+                out_path.unlink(missing_ok=True)
+                if req_file and req_file.exists():
+                    req_file.unlink(missing_ok=True)
+
+            logger.info(f"decision_keyframe_invoke_flux: Shot {idx} cache miss (or force_rerun). Synthesizing via FLUX 1.1 Pro Ultra...")
+            print(f"[DECISION - KEYFRAME SYNTHESIS] Shot {idx} synthesizing via FLUX 1.1 Pro Ultra concurrently...")
             adapter = FalFluxProUltraAdapter(api_key=self.fal_key)
             await adapter.generate_to_file(prompt=prompt, output_path=out_path, aspect_ratio=aspect_ratio, force_live=bool(self.fal_key))
             return out_path
@@ -94,30 +117,56 @@ class VisualBatchService:
         total_shots = len(tasks)
 
         async def _process_single_motion(task: MotionClipTask) -> Path:
-            if task.output_path.is_file() and task.output_path.stat().st_size > 1000:
+            if not task.force_rerun and task.output_path.is_file() and task.output_path.stat().st_size > 1000:
                 logger.info(f"decision_motion_cache_hit: Reusing {task.output_path.name} ($0.00 spend)")
                 print(f"[DECISION - MOTION CACHE HIT] Clip {task.output_path.name} exists on disk. Reusing asset ($0.00 spend).")
                 return task.output_path
 
+            if task.force_rerun:
+                task.output_path.unlink(missing_ok=True)
+                raw_diff = task.output_path.parent / f"raw_diff_{task.output_path.name}"
+                raw_diff.unlink(missing_ok=True)
+                if task.req_file and task.req_file.exists():
+                    task.req_file.unlink(missing_ok=True)
+
             chosen_model, rationale = resolve_motion_model(task.model, f"{task.visual_prompt} {task.motion_prompt}", total_shots=total_shots)
             logger.info(f"decision_motion_routing: {task.output_path.name} -> {chosen_model.upper()} ({rationale})")
             print(f"[DECISION - MOTION ROUTING] {task.output_path.name} -> {chosen_model.upper()} ({rationale})")
+
+            eff_prompt = task.motion_prompt
+            eff_neg = task.negative_prompt
+            eff_settings: dict[str, Any] = {}
+            if task.model_configs and isinstance(task.model_configs, dict):
+                m_key = "wan_2_1" if chosen_model == "wan" else ("kling_v1_6_pro" if chosen_model in ("kling", "kling_v3", "kling_4k") else chosen_model)
+                m_cfg = task.model_configs.get(m_key) or task.model_configs.get(chosen_model)
+                if m_cfg:
+                    prompts = m_cfg.get("prompts") if isinstance(m_cfg, dict) else getattr(m_cfg, "prompts", None)
+                    settings = m_cfg.get("settings") if isinstance(m_cfg, dict) else getattr(m_cfg, "settings", {})
+                    if prompts:
+                        p_pos = prompts.get("positive_prompt") if isinstance(prompts, dict) else getattr(prompts, "positive_prompt", None)
+                        p_neg = prompts.get("negative_prompt") if isinstance(prompts, dict) else getattr(prompts, "negative_prompt", None)
+                        if p_pos and p_pos.strip():
+                            eff_prompt = p_pos.strip()
+                        if p_neg and p_neg.strip():
+                            eff_neg = p_neg.strip()
+                    if settings and isinstance(settings, dict):
+                        eff_settings = settings
 
             if chosen_model in ("hunyuan", "wan", "kling", "kling_v3", "kling_4k") and self.fal_key and task.image_path.is_file() and task.image_path.stat().st_size > 1000:
                 try:
                     raw_diff = task.output_path.parent / f"raw_diff_{task.output_path.name}"
                     if chosen_model == "wan":
                         adapter = FalWan21Adapter(api_key=self.fal_key)
-                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=task.motion_prompt, output_path=raw_diff, force_live=True)
+                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, negative_prompt=eff_neg, settings=eff_settings)
                     elif chosen_model in ("kling_v3", "kling_4k"):
                         adapter = FalKlingV3Adapter(api_key=self.fal_key)
-                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=task.motion_prompt, output_path=raw_diff, force_live=True)
+                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, negative_prompt=eff_neg, settings=eff_settings)
                     elif chosen_model == "kling":
                         adapter = FalKlingAdapter(api_key=self.fal_key)
-                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=task.motion_prompt, output_path=raw_diff, force_live=True)
+                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, negative_prompt=eff_neg)
                     else:
                         adapter = FalHunyuanAdapter(api_key=self.fal_key)
-                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=task.motion_prompt, output_path=raw_diff, force_live=True, req_file=task.req_file)
+                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, req_file=task.req_file)
 
                     if raw_diff.is_file() and raw_diff.stat().st_size > 1000:
                         # Direct 4K Pass-Through: If already 4K native, move directly (0% CPU, 0s compute)
@@ -161,10 +210,19 @@ class VisualBatchService:
         total_frames = int(duration_sec * 24)
         cmd = [
             ffmpeg_bin, "-y", "-loop", "1", "-i", str(img_path),
-            "-vf", f"zoompan=z='min(zoom+0.0003,1.06)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={total_frames}:s=3840x2160:fps=24",
+            "-vf", f"zoompan=z='min(zoom+0.0003,1.06)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={total_frames}:fps=24,scale=3840:2160:flags=bicubic",
             "-t", str(duration_sec), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-r", "24", str(out_path),
         ]
-        subprocess.run(cmd, capture_output=True, check=True)
+        try:
+            subprocess.run(cmd, capture_output=True, text=True, check=True)
+        except Exception as e:
+            logger.error(f"zoompan_primary_failed: {e}. Falling back to safe 4K loop.")
+            cmd_safe = [
+                ffmpeg_bin, "-y", "-loop", "1", "-i", str(img_path),
+                "-vf", "scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160",
+                "-t", str(duration_sec), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-r", "24", str(out_path),
+            ]
+            subprocess.run(cmd_safe, capture_output=True, text=True, check=True)
         return out_path
 
 

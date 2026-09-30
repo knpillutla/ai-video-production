@@ -45,6 +45,7 @@ class FalKlingAdapter:
         aspect_ratio: str = "16:9",
         mode: str = "pro",
         force_live: bool = False,
+        negative_prompt: Optional[str] = None,
     ) -> tuple[str, Path]:
         """Synthesize video motion from a reference image URL.
 
@@ -96,32 +97,16 @@ class FalKlingAdapter:
                 "Content-Type": "application/json",
             }
 
-            anti_hallucination = (
-                "phantom snow, flying powder, floating white particles, spontaneous dust bursts, magical sparkles, "
-                "floating debris, erupting road powder, unnatural specks, visual hallucinations, morphing ground, "
-            )
-            anti_ghosting = (
-                "ghosting humans, transparent people, translucent bodies, smeared pedestrians, disappearing limbs, "
-                "morphing faces, melting bodies, dissolving people, double exposure, ghostly silhouettes, motion blur on people, "
-                "see-through bodies, blurry faces, deformed walkers, "
-            )
-            neg_prompt = (
-                anti_hallucination + anti_ghosting +
-                "blurry, low quality, distortion, noise, compression artifacts, jitter, flickers, overexposed, oversaturated, "
-                "deformed, cartoon, low resolution, pixelated, soft focus, haze, smear, "
-                "unrealistic person walking in front, pedestrian in front, human back, walking person in frame, uncanny human figure, mannequin, bad anatomy, CGI character"
-                if "scenic" in motion_prompt.lower() or "first-person" in motion_prompt.lower() or "empty" in motion_prompt.lower() or "pov" in motion_prompt.lower()
-                else anti_hallucination + anti_ghosting + "blurry, low quality, distortion, noise, compression artifacts, jitter, flickers, overexposed, oversaturated, deformed, cartoon, low resolution, pixelated, soft focus, haze, smear"
-            )
-            payload = {
-                "prompt": motion_prompt,
-                "negative_prompt": neg_prompt,
+            payload: dict[str, Any] = {
+                "prompt": motion_prompt.strip(),
                 "image_url": actual_url,
                 "duration": kling_dur,
                 "aspect_ratio": aspect_ratio,
                 "mode": eff_mode,
                 "cfg_scale": 0.55,
             }
+            if negative_prompt and negative_prompt.strip():
+                payload["negative_prompt"] = negative_prompt.strip()
 
             job_sidecar = out.with_suffix(out.suffix + ".fal_job.json")
             status_url, response_url = None, None

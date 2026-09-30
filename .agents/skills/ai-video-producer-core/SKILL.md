@@ -25,10 +25,9 @@ Every agent and pipeline must adhere to these foundational engineering standards
 3. **Pre-Flight Cost Transparency (Directive 7):**
    - Calculate and display the itemized cost breakdown (tokens, voice chars, keyframe images, video motion, compute) before dispatching generation jobs.
 4. **Model Testing Safety Guard & Bulk Test Ban (Directive 8):**
+   - **STRICT BAN ON AUTOMATED TESTS WITH LIVE MODELS:** **NEVER run any automated test with live external models.** Automated tests must ALWAYS run 100% locally with offline deterministic mocks/fixtures ($0.00 cost).
    - **STRICT BAN ON BULK TESTS:** **NEVER, EVER automatically run all tests.** Full test suite runs (`pytest tests/`) are strictly prohibited unless explicitly requested by the user.
    - When verifying a code change, run **ONLY the single specific test file or function** modified.
-   - Automated test suite runs 100% locally with offline deterministic mocks ($0.00 cost).
-   - Live external model tests must run **only ONE test only** capped at a **maximum duration of 10 seconds**.
 5. **Pre-Flight Topic Deduplication & User Alerting (Directive 10):**
    - Save topic, genre, tags, and synthesized story into `TopicMemory`.
    - If cosine similarity $\ge 0.80$ or heavy metadata overlap is detected, block generation (HTTP 409 Conflict) and alert the user immediately.
@@ -37,6 +36,16 @@ Every agent and pipeline must adhere to these foundational engineering standards
    - **100% Commercial Master Rights:** Zero copyrighted third-party tracks. Composed via Suno v3.5 Pro or procedural DSP stems.
    - **AdSense Advertiser-Friendly Screening:** All scripts screened via `local_compliance.py`.
    - **Synthetic Media Disclosure:** Set `has_synthetic_media=True` on upload.
+7. **Agentic Context Enrichment & Gemini Directorial Scripting (Directive 27):**
+   - Never dispatch raw user strings or static fallback scripts.
+   - Enforce multi-faceted domain enrichment (regional architecture, fluid dynamics, 35mm optical framing, negative vehicle/crowd tokens, acoustic tags) before querying Gemini LLM for structured screenplays.
+   - Transparently log prompts (`[GEMINI ... DISPATCHED]`) and responses (`[GEMINI ... RECEIVED]`) and persist full directorial data to `episode_manifest.json`.
+8. **Mandatory Pure Nature Purity Guard (Directive 29):**
+   - In all relaxation/nature themes, mandate: `zero humans, zero characters, zero crowds, zero cars, zero vehicles, zero vans, zero trucks, zero modern traffic, zero modern clutter, zero animals, zero wildlife, zero birds, zero pets` unless explicitly specified in the user's prompt.
+9. **Strict Ban on Universal / Generic Directorial Prompts (Directive 30):**
+   - Never create or use a 'Universal Director' or generic global prompt.
+   - Every genre studio (Relaxation/Ambient, BBC Documentary, Telugu Comedy, Dance Music) MUST maintain its dedicated, genre-specific prompt builder and director module inside its respective studio package (e.g. `ambient_directorial_prompt.py` and `relax_director.py`).
+
 
 ---
 

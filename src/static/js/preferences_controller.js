@@ -7,15 +7,20 @@ const STUDIO_DEFAULT_PRESETS = {
   format: "16:9",
   pureNature: false,
   bgm: true,
-  voiceOver: true,
+  voiceOver: false,
   tts: false,
   lipsync: false,
   duration: "10",
-  stretchHours: "0",
+  stretchHours: "3.0",
+  prodShots: "1",
   fps: "24",
   language: "en",
-  tier: "balanced",
-  nicheRadio: null
+  tier: "cinematic",
+  execMode: "test",
+  pipelineStrategy: "manual",
+  nicheRadio: "relax_nature",
+  shotHold: "3m",
+  cameraMotion: "locked_tripod"
 };
 
 function getUserPreferencesList() {
@@ -40,6 +45,7 @@ function captureCurrentStudioSettings() {
   const getChk = id => document.getElementById(id)?.checked || false;
   const getVal = (id, def) => document.getElementById(id)?.value || def;
   const nicheRadio = document.querySelector("input[name='niche_theme_radio']:checked")?.value || null;
+  const shotHold = document.querySelector("input[name='studio_shot_hold']:checked")?.value || "3m";
 
   return {
     format: getVal("studio-selected-format", "16:9"),
@@ -49,11 +55,16 @@ function captureCurrentStudioSettings() {
     tts: getChk("studio-toggle-tts"),
     lipsync: getChk("studio-toggle-lipsync"),
     duration: getVal("studio-duration", "10"),
-    stretchHours: getVal("studio-stretch-hours", "0"),
+    stretchHours: getVal("studio-stretch-hours", "3.0"),
+    prodShots: getVal("studio-prod-shots", "1"),
     fps: getVal("studio-fps", "24"),
     language: getVal("studio-language", "en"),
-    tier: typeof currentTier !== "undefined" ? currentTier : "balanced",
-    nicheRadio: nicheRadio
+    tier: typeof currentTier !== "undefined" ? currentTier : "low_cost",
+    execMode: typeof activeExecutionMode !== "undefined" ? activeExecutionMode : "test",
+    pipelineStrategy: typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "manual",
+    nicheRadio: nicheRadio,
+    shotHold: shotHold,
+    cameraMotion: getVal("studio-camera-motion", "locked_tripod")
   };
 }
 
@@ -66,23 +77,41 @@ function applySettingsToStudio(settings) {
   }
 
   setChk("studio-toggle-pure-nature", settings.pureNature);
-  setChk("studio-toggle-bgm", settings.bgm);
-  setChk("studio-toggle-voice-over", settings.voiceOver);
+  setChk("studio-toggle-bgm", settings.bgm !== undefined ? settings.bgm : true);
+  setChk("studio-toggle-voice-over", settings.voiceOver !== undefined ? settings.voiceOver : false);
   setChk("studio-toggle-tts", settings.tts);
   setChk("studio-toggle-lipsync", settings.lipsync);
 
   setVal("studio-duration", settings.duration || "10");
-  setVal("studio-stretch-hours", settings.stretchHours || "0");
+  setVal("studio-stretch-hours", settings.stretchHours || "3.0");
+  setVal("studio-prod-shots", settings.prodShots || "1");
   setVal("studio-fps", settings.fps || "24");
   setVal("studio-language", settings.language || "en");
+  setVal("studio-camera-motion", settings.cameraMotion || "locked_tripod");
 
-  if (typeof selectProductionTier === "function" && settings.tier) {
-    selectProductionTier(settings.tier);
+  if (typeof selectProductionTier === "function") {
+    selectProductionTier(settings.tier || "cinematic");
+  }
+
+  if (settings.execMode && typeof setExecutionMode === "function") {
+    setExecutionMode(settings.execMode);
+  }
+
+  if (settings.pipelineStrategy && typeof setPipelineExecutionMode === "function") {
+    setPipelineExecutionMode(settings.pipelineStrategy);
+  }
+
+  if (settings.shotHold) {
+    const r = document.querySelector(`input[name='studio_shot_hold'][value='${settings.shotHold}']`);
+    if (r) r.checked = true;
   }
 
   if (settings.nicheRadio) {
     const r = document.querySelector(`input[name='niche_theme_radio'][value='${settings.nicheRadio}']`);
     if (r) r.checked = true;
+    if (typeof selectNicheRadio === "function") {
+      selectNicheRadio(settings.nicheRadio);
+    }
   } else {
     document.querySelectorAll("input[name='niche_theme_radio']").forEach(r => r.checked = false);
   }

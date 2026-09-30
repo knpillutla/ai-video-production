@@ -56,13 +56,9 @@ class FalFluxProUltraAdapter:
             logger.warning("fal_flux_pro_ultra: no FAL_KEY — using local placeholder")
             return await self._fallback_local(prompt, out, aspect_ratio)
 
-        clean_prompt = prompt
-        for bad_tok in ("perspiration", "micro-pores", "subtle perspiration", "bare skin", "shirtless", "naked", "half naked", "unclothed", "provocative"):
-            clean_prompt = clean_prompt.replace(bad_tok, "authentic texture")
-
         headers = {"Authorization": f"Key {self.api_key}", "Content-Type": "application/json"}
         payload: dict[str, Any] = {
-            "prompt": f"{clean_prompt}, fully clothed modest attire, zero nudity, family-friendly advertiser-safe standard",
+            "prompt": prompt.strip(),
             "aspect_ratio": "16:9" if aspect_ratio == "16:9" else "9:16",
             "output_format": "jpeg",
             "raw": True,

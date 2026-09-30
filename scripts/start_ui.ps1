@@ -37,4 +37,4 @@ if (-not $NoBrowser) {
     } -ArgumentList "http://${HostAddress}:${Port}/ui" | Out-Null
 }
 
-python -m uvicorn src.api.main:app --host $HostAddress --port $Port
+python -m uvicorn src.api.main:app --host $HostAddress --port $Port --reload

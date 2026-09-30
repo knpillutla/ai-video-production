@@ -2,7 +2,7 @@
 const PRODUCTION_TIERS = {
   low_cost: {
     key: "low_cost",
-    name: "Low-Cost Test",
+    name: "Draft",
     priceUsd: 0.02,
     priceStr: "$0.02 USD",
     models: "Fal FLUX.1-dev • 10s Draft Test • Azure TTS",
@@ -10,7 +10,7 @@ const PRODUCTION_TIERS = {
   },
   balanced: {
     key: "balanced",
-    name: "Balanced Creator",
+    name: "Balanced",
     priceUsd: 0.14,
     priceStr: "$0.14 USD",
     models: "FLUX Dev • Azure Speech • YouTube Ready",
@@ -18,7 +18,7 @@ const PRODUCTION_TIERS = {
   },
   cinematic: {
     key: "cinematic",
-    name: "Cinematic 4K",
+    name: "4K Master",
     priceUsd: 0.45,
     priceStr: "$0.45 USD",
     models: "FLUX Pro • Suno BGM • 4K Master",
@@ -26,7 +26,7 @@ const PRODUCTION_TIERS = {
   }
 };
 
-let currentTier = "balanced";
+let currentTier = "cinematic";
 let activeTab = "studio";
 
 let currentUser = {
@@ -41,7 +41,7 @@ let currentUser = {
 
 function switchTab(tabId) {
   activeTab = tabId;
-  const tabs = ["studio", "ledger", "apps", "dashboard", "channels", "analytics"];
+  const tabs = ["studio", "studio-pro", "ledger", "apps", "dashboard", "channels", "analytics"];
   tabs.forEach(t => {
     const el = document.getElementById("tab-" + t);
     const btn = document.getElementById("tab-btn-" + t);
@@ -49,14 +49,20 @@ function switchTab(tabId) {
     if (btn) {
       if (t === tabId) {
         btn.classList.add("text-white", "bg-indigo-600/20", "border-r-2", "border-indigo-500");
-        btn.classList.remove("text-gray-400");
+        btn.classList.remove("text-gray-400", "text-emerald-400");
       } else {
         btn.classList.remove("text-white", "bg-indigo-600/20", "border-r-2", "border-indigo-500");
-        btn.classList.add("text-gray-400");
+        if (t === "studio-pro") {
+          btn.classList.add("text-emerald-400");
+        } else {
+          btn.classList.add("text-gray-400");
+        }
       }
     }
   });
-  if ((tabId === "studio" || tabId === "ledger") && typeof renderStudioVideoHistory === "function") {
+  if (tabId === "studio-pro" && typeof renderStudioProView === "function") {
+    renderStudioProView(typeof currentActiveInspectorEpisode !== "undefined" ? currentActiveInspectorEpisode : null);
+  } else if ((tabId === "studio" || tabId === "ledger") && typeof renderStudioVideoHistory === "function") {
     renderStudioVideoHistory();
   } else if (tabId === "dashboard" && typeof renderDashboardStats === "function") {
     renderDashboardStats();

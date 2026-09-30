@@ -9,9 +9,8 @@ from src.scripts.youtube_ingest import compute_text_cosine_similarity
 server = MCPServerBase(server_name="mcp-topic-memory", version="1.0.0")
 
 import json
+import re
 from pathlib import Path
-
-VAULT_FILE = Path("storage/topic_memory_vault.json")
 
 _SEED_VAULT: List[Dict[str, Any]] = [
     {
@@ -33,12 +32,35 @@ _SEED_VAULT: List[Dict[str, Any]] = [
 ]
 
 
-def _get_vault() -> List[Dict[str, Any]]:
-    """Retrieve in-memory and disk-persisted topic memory entries."""
+def _get_channel_storage_folder(user_id: Optional[str] = None, channel_id: Optional[str] = None) -> Path:
+    """Resolve the channel storage directory under storage/<user_container>/channels/<channel_id>/."""
+    eff_uid = str(user_id or "knpillutla").strip()
+    eff_chan = str(channel_id or "default_channel").strip()
+    clean_chan = re.sub(r"[^a-zA-Z0-9_-]", "_", eff_chan).strip("_") or "default_channel"
+    p_direct = Path(f"storage/{eff_uid}/channels/{clean_chan}")
+    if p_direct.is_dir():
+        return p_direct
+    clean_id = re.sub(r"[^a-zA-Z0-9-]", "-", eff_uid).lower()
+    clean_id = re.sub(r"-+", "-", clean_id).strip("-")
+    container_name = clean_id if clean_id.startswith("user-") else f"user-{clean_id}"
+    chan_dir = Path(f"storage/{container_name[:63]}/channels/{clean_chan[:64]}")
+    chan_dir.mkdir(parents=True, exist_ok=True)
+    return chan_dir
+
+
+def _get_vault_file(user_id: Optional[str] = None, channel_id: Optional[str] = None) -> Path:
+    """Get the channel-scoped topic memory vault file path."""
+    folder = _get_channel_storage_folder(user_id, channel_id)
+    return folder / "topic_memory_vault.json"
+
+
+def _get_vault(user_id: Optional[str] = None, channel_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Retrieve in-memory seeds and disk-persisted topic memory entries for a user's channel."""
     entries = list(_SEED_VAULT)
-    if VAULT_FILE.is_file():
+    v_file = _get_vault_file(user_id, channel_id)
+    if v_file.is_file():
         try:
-            data = json.loads(VAULT_FILE.read_text(encoding="utf-8"))
+            data = json.loads(v_file.read_text(encoding="utf-8"))
             if isinstance(data, list):
                 seen = {(str(e.get("user_id", "")), e["topic"], (e.get("metadata") or {}).get("language", "en").lower()) for e in entries}
                 for item in data:
@@ -51,23 +73,23 @@ def _get_vault() -> List[Dict[str, Any]]:
     return entries
 
 
-def _persist_vault(record: Dict[str, Any]) -> None:
-    """Append a newly remembered topic to disk vault."""
+def _persist_vault(record: Dict[str, Any], user_id: Optional[str] = None, channel_id: Optional[str] = None) -> None:
+    """Append a newly remembered topic to channel's disk vault under storage/<user>/channels/<channel>/."""
     try:
-        VAULT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        eff_uid = user_id or record.get("user_id")
+        eff_chan = channel_id or record.get("channel_id")
+        v_file = _get_vault_file(eff_uid, eff_chan)
+        v_file.parent.mkdir(parents=True, exist_ok=True)
         current = []
-        if VAULT_FILE.is_file():
+        if v_file.is_file():
             try:
-                current = json.loads(VAULT_FILE.read_text(encoding="utf-8"))
+                current = json.loads(v_file.read_text(encoding="utf-8"))
             except Exception:
                 current = []
         current.append(record)
-        VAULT_FILE.write_text(json.dumps(current, indent=2), encoding="utf-8")
+        v_file.write_text(json.dumps(current, indent=2), encoding="utf-8")
     except Exception:
         pass
-
-
-_TOPIC_VAULT = _get_vault()
 
 
 def _format_metadata_str(meta: Optional[Dict[str, Any]]) -> str:
@@ -80,9 +102,14 @@ def _format_metadata_str(meta: Optional[Dict[str, Any]]) -> str:
     return f"{genre} {tags} {target}".strip()
 
 
-def recent_topic_context(user_id: Optional[str], language: str, limit: int = 12) -> List[str]:
-    """Return recent same-language premises for concise creative-planner exclusions."""
-    entries = _get_vault()
+def recent_topic_context(
+    user_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
+    language: str = "en",
+    limit: int = 15,
+) -> List[str]:
+    """Return recent same-language premises for creative-planner exclusions scoped to channel."""
+    entries = _get_vault(user_id, channel_id)
     scoped = [
         entry for entry in entries
         if (not user_id or str(entry.get("user_id", "")) == str(user_id))
@@ -97,25 +124,23 @@ async def check_topic_duplicate(
     final_story: Optional[str] = None,
     threshold: float = 0.80,
     user_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
     language: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Check if proposed video topic duplicates existing productions for this user & language."""
+    """Check if proposed video topic duplicates existing productions for this user channel & language."""
     highest_sim = 0.0
     conflicting_entry: Optional[Dict[str, Any]] = None
     candidate_meta_str = _format_metadata_str(metadata)
     candidate_lang = language or (metadata.get("language") if metadata else None) or "en"
 
-    global _TOPIC_VAULT
-    _TOPIC_VAULT = _get_vault()
-
     eff_user_id = user_id or (metadata.get("user_id") if metadata else None)
+    eff_channel_id = channel_id or (metadata.get("channel_id") if metadata else None)
+    entries_to_check = _get_vault(eff_user_id, eff_channel_id)
     if eff_user_id is not None:
         entries_to_check = [
-            e for e in _TOPIC_VAULT
-            if e.get("user_id") and str(e.get("user_id")).strip() == str(eff_user_id).strip()
+            e for e in entries_to_check
+            if not e.get("user_id") or str(e.get("user_id")).strip() == str(eff_user_id).strip()
         ]
-    else:
-        entries_to_check = _TOPIC_VAULT
 
     for entry in entries_to_check:
         topic_sim = compute_text_cosine_similarity(topic, entry["topic"])
@@ -134,23 +159,19 @@ async def check_topic_duplicate(
 
         entry_meta = entry.get("metadata") or {}
         entry_lang = entry_meta.get("language") or "en"
-        # Only conflict if the similarity meets threshold AND it is for the SAME language
         if sim >= threshold and entry_lang.lower() == candidate_lang.lower():
             if sim > highest_sim:
                 highest_sim = sim
                 conflicting_entry = entry
-        elif sim > highest_sim and not conflicting_entry:
-            # Track overall similarity for telemetry, but do not mark conflicting_entry if language differs
-            pass
 
     is_duplicate = conflicting_entry is not None
     alert_msg = None
     if is_duplicate and conflicting_entry:
         alert_msg = (
             f"DUPLICATE CONTENT ALERT: Video generation blocked! The proposed topic '{topic}' "
-            f"already exists for language '{candidate_lang}' in episode '{conflicting_entry['topic']}' "
+            f"already exists in this channel for language '{candidate_lang}' in episode '{conflicting_entry['topic']}' "
             f"(Episode ID: {conflicting_entry.get('episode_id', 'unknown')}). "
-            f"Creating duplicate content for the same language is blocked to avoid demonetization and channel audience cannibalization."
+            f"Creating duplicate content on the same channel is blocked to avoid demonetization and channel audience cannibalization."
         )
 
     return {
@@ -160,6 +181,7 @@ async def check_topic_duplicate(
         "threshold": threshold,
         "is_duplicate": is_duplicate,
         "user_id": str(eff_user_id) if eff_user_id else None,
+        "channel_id": str(eff_channel_id) if eff_channel_id else None,
         "conflicting_topic": conflicting_entry["topic"] if is_duplicate and conflicting_entry else None,
         "conflicting_episode_id": conflicting_entry.get("episode_id") if is_duplicate and conflicting_entry else None,
         "alert_message": alert_msg,
@@ -174,9 +196,11 @@ async def remember_topic(
     episode_id: str = "",
     show_slug: str = "default",
     user_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Record an approved topic, its metadata, and final story into memory vault scoped to user."""
+    """Record an approved topic, its metadata, and final story into channel memory vault."""
     eff_user_id = user_id or (metadata.get("user_id") if metadata else None)
+    eff_channel_id = channel_id or (metadata.get("channel_id") if metadata else None)
 
     record = {
         "topic": topic.strip(),
@@ -185,43 +209,39 @@ async def remember_topic(
         "episode_id": episode_id,
         "show_slug": show_slug,
         "user_id": str(eff_user_id) if eff_user_id else None,
+        "channel_id": str(eff_channel_id) if eff_channel_id else None,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    _TOPIC_VAULT.append(record)
-    _persist_vault(record)
+    _persist_vault(record, eff_user_id, eff_channel_id)
+    vault_entries = _get_vault(eff_user_id, eff_channel_id)
     return {
         "status": "memorized",
-        "total_topics_tracked": len(_TOPIC_VAULT),
+        "total_topics_tracked": len(vault_entries),
         "recorded_topic": record["topic"],
         "user_id": record["user_id"],
+        "channel_id": record["channel_id"],
         "has_metadata": bool(metadata),
         "has_story": bool(final_story),
     }
 
 
-def clear_topic_vault(user_id: Optional[str] = None) -> int:
-    """Clear topic memory vault. If user_id is provided, only clear topics for that user."""
-    global _TOPIC_VAULT
-    current = _get_vault()
-    if user_id:
-        retained = [e for e in current if str(e.get("user_id", "")) != str(user_id)]
-        cleared_count = len(current) - len(retained)
-        _TOPIC_VAULT = retained
-        VAULT_FILE.parent.mkdir(parents=True, exist_ok=True)
-        disk_entries = [e for e in retained if e not in _SEED_VAULT]
-        VAULT_FILE.write_text(json.dumps(disk_entries, indent=2), encoding="utf-8")
-        return cleared_count
-    else:
-        cleared_count = len(current)
-        _TOPIC_VAULT = list(_SEED_VAULT)
-        VAULT_FILE.parent.mkdir(parents=True, exist_ok=True)
-        VAULT_FILE.write_text("[]", encoding="utf-8")
-        return cleared_count
+def clear_topic_vault(user_id: Optional[str] = None, channel_id: Optional[str] = None) -> int:
+    """Clear topic memory vault file for specified channel under storage/<user>/channels/<channel>/."""
+    v_file = _get_vault_file(user_id, channel_id)
+    if v_file.is_file():
+        try:
+            data = json.loads(v_file.read_text(encoding="utf-8"))
+            count = len(data) if isinstance(data, list) else 1
+            v_file.unlink()
+            return count
+        except Exception:
+            return 0
+    return 0
 
 
 server.register_tool(
     name="mcp_check_topic_duplicate",
-    description="Check if candidate topic duplicates existing productions for a user using cosine similarity",
+    description="Check if candidate topic duplicates existing productions in a channel using cosine similarity",
     input_schema={
         "type": "object",
         "properties": {
@@ -229,7 +249,8 @@ server.register_tool(
             "metadata": {"type": "object", "description": "Optional metadata dictionary"},
             "final_story": {"type": "string", "description": "Optional story text"},
             "threshold": {"type": "number", "default": 0.80},
-            "user_id": {"type": "string", "description": "User identifier to scope deduplication to user"},
+            "user_id": {"type": "string", "description": "User identifier"},
+            "channel_id": {"type": "string", "description": "Channel identifier to scope deduplication to channel"},
         },
         "required": ["topic"],
     },
@@ -238,7 +259,7 @@ server.register_tool(
 
 server.register_tool(
     name="mcp_remember_topic",
-    description="Commit an approved episode topic, metadata, and story into user's memory vault",
+    description="Commit an approved episode topic, metadata, and story into channel memory vault",
     input_schema={
         "type": "object",
         "properties": {
@@ -248,6 +269,7 @@ server.register_tool(
             "episode_id": {"type": "string", "default": ""},
             "show_slug": {"type": "string", "default": "default"},
             "user_id": {"type": "string", "description": "User identifier"},
+            "channel_id": {"type": "string", "description": "Channel identifier"},
         },
         "required": ["topic"],
     },
@@ -256,12 +278,15 @@ server.register_tool(
 
 server.register_tool(
     name="mcp_clear_topic_memory",
-    description="Clear remembered topics from vault, optionally scoped to a specific user",
+    description="Clear remembered topics from vault, optionally scoped to a specific user channel",
     input_schema={
         "type": "object",
-        "properties": {"user_id": {"type": "string", "description": "Optional user ID"}},
+        "properties": {
+            "user_id": {"type": "string", "description": "Optional user ID"},
+            "channel_id": {"type": "string", "description": "Optional channel ID"},
+        },
     },
-    handler=lambda user_id=None: {"cleared_count": clear_topic_vault(user_id)},
+    handler=lambda user_id=None, channel_id=None: {"cleared_count": clear_topic_vault(user_id, channel_id)},
 )
 
 if __name__ == "__main__":

@@ -1,30 +1,73 @@
-// CineAI Studio: Master Video Player & Preview Controller
+// CineAI Studio: Master Video & Photo Artifact Player Controller (With Fullscreen Support)
 let currentlyPlayingVideo = null;
 
-function openVideoPopup(url, title, meta) {
+function openArtifactMediaPopup(type, url, title, meta, badge) {
   const videoEl = document.getElementById("player-modal-video");
+  const imgEl = document.getElementById("player-modal-image");
   const titleEl = document.getElementById("player-modal-title");
   const metaEl = document.getElementById("player-modal-meta");
+  const badgeEl = document.getElementById("player-modal-badge");
   const costEl = document.getElementById("player-modal-cost");
   const downloadBtn = document.getElementById("player-modal-download-btn");
+  const iconEl = document.getElementById("player-modal-icon");
+  const publishBtn = document.getElementById("player-modal-publish-btn");
 
-  if (titleEl) titleEl.textContent = title || "Video Master Player";
+  if (titleEl) titleEl.textContent = title || "Artifact Viewer";
   if (metaEl) metaEl.textContent = meta || "4K Master Render • Single-Pass Lossless";
-  if (costEl) costEl.textContent = "Autonomous AI Production Master";
+  if (badgeEl) badgeEl.textContent = badge || (type === "image" ? "FLUX 1.1 Pro (4K)" : "4K UHD");
+  if (costEl) costEl.textContent = "Autonomous AI Studio Production Artifact";
+
   if (downloadBtn && url) {
     downloadBtn.href = url;
-    downloadBtn.download = (title || "video_master").replace(/[^a-zA-Z0-9_-]/g, "_") + ".mp4";
+    const ext = type === "image" ? ".jpg" : ".mp4";
+    downloadBtn.download = (title || "artifact_media").replace(/[^a-zA-Z0-9_-]/g, "_") + ext;
   }
 
-  if (videoEl && url) {
-    if (!videoEl.src.endsWith(url)) {
-      videoEl.src = url;
-      videoEl.load();
+  if (type === "image") {
+    if (videoEl) { videoEl.pause(); videoEl.classList.add("hidden"); }
+    if (imgEl) { imgEl.src = url; imgEl.classList.remove("hidden"); }
+    if (iconEl) iconEl.className = "fa-solid fa-image text-blue-400";
+    if (publishBtn) publishBtn.classList.add("hidden");
+  } else {
+    if (imgEl) { imgEl.classList.add("hidden"); imgEl.src = ""; }
+    if (videoEl) {
+      videoEl.classList.remove("hidden");
+      if (!videoEl.src.endsWith(url)) {
+        videoEl.src = url;
+        videoEl.load();
+      }
+      videoEl.currentTime = 0;
+      videoEl.play().catch(() => {});
     }
-    videoEl.currentTime = 0;
-    videoEl.play().catch(() => {});
+    if (iconEl) iconEl.className = "fa-solid fa-play text-indigo-400";
+    if (publishBtn) publishBtn.classList.remove("hidden");
   }
+
   openModal("video-player-modal");
+}
+
+function openVideoPopup(url, title, meta) {
+  openArtifactMediaPopup("video", url, title, meta, "4K Video");
+}
+
+function openImagePopup(url, title, meta) {
+  openArtifactMediaPopup("image", url, title, meta, "4K Photo");
+}
+
+function toggleModalMediaFullscreen() {
+  const container = document.getElementById("player-modal-media-container");
+  if (!container) return;
+  if (!document.fullscreenElement) {
+    if (container.requestFullscreen) {
+      container.requestFullscreen();
+    } else if (container.webkitRequestFullscreen) {
+      container.webkitRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  }
 }
 
 function playStudioVideo(id) {
@@ -39,20 +82,7 @@ function playStudioVideo(id) {
   openVideoPopup(targetUrl, title, meta);
 
   const costEl = document.getElementById("player-modal-cost");
-  if (costEl) costEl.textContent = `Cost: ${vid.costStr || '$1.6400 USD'} • Started: ${formatTimestamp(vid.startedAt)} • Completed: ${formatTimestamp(vid.completedAt)}`;
-
-  const publishBtn = document.getElementById("player-modal-publish-btn");
-  if (publishBtn) {
-    if (vid.youtubeStatus === "published") {
-      publishBtn.className = "px-5 py-2 bg-emerald-700/80 text-white font-bold rounded-xl shadow-lg flex items-center gap-1.5 cursor-default";
-      publishBtn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Published to YouTube</span>';
-      publishBtn.disabled = true;
-    } else {
-      publishBtn.className = "px-5 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-1.5 transition";
-      publishBtn.innerHTML = '<i class="fa-brands fa-youtube"></i> <span>Publish to YouTube</span>';
-      publishBtn.disabled = false;
-    }
-  }
+  if (costEl) costEl.textContent = `Cost: ${vid.costStr || '$0.02 USD'} • Channel: ${vid.channelId || vid.channel_id || 'CineAI'}`;
 }
 
 function closeVideoPlayerModal() {
@@ -62,7 +92,7 @@ function closeVideoPlayerModal() {
 }
 
 function publishCurrentPlayingVideo() {
-  if (currentlyPlayingVideo) {
+  if (currentlyPlayingVideo && typeof publishVideoToYouTube === "function") {
     publishVideoToYouTube(currentlyPlayingVideo.jobId);
     playStudioVideo(currentlyPlayingVideo.id);
   }

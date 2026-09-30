@@ -26,6 +26,24 @@ from src.services.visual_batch_service import MotionClipTask, visual_batch_servi
 from src.studios.ambient_world.ambient_storyboard import AmbientStoryboard
 
 
+def _resolve_scene_negative_prompt(scene: Any, default_camera: str = "locked_tripod") -> str:
+    neg = getattr(scene, "motion_negative_prompt", None)
+    base_neg = neg.strip() if (neg and isinstance(neg, str)) else ""
+    cam = getattr(scene, "camera_rig", "") or default_camera
+    extra_tokens = []
+    if cam == "locked_tripod":
+        extra_tokens.append("zoom, zooming, zoom in, zoom out, forward camera movement, camera flythrough, walking tour, walking cadence, dolly, dolly in, tracking shot, camera pan, panning, moving camera, camera movement, camera tilt, handheld camera, camera shake, jitter, violent wind, rapid shaking, fast motion, sudden lighting shift, flickering light, jumping foliage, jumping branches, discontinuous water flow, abrupt mist displacement, temporal jump, loop seam")
+    p_text = f"{getattr(scene, 'visual_prompt', '')} {getattr(scene, 'motion_prompt', '')}".lower()
+    if "rain" in p_text:
+        extra_tokens.append("dry weather, bright sunshine, clear blue sky, cloudless, arid, parched")
+    if "waterfall" in p_text or "cascade" in p_text:
+        extra_tokens.append("frozen ice, motionless water, stagnant pond, reverse water flow")
+    extra_tokens.append("gelatinous water, melting foam, static frozen water, boiling water artifacts, rubbery water, unnatural foam blobs, zero static vertical streaks, artifacts")
+    
+    parts = [p for p in [base_neg, ", ".join(extra_tokens)] if p]
+    return ", ".join(parts)
+
+
 class AmbientWorldProducer:
     """Produces 4K broadcast-grade relaxing ambient videos with Velvet audio & AI video diffusion."""
 
@@ -43,8 +61,12 @@ class AmbientWorldProducer:
         fade_to_black_hours: Optional[float] = None,
         generate_short: bool = False,
         photos_only: bool = False,
+        motion_only: bool = False,
+        audio_only: bool = False,
+        master_only: bool = False,
         no_bgm: bool = False,
         allow_fallback: bool = False,
+        force_rerun: bool = False,
     ) -> Dict[str, Any]:
         """Execute 4-Stage Progressive Quality Gate with 100% Artifact Idempotency."""
         t_start = time.time()
@@ -69,7 +91,7 @@ class AmbientWorldProducer:
             (scene.visual_prompt, ep_dir / f"keyframe_p{scene.scene_index}.jpg", ep_dir / f"fal_req_p{scene.scene_index}.json", scene.scene_index)
             for scene in sb.scenes
         ]
-        keyframe_paths = await visual_batch_service.render_keyframes_batch(kf_tasks)
+        keyframe_paths = await visual_batch_service.render_keyframes_batch(kf_tasks, force_rerun=force_rerun)
 
         # Stage 2 Gate: If photos_only is requested, dispatch review notification and stop
         if photos_only:
@@ -85,21 +107,7 @@ class AmbientWorldProducer:
                 "keyframes": [str(p) for p in keyframe_paths], "storage_path": str(ep_dir),
             }
 
-        # Stage 3: Audio Synthesis & Binaural 3D Velvet Mastering (unless --no-bgm)
-        master_bgm_path = None
-        if not no_bgm:
-            raw_bgm_path, master_bgm_path = ep_dir / "raw_soundtrack.mp3", ep_dir / "velvet_binaural_master_48k.mp3"
-            if not master_bgm_path.is_file() or master_bgm_path.stat().st_size < 1000:
-                await soundtrack_service.synthesize_ambient_soundtrack(sb.title, sb.audio_tags, raw_bgm_path, sb.total_duration)
-                apply_binaural_spatial_mastering(input_audio=raw_bgm_path, output_audio=master_bgm_path, target_lufs=-21.0, duration_seconds=sb.total_duration)
-            else:
-                logger.info(f"decision_audio_master_cache_hit: Reusing {master_bgm_path.name} ($0.00 spend)")
-                print(f"[DECISION - AUDIO MASTER CACHE HIT] Master audio already exists on disk ({master_bgm_path.name}). Reusing asset ($0.00 spend).")
-        else:
-            logger.info("decision_no_bgm_active: Preserving 100% native video audio without external BGM soundtrack.")
-            print("[DECISION - NATIVE AUDIO ACTIVE (--no-bgm)] Skipping external Suno BGM. Preserving natural sound directly from video diffusion.")
-
-        # Stage 4: AI Video Diffusion Motion Synthesis (Concurrent Parallel Batch via visual_batch_service)
+        # Stage 3: AI Video Diffusion Motion Synthesis (Concurrent Parallel Batch via visual_batch_service)
         motion_tasks = [
             MotionClipTask(
                 image_path=kf_path,
@@ -111,10 +119,43 @@ class AmbientWorldProducer:
                 domain=scene.domain,
                 req_file=ep_dir / f"fal_diff_req_p{scene.scene_index}.json",
                 allow_fallback=allow_fallback,
+                force_rerun=force_rerun,
+                negative_prompt=_resolve_scene_negative_prompt(scene),
+                model_configs=getattr(scene, "model_configs", {}),
             )
             for scene, kf_path in zip(sb.scenes, keyframe_paths)
         ]
         video_clip_paths = await visual_batch_service.render_motion_batch(motion_tasks)
+
+        # Stage 3 Gate: If motion_only is requested, stop and return motion clips for review
+        if motion_only:
+            return {
+                "episode_id": ep_dir.name, "title": sb.title, "status": "motion_ready_for_review",
+                "keyframes": [str(p) for p in keyframe_paths], "raw_videos": [str(p) for p in video_clip_paths],
+                "storage_path": str(ep_dir),
+            }
+
+        # Stage 4: Audio Synthesis & Binaural 3D Velvet Mastering (unless --no-bgm)
+        master_bgm_path = None
+        if not no_bgm:
+            raw_bgm_path, master_bgm_path = ep_dir / "raw_soundtrack.mp3", ep_dir / "velvet_binaural_master_48k.mp3"
+            if not master_bgm_path.is_file() or master_bgm_path.stat().st_size < 1000:
+                await soundtrack_service.synthesize_ambient_soundtrack(sb.title, sb.audio_tags, raw_bgm_path, sb.total_duration, episode_id=ep_dir.name)
+                apply_binaural_spatial_mastering(input_audio=raw_bgm_path, output_audio=master_bgm_path, target_lufs=-21.0, duration_seconds=sb.total_duration)
+            else:
+                logger.info(f"decision_audio_master_cache_hit: Reusing {master_bgm_path.name} ($0.00 spend)")
+                print(f"[DECISION - AUDIO MASTER CACHE HIT] Master audio already exists on disk ({master_bgm_path.name}). Reusing asset ($0.00 spend).")
+        else:
+            logger.info("decision_no_bgm_active: Preserving 100% native video audio without external BGM soundtrack.")
+            print("[DECISION - NATIVE AUDIO ACTIVE (--no-bgm)] Skipping external Suno BGM. Preserving natural sound directly from video diffusion.")
+
+        # Stage 4 Gate: If audio_only is requested, stop and return stems for review
+        if audio_only:
+            return {
+                "episode_id": ep_dir.name, "title": sb.title, "status": "audio_ready_for_review",
+                "keyframes": [str(p) for p in keyframe_paths], "raw_videos": [str(p) for p in video_clip_paths],
+                "bgm_path": str(master_bgm_path) if master_bgm_path else None, "storage_path": str(ep_dir),
+            }
 
         # Stage 5: Master Assembly & Packaging Delegation
         masters = assemble_dual_masters(video_clip_paths, master_bgm_path, ep_dir)

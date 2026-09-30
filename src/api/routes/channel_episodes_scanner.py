@@ -94,6 +94,36 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
     ep_id = ep_path.name
     files = {f.name: f for f in ep_path.iterdir() if f.is_file()}
 
+    manifest_data = {}
+    if "episode_manifest.json" in files:
+        try:
+            manifest_data = json.loads(files["episode_manifest.json"].read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    screenplay_data = {}
+    if "screenplay.json" in files:
+        try:
+            screenplay_data = json.loads(files["screenplay.json"].read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    pipeline_state_data = {}
+    if "pipeline_state.json" in files:
+        try:
+            pipeline_state_data = json.loads(files["pipeline_state.json"].read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    user_inputs_data = {}
+    if "user_inputs.json" in files:
+        try:
+            user_inputs_data = json.loads(files["user_inputs.json"].read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    is_approved = bool(pipeline_state_data.get("is_approved", manifest_data.get("is_approved", False)))
+
     yt_pack = {}
     if "youtube_packaging.json" in files:
         try:
@@ -108,9 +138,9 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
         except Exception:
             pass
 
-    title = yt_pack.get("title") or ep_id.replace("ep_", "").replace("_", " ").title()
+    title = manifest_data.get("title") or yt_pack.get("title") or ep_id.replace("ep_", "").replace("_", " ").title()
     desc = yt_pack.get("description", "")
-    story_topic = ep_id.replace("ep_", "").replace("_", " ").title()
+    story_topic = manifest_data.get("prompt") or ep_id.replace("ep_", "").replace("_", " ").title()
     if "blizzard" in ep_id:
         story_topic = "Cozy Timber Cabin in Mountain Blizzard with Starlit Campfire & Glowing Embers"
     elif "swiss_alps" in ep_id:
@@ -129,15 +159,22 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
 
     edition_defs = [
         ("master_4k_8hour_broadcast.mp4", "8h_music", "8-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "8:00:00 (8 Hours)", "16:9 Long-Play", "published", "25.35 GB"),
-        ("master_4k_8hour_nature_only_broadcast.mp4", "8h_nature", "8-Hour 4K Broadcast (Pure Nature ASMR)", "fa-leaf text-emerald-400", "Pure Nature (NO MUSIC)", "8:00:00 (8 Hours)", "16:9 Long-Play", "published", "25.09 GB"),
+        ("master_4k_8hour_nature_only_broadcast.mp4", "8h_nature", "8-Hour 4K Broadcast (Pure Nature ASMR)", "fa-water text-cyan-400", "Pure Nature ASMR", "8:00:00 (8 Hours)", "16:9 Long-Play", "published", "25.09 GB"),
         ("master_4k_3hour_broadcast.mp4", "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3 Hours)", "16:9 Long-Play", "published", "12.87 GB"),
+        ("master_4k_3hour_nature_only_broadcast.mp4", "3h_nature", "3-Hour 4K Broadcast (Pure Nature ASMR)", "fa-water text-cyan-400", "Pure Nature ASMR", "3:00:00 (3 Hours)", "16:9 Long-Play", "published", "12.72 GB"),
+        ("master_4k_1hour_broadcast.mp4", "1h_music", "1-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "1:00:00 (1 Hour)", "16:9 Long-Play", "published", "4.29 GB"),
+        ("master_4k_1hour_nature_only_broadcast.mp4", "1h_nature", "1-Hour 4K Broadcast (Pure Nature ASMR)", "fa-water text-cyan-400", "Pure Nature ASMR", "1:00:00 (1 Hour)", "16:9 Long-Play", "published", "4.24 GB"),
         ("master_4k_ambient.mp4", "master_music", "4K Master Set (Music)", "fa-clapperboard text-purple-400", "Music Master", "90s (Master)", "16:9 Master", "completed", "155 MB"),
         ("master_4k_ambient_nature_only.mp4", "master_nature", "4K Master Set (Pure Nature)", "fa-water text-cyan-400", "Pure Nature ASMR", "90s (Master)", "16:9 Master", "completed", "153 MB"),
         ("short_9x16_teaser.mp4", "short_teaser", "9:16 Vertical Short Teaser", "fa-mobile-screen text-pink-400", "Music + Ambient", "20s (Short)", "9:16 Short", "completed", "6.6 MB"),
     ]
     for fn, eid, name, icon, mode, dur, fmt, st, sz in edition_defs:
         if fn in files:
-            editions.append({"edition_id": eid, "name": name, "icon": icon, "audio_mode": mode, "duration": dur, "format": fmt, "status": st, "url": f"{rel_prefix}/{fn}", "size_str": sz})
+            mtime = int(files[fn].stat().st_mtime)
+            editions.append({"edition_id": eid, "name": name, "icon": icon, "audio_mode": mode, "duration": dur, "format": fmt, "status": st, "url": f"{rel_prefix}/{fn}?t={mtime}", "size_str": sz})
+
+    master_editions = [e for e in editions if "Long-Play" not in e["format"]]
+    long_play_editions = [e for e in editions if "Long-Play" in e["format"]]
 
     cost_by_stage = [
         {"stage": "Stage 1: Keyframe Visuals", "model": "FLUX.1 Dev (Fal AI)", "cost_usd": 0.075, "unit": "3 Keyframes"},
@@ -154,15 +191,16 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
         {"model": "FFmpeg Engine (Mastering)", "provider": "Local Zero-GPU", "cost_usd": 0.000, "percentage": "0.0%"}
     ]
 
-    keyframes = [{"name": f"Shot {k.replace('keyframe_p', '').replace('.jpg', '')}", "url": f"{rel_prefix}/{k}", "filename": k} for k in sorted(files.keys()) if k.startswith("keyframe_p") and k.endswith(".jpg")]
-    motion_clips = [{"name": f"Motion {m.replace('motion_p', '').replace('.mp4', '')}", "url": f"{rel_prefix}/{m}", "filename": m, "model": "Kling Pro" if "p1" in m else "Wan 2.1"} for m in sorted(files.keys()) if m.startswith("motion_p") and m.endswith(".mp4") and not m.endswith("_fwd_seamless.mp4")]
+    keyframes = [{"name": f"Shot {k.replace('keyframe_p', '').replace('.jpg', '')}", "url": f"{rel_prefix}/{k}?t={int(files[k].stat().st_mtime)}", "filename": k} for k in sorted(files.keys()) if k.startswith("keyframe_p") and k.endswith(".jpg")]
+    motion_clips = [{"name": f"Motion {m.replace('motion_p', '').replace('.mp4', '')}", "url": f"{rel_prefix}/{m}?t={int(files[m].stat().st_mtime)}", "filename": m, "model": "Kling Pro" if "p1" in m else "Wan 2.1"} for m in sorted(files.keys()) if m.startswith("motion_p") and m.endswith(".mp4") and not m.endswith("_fwd_seamless.mp4")]
     audio_stems = []
     if "raw_soundtrack.mp3" in files:
-        audio_stems.append({"name": "Suno Master Soundtrack", "url": f"{rel_prefix}/raw_soundtrack.mp3", "filename": "raw_soundtrack.mp3", "type": "suno_bgm"})
+        audio_stems.append({"name": "Suno Master Soundtrack", "url": f"{rel_prefix}/raw_soundtrack.mp3?t={int(files['raw_soundtrack.mp3'].stat().st_mtime)}", "filename": "raw_soundtrack.mp3", "type": "suno_bgm"})
     if "velvet_binaural_master_48k.mp3" in files:
-        audio_stems.append({"name": "432Hz Velvet Binaural ASMR", "url": f"{rel_prefix}/velvet_binaural_master_48k.mp3", "filename": "velvet_binaural_master_48k.mp3", "type": "binaural_nature"})
+        audio_stems.append({"name": "432Hz Velvet Binaural ASMR", "url": f"{rel_prefix}/velvet_binaural_master_48k.mp3?t={int(files['velvet_binaural_master_48k.mp3'].stat().st_mtime)}", "filename": "velvet_binaural_master_48k.mp3", "type": "binaural_nature"})
 
     total_cost = sum(item["cost_usd"] for item in cost_by_stage)
+    primary_master = master_editions[0]["url"] if master_editions else None
 
     return {
         "episode_id": ep_id,
@@ -189,17 +227,33 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
             "stage_1_keyframes": len(keyframes) > 0,
             "stage_2_cineloop_masters": "master_4k_ambient.mp4" in files,
             "stage_3_crf22_compression": "master_4k_ambient.mp4" in files,
-            "stage_4_long_play_stretch": len(editions) > 2,
+            "stage_4_long_play_stretch": len(long_play_editions) > 0,
             "stage_5_short_teaser": "short_9x16_teaser.mp4" in files,
         },
         "keyframes": keyframes,
         "motion_clips": motion_clips,
         "audio_stems": audio_stems,
-        "editions": editions,
+        "editions": master_editions if master_editions else editions,
+        "long_play_editions": long_play_editions,
+        "all_editions": editions,
+        "video_url": primary_master,
+        "videoUrl": primary_master,
+        "nature_video_url": next((e["url"] for e in master_editions if e["edition_id"] == "master_nature"), None),
+        "script": screenplay_data if screenplay_data else manifest_data,
+        "screenplay": screenplay_data if screenplay_data else None,
+        "user_inputs": user_inputs_data if user_inputs_data else None,
+        "pipeline_state": pipeline_state_data if pipeline_state_data else None,
+        "manifest": manifest_data,
+        "scenes": (screenplay_data.get("scenes") or manifest_data.get("scenes", [])),
+        "audio_tags": (screenplay_data.get("audio_master", {}).get("suno_musical_tags") if isinstance(screenplay_data.get("audio_master"), dict) else (screenplay_data.get("audio_tags") or manifest_data.get("audio_tags", ""))),
+        "cluster": manifest_data.get("cluster", ""),
+        "recommended_fps": screenplay_data.get("recommended_fps", manifest_data.get("recommended_fps", 24)),
         "created_at": created_iso,
         "updated_at": updated_iso,
         "created_timestamp": created_ts,
         "created_by": "AI Studio Autonomous Producer",
+        "is_approved": is_approved,
+        "approved": is_approved,
         "youtube_packaging": yt_pack,
         "youtube_packaging_nature_only": yt_pack_nature,
     }

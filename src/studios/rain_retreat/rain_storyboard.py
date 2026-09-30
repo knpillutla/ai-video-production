@@ -1,5 +1,6 @@
 """Directorial Storyboard Generator for Rain Retreat & River ASMR."""
 
+import json
 from typing import List
 from pydantic import BaseModel, Field
 from src.core.telemetry import logger
@@ -86,3 +87,85 @@ def generate_rain_storyboard(
         audio_tags=audio_tags,
         scenes=[s1, s2],
     )
+
+
+async def generate_rain_storyboard_gemini(
+    theme: str = "Forest River Rain & Water Droplets",
+    duration_seconds: float = 60.0,
+    user_id: str = "user_krishna_01",
+) -> RainStoryboard:
+    """Dynamically generate binaural rain & water droplet storyboard via Gemini LLM."""
+    print(f"\n[GEMINI RAIN RETREAT AGENT INVOKED]")
+    print(f"   * Theme:              \"{theme}\"")
+    print(f"   * Duration:           {duration_seconds}s (2 Perspectives @ {duration_seconds/2.0}s each)")
+
+    try:
+        import json
+        from src.providers.llm.gemini_adapter import GeminiLLMAdapter
+        llm = GeminiLLMAdapter()
+
+        system_prompt = (
+            "You are a master nature director and binaural ASMR sound designer specializing in tranquil forest rainfall and water droplet soundscapes. "
+            "Generate an 8K UHD 2-perspective cinematic storyboard (Perspective 1: Wide Forest River Rain, Perspective 2: Intimate Water Droplet Macro/Ripple Detail). "
+            "CRITICAL ANTI-FATIGUE DIRECTIVES:\n"
+            "- ANTI-FATIGUE VIDEO MOTION: Locked tripod framing, continuous soothing fine falling rain streaks, expanding circular water ripples on river surface, slow tranquil flow, zero camera shake, zero rapid pans.\n"
+            "- ANTI-FATIGUE ACOUSTIC MASTERING: Binaural soft rain ASMR, gentle stream trickle, warm low-end rumble, zero harsh high-frequency sizzle/hiss (>8kHz), zero sudden claps of thunder, velvet -14 LUFS.\n"
+            "- PURE RAIN NATURE PURITY GUARD: Mandate 'zero humans, zero people, zero persons, zero characters, zero crowds, zero cars, zero vehicles, zero vans, zero trucks, zero modern traffic, zero modern clutter, zero animals, zero pets' unless explicitly requested in the theme.\n"
+            "For visual prompts: Mandate Arri Alexa 35mm cinematographic specifications, 8K UHD master resolution, exact focal lengths (35mm f/4.0, 50mm f/1.4), glistening wet moss, rain droplets splashing on calm water, and the pure rain nature purity guard. "
+            "Return valid JSON only matching the schema."
+        )
+
+        user_msg = (
+            f"Generate an 8K UHD 2-perspective anti-fatigue forest rain storyboard for theme: '{theme}'. Duration: {duration_seconds}s.\n\n"
+            f"Output JSON with fields:\n"
+            f"- 'title': High-CTR rain relaxation YouTube title\n"
+            f"- 'audio_tags': Binaural anti-fatigue ASMR rain and river foley tags (warm rain, gentle trickle, zero harsh hiss, 48kHz)\n"
+            f"- 'scenes': Array of 2 scene objects each containing:\n"
+            f"    - 'scene_index': int (1, 2)\n"
+            f"    - 'perspective_type': 'wide_forest_river_rain' or 'intimate_macro_water_droplet'\n"
+            f"    - 'visual_prompt': detailed 8K photoreal prompt for Fal FLUX 1.1 Pro\n"
+            f"    - 'motion_prompt': continuous soothing anti-fatigue video motion prompt for Wan 2.1 / Kling\n"
+            f"    - 'domain': 'water_fluid'\n"
+        )
+
+        full_prompt = f"{system_prompt}\n\n{user_msg}"
+        logger.info(f"gemini_rain_request_sent: theme='{theme}'\n--- PROMPT SENT TO GEMINI ---\n{full_prompt}\n-----------------------------")
+        print(f"\n[GEMINI RAIN REQUEST DISPATCHED]")
+        print(f"--- PROMPT SENT TO GEMINI ---\n{full_prompt}\n-----------------------------")
+
+        data = await llm.generate_structured(full_prompt)
+        logger.info(f"gemini_rain_response_received:\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}")
+        print(f"\n[GEMINI RAIN RESPONSE RECEIVED]\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}\n")
+
+        if data and isinstance(data, dict) and data.get("scenes") and len(data["scenes"]) >= 2:
+            scenes = []
+            for idx, sc in enumerate(data["scenes"][:2]):
+                scenes.append(
+                    RainScenePrompt(
+                        scene_index=idx + 1,
+                        perspective_type=sc.get("perspective_type", "wide_forest_river_rain" if idx == 0 else "intimate_macro_water_droplet"),
+                        visual_prompt=sc.get("visual_prompt", ""),
+                        motion_prompt=sc.get("motion_prompt", ""),
+                        duration_seconds=duration_seconds / 2.0,
+                        domain="water_fluid",
+                    )
+                )
+
+            sb = RainStoryboard(
+                title=data.get("title") or theme,
+                theme=theme,
+                total_duration=duration_seconds,
+                recommended_fps=24,
+                audio_tags=data.get("audio_tags") or "ambient asmr soundscape, pure natural rain falling on river, wet foliage, 48kHz master",
+                scenes=scenes,
+            )
+            print(f"[GEMINI RAIN STORYBOARD SUCCESS] Synthesized '{sb.title}' with 2 custom perspectives.")
+            return sb
+        raise RuntimeError(f"Gemini LLM returned empty or malformed rain storyboard data: {data}")
+    except Exception as ex:
+        logger.error(f"gemini_rain_storyboard_fatal_error: {ex}")
+        print(f"\n[GEMINI FATAL ERROR] Rain directorial screenplay synthesis failed: {ex}\n")
+        raise RuntimeError(f"Gemini rain directorial screenplay generation failed: {ex}") from ex
+
+
+__all__ = ["RainScenePrompt", "RainStoryboard", "generate_rain_storyboard", "generate_rain_storyboard_gemini"]
