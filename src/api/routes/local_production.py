@@ -239,6 +239,8 @@ async def poll_production_artifacts(channel_id: str, episode_id: str, user_id: s
         editions.append({"edition_id": "master_music", "name": f"🎵 Ambient Soundtrack ({dur_str})", "label": "4K Ambient Music & 432Hz BGM", "format": "4K UHD", "duration": dur_str, "url": master_url})
     if nature_master_url:
         editions.append({"edition_id": "master_nature", "name": f"🌊 Pure Nature ASMR ({dur_str})", "label": "4K Pure Nature Soundscape", "format": "4K Nature", "duration": dur_str, "url": nature_master_url})
+    if "short_9x16_teaser.mp4" in files and files["short_9x16_teaser.mp4"].stat().st_size > 1000:
+        editions.append({"edition_id": "short_teaser", "name": "📱 9:16 Vertical Short Teaser (20s)", "label": "9:16 Vertical YouTube Short / Reel", "format": "9:16 Short", "duration": "20s", "url": _file_url(files["short_9x16_teaser.mp4"])})
 
     long_play_editions = []
     lp_patterns = [

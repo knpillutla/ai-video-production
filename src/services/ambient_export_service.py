@@ -276,14 +276,13 @@ def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], 
     return lp_path
 
 
-def handle_short_export(master: Path, ep_dir: Path, gen: bool) -> Optional[Path]:
+def handle_short_export(master: Path, ep_dir: Path, gen: bool = True) -> Optional[Path]:
     """Generate 9:16 vertical teaser short from 4K master."""
-    if not gen:
-        return None
     s_path = ep_dir / "short_9x16_teaser.mp4"
-    if not s_path.is_file() or s_path.stat().st_size < 1000:
-        generate_ambient_short(source_4k_video=master, output_short_path=s_path)
-    return s_path
+    if master.is_file() and master.stat().st_size > 1000:
+        if not s_path.is_file() or s_path.stat().st_size < 1000:
+            generate_ambient_short(source_4k_video=master, output_short_path=s_path)
+    return s_path if s_path.is_file() else None
 
 
 def export_metadata_packages(
