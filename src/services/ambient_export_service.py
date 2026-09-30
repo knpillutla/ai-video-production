@@ -245,11 +245,10 @@ def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], e
 
 
 def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], fade_hours: Optional[float]) -> Optional[Path]:
-    """Export long-play multi-hour stream loop for all existing master versions (with BGM and pure nature)."""
-    if not hours or hours <= 0:
-        return None
+    """Export long-play multi-hour stream loop for all existing master versions (with BGM and pure nature), plus 30-min broadcast by default."""
+    eff_hours = hours if (hours and hours > 0) else 3.0
     suffix = f"_{int(fade_hours)}h_black" if fade_hours else ""
-    label = int(hours) if hours.is_integer() else hours
+    label = int(eff_hours) if eff_hours.is_integer() else eff_hours
     lp_path = ep_dir / f"master_4k_{label}hour{suffix}_broadcast.mp4"
     legacy_lp = ep_dir / f"master_4k_{label}hour{suffix}_sleep.mp4"
     if legacy_lp.is_file() and legacy_lp.stat().st_size > 1000 and (not lp_path.is_file() or lp_path.stat().st_size < 1000):
@@ -259,8 +258,13 @@ def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], 
             pass
 
     if master.is_file() and (not lp_path.is_file() or lp_path.stat().st_size < 1000):
-        export_long_play_broadcast(source_4k_video=master, output_long_play=lp_path, target_duration_seconds=hours * 3600.0, fade_to_black_hours=fade_hours)
+        export_long_play_broadcast(source_4k_video=master, output_long_play=lp_path, target_duration_seconds=eff_hours * 3600.0, fade_to_black_hours=fade_hours)
     
+    # Also generate default 30-Minute (0.5 hour) Broadcast Edition
+    lp_30m = ep_dir / "master_4k_30min_broadcast.mp4"
+    if master.is_file() and (not lp_30m.is_file() or lp_30m.stat().st_size < 1000):
+        export_long_play_broadcast(source_4k_video=master, output_long_play=lp_30m, target_duration_seconds=1800.0)
+
     nature_master = ep_dir / "master_4k_ambient_nature_only.mp4"
     if nature_master.is_file() and nature_master.resolve() != master.resolve():
         lp_nature_path = ep_dir / f"master_4k_{label}hour_nature_only{suffix}_broadcast.mp4"
@@ -272,7 +276,11 @@ def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], 
                 pass
         if not lp_nature_path.is_file() or lp_nature_path.stat().st_size < 1000:
             logger.info(f"stretching_dual_nature_master: {lp_nature_path.name}")
-            export_long_play_broadcast(source_4k_video=nature_master, output_long_play=lp_nature_path, target_duration_seconds=hours * 3600.0, fade_to_black_hours=fade_hours)
+            export_long_play_broadcast(source_4k_video=nature_master, output_long_play=lp_nature_path, target_duration_seconds=eff_hours * 3600.0, fade_to_black_hours=fade_hours)
+        
+        lp_30m_nature = ep_dir / "master_4k_30min_nature_only_broadcast.mp4"
+        if not lp_30m_nature.is_file() or lp_30m_nature.stat().st_size < 1000:
+            export_long_play_broadcast(source_4k_video=nature_master, output_long_play=lp_30m_nature, target_duration_seconds=1800.0)
     return lp_path
 
 
@@ -288,14 +296,33 @@ def handle_short_export(master: Path, ep_dir: Path, gen: bool = True) -> Optiona
 def export_metadata_packages(
     sb: AmbientStoryboard, ep_dir: Path, hours: Optional[float], fade_h: Optional[float]
 ) -> Tuple[YouTubeAmbientPackage, ThumbnailABPackage, Dict[str, LocalizedMetadata]]:
-    """Generate YouTube packaging for both Music and Nature-Only variants, A/B thumbnails, and multi-language SEO."""
-    pkg_music = generate_youtube_ambient_package(sb.primary_archetype, hours or 1.0, sb.secondary_archetype, fade_h)
+    """Generate YouTube packaging for 3-Hour, 30-Minute, Nature-Only, and Short variants, plus A/B thumbnails and multi-language SEO."""
+    eff_h = hours or 3.0
+    pkg_music = generate_youtube_ambient_package(sb.primary_archetype, eff_h, sb.secondary_archetype, fade_h)
     (ep_dir / "youtube_packaging.json").write_text(json.dumps(pkg_music.model_dump(), indent=2), encoding="utf-8")
     
-    pkg_nature = generate_youtube_ambient_package(sb.primary_archetype, hours or 1.0, sb.secondary_archetype, fade_h)
+    pkg_nature = generate_youtube_ambient_package(sb.primary_archetype, eff_h, sb.secondary_archetype, fade_h)
     pkg_nature.title = f"{pkg_nature.title} | Pure Nature Sounds (NO MUSIC) [4K ASMR]"
     pkg_nature.description = f"100% pure natural ambient soundscape without background music.\n\n{pkg_nature.description}"
     (ep_dir / "youtube_packaging_nature_only.json").write_text(json.dumps(pkg_nature.model_dump(), indent=2), encoding="utf-8")
+
+    # 30-Minute Broadcast Editions
+    pkg_30m_music = generate_youtube_ambient_package(sb.primary_archetype, 0.5, sb.secondary_archetype)
+    (ep_dir / "youtube_packaging_30min.json").write_text(json.dumps(pkg_30m_music.model_dump(), indent=2), encoding="utf-8")
+
+    pkg_30m_nature = generate_youtube_ambient_package(sb.primary_archetype, 0.5, sb.secondary_archetype)
+    pkg_30m_nature.title = f"{pkg_30m_nature.title} | Pure Nature Sounds (NO MUSIC) [4K ASMR]"
+    pkg_30m_nature.description = f"100% pure natural ambient soundscape without background music.\n\n{pkg_30m_nature.description}"
+    (ep_dir / "youtube_packaging_30min_nature_only.json").write_text(json.dumps(pkg_30m_nature.model_dump(), indent=2), encoding="utf-8")
+
+    # 9:16 Vertical Short Teaser
+    pkg_short = {
+        "title": f"Experience {sb.title.split('~')[0].strip()} in 4K 🌊✨ #shorts",
+        "description": f"Stand directly in front of {sb.title.split('~')[0].strip()} in crisp 4K.\n\n🎧 Watch the full 30-Minute & 3-Hour Velvet Broadcasts on our channel!\n\n#shorts #nature #asmr #satisfying #4k",
+        "tags": [sb.primary_archetype, "shorts", "nature_asmr", "satisfying", "4k_nature"],
+        "pinned_comment": "🌊 Would you visit here? Watch the full 30-Minute & 3-Hour editions with 432Hz sleep audio on our channel! 🌙💤",
+    }
+    (ep_dir / "youtube_packaging_short.json").write_text(json.dumps(pkg_short, indent=2), encoding="utf-8")
 
     ab = generate_thumbnail_ab_variants(sb.primary_archetype)
     (ep_dir / "thumbnail_ab_variants.json").write_text(json.dumps(ab.model_dump(), indent=2), encoding="utf-8")

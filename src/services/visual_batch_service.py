@@ -109,6 +109,29 @@ class VisualBatchService:
 
         return list(await asyncio.gather(*[_process_single_keyframe(p, out, req, idx) for p, out, req, idx in tasks]))
 
+    async def render_thumbnails_batch(
+        self,
+        tasks: List[Tuple[str, Path, str]],
+        force_rerun: bool = False,
+    ) -> List[Path]:
+        """Render batch of YouTube SEO thumbnails (16:9 Long-Play and 9:16 Vertical Shorts) concurrently with disk caching."""
+        async def _process_single_thumbnail(prompt: str, out_path: Path, aspect_ratio: str) -> Path:
+            if not force_rerun and out_path.is_file() and out_path.stat().st_size > 1000:
+                logger.info(f"decision_thumbnail_cache_hit: Reusing {out_path.name} ($0.00 spend)")
+                print(f"[DECISION - THUMBNAIL CACHE HIT] Thumbnail {out_path.name} exists on disk. Reusing image ($0.00 spend).")
+                return out_path
+
+            if force_rerun:
+                out_path.unlink(missing_ok=True)
+
+            logger.info(f"decision_thumbnail_invoke_flux: Synthesizing {out_path.name} ({aspect_ratio}) via FLUX 1.1 Pro Ultra...")
+            print(f"[DECISION - THUMBNAIL SYNTHESIS] Synthesizing SEO thumbnail {out_path.name} ({aspect_ratio})...")
+            adapter = FalFluxProUltraAdapter(api_key=self.fal_key)
+            await adapter.generate_to_file(prompt=prompt, output_path=out_path, aspect_ratio=aspect_ratio, force_live=bool(self.fal_key))
+            return out_path
+
+        return list(await asyncio.gather(*[_process_single_thumbnail(p, out, ar) for p, out, ar in tasks]))
+
     async def render_motion_batch(
         self,
         tasks: List[MotionClipTask],

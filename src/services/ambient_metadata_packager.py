@@ -45,30 +45,42 @@ def generate_youtube_ambient_package(
     if secondary_element:
         base_title = f"{base_title.split('~')[0]}with {secondary_element.title()} ~{base_title.split('~')[1]}"
 
-    if fade_to_black_hours:
+    is_30min = (duration_hours <= 0.6)
+    if is_30min:
+        prefix = base_title.split("~")[0].strip()
+        base_title = f"{prefix} ~ 30-Minute 4K Velvet Relaxation & Deep Focus [432Hz]"
+    elif fade_to_black_hours:
         base_title = f"{base_title.split('[')[0]}~ Fades to Black Screen after {int(fade_to_black_hours)}H [{base_title.split('[')[1]}"
 
     # Chapter Markers
-    num_hours = int(duration_hours) or 1
-    chapters = [
-        "00:00:00 🌿 Golden Hour Relaxation & Settling In",
-        "00:30:00 🌧️ Velvet Rain & Calming Ambiance",
-    ]
-    for h in range(1, num_hours + 1):
-        if fade_to_black_hours and h == int(fade_to_black_hours):
-            chapters.append(f"{h:02d}:00:00 🌑 Screen Fades to Pure Black (Audio Continues)")
-        elif h == 1:
-            chapters.append("01:00:00 🌙 432Hz Delta Wave Sleep Transition")
-        elif h == 3:
-            chapters.append("03:00:00 💤 Deep REM Sleep & Unbroken Rest")
-        elif h == 6:
-            chapters.append("06:00:00 ✨ Early Dawn Peaceful Awakening")
+    if is_30min:
+        chapters = [
+            "00:00:00 🌿 Golden Hour Relaxation & Breathwork",
+            "00:10:00 🌊 Plunging Cataract Water Wall Focus",
+            "00:20:00 🌙 Calming Mist & Peaceful Winddown",
+        ]
+    else:
+        num_hours = int(duration_hours) or 1
+        chapters = [
+            "00:00:00 🌿 Golden Hour Relaxation & Settling In",
+            "00:30:00 🌧️ Velvet Rain & Calming Ambiance",
+        ]
+        for h in range(1, num_hours + 1):
+            if fade_to_black_hours and h == int(fade_to_black_hours):
+                chapters.append(f"{h:02d}:00:00 🌑 Screen Fades to Pure Black (Audio Continues)")
+            elif h == 1:
+                chapters.append("01:00:00 🌙 432Hz Delta Wave Sleep Transition")
+            elif h == 3:
+                chapters.append("03:00:00 💤 Deep REM Sleep & Unbroken Rest")
+            elif h == 6:
+                chapters.append("06:00:00 ✨ Early Dawn Peaceful Awakening")
 
+    dur_label = "30-Minute" if is_30min else f"{int(duration_hours) if duration_hours.is_integer() else duration_hours}-Hour"
     description = (
-        f"Immerse yourself in this 4K Velvet Ambient Soundscape featuring {archetype_key.replace('_', ' ').title()}.\n\n"
+        f"Immerse yourself in this {dur_label} 4K Velvet Ambient Soundscape featuring {archetype_key.replace('_', ' ').title()}.\n\n"
         "✨ Acoustic Engineering: Mastered to -21.0 LUFS with Velvet Low-Pass anti-fatigue filtering "
         "and sub-audible 432Hz delta wave brainwave entrainment to ease insomnia and promote deep restorative sleep.\n\n"
-        "⏰ Sleep Chapters:\n" + "\n".join(chapters) + "\n\n"
+        "⏰ Broadcast Chapters:\n" + "\n".join(chapters) + "\n\n"
         "🎧 For optimal relaxation and sleep, listen with headphones at comfortable volume.\n"
         "🌿 100% Commercial Master Rights | 4K UHD Visuals"
     )
@@ -81,13 +93,17 @@ def generate_youtube_ambient_package(
 
     pinned_comment = (
         f"🌿 Welcome to your nightly sanctuary. Leave a comment with one thing you are grateful for today, "
-        "put on your headphones, set your sleep timer, and rest deeply. Sleep chapters are listed in the description. 🌙💤"
+        "put on your headphones, set your sleep timer, and rest deeply. Broadcast chapters are listed in the description. 🌙💤"
     )
 
     tags = [
         archetype_key, "relaxing_music", "deep_sleep", "432hz", "sleep_meditation",
-        "4k_nature", "ambient_soundscape", "asmr", "insomnia_relief", "fades_to_black_screen"
+        "4k_nature", "ambient_soundscape", "asmr", "insomnia_relief"
     ]
+    if is_30min:
+        tags.extend(["30_minute_relaxation", "30_min_meditation", "power_nap", "study_music", "focus_soundscape"])
+    else:
+        tags.extend(["all_night_sleep", "fades_to_black_screen"])
 
     return YouTubeAmbientPackage(
         title=base_title,

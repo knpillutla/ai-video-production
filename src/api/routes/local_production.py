@@ -248,6 +248,8 @@ async def poll_production_artifacts(channel_id: str, episode_id: str, user_id: s
         (["master_4k_8hour_nature_only_broadcast.mp4", "master_4k_8hour_nature_only_sleep.mp4"], "8h_nature", "8-Hour 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature ASMR", "8:00:00 (8h)", "16:9 Long-Play"),
         (["master_4k_3hour_broadcast.mp4", "master_4k_3hour_sleep.mp4"], "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3h)", "16:9 Long-Play"),
         (["master_4k_3hour_nature_only_broadcast.mp4", "master_4k_3hour_nature_only_sleep.mp4"], "3h_nature", "3-Hour 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature ASMR", "3:00:00 (3h)", "16:9 Long-Play"),
+        (["master_4k_30min_broadcast.mp4", "master_4k_0.5hour_broadcast.mp4"], "30m_music", "30-Minute 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "30:00 (30m)", "16:9 Long-Play"),
+        (["master_4k_30min_nature_only_broadcast.mp4", "master_4k_0.5hour_nature_only_broadcast.mp4"], "30m_nature", "30-Minute 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature ASMR", "30:00 (30m)", "16:9 Long-Play"),
     ]
     for fn_list, eid, name, icon, mode, dur, fmt in lp_patterns:
         target_f = next((files[fn] for fn in fn_list if fn in files and files[fn].stat().st_size > 1000), None)
