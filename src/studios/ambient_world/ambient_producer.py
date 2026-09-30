@@ -81,14 +81,33 @@ class AmbientWorldProducer:
                 print(f"[DECISION - TOPIC DEDUPLICATION] Duplicate topic detected (matches {conflict.get('episode_id')}). Auto-pivoting to unique Twilight variation to protect channel CTR.")
                 sb.title = f"{sb.title} ~ Golden Twilight Serenade"
                 for s in sb.scenes:
-                    s.visual_prompt = f"{s.visual_prompt} Bathed in warm golden twilight and evening mountain stillness."
+                    s.visual_prompt = f"{s.visual_prompt} Bathed in warm golden twilight and serene evening tranquility."
             else:
                 logger.info(f"decision_deduplication_clean: '{sb.title}' is unique. Proceeding without conflict.")
                 print(f"[DECISION - TOPIC DEDUPLICATION] Title '{sb.title}' is 100% novel in Topic Memory. Proceeding without conflict.")
 
         # Stage 2: Keyframe Image Gate (Concurrent Idempotent Batch via visual_batch_service)
+        def _resolve_scene_image_prompt(s: AmbientScenePrompt) -> str:
+            raw_prompt = ""
+            if getattr(s, "image_model_configs", None) and isinstance(s.image_model_configs, dict):
+                for m_key in ("flux_1_1_pro_ultra", "flux_pro_ultra", "flux_1_1_pro", "flux"):
+                    if m_key in s.image_model_configs:
+                        cfg = s.image_model_configs[m_key]
+                        if isinstance(cfg, dict) and cfg.get("prompt"):
+                            raw_prompt = str(cfg["prompt"]).strip()
+                            break
+            if not raw_prompt:
+                raw_prompt = s.visual_prompt.strip()
+
+            # Dual-layer structural fail-safe for symmetrical frontal living wallpapers:
+            sub_genre = (getattr(sb, "sub_genre", "") or getattr(sb, "primary_archetype", "") or "").lower()
+            if "waterfall" in sub_genre or "cascade" in sub_genre or "gorge" in sub_genre or "river" in sub_genre:
+                if "symmetrical" not in raw_prompt.lower() and "dead-center" not in raw_prompt.lower():
+                    raw_prompt = "Dead-center symmetrical frontal vantage point, head-on straight perspective, flat horizon line. " + raw_prompt
+            return raw_prompt
+
         kf_tasks = [
-            (scene.visual_prompt, ep_dir / f"keyframe_p{scene.scene_index}.jpg", ep_dir / f"fal_req_p{scene.scene_index}.json", scene.scene_index)
+            (_resolve_scene_image_prompt(scene), ep_dir / f"keyframe_p{scene.scene_index}.jpg", ep_dir / f"fal_req_p{scene.scene_index}.json", scene.scene_index)
             for scene in sb.scenes
         ]
         keyframe_paths = await visual_batch_service.render_keyframes_batch(kf_tasks, force_rerun=force_rerun)

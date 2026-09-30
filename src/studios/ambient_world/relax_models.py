@@ -37,16 +37,16 @@ class RelaxModelConfigDirective(BaseModel):
 class RelaxTravelTourismSpec(BaseModel):
     """Geospatial and natural landmark discovery specification."""
     destination_name: str = "Natural Landmark"
-    country: str = "Switzerland"
+    country: str = "Natural Sanctuary"
     province_state: Optional[str] = None
     attraction_type: str = "Natural Sanctuary"
-    best_season_and_lighting: str = "Crisp Natural Daylight 5500K"
+    best_season_and_lighting: Optional[str] = None
 
 
 class RelaxGlobalCultureSpec(BaseModel):
     """Architectural materials and cultural atmosphere specification."""
-    continent_region: str = "Alpine Europe"
-    culture_heritage: str = "Alpine Vernacular"
+    continent_region: str = "Global Wilderness"
+    culture_heritage: str = "Natural Heritage"
     authentic_textiles_and_fabrics: str = "Weathered timber, slate, stone"
     cultural_gestures_and_rituals: str = "Tranquil mindful contemplation"
 
@@ -56,7 +56,7 @@ class RelaxAudioMasterSpec(BaseModel):
     audio_mode: str = "ambient_nature"
     spoken_narration_script: Optional[str] = ""
     singing_lyrics_spec: Optional[str] = ""
-    suno_musical_tags: str = "432Hz ambient, natural foley, soft cello drone, stereo spatial acoustics, -14 LUFS"
+    suno_musical_tags: str = "432Hz ambient, natural foley, soft acoustic drone, stereo spatial acoustics, -14 LUFS"
     vocal_gender: str = "female"
     tempo_bpm: int = 64
     speech_cadence_wpm: int = 125
@@ -71,11 +71,12 @@ class RelaxSceneDirective(BaseModel):
     location_hub: str = "Scenic Vista"
     shot_type: str = "wide_panoramic_picturesque"
     camera_rig: str = "locked_tripod"
-    color_temp_kelvin: int = 5500  # Strict 5500K across all scenes
-    visual_prompt: str = Field(..., description="Photorealistic living wallpaper prompt for FLUX 1.1 Pro")
+    color_temp_kelvin: Optional[int] = None  # Autonomously determined by director
+    visual_prompt: str = Field(..., description="Photorealistic living wallpaper prompt")
     motion_prompt: str = Field(..., description="Video diffusion prompt with locked tripod and fluid vector alignment")
     motion_negative_prompt: Optional[str] = Field(None, description="Director-specified negative constraints")
     model_configs: Dict[str, RelaxModelConfigDirective] = Field(default_factory=dict)
+    image_model_configs: Dict[str, Any] = Field(default_factory=dict)
     loop_strategy: Optional[LoopStrategySpec] = None
     domain: str = "landscape_solid"  # landscape_solid, water_fluid
     duration_seconds: float = 30.0
@@ -98,6 +99,9 @@ class RelaxScreenplay(BaseModel):
     story_topic: str
     genre: str = "relax/nature"
     sub_genre: Optional[str] = "nature_sanctuary"
+    primary_archetype: Optional[str] = None
+    secondary_archetype: Optional[str] = None
+    cluster: Optional[str] = None
     primary_language: str = "en"
     target_dubbing_languages: List[str] = Field(default_factory=lambda: ["en", "de", "fr", "ja", "es"])
     recommended_fps: int = 24

@@ -18,6 +18,8 @@ class AmbientScenePrompt(BaseModel):
     motion_prompt: str
     duration_seconds: float = 30.0
     domain: str = "landscape_solid"
+    image_model_configs: dict = Field(default_factory=dict)
+    model_configs: dict = Field(default_factory=dict)
 
 
 class AmbientStoryboard(BaseModel):

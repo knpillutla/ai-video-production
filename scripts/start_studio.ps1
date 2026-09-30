@@ -147,6 +147,7 @@ $Proc = Start-Process -FilePath $PythonExe `
     -WorkingDirectory $ProjectRoot `
     -RedirectStandardOutput $StdOutLog `
     -RedirectStandardError $StdErrLog `
+    -WindowStyle Hidden `
     -PassThru
 
 if (-not $Proc) {

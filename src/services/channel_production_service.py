@@ -54,47 +54,6 @@ CHANNEL_MAP = {
 }
 
 
-def _resolve_archetypes(channel_id: str, prompt: str) -> tuple[str, Optional[str]]:
-    """Determine primary and secondary archetype based on channel and user prompt keywords."""
-    p = (prompt or "").lower()
-    
-    # Priority 1: Geographic / Sanctuary Location
-    geo_mapping = [
-        ("swiss_alps", ["swiss", "alps", "alpine", "lauterbrunnen", "meadow", "edelweiss", "matterhorn", "chalet", "village"]),
-        ("himalayas", ["himalaya", "monastery", "tibet", "prayer flag", "sherpa"]),
-        ("zen_garden", ["zen", "kyoto", "lotus", "bamboo fountain", "gravel", "temple garden", "rock garden", "serenity"]),
-        ("ocean_world", ["ocean", "waves", "coastal", "coral", "sea", "reef", "lagoon", "tide", "aquatic", "marine", "beach"]),
-        ("biophilic_living", ["biophilic", "terrace", "pavilion", "patio", "deck", "retreat", "indoor garden"]),
-        ("lake", ["lake", "placid", "dock", "mirror lake", "reflection pool", "fjord"]),
-        ("forest", ["forest", "rainforest", "woods", "canopy", "moss", "trees", "pine", "jungle", "emerald"]),
-        ("mountains", ["mountain", "misty mountain", "peak", "ridge", "highlands"]),
-    ]
-
-    weather_has_rain = any(k in p for k in ("rain", "raining", "rainfall", "downpour", "storm", "puddle", "drizzle"))
-    weather_has_snow = any(k in p for k in ("blizzard", "snow", "snowstorm", "frost", "winter", "sub-zero", "arctic", "ice"))
-    weather_has_fire = any(k in p for k in ("campfire", "fire", "hearth", "fireplace", "ember", "flame", "cabin fire"))
-
-    for arch_key, kws in geo_mapping:
-        if any(kw in p for kw in kws):
-            sec = "rain" if weather_has_rain else ("blizzard" if weather_has_snow else ("camp_fire" if weather_has_fire else None))
-            return arch_key, sec
-
-    # Priority 2: Pure Atmospheric Fallback
-    if weather_has_rain:
-        return "rain", None
-    if weather_has_snow:
-        return "blizzard", "camp_fire"
-    if weather_has_fire:
-        return "camp_fire", None
-
-    if channel_id == "silent_hearth":
-        return "blizzard", "camp_fire"
-    elif channel_id in ("rain_retreat", "study_focus_cafe"):
-        return "rain", None
-    elif channel_id == "cineai_docs":
-        return "mountains", None
-    return "swiss_alps", None
-
 
 async def produce_channel_video(
     channel_id: str,
@@ -112,6 +71,7 @@ async def produce_channel_video(
     allow_fallback: bool = False,
     user_id: Optional[str] = "user_krishna_01",
     motion_model: str = "auto",
+    image_model: str = "flux_1_1_pro_ultra",
     long_play_hours: Optional[float] = None,
     camera_motion: Optional[str] = "locked_tripod",
     execution_mode: str = "test",
@@ -150,7 +110,16 @@ async def produce_channel_video(
         )
 
     pipeline = BaseChannelPipeline(cfg)
-    primary, secondary = _resolve_archetypes(channel_id, prompt)
+
+    # Determine effective channel genre
+    eff_genre = (
+        "relax/nature" if channel_id in ("earth_serenade", "nature_retreat", "rain_retreat")
+        else ("relax/cozy" if channel_id == "cozy_ambiance"
+        else ("relax/healing" if channel_id == "healing_relaxation"
+        else ("comedy/telugu" if channel_id == "telugu_comedy"
+        else ("documentary/cineai" if channel_id == "cineai_docs"
+        else (channel_id or "relax/nature")))))
+    )
 
     ep_dir = (user_chan_dir / episode_id) if episode_id else None
     screenplay_file = (ep_dir / "screenplay.json") if ep_dir else None
@@ -172,14 +141,15 @@ async def produce_channel_video(
         universal_sp = existing_sp
     else:
         universal_sp = await generate_relax_screenplay_gemini(
-            primary=primary,
             custom_prompt=prompt,
             duration_seconds=duration_seconds or 60.0,
             num_shots=effective_shots,
             camera_motion=camera_motion or "locked_tripod",
-            genre=channel_id or "relax/nature",
+            genre=eff_genre,
             user_id=effective_user,
             channel_id=channel_id,
+            raw_output_path=(ep_dir / "raw_gemini_screenplay.json") if ep_dir else None,
+            image_model=image_model,
         )
         if screenplay_file:
             try:
@@ -188,29 +158,30 @@ async def produce_channel_video(
             except Exception as ex:
                 logger.warning(f"failed_to_write_screenplay_file: {ex}")
 
+    sub_genre = getattr(universal_sp, "sub_genre", None) or eff_genre
+    sb = relax_to_ambient_storyboard(universal_sp)
+
+    primary_archetype = getattr(universal_sp, "primary_archetype", None) or sub_genre
+    secondary_archetype = getattr(universal_sp, "secondary_archetype", None)
+    cluster_val = getattr(universal_sp, "cluster", None) or sb.cluster
+
     user_inputs_file = (ep_dir / "user_inputs.json") if ep_dir else None
     if user_inputs_file:
         try:
             from datetime import datetime, timezone
-            eff_genre = (
-                "relax/nature" if channel_id in ("earth_serenade", "nature_retreat", "rain_retreat")
-                else ("relax/cozy" if channel_id == "cozy_ambiance"
-                else ("relax/healing" if channel_id == "healing_relaxation"
-                else ("comedy/telugu" if channel_id == "telugu_comedy"
-                else ("documentary/cineai" if channel_id == "cineai_docs"
-                else (channel_id or "general")))))
-            )
             user_inputs_payload = {
                 "prompt": prompt,
                 "channel_id": channel_id,
                 "genre": eff_genre,
-                "primary_archetype": primary,
-                "secondary_archetype": secondary,
+                "primary_archetype": primary_archetype,
+                "secondary_archetype": secondary_archetype,
+                "cluster": cluster_val,
                 "episode_id": episode_id or "EP-001",
                 "user_id": effective_user,
                 "duration_seconds": duration_seconds,
                 "long_play_hours": long_play_hours,
                 "num_shots": effective_shots,
+                "image_model": image_model,
                 "motion_model": motion_model,
                 "camera_motion": camera_motion,
                 "pipeline_strategy": pipeline_strategy,
@@ -222,8 +193,6 @@ async def produce_channel_video(
             logger.info(f"user_inputs_saved: {user_inputs_file.name}")
         except Exception as ex:
             logger.warning(f"failed_to_write_user_inputs: {ex}")
-
-    sb = relax_to_ambient_storyboard(universal_sp)
 
     # Pure operational pipeline state (Separated from creative script)
     pipeline_state_payload = {
@@ -250,9 +219,9 @@ async def produce_channel_video(
         "title": universal_sp.title,
         "prompt": prompt,
         "genre": eff_genre,
-        "primary_archetype": primary,
-        "secondary_archetype": secondary,
-        "cluster": sb.cluster,
+        "primary_archetype": primary_archetype,
+        "secondary_archetype": secondary_archetype,
+        "cluster": cluster_val,
         "story_topic": universal_sp.story_topic,
         "duration_seconds": duration_seconds,
         "num_shots": effective_shots,
@@ -336,13 +305,15 @@ async def produce_channel_video(
     keyframes = []
     for idx, kf_path in enumerate(raw_kfs, 1):
         url = _to_url(kf_path)
-        keyframes.append({"name": f"Shot {idx}: {primary.replace('_', ' ').title()}", "url": url, "timing": f"{duration_seconds / max(1, len(raw_kfs)):.1f}s"})
+        scene_label = universal_sp.scenes[idx - 1].location_hub if (idx - 1 < len(universal_sp.scenes) and getattr(universal_sp.scenes[idx - 1], "location_hub", None)) else universal_sp.title
+        keyframes.append({"name": f"Shot {idx}: {scene_label}", "url": url, "timing": f"{duration_seconds / max(1, len(raw_kfs)):.1f}s"})
 
     motion_clips = []
     m_label = "Wan 2.1" if eff_motion in ("wan", "wan_2_1", "wan21") else "Kling v3 4K Native"
     for idx, mv_path in enumerate(raw_vids, 1):
         url = _to_url(mv_path)
-        motion_clips.append({"name": f"Motion {idx}: {primary.title()}", "model": m_label, "duration": f"{duration_seconds:.0f}s", "url": url})
+        scene_label = universal_sp.scenes[idx - 1].location_hub if (idx - 1 < len(universal_sp.scenes) and getattr(universal_sp.scenes[idx - 1], "location_hub", None)) else universal_sp.title
+        motion_clips.append({"name": f"Motion {idx}: {scene_label}", "model": m_label, "duration": f"{duration_seconds:.0f}s", "url": url})
 
     audio_stems = []
     bgm_path = result.get("bgm_path")
