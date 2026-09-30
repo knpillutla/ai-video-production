@@ -54,7 +54,7 @@ function proSwitchAudioMode(mode) {
       const curTime = video.currentTime;
       video.src = targetUrl;
       video.currentTime = curTime;
-      video.play().catch(() => {});
+      video.play().catch(() => { });
     }
   }
 }

@@ -105,8 +105,8 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
       vid.progress = 10;
     }
   } else {
-    vid.currentStage = 1;
-    vid.progress = 10;
+    vid.currentStage = vid.currentStage || 1;
+    vid.progress = Math.max(10, vid.progress || 10);
   }
 
   const banner = document.getElementById("studio-queued-banner");
@@ -115,14 +115,14 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
     const iconEl = document.getElementById("studio-banner-icon");
     if (iconEl) {
       iconEl.className = "w-6 h-6 rounded-lg bg-emerald-600/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0 border border-emerald-400/30";
-      iconEl.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+      iconEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
     }
     const reqIdEl = document.getElementById("studio-banner-request-id");
     if (reqIdEl) reqIdEl.textContent = vid.jobId || `job_${vid.id || vid.episode_id}`;
     const tEl = document.getElementById("studio-banner-title");
-    if (tEl) { tEl.textContent = isManual ? "Manual Stage Pipeline Active" : "Autonomous Pipeline Active"; tEl.className = "font-black text-emerald-950 dark:text-white"; }
+    if (tEl) { tEl.textContent = isManual ? "Manual Stage Pipeline Active" : "Autonomous Pipeline Active (--id)"; tEl.className = "font-black text-emerald-950 dark:text-white"; }
     const dEl = document.getElementById("studio-banner-detail");
-    if (dEl) { dEl.textContent = `Episode ${vid.id || vid.episode_id} ("${vid.title || 'Resuming'}"): Executing pipeline...`; dEl.className = "text-[10px] text-emerald-900 dark:text-gray-200 font-medium truncate"; }
+    if (dEl) { dEl.textContent = `Episode ${vid.id || vid.episode_id} ("${vid.title || 'Resuming'}"): Synthesizing & Assembling 4K Broadcast Master...`; dEl.className = "text-[10px] text-emerald-900 dark:text-gray-200 font-medium truncate"; }
     const bb = document.getElementById("studio-banner-phase-badge");
     if (bb) {
       bb.classList.remove("hidden");
@@ -130,7 +130,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
       else if (isPhotosOnly) bb.textContent = "Stage 2: Synthesizing Keyframes (FLUX 1.1 Pro)";
       else if (isMotionOnly) bb.textContent = "Stage 3: Synthesizing Motion (Wan 2.1 / Kling)";
       else if (isAudioOnly) bb.textContent = "Stage 4: Synthesizing Audio (Suno v3.5 & 432Hz DSP)";
-      else bb.textContent = "Stage 5: Rendering 4K Master Video";
+      else bb.textContent = `Stage ${vid.currentStage || 5}: Rendering 4K Master & Long-Play Broadcast`;
       bb.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-blue-600 text-white animate-pulse";
     }
     banner.classList.remove("hidden");
@@ -207,6 +207,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
   };
 
   let pulseVal = vid.progress || 10;
+  pollArtifacts();
   const pulseTimer = setInterval(() => {
     if (vid.status !== "processing") { clearInterval(pulseTimer); return; }
     pulseVal = Math.min(92, pulseVal + 3);
@@ -493,12 +494,13 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
       episode_id: targetId,
       title: `Episode ${targetId}`,
       status: "processing",
-      pipelineStrategy: typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "manual"
+      pipelineStrategy: "autonomous"
     };
   }
   ep.id = targetId;
   ep.episode_id = targetId;
   ep.status = "processing";
+  ep.is_approved = true;
   ep.errorMessage = null;
   ep.failedStage = null;
   ep.force_rerun = Boolean(forceRerun);
@@ -509,12 +511,14 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
   renderInspectorFromVideo(ep);
   if (typeof filterChannelArchive === "function") filterChannelArchive();
 
-  const strat = ep.pipelineStrategy || (typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "manual");
-  if (strat === "manual") {
-    // If triggered from Stage 2 or 3, reprocess specifically Stage 3 Motion
-    startStudioLiveStageProgress(ep, "manual", "motion");
-  } else {
-    startStudioLiveStageProgress(ep, "autonomous");
-  }
+  // Persist disk approval
+  try {
+    const chSlug = ep.channelId || ep.channel_id || (typeof selectedStudioChannel !== "undefined" ? selectedStudioChannel : "earth_serenade");
+    const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
+    fetch(`/api/production/episodes/${targetId}/approve?channel_id=${chSlug}&user_id=${encodeURIComponent(uEmail)}`, { method: "POST" }).catch(() => {});
+  } catch (e) {}
+
+  // Approve and Rerender (--id xxxx): Resumes pipeline from where it stopped, reusing all existing artifacts
+  startStudioLiveStageProgress(ep, "autonomous");
 }
 

@@ -250,13 +250,26 @@ def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], 
         return None
     suffix = f"_{int(fade_hours)}h_black" if fade_hours else ""
     label = int(hours) if hours.is_integer() else hours
-    lp_path = ep_dir / f"master_4k_{label}hour{suffix}_sleep.mp4"
+    lp_path = ep_dir / f"master_4k_{label}hour{suffix}_broadcast.mp4"
+    legacy_lp = ep_dir / f"master_4k_{label}hour{suffix}_sleep.mp4"
+    if legacy_lp.is_file() and legacy_lp.stat().st_size > 1000 and (not lp_path.is_file() or lp_path.stat().st_size < 1000):
+        try:
+            legacy_lp.rename(lp_path)
+        except Exception:
+            pass
+
     if master.is_file() and (not lp_path.is_file() or lp_path.stat().st_size < 1000):
         export_long_play_broadcast(source_4k_video=master, output_long_play=lp_path, target_duration_seconds=hours * 3600.0, fade_to_black_hours=fade_hours)
     
     nature_master = ep_dir / "master_4k_ambient_nature_only.mp4"
     if nature_master.is_file() and nature_master.resolve() != master.resolve():
-        lp_nature_path = ep_dir / f"master_4k_{label}hour_nature_only{suffix}_sleep.mp4"
+        lp_nature_path = ep_dir / f"master_4k_{label}hour_nature_only{suffix}_broadcast.mp4"
+        legacy_nature_lp = ep_dir / f"master_4k_{label}hour_nature_only{suffix}_sleep.mp4"
+        if legacy_nature_lp.is_file() and legacy_nature_lp.stat().st_size > 1000 and (not lp_nature_path.is_file() or lp_nature_path.stat().st_size < 1000):
+            try:
+                legacy_nature_lp.rename(lp_nature_path)
+            except Exception:
+                pass
         if not lp_nature_path.is_file() or lp_nature_path.stat().st_size < 1000:
             logger.info(f"stretching_dual_nature_master: {lp_nature_path.name}")
             export_long_play_broadcast(source_4k_video=nature_master, output_long_play=lp_nature_path, target_duration_seconds=hours * 3600.0, fade_to_black_hours=fade_hours)

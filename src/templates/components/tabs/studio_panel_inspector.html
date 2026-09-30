@@ -10,9 +10,9 @@
             <span id="panel-header-ep-id">NEW</span>
             <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i>
           </a>
-          <button type="button" onclick="reprocessActiveEpisodeId()" id="btn-header-reprocess-ep" class="px-2 py-0.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-bold transition flex items-center gap-1 shadow-sm active:scale-95" title="Resume / Reprocess (--id) — Picks up in-flight Fal.ai video motion & completes the 4K Master">
-            <i class="fa-solid fa-arrows-rotate text-[8px]"></i>
-            <span>Reprocess (--id)</span>
+          <button type="button" onclick="reprocessActiveEpisodeId()" id="btn-header-reprocess-ep" class="px-2.5 py-0.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-[9.5px] font-bold transition flex items-center gap-1 shadow-sm active:scale-95 border border-emerald-500/50" title="Approve and Rerender (--id) — Resumes from where it stopped and completes the 4K Master">
+            <i class="fa-solid fa-play text-[8px]"></i>
+            <span>Approve and Rerender</span>
           </button>
           <button type="button" onclick="deleteActiveInspectorEpisode()" class="p-0.5 text-slate-400 hover:text-rose-500 rounded transition" title="Delete Episode">
             <i class="fa-solid fa-trash-can text-[9px]"></i>
@@ -80,9 +80,9 @@
             <div id="studio-panel-processing-title" class="font-bold text-slate-900 dark:text-white text-xs">AI Studio Pipeline Active</div>
             <div id="studio-panel-processing-subtitle" class="text-[9px] text-indigo-600 dark:text-indigo-400 font-medium">Synthesizing 4K Master...</div>
           </div>
-          <button type="button" onclick="reprocessActiveEpisodeId()" class="mt-1 px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Pick up Fal.ai in-flight job and complete video">
-            <i class="fa-solid fa-arrows-rotate text-[8px]"></i>
-            <span>Reprocess / Read Fal.ai (--id)</span>
+          <button type="button" onclick="reprocessActiveEpisodeId()" class="mt-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[9.5px] font-bold transition flex items-center gap-1 shadow active:scale-95 border border-emerald-500/50" title="Approve and Rerender (--id) — Resumes pipeline from where it stopped">
+            <i class="fa-solid fa-play text-[8px]"></i>
+            <span>Approve and Rerender (--id)</span>
           </button>
         </div>
       </div>
@@ -125,9 +125,9 @@
       <div class="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-gray-100">
         <span class="flex items-center gap-1.5 text-purple-700 dark:text-purple-400 font-mono uppercase font-black"><i class="fa-solid fa-film text-xs"></i> 3. Raw Video Motion (Kling / Wan)</span>
         <div class="flex items-center gap-1.5">
-          <button type="button" onclick="reprocessActiveEpisodeId()" class="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold transition flex items-center gap-1 shadow-sm border border-slate-700 active:scale-95" title="Resume / Reprocess Stage 3 Motion using --id to pick up Fal.ai">
-            <i class="fa-solid fa-arrows-rotate text-[9px]"></i>
-            <span>Pick Up (--id)</span>
+          <button type="button" onclick="reprocessActiveEpisodeId()" class="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold transition flex items-center gap-1 shadow-sm border border-emerald-500/50 active:scale-95" title="Approve and Rerender (--id) — Resumes Stage 3 Motion using --id">
+            <i class="fa-solid fa-play text-[9px]"></i>
+            <span>Approve & Rerender (--id)</span>
           </button>
           <span id="panel-raw-videos-count" class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-[10px] font-bold border border-slate-300 dark:border-slate-700">0 Clips</span>
         </div>
@@ -139,9 +139,9 @@
             <span class="text-[11px] font-bold text-slate-900 dark:text-white">No Motion Clips Yet</span>
             <span class="text-[9px] text-slate-600 dark:text-slate-400 font-mono">(Kling v3 / Wan 2.1)</span>
           </div>
-          <button type="button" onclick="reprocessActiveEpisodeId()" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow-sm active:scale-95">
-            <i class="fa-solid fa-arrows-rotate text-[9px]"></i>
-            <span>Pick Up Motion (--id)</span>
+          <button type="button" onclick="reprocessActiveEpisodeId()" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow-sm border border-emerald-500/50 active:scale-95" title="Approve and Rerender (--id)">
+            <i class="fa-solid fa-play text-[9px]"></i>
+            <span>Approve & Rerender (--id)</span>
           </button>
         </div>
       </div>

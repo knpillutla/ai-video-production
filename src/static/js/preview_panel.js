@@ -22,7 +22,7 @@ function selectLedgerMasterVideoRender(url, label, cardEl) {
   const badge = document.getElementById("ledger-panel-video-badge");
   if (video && url) {
     video.src = url;
-    video.play().catch(() => {});
+    video.play().catch(() => { });
   }
   if (badge && label) badge.textContent = label;
 
@@ -62,7 +62,7 @@ function toggleAudioStemPlay(audioId, btnEl) {
     audio.play().then(() => {
       activePlayingAudioStemId = audioId;
       if (btnEl) btnEl.innerHTML = '<i class="fa-solid fa-pause text-amber-500"></i> Pause';
-    }).catch(() => {});
+    }).catch(() => { });
   } else {
     audio.pause();
     if (btnEl) btnEl.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i> Play';
@@ -90,7 +90,7 @@ function clearLedgerInspector() {
   if (metaEl) metaEl.textContent = "0 Videos";
   if (titleEl) titleEl.textContent = "No Episode Selected";
   if (storyEl) storyEl.textContent = "Select a channel or video from the ledger on the left to inspect master artifacts.";
-  
+
   const video = document.getElementById("studio-panel-video");
   if (video) { video.src = ""; video.pause(); }
 

@@ -242,15 +242,16 @@ async def poll_production_artifacts(channel_id: str, episode_id: str, user_id: s
 
     long_play_editions = []
     lp_patterns = [
-        ("master_4k_8hour_broadcast.mp4", "8h_music", "8-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "8:00:00 (8h)", "16:9 Long-Play"),
-        ("master_4k_8hour_nature_only_broadcast.mp4", "8h_nature", "8-Hour 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature ASMR", "8:00:00 (8h)", "16:9 Long-Play"),
-        ("master_4k_3hour_broadcast.mp4", "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3h)", "16:9 Long-Play"),
-        ("master_4k_3hour_nature_only_broadcast.mp4", "3h_nature", "3-Hour 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature ASMR", "3:00:00 (3h)", "16:9 Long-Play"),
+        (["master_4k_8hour_broadcast.mp4", "master_4k_8hour_sleep.mp4"], "8h_music", "8-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "8:00:00 (8h)", "16:9 Long-Play"),
+        (["master_4k_8hour_nature_only_broadcast.mp4", "master_4k_8hour_nature_only_sleep.mp4"], "8h_nature", "8-Hour 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature ASMR", "8:00:00 (8h)", "16:9 Long-Play"),
+        (["master_4k_3hour_broadcast.mp4", "master_4k_3hour_sleep.mp4"], "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3h)", "16:9 Long-Play"),
+        (["master_4k_3hour_nature_only_broadcast.mp4", "master_4k_3hour_nature_only_sleep.mp4"], "3h_nature", "3-Hour 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature ASMR", "3:00:00 (3h)", "16:9 Long-Play"),
     ]
-    for fn, eid, name, icon, mode, dur, fmt in lp_patterns:
-        if fn in files and files[fn].stat().st_size > 1000:
-            sz_mb = round(files[fn].stat().st_size / (1024 * 1024), 1)
-            long_play_editions.append({"edition_id": eid, "name": name, "icon": icon, "audio_mode": mode, "duration": dur, "format": fmt, "status": "completed", "url": _file_url(files[fn]), "size_str": f"{sz_mb} MB" if sz_mb < 1000 else f"{round(sz_mb/1024, 2)} GB", "filename": fn})
+    for fn_list, eid, name, icon, mode, dur, fmt in lp_patterns:
+        target_f = next((files[fn] for fn in fn_list if fn in files and files[fn].stat().st_size > 1000), None)
+        if target_f:
+            sz_mb = round(target_f.stat().st_size / (1024 * 1024), 1)
+            long_play_editions.append({"edition_id": eid, "name": name, "icon": icon, "audio_mode": mode, "duration": dur, "format": fmt, "status": "completed", "url": _file_url(target_f), "size_str": f"{sz_mb} MB" if sz_mb < 1000 else f"{round(sz_mb/1024, 2)} GB", "filename": target_f.name})
 
     screenplay_file = c_dir / "screenplay.json"
     screenplay_data = json.loads(screenplay_file.read_text("utf-8")) if screenplay_file.exists() else None

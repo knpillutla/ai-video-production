@@ -329,7 +329,7 @@ function renderMotionClipsList(vid) {
       <div class="flex items-center justify-between flex-wrap gap-1">
         <span class="text-xs font-black text-red-700 dark:text-red-400 flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-red-600"></i> Video Motion Status / Timeout</span>
         <div class="flex items-center gap-1">
-          <button type="button" onclick="reprocessActiveEpisodeId('${vid.id || vid.episode_id}')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition flex items-center gap-1 shadow-sm active:scale-95" title="Pick up Fal.ai in-flight job and complete video">🔄 Reprocess (--id)</button>
+          <button type="button" onclick="reprocessActiveEpisodeId('${vid.id || vid.episode_id}')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1 shadow-sm active:scale-95" title="Approve and Rerender (--id) — Resumes pipeline from where it stopped">⚡ Approve and Rerender</button>
           <button type="button" onclick="retryEpisodeWithFallback('${vid.id || vid.episode_id}')" class="px-2 py-1 text-[9px] font-medium rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-gray-200 transition">Fallback</button>
         </div>
       </div>

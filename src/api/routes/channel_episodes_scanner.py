@@ -158,20 +158,21 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
     editions: list[dict[str, Any]] = []
 
     edition_defs = [
-        ("master_4k_8hour_broadcast.mp4", "8h_music", "8-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "8:00:00 (8 Hours)", "16:9 Long-Play", "published", "25.35 GB"),
-        ("master_4k_8hour_nature_only_broadcast.mp4", "8h_nature", "8-Hour 4K Broadcast (Pure Nature ASMR)", "fa-water text-cyan-400", "Pure Nature ASMR", "8:00:00 (8 Hours)", "16:9 Long-Play", "published", "25.09 GB"),
-        ("master_4k_3hour_broadcast.mp4", "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3 Hours)", "16:9 Long-Play", "published", "12.87 GB"),
-        ("master_4k_3hour_nature_only_broadcast.mp4", "3h_nature", "3-Hour 4K Broadcast (Pure Nature ASMR)", "fa-water text-cyan-400", "Pure Nature ASMR", "3:00:00 (3 Hours)", "16:9 Long-Play", "published", "12.72 GB"),
-        ("master_4k_1hour_broadcast.mp4", "1h_music", "1-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "1:00:00 (1 Hour)", "16:9 Long-Play", "published", "4.29 GB"),
-        ("master_4k_1hour_nature_only_broadcast.mp4", "1h_nature", "1-Hour 4K Broadcast (Pure Nature ASMR)", "fa-water text-cyan-400", "Pure Nature ASMR", "1:00:00 (1 Hour)", "16:9 Long-Play", "published", "4.24 GB"),
-        ("master_4k_ambient.mp4", "master_music", "4K Master Set (Music)", "fa-clapperboard text-purple-400", "Music Master", "90s (Master)", "16:9 Master", "completed", "155 MB"),
-        ("master_4k_ambient_nature_only.mp4", "master_nature", "4K Master Set (Pure Nature)", "fa-water text-cyan-400", "Pure Nature ASMR", "90s (Master)", "16:9 Master", "completed", "153 MB"),
-        ("short_9x16_teaser.mp4", "short_teaser", "9:16 Vertical Short Teaser", "fa-mobile-screen text-pink-400", "Music + Ambient", "20s (Short)", "9:16 Short", "completed", "6.6 MB"),
+        (["master_4k_8hour_broadcast.mp4", "master_4k_8hour_sleep.mp4"], "8h_music", "8-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "8:00:00 (8 Hours)", "16:9 Long-Play", "published", "25.35 GB"),
+        (["master_4k_8hour_nature_only_broadcast.mp4", "master_4k_8hour_nature_only_sleep.mp4"], "8h_nature", "8-Hour 4K Broadcast (Pure Nature ASMR)", "fa-water text-cyan-400", "Pure Nature ASMR", "8:00:00 (8 Hours)", "16:9 Long-Play", "published", "25.09 GB"),
+        (["master_4k_3hour_broadcast.mp4", "master_4k_3hour_sleep.mp4"], "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3 Hours)", "16:9 Long-Play", "published", "12.87 GB"),
+        (["master_4k_3hour_nature_only_broadcast.mp4", "master_4k_3hour_nature_only_sleep.mp4"], "3h_nature", "3-Hour 4K Broadcast (Pure Nature ASMR)", "fa-water text-cyan-400", "Pure Nature ASMR", "3:00:00 (3 Hours)", "16:9 Long-Play", "published", "12.72 GB"),
+        (["master_4k_1hour_broadcast.mp4", "master_4k_1hour_sleep.mp4"], "1h_music", "1-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "1:00:00 (1 Hour)", "16:9 Long-Play", "published", "4.29 GB"),
+        (["master_4k_1hour_nature_only_broadcast.mp4", "master_4k_1hour_nature_only_sleep.mp4"], "1h_nature", "1-Hour 4K Broadcast (Pure Nature ASMR)", "fa-water text-cyan-400", "Pure Nature ASMR", "1:00:00 (1 Hour)", "16:9 Long-Play", "published", "4.24 GB"),
+        (["master_4k_ambient.mp4"], "master_music", "4K Master Set (Music)", "fa-clapperboard text-purple-400", "Music Master", "90s (Master)", "16:9 Master", "completed", "155 MB"),
+        (["master_4k_ambient_nature_only.mp4"], "master_nature", "4K Master Set (Pure Nature)", "fa-water text-cyan-400", "Pure Nature ASMR", "90s (Master)", "16:9 Master", "completed", "153 MB"),
+        (["short_9x16_teaser.mp4"], "short_teaser", "9:16 Vertical Short Teaser", "fa-mobile-screen text-pink-400", "Music + Ambient", "20s (Short)", "9:16 Short", "completed", "6.6 MB"),
     ]
-    for fn, eid, name, icon, mode, dur, fmt, st, sz in edition_defs:
-        if fn in files:
-            mtime = int(files[fn].stat().st_mtime)
-            editions.append({"edition_id": eid, "name": name, "icon": icon, "audio_mode": mode, "duration": dur, "format": fmt, "status": st, "url": f"{rel_prefix}/{fn}?t={mtime}", "size_str": sz})
+    for fn_list, eid, name, icon, mode, dur, fmt, st, sz in edition_defs:
+        match_fn = next((fn for fn in fn_list if fn in files), None)
+        if match_fn:
+            mtime = int(files[match_fn].stat().st_mtime)
+            editions.append({"edition_id": eid, "name": name, "icon": icon, "audio_mode": mode, "duration": dur, "format": fmt, "status": st, "url": f"{rel_prefix}/{match_fn}?t={mtime}", "size_str": sz})
 
     master_editions = [e for e in editions if "Long-Play" not in e["format"]]
     long_play_editions = [e for e in editions if "Long-Play" in e["format"]]

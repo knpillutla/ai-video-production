@@ -101,5 +101,5 @@ def stretch_channel_episode_background(channel_name: str, episode_id: str) -> Pa
 
     suffix = f"_{int(fade_h)}h_black" if fade_h else ""
     hour_label = int(hours) if hours.is_integer() else hours
-    out_lp = ep_dir / f"master_4k_{hour_label}hour{suffix}_sleep.mp4"
+    out_lp = ep_dir / f"master_4k_{hour_label}hour{suffix}_broadcast.mp4"
     return export_long_play_broadcast(source_4k_video=master_path, output_long_play=out_lp, target_duration_seconds=hours * 3600.0, fade_to_black_hours=fade_h)

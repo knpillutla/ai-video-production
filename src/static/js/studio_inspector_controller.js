@@ -73,7 +73,18 @@ function renderInspectorFromVideo(vid) {
       statusBadge.innerHTML = '<i class="fa-solid fa-circle-check text-[8px]"></i><span>Ready</span>';
     } else {
       statusBadge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-blue-600 text-white shadow-sm flex items-center gap-1 animate-pulse";
-      statusBadge.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-[8px]"></i><span>${vid.pipelineStrategy === 'manual' ? 'Manual Stage ' + (vid.currentStage || 1) : 'Auto In Progress'}</span>`;
+      statusBadge.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-[8px]"></i><span>${vid.pipelineStrategy === 'manual' ? 'Manual Stage ' + (vid.currentStage || 1) : 'Re-rendering (--id)...'}</span>`;
+    }
+  }
+
+  const reprocessBtn = document.getElementById("btn-header-reprocess-ep");
+  if (reprocessBtn) {
+    if (vid.status === "processing") {
+      reprocessBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-[8px]"></i><span>Re-rendering (--id)...</span>';
+      reprocessBtn.classList.add("opacity-80", "pointer-events-none");
+    } else {
+      reprocessBtn.innerHTML = '<i class="fa-solid fa-play text-[8px]"></i><span>Approve and Rerender</span>';
+      reprocessBtn.classList.remove("opacity-80", "pointer-events-none");
     }
   }
 
@@ -89,10 +100,10 @@ function renderInspectorFromVideo(vid) {
       const subTitle = document.getElementById("studio-panel-processing-subtitle");
       if (subTitle) {
         if (vid.currentStage === 1) subTitle.textContent = "Script & Storyboard Ready (Stage 1)...";
-        else if (vid.currentStage === 2) subTitle.textContent = "Keyframe Photos Ready (Approve Stage 3 Motion)...";
+        else if (vid.currentStage === 2) subTitle.textContent = "Keyframe Photos Ready (Synthesizing Stage 3 Motion)...";
         else if (vid.currentStage === 3) subTitle.textContent = "Synthesizing Video Motion (Wan 2.1 / Kling)...";
         else if (vid.currentStage === 4) subTitle.textContent = "Mastering Audio & Soundscape (Suno / 432Hz DSP)...";
-        else subTitle.textContent = "Awaiting Stage 5 Master Assembly...";
+        else subTitle.textContent = "Assembling 4K Broadcast Master & 3-Hour Long Play...";
       }
     }
   }
