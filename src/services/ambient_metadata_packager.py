@@ -15,20 +15,22 @@ class YouTubeAmbientPackage(BaseModel):
 
 
 TITLE_TEMPLATES: Dict[str, str] = {
-    "swiss_alps": "Swiss Alps Rain & Distant Thunder ~ Cozy Chalet Sleep in Lauterbrunnen [4K, 432Hz]",
-    "himalayas": "Sacred Himalayas Deep Meditation ~ 432Hz Monastery Wind & Tibetan Singing Bowls [4K]",
-    "ocean_world": "Underwater Coral Paradise ~ Calming Deep Sea Bioluminescence for Instant Sleep [4K]",
-    "mountains": "Misty Mountain Sunrise ~ Soothing Alpine Breeze & Deep Sleep Resonance [4K, 432Hz]",
-    "rain": "Gentle Forest River Rain ~ Ultra-Soft Raindrops for Insomnia Relief & Deep Study [4K]",
-    "lake": "Placid Mountain Lake at Dawn ~ Serene Water Reflections & Calming Morning Mist [4K]",
-    "beach": "Tropical Beach Sunset Waves ~ Velvet Ocean Surf & Gentle Sea Breeze for Sleep [4K]",
-    "camp_fire": "Starlit Campfire & Milky Way ~ Cozy Crackling Hearth Under the Stars [4K, 432Hz]",
-    "forest": "Ancient Pine Forest Sunbeams ~ Soothing Woodland Breeze & Golden Dawn Birds [4K]",
-    "beach_house": "Cozy Beach House Storm ~ Velvet Rain on Ocean Waves for Instant Rest [4K, 432Hz]",
-    "night_sleep": "Moonlit Celestial Night Sky ~ 432Hz Delta Waves for 8 Hours of Unbroken Sleep [4K]",
-    "blizzard": "Sub-Zero Mountain Blizzard Outside ~ Warm Fireplace Inside Timber Cabin [4K, 432Hz]",
-    "winter": "Pristine Winter Snowfall ~ Gentle Falling Snow in Quiet Evergreen Forest [4K]",
-    "autumn": "Golden Autumn Rain on River ~ Crimson Maple Leaves & Cozy Forest Stream [4K]",
+    "swiss_alps": "Swiss Alps Rain & Distant Thunder • Cozy Chalet Ambience in 4K",
+    "himalayas": "Sacred Himalayas Ambience • Calming Mountain Wind & Monastery Bowls [4K]",
+    "ocean_world": "Underwater Coral Paradise • Calming Deep Sea Sanctuary in 4K",
+    "mountains": "Misty Mountain Sunrise • Soothing Alpine Breeze & Deep Peace [4K]",
+    "rain": "Gentle Forest River Rain • Soft Raindrops for Sleep & Study [4K]",
+    "lake": "Placid Mountain Lake at Dawn • Serene Water Reflections & Morning Mist [4K]",
+    "beach": "Tropical Beach Sunset Waves • Velvet Ocean Surf & Gentle Sea Breeze [4K]",
+    "camp_fire": "Starlit Campfire & Milky Way • Cozy Crackling Hearth Under Stars [4K]",
+    "forest": "Ancient Pine Forest Sunbeams • Soothing Woodland Breeze in 4K",
+    "beach_house": "Cozy Beach House Rain • Calming Waves & Window Raindrops [4K]",
+    "night_sleep": "Moonlit Celestial Night Sky • Starry Cosmos & Deep Relaxation [4K]",
+    "blizzard": "Mountain Blizzard & Warm Fireplace • Cozy Winter Timber Cabin [4K]",
+    "winter": "Pristine Winter Snowfall • Quiet Evergreen Forest in 4K",
+    "autumn": "Golden Autumn River • Crimson Maple Leaves & Cozy Forest Stream [4K]",
+    "waterfall_gorge": "Niagara Falls 4K • Calming Waterfall Ambience & Soft Music for Sleep & Focus",
+    "waterfall": "Niagara Falls 4K • Calming Waterfall Ambience & Soft Music for Sleep & Focus",
 }
 
 
@@ -40,17 +42,16 @@ def generate_youtube_ambient_package(
 ) -> YouTubeAmbientPackage:
     """Generate high-CTR YouTube metadata, thumbnail prompt, and chapter timestamps."""
     key = archetype_key.lower().replace("-", "_").replace(" ", "_")
-    base_title = TITLE_TEMPLATES.get(key, f"Cozy {archetype_key.title()} ~ 4K Velvet Sleep Ambiance [432Hz]")
-    
-    if secondary_element:
-        base_title = f"{base_title.split('~')[0]}with {secondary_element.title()} ~{base_title.split('~')[1]}"
+    clean_name = archetype_key.replace("_", " ").title()
+    base_title = TITLE_TEMPLATES.get(key, f"{clean_name} 4K • Calming Nature Ambience & Soft Music")
+
+    if secondary_element and "•" in base_title:
+        parts = base_title.split("•")
+        base_title = f"{parts[0].strip()} with {secondary_element.title()} •{parts[1]}"
 
     is_30min = (duration_hours <= 0.6)
-    if is_30min:
-        prefix = base_title.split("~")[0].strip()
-        base_title = f"{prefix} ~ 30-Minute 4K Velvet Relaxation & Deep Focus [432Hz]"
-    elif fade_to_black_hours:
-        base_title = f"{base_title.split('[')[0]}~ Fades to Black Screen after {int(fade_to_black_hours)}H [{base_title.split('[')[1]}"
+    if fade_to_black_hours:
+        base_title = f"{base_title} • Fades to Black Screen ({int(fade_to_black_hours)}H)"
 
     # Chapter Markers
     if is_30min:
@@ -77,7 +78,7 @@ def generate_youtube_ambient_package(
 
     dur_label = "30-Minute" if is_30min else f"{int(duration_hours) if duration_hours.is_integer() else duration_hours}-Hour"
     description = (
-        f"Immerse yourself in this {dur_label} 4K Velvet Ambient Soundscape featuring {archetype_key.replace('_', ' ').title()}.\n\n"
+        f"Immerse yourself in this {dur_label} 4K Velvet Ambient Soundscape featuring {clean_name}.\n\n"
         "✨ Acoustic Engineering: Mastered to -21.0 LUFS with Velvet Low-Pass anti-fatigue filtering "
         "and sub-audible 432Hz delta wave brainwave entrainment to ease insomnia and promote deep restorative sleep.\n\n"
         "⏰ Broadcast Chapters:\n" + "\n".join(chapters) + "\n\n"
@@ -86,13 +87,13 @@ def generate_youtube_ambient_package(
     )
 
     thumb_prompt = (
-        f"High-contrast masterpiece YouTube thumbnail photograph of {archetype_key.replace('_', ' ')}. "
+        f"High-contrast masterpiece YouTube thumbnail photograph of {clean_name}. "
         "Striking color contrast between warm glowing golden amber light inside and deep atmospheric cool cobalt blue outside. "
         "Extreme visual depth, crisp 35mm optical bokeh, cozy inviting mood, award-winning cinematography, 8k, zero text."
     )
 
     pinned_comment = (
-        f"🌿 Welcome to your nightly sanctuary. Leave a comment with one thing you are grateful for today, "
+        "🌿 Welcome to your nightly sanctuary. Leave a comment with one thing you are grateful for today, "
         "put on your headphones, set your sleep timer, and rest deeply. Broadcast chapters are listed in the description. 🌙💤"
     )
 

@@ -53,11 +53,13 @@ function renderLongPlayStretchSection(vid) {
 
   // Completed long-play broadcast editions on disk
   if (lpEditions.length > 0) {
-    if (approvalCard) approvalCard.classList.add("hidden");
+    if (approvalCard) approvalCard.classList.remove("hidden");
     if (statusBadge) {
       statusBadge.className = "px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[8px] font-mono font-bold flex items-center gap-1";
       statusBadge.innerHTML = `<i class="fa-solid fa-circle-check text-[7px]"></i><span>Dual 4K Broadcasts Ready</span>`;
     }
+    const btnApprove = document.getElementById("btn-approve-longplay-text");
+    if (btnApprove) btnApprove.innerHTML = '<i class="fa-solid fa-arrows-rotate mr-1"></i> Regenerate Dual 4K Broadcasts';
 
     dualGrid.innerHTML = lpEditions.map(ed => `
       <div class="flex flex-col items-center gap-0.5 cursor-pointer w-full group" onclick="if (typeof selectMasterVideoRender === 'function') selectMasterVideoRender('${ed.url}', '${ed.name}', this); if (typeof openVideoPopup === 'function') openVideoPopup('${ed.url}', '${epId}: ${ed.name}', '${ed.format} • ${ed.audio_mode}');" title="Click to preview full broadcast in 4K popup">

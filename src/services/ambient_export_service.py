@@ -1,15 +1,9 @@
-"""Ambient World Packaging and Export Utilities.
-
-Handles long-play stretching, teaser short extraction, localized metadata, and topic memory indexing.
-"""
+"""Ambient World Packaging and Export Utilities (long-play stretching, shorts, localized metadata)."""
 
 from __future__ import annotations
-
-import json
+import json, subprocess
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
-
-import subprocess
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 import imageio_ffmpeg
 
 from src.core.telemetry import logger
@@ -19,7 +13,6 @@ from src.services.ambient_translator import LocalizedMetadata, localize_metadata
 from src.services.long_play_stretcher import export_long_play_broadcast
 from src.services.thumbnail_ab_packager import ThumbnailABPackage, generate_thumbnail_ab_variants
 from src.services.topic_memory import topic_memory
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.studios.ambient_world.ambient_storyboard import AmbientStoryboard
@@ -40,15 +33,12 @@ def _probe_clip_duration(clip_path: Path) -> float:
 
 
 def get_media_duration(media_path: Path) -> float:
-    """Probe the exact duration of an audio or video media file in seconds."""
     return _probe_clip_duration(media_path)
 
 
 def _is_clip_4k(clip_path: Path) -> bool:
-    """Check if a video clip has native 4K resolution (3840x2160 or 2160x3840)."""
     try:
-        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-        res = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], capture_output=True, text=True, errors="ignore")
+        res = subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-i", str(clip_path)], capture_output=True, text=True, errors="ignore")
         return "3840x2160" in res.stderr or "2160x3840" in res.stderr
     except Exception:
         return False
@@ -123,26 +113,25 @@ def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf
 
 
 def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_master: Path, scene_hold_sec: float = 60.0, crf: int = 22) -> Path:
-    """Assemble relaxing 4K master with seamless forward cineloops, 60s Extended Perspective Hold, and 2.0s crossfades in CRF 22 format."""
+    """Assemble relaxing 4K master with seamless forward cineloops, Extended Perspective Hold, and crossfades in CRF 22 format."""
     from src.services.procedural_foley import synthesize_foley_stem
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     seamless_clips = [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
-    n = len(seamless_clips)
-    x_dur = 2.0
+    n, x_dur = len(seamless_clips), 2.0
     total_vid_dur = scene_hold_sec if n == 1 else (n * scene_hold_sec) - ((n - 1) * x_dur)
-    
+
+    target_audio = audio_path
+    if not target_audio or not target_audio.is_file():
+        has_clip_audio = all("Audio:" in subprocess.run([ffmpeg_bin, "-i", str(c)], capture_output=True, text=True, errors="ignore").stderr for c in seamless_clips)
+        if not has_clip_audio:
+            foley_wav = out_master.parent / "procedural_nature_foley.wav"
+            if not foley_wav.is_file() or foley_wav.stat().st_size < 1000:
+                synthesize_foley_stem(weather_type="water stream alpine breeze", setting_type="nature", space="outdoor", duration_seconds=total_vid_dur + 5.0, output_path=foley_wav)
+            target_audio = foley_wav
+
     if n == 1:
         c_dur = get_media_duration(seamless_clips[0]) or 5.0
         v_loops = max(1, int(scene_hold_sec / max(1.0, c_dur)) + 2)
-        target_audio = audio_path
-        if not target_audio or not target_audio.is_file():
-            check = subprocess.run([ffmpeg_bin, "-i", str(seamless_clips[0])], capture_output=True, text=True, errors="ignore")
-            if "Audio:" not in check.stderr:
-                foley_wav = out_master.parent / "procedural_nature_foley.wav"
-                if not foley_wav.is_file() or foley_wav.stat().st_size < 1000:
-                    synthesize_foley_stem(weather_type="water stream alpine breeze", setting_type="nature", space="outdoor", duration_seconds=total_vid_dur + 5.0, output_path=foley_wav)
-                target_audio = foley_wav
-
         if target_audio and target_audio.is_file():
             a_dur = get_media_duration(target_audio) or 5.0
             a_loops = max(1, int(scene_hold_sec / max(1.0, a_dur)) + 2)
@@ -167,29 +156,18 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
     else:
         inputs = []
         for c in seamless_clips:
-            c_dur = get_media_duration(c) or 5.0
-            v_loops = max(1, int(scene_hold_sec / max(1.0, c_dur)) + 2)
+            v_loops = max(1, int(scene_hold_sec / max(1.0, get_media_duration(c) or 5.0)) + 2)
             inputs.extend(["-stream_loop", str(v_loops), "-i", str(c)])
-        
+
         filter_parts = [f"[{i}:v]scale=3840:2160,setsar=1[s{i}]" for i in range(n)]
         prev_tag, curr_offset = "s0", scene_hold_sec - x_dur
         for i in range(1, n):
             out_tag = f"v{i}" if i < n - 1 else "v"
             filter_parts.append(f"[{prev_tag}][s{i}]xfade=transition=fade:duration={x_dur:.2f}:offset={curr_offset:.2f}[{out_tag}]")
             prev_tag, curr_offset = out_tag, curr_offset + scene_hold_sec - x_dur
-        
-        target_audio = audio_path
-        if not target_audio or not target_audio.is_file():
-            has_clip_audio = all("Audio:" in subprocess.run([ffmpeg_bin, "-i", str(c)], capture_output=True, text=True, errors="ignore").stderr for c in seamless_clips)
-            if not has_clip_audio:
-                foley_wav = out_master.parent / "procedural_nature_foley.wav"
-                if not foley_wav.is_file() or foley_wav.stat().st_size < 1000:
-                    synthesize_foley_stem(weather_type="water stream alpine breeze", setting_type="nature", space="outdoor", duration_seconds=total_vid_dur + 5.0, output_path=foley_wav)
-                target_audio = foley_wav
 
         if target_audio and target_audio.is_file():
-            a_dur = get_media_duration(target_audio) or 5.0
-            a_loops = max(1, int(total_vid_dur / max(1.0, a_dur)) + 2)
+            a_loops = max(1, int(total_vid_dur / max(1.0, get_media_duration(target_audio) or 5.0)) + 2)
             inputs.extend(["-stream_loop", str(a_loops), "-i", str(target_audio)])
             cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-map", f"{n}:a", "-t", f"{total_vid_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
         else:
@@ -206,10 +184,7 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
 
 
 def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], ep_dir: Path, crf: int = 22) -> Dict[str, Path]:
-    """Assemble 4K masters in CRF 22 format. Automatically rebuilds if forward cineloops are updated.
-    If audio_path is provided, assembles BOTH Music Master and Pure Nature Master.
-    If audio_path is None (--no-bgm), assembles ONLY a single Pure Nature Master.
-    """
+    """Assemble 4K masters in CRF 22 format. Automatically rebuilds if forward cineloops are updated."""
     seamless_clips = [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
     master_music = ep_dir / "master_4k_ambient.mp4"
     needs_music_rebuild = (
@@ -218,25 +193,16 @@ def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], e
         or any(sc.stat().st_mtime > master_music.stat().st_mtime for sc in seamless_clips)
     )
     if needs_music_rebuild:
-        if audio_path and audio_path.is_file():
-            print(f"[STAGE 2 - MASTER ASSEMBLY] Assembling Music Master (With BGM, Forward Cineloop, CRF {crf}) -> {master_music.name}")
-            assemble_4k_master(seamless_clips, audio_path, master_music, crf=crf)
-        else:
-            print(f"[STAGE 2 - MASTER ASSEMBLY] Assembling Single Native Master (--no-bgm, Forward Cineloop, CRF {crf}) -> {master_music.name}")
-            assemble_4k_master(seamless_clips, None, master_music, crf=crf)
+        assemble_4k_master(seamless_clips, audio_path, master_music, crf=crf)
     else:
         logger.info(f"decision_master_video_cache_hit: Reusing {master_music.name} ($0.00 spend)")
-        print(f"[DECISION - MASTER VIDEO CACHE HIT] Master 4K video already exists ({master_music.name}). Reusing asset ($0.00 spend).")
 
-    # If specifically --no-bgm (audio_path is None), only produce the single master above
     if not audio_path:
         return {"music_master": master_music, "nature_master": None}
 
-    # Otherwise assemble dual version: Pure Nature Master (No Music)
     master_nature = ep_dir / "master_4k_ambient_nature_only.mp4"
     needs_nature_rebuild = not master_nature.is_file() or master_nature.stat().st_size < 1000 or any(sc.stat().st_mtime > master_nature.stat().st_mtime for sc in seamless_clips)
     if needs_nature_rebuild:
-        print(f"[STAGE 2 - DUAL MASTER ASSEMBLY] Assembling Pure Nature Master (CRF {crf}) -> {master_nature.name}")
         assemble_4k_master(seamless_clips, None, master_nature, crf=crf)
     else:
         logger.info(f"decision_nature_master_cache_hit: Reusing {master_nature.name} ($0.00 spend)")
@@ -307,15 +273,14 @@ def export_metadata_packages(
     (ep_dir / "youtube_packaging_nature_only.json").write_text(json.dumps(pkg_nature.model_dump(), indent=2), encoding="utf-8")
 
     # 30-Minute Broadcast Editions
-    pkg_30m_music = generate_youtube_ambient_package(sb.primary_archetype, 0.5, sb.secondary_archetype)
-    (ep_dir / "youtube_packaging_30min.json").write_text(json.dumps(pkg_30m_music.model_dump(), indent=2), encoding="utf-8")
+    pkg_30m_m = generate_youtube_ambient_package(sb.primary_archetype, 0.5, sb.secondary_archetype)
+    (ep_dir / "youtube_packaging_30min.json").write_text(json.dumps(pkg_30m_m.model_dump(), indent=2), encoding="utf-8")
 
-    pkg_30m_nature = generate_youtube_ambient_package(sb.primary_archetype, 0.5, sb.secondary_archetype)
-    pkg_30m_nature.title = f"{pkg_30m_nature.title} | Pure Nature Sounds (NO MUSIC) [4K ASMR]"
-    pkg_30m_nature.description = f"100% pure natural ambient soundscape without background music.\n\n{pkg_30m_nature.description}"
-    (ep_dir / "youtube_packaging_30min_nature_only.json").write_text(json.dumps(pkg_30m_nature.model_dump(), indent=2), encoding="utf-8")
+    pkg_30m_n = generate_youtube_ambient_package(sb.primary_archetype, 0.5, sb.secondary_archetype)
+    pkg_30m_n.title = f"{pkg_30m_n.title} | Pure Nature Sounds (NO MUSIC) [4K ASMR]"
+    pkg_30m_n.description = f"100% pure natural ambient soundscape without background music.\n\n{pkg_30m_n.description}"
+    (ep_dir / "youtube_packaging_30min_nature_only.json").write_text(json.dumps(pkg_30m_n.model_dump(), indent=2), encoding="utf-8")
 
-    # 9:16 Vertical Short Teaser
     pkg_short = {
         "title": f"Experience {sb.title.split('~')[0].strip()} in 4K 🌊✨ #shorts",
         "description": f"Stand directly in front of {sb.title.split('~')[0].strip()} in crisp 4K.\n\n🎧 Watch the full 30-Minute & 3-Hour Velvet Broadcasts on our channel!\n\n#shorts #nature #asmr #satisfying #4k",
@@ -323,7 +288,6 @@ def export_metadata_packages(
         "pinned_comment": "🌊 Would you visit here? Watch the full 30-Minute & 3-Hour editions with 432Hz sleep audio on our channel! 🌙💤",
     }
     (ep_dir / "youtube_packaging_short.json").write_text(json.dumps(pkg_short, indent=2), encoding="utf-8")
-
     ab = generate_thumbnail_ab_variants(sb.primary_archetype)
     (ep_dir / "thumbnail_ab_variants.json").write_text(json.dumps(ab.model_dump(), indent=2), encoding="utf-8")
     loc = localize_metadata_for_languages(sb.primary_archetype, pkg_music.title, pkg_music.description)
