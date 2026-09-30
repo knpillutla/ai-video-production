@@ -250,13 +250,13 @@ function renderKeyframesList(vid) {
 
   if (countEl) {
     if (isGeneratingPhotos) {
-      countEl.innerHTML = `<span class="text-blue-600 dark:text-blue-400 font-bold font-mono animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-0.5 text-[8px]"></i>Generating ${completedKfs.length + 1}/${numShots}...</span>`;
+      countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-200 font-bold font-mono text-[10px] border border-blue-300 dark:border-blue-700 animate-pulse inline-flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[8px]"></i>Generating ${completedKfs.length + 1}/${numShots}...</span>`;
     } else if (completedKfs.length > 0) {
-      countEl.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400 font-bold font-mono">${completedKfs.length}/${numShots} Ready</span>`;
+      countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 font-bold font-mono text-[10px] border border-emerald-300 dark:border-emerald-700 inline-flex items-center gap-1"><i class="fa-solid fa-check text-[8px]"></i>${completedKfs.length}/${numShots} Ready</span>`;
     } else if (isProc && stage === 1) {
-      countEl.innerHTML = `<span class="text-slate-400 font-mono text-[9px]">Queued</span>`;
+      countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 font-bold font-mono text-[10px] border border-amber-300 dark:border-amber-700">Queued</span>`;
     } else {
-      countEl.textContent = `${numShots} Shot${numShots > 1 ? 's' : ''}`;
+      countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold font-mono text-[10px] border border-slate-300 dark:border-slate-700">${numShots} Shot${numShots > 1 ? 's' : ''}</span>`;
     }
   }
 
@@ -292,15 +292,19 @@ function renderKeyframesList(vid) {
     const name = (existing && typeof existing === "object" && existing.name) ? existing.name : (names[i] || `Shot ${i + 1}`);
     const isSel = vid.selectedKeyframeIds.includes(i);
 
-    if (hasImage) {
+    const isThisKeyframeGenerating = Boolean(
+      isGeneratingPhotos && (vid.force_rerun || !hasImage || i === activeGenIdx || (numShots === 1 && isProc && stage === 2))
+    );
+
+    if (isThisKeyframeGenerating) {
+      return `<div class="flex flex-col items-center gap-0.5 w-full"><div class="relative w-full h-12 rounded-lg bg-blue-50/80 dark:bg-slate-900 border-2 border-blue-500 shadow-sm flex flex-col justify-between p-1.5 ring-2 ring-blue-500/20"><div class="flex items-center justify-between w-full"><span class="text-[8px] font-mono font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[7px]"></i> FLUX 1.1</span><span class="text-[7px] font-mono text-blue-600 dark:text-blue-400 font-bold">${pVal}%</span></div><div class="w-full bg-blue-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full animate-pulse" style="width: ${pVal}%"></div></div></div><span class="text-[8px] font-bold text-blue-600 dark:text-blue-400 truncate w-full text-center">${name}</span></div>`;
+    }
+
+    if (hasImage && !vid.force_rerun) {
       const liveUrl = url;
       const borderCls = isSel ? "border-2 border-emerald-500 ring-1 ring-emerald-500/50" : "border border-slate-300 dark:border-slate-800 opacity-40 grayscale";
       const clickAction = `openImagePopup('${liveUrl}', '${epId}: ${name}', 'FLUX 1.1 Pro • 4K UHD Keyframe Photo')`;
       return `<div class="flex flex-col items-center gap-0.5 w-full relative group"><div class="relative w-full h-12 rounded-lg overflow-hidden bg-white dark:bg-slate-900 ${borderCls} cursor-pointer transition shadow-sm" onclick="${clickAction}" title="Click to view photo in popup"><img src="${liveUrl}" alt="${name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300"><div class="absolute top-0.5 right-0.5 flex items-center gap-0.5 z-10"><button type="button" onclick="event.stopPropagation(); promptDeleteArtifact('Keyframe', ${i}, '${name}', 'Keyframe Shot');" class="w-3.5 h-3.5 rounded bg-rose-600/90 hover:bg-rose-500 text-white flex items-center justify-center text-[7px] font-bold">✕</button><button type="button" onclick="event.stopPropagation(); toggleKeyframeSelection(${i});" class="px-1 py-0.2 rounded bg-black/80 text-[7px] font-mono hover:bg-emerald-600 ${isSel ? 'text-emerald-300' : 'text-gray-400'}">${isSel ? '✓' : 'Off'}</button></div></div><span class="text-[8px] font-bold text-slate-800 dark:text-gray-300 truncate cursor-pointer" onclick="${clickAction}">${name}</span></div>`;
-    }
-
-    if (isGeneratingPhotos && i === activeGenIdx) {
-      return `<div class="flex flex-col items-center gap-0.5 w-full"><div class="relative w-full h-12 rounded-lg bg-blue-50/80 dark:bg-slate-900 border-2 border-blue-500 shadow-sm flex flex-col justify-between p-1.5 ring-2 ring-blue-500/20"><div class="flex items-center justify-between w-full"><span class="text-[8px] font-mono font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[7px]"></i> FLUX 1.1</span><span class="text-[7px] font-mono text-blue-600 dark:text-blue-400 font-bold">${pVal}%</span></div><div class="w-full bg-blue-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full animate-pulse" style="width: ${pVal}%"></div></div></div><span class="text-[8px] font-bold text-blue-600 dark:text-blue-400 truncate w-full text-center">${name}</span></div>`;
     }
 
     return `<div class="flex flex-col items-center gap-0.5 w-full opacity-60"><div class="relative w-full h-12 rounded-lg bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-300 dark:border-slate-800 flex flex-col items-center justify-center p-1"><span class="text-[8px] font-mono text-slate-400 dark:text-slate-500 flex items-center gap-1"><i class="fa-solid fa-hourglass text-[7px]"></i> Queued</span></div><span class="text-[8px] text-slate-400 dark:text-slate-500 truncate w-full text-center">${name}</span></div>`;
@@ -340,11 +344,11 @@ function renderMotionClipsList(vid) {
 
   if (countEl) {
     if (isGeneratingMotion) {
-      countEl.innerHTML = `<span class="text-purple-600 dark:text-purple-400 font-bold font-mono animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-0.5 text-[8px]"></i>Rendering ${completedClips.length + 1}/${numClips}...</span>`;
+      countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-purple-200 font-bold font-mono text-[10px] border border-purple-300 dark:border-purple-700 animate-pulse inline-flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[8px]"></i>Rendering ${completedClips.length + 1}/${numClips}...</span>`;
     } else if (completedClips.length > 0) {
-      countEl.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400 font-bold font-mono">${completedClips.length}/${numClips} Ready</span>`;
+      countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 font-bold font-mono text-[10px] border border-emerald-300 dark:border-emerald-700 inline-flex items-center gap-1"><i class="fa-solid fa-check text-[8px]"></i>${completedClips.length}/${numClips} Ready</span>`;
     } else {
-      countEl.textContent = `${numClips} Clip${numClips > 1 ? 's' : ''}`;
+      countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold font-mono text-[10px] border border-slate-300 dark:border-slate-700">${numClips} Clip${numClips > 1 ? 's' : ''}</span>`;
     }
   }
 
@@ -380,10 +384,22 @@ function renderMotionClipsList(vid) {
     const hasVid = url && (url.startsWith("http") || url.startsWith("/static/") || url.startsWith("/storage/")) && !url.includes("placeholder_");
     const name = (existing && typeof existing === "object" && existing.name) ? existing.name : `Motion ${i + 1}`;
     let model = (existing && typeof existing === "object" && existing.model) ? existing.model : defModel;
-    if ((model === "Kling Pro" || model === "Kling v3 Pro") && defModel === "Wan 2.1") model = "Wan 2.1";
+    if (vid.motionModel) {
+      if (vid.motionModel.includes("kling")) model = "Kling v3 Pro (4K)";
+      else if (vid.motionModel.includes("wan")) model = "Wan 2.1";
+    }
     const isSel = vid.selectedMotionClipIds.includes(i);
 
-    if (hasVid) {
+    const isThisClipGenerating = Boolean(
+      isGeneratingMotion && (vid.force_rerun || !hasVid || i === activeGenIdx || (numClips === 1 && isProc && stage === 3))
+    );
+
+    if (isThisClipGenerating) {
+      const activeModelLabel = (vid.motionModel && vid.motionModel.includes("kling")) ? "Kling v3 4K" : ((vid.motionModel && vid.motionModel.includes("wan")) ? "Wan 2.1" : model);
+      return `<div class="flex flex-col items-center gap-0.5 w-full"><div class="relative w-full h-11 rounded-lg bg-purple-50/80 dark:bg-slate-900 border-2 border-purple-500 shadow-sm flex flex-col justify-between p-1 ring-2 ring-purple-500/20"><div class="flex items-center justify-between w-full"><span class="text-[8px] font-mono font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[7px]"></i> ${activeModelLabel}</span><span class="text-[7px] font-mono text-purple-600 dark:text-purple-400 font-bold">${pVal}%</span></div><div class="w-full bg-purple-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-purple-600 to-pink-500 rounded-full animate-pulse" style="width: ${pVal}%"></div></div></div><span class="text-[8px] font-bold text-purple-600 dark:text-purple-400 truncate w-full text-center">${name}</span></div>`;
+    }
+
+    if (hasVid && !vid.force_rerun) {
       const borderCls = isSel ? "border-2 border-purple-500" : "border border-slate-300 dark:border-slate-700";
       const kf = (vid.keyframes && vid.keyframes[i]) ? vid.keyframes[i] : (vid.artifacts?.keyframes?.[i] || null);
       const kfUrl = (typeof kf === "object" && kf !== null) ? kf.url : (typeof kf === "string" ? kf : "");
@@ -406,10 +422,6 @@ function renderMotionClipsList(vid) {
         </div>
         <span class="text-[8px] font-bold text-slate-800 dark:text-gray-300 truncate w-full text-center">${name}</span>
       </div>`;
-    }
-
-    if (isGeneratingMotion && i === activeGenIdx) {
-      return `<div class="flex flex-col items-center gap-0.5 w-full"><div class="relative w-full h-11 rounded-lg bg-purple-50/80 dark:bg-slate-900 border-2 border-purple-500 shadow-sm flex flex-col justify-between p-1 ring-2 ring-purple-500/20"><div class="flex items-center justify-between w-full"><span class="text-[8px] font-mono font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[7px]"></i> ${model}</span><span class="text-[7px] font-mono text-purple-600 dark:text-purple-400 font-bold">${pVal}%</span></div><div class="w-full bg-purple-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-purple-600 to-pink-500 rounded-full animate-pulse" style="width: ${pVal}%"></div></div></div><span class="text-[8px] font-bold text-purple-600 dark:text-purple-400 truncate w-full text-center">${name}</span></div>`;
     }
 
     return `<div class="flex flex-col items-center gap-0.5 w-full opacity-60"><div class="relative w-full h-11 rounded-lg bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-300 dark:border-slate-800 flex flex-col items-center justify-center p-1"><span class="text-[7px] font-mono text-slate-400 dark:text-slate-500 flex items-center gap-1"><i class="fa-solid fa-hourglass text-[6px]"></i> Queued</span></div><span class="text-[8px] text-slate-400 dark:text-slate-500 truncate w-full text-center">${name}</span></div>`;

@@ -61,23 +61,22 @@ If the user provided the same landmark, autonomously pivot to a distinct sub-van
 Your mission is to synthesize an 8K broadcast-grade master directorial screenplay for a PURE NATURE / AMBIENT SOUNDSCAPE production conforming strictly to the RelaxScreenplay JSON schema.
 {relaxation_guardrails}
 ======================================================================
-[SYSTEM DIRECTIVE: STRUCTURAL COMPOSITION ARCHITECTURE FOR FLUX PRO]
+[SYSTEM DIRECTIVE: DIRECT LANDMARK PROMPT ARCHITECTURE FOR FLUX PRO]
 ======================================================================
-You are automated to structure prompts specifically targeting the FLUX 1.1 Pro Ultra image canvas. You must translate geographical names into literal spatial layouts. Never use conversational prose, visual cliches, or implied terms.
-When assembling the 'visual_prompt' and 'image_model_configs.flux_1_1_pro_ultra.prompt' strings, execute these strict parsing transformations based on destination topology:
+You are automated to structure prompts specifically targeting the FLUX 1.1 Pro Ultra image canvas.
+For all natural landmarks, you MUST explicitly name the landmark in the primary sentence and direct the spatial perspective cleanly and authoritatively.
 
-1. TOPOGRAPHY RULES FOR WIDE ESCARPMENT CATARACTS (e.g., Niagara Falls):
-   - CRITICAL BAN: Absolute ban on words: "gorge", "canyon", "mountain ravine", "alpine cliffs", "vertical peak". These algorithmically trigger narrow alpine creeks.
-   - MANDATORY PHRASES: You must start the prompt with: "Ultra-wide panoramic landscape photography of the monumental landmark, framed from a dead-center symmetrical frontal vantage point looking directly face-to-face at the massive horizontal cataract cascade. Eye-level straight-on view with an incredibly wide sweeping semi-circular horizontal cliff crescent stretching balanced from edge-to-edge across the canvas."
-   - LOCATION CONSTRAINTS: Force the canvas grid to remain low-altitude and flat. Symmetrically balance foreground stones evenly into both the bottom-left and bottom-right corners. End the prompt string with: "perfectly straight flat horizon line, zero camera axis tilt, strictly zero mountains, zero narrow canyons, 100% flat horizontal terrain."
+1. DIRECT LANDMARK PROMPT FORMULATION:
+   When creating visual prompts for any world landmark, you MUST format the prompt using this exact direct structure:
+   "A photorealistic, ultra-close eye-level frontal view directly confronting the colossal plunging water wall of [Landmark Name]. Symmetrical 16:9 cinematic landscape framing, shot on a locked tripod. The monumental vertical waterfall wall spans wall-to-wall across 100% of the screen from left edge to right edge. [Atmospheric weather/sky e.g., Overcast moody sky, heavy diffused mist rising from the basin]. Pristine natural wilderness look, strictly zero buildings, zero boats, zero tourists, and zero modern structures."
+   
+   - Always place the explicit landmark name front-and-center so the diffusion model activates its authentic geographic representations.
+   - Symmetrical 16:9 framing on a locked tripod guarantees the flat, eye-level, living wallpaper cinemagraph horizon.
+   - Explicit zero-human, zero-boat, zero-tourist, zero-structure affirmative constraints guarantee pure wilderness isolation.
 
-2. LIGHTING TRAP ELIMINATION:
-   - CRITICAL BAN: Absolute ban on words: "daylight", "natural daylight", "sunlight", "sunny", "5500K". FLUX reads "daylight" and forces high-contrast sunlit blue skies.
-   - MANDATORY PHRASES: Always dictate overcast gray skies explicitly: "Heavy moody diffused overcast sky, dark slate-grey low-hanging cloud cover, soft desaturated flat light, zero blue sky, zero sunshine."
-
-3. GEOLOGY COLOR BOUNDARY & MIST PRIMACY:
-   - Place dense vapor mist directives and colossal horizontal waterfall plunge in the first 25 words of the prompt string to serve as a global canvas filter.
-   - Never write rock types like "dolomite" or "shale" without an explicit dark color constraint. Always enforce: "wet, dark charcoal-gray stratified limestone, moisture-drenched deep slate-gray rocks."
+2. LIGHTING & ATMOSPHERE DIRECTIVE:
+   - Dictate atmospheric mood explicitly matching the sanctuary: "Overcast moody sky, heavy diffused mist rising from the basin, soft muted flat lighting, zero harsh glare, zero high-contrast shadows."
+   - For river waterfalls and gorges, place vapor mist and water cascades in the primary focal plane.
 
 ======================================================================
 STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
@@ -86,54 +85,67 @@ STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
    - This is a PURE NATURE / AMBIENT SOUNDSCAPE production.
    - STRICTLY PROHIBIT humans, actors, faces, crowds, silhouettes, and moving or parked vehicles.
    - Set "cast": [] (an EMPTY list). Do NOT create or invent human characters or performers.
-   - Describe 100% deserted, empty, untouched virgin wilderness and authentic natural terrain (mossy stone riverbanks, natural gravel and boulder shorelines, weathered canyon rock formations, primeval forests).
-   - Frame scenes as pure untouched natural environments; strictly avoid motor roadways, asphalt streets, modern paved walkways, railings, bridges, or driveways to keep the vista 100% wilderness-pure.
-   - In "visual_prompt", use affirmative uninhabited phrasing: 'untouched natural terrain', 'empty river gorge', 'untouched natural gravel and boulder shoreline', 'wild stone riverbank', 'virgin untouched wilderness sanctuary', 'deserted canyon basin'.
-   - NEVER use the word 'alpine' unless the landmark is genuinely situated in an alpine mountain range. For river waterfalls, gorges, and canyons, use 'canyon', 'gorge', 'escarpment', or 'riverbank'.
+   - Frame scenes as pure untouched virgin wilderness; strictly avoid buildings, boats, tourists, motor roadways, paved walkways, railings, bridges, or modern structures.
+   - In "visual_prompt", use affirmative uninhabited phrasing: 'pristine natural wilderness look', 'virgin untouched wilderness sanctuary', 'strictly zero buildings, zero boats, zero tourists, and zero modern structures'.
 
 2. AUTONOMOUS DIRECTORIAL LIGHTING, ATMOSPHERE & WEATHER CONDITIONS:
-   - Autonomously derive and describe the optimal atmospheric lighting, time of day, sky conditions, and environmental mood that naturally matches the specific landmark, geography, and relaxation soundscape genre (e.g., golden sunrise glow over mist, soft diffused overcast, crisp mountain morning light, tranquil twilight dusk, ambient sunbeams through canopy, or gentle misty rain).
-   - Tailor the color palette, shadows, and atmospheric diffusion organically to the location's authentic character.
+   - Autonomously derive and describe the optimal atmospheric lighting, time of day, sky conditions, and environmental mood that naturally matches the specific landmark and relaxation soundscape genre (e.g., moody overcast diffused sky, soft morning mist, tranquil dusk twilight).
 
-3. LIVING WALLPAPER & WIDE PANORAMIC PICTURESQUE FRAMING (CRITICAL FOR RELAX/NATURE):
+3. LIVING WALLPAPER & EYE-LEVEL WALL-TO-WALL WATER CURTAIN FRAMING:
    - For all relax/nature scenes, you MUST format the visual and motion framing as a LIVING WALLPAPER / CINEMAGRAPH.
    - In "shot_type", use "wide_panoramic_picturesque".
-   - In "visual_prompt", ALWAYS include: "Living wallpaper framing, ultra-wide panoramic picturesque landscape with deep optical clarity, dead-center symmetrical frontal vantage point, flat straight horizon line, head-on perspective."
+   - In "visual_prompt", ALWAYS include: "Living wallpaper framing, ultra-close eye-level frontal vantage point directly confronting the plunging water wall, symmetrical 16:9 cinematic landscape framing, shot on a locked tripod, falling water spans wall-to-wall across 100% of the horizontal screen, flat straight horizon line, eye-level head-on perspective."
    - In "motion_prompt", ALWAYS anchor with: "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, zero panning, zero tilting, zero zooming."
 
-4. MONUMENTAL HERO WATERFALL & LANDMARK VISTA DIRECTIVE:
-   - When the landmark is a famous waterfall (e.g., Niagara Falls, Victoria Falls, Iguazu, Staubbach Falls), the visual prompt MUST showcase the **monumental vertical cascade drop itself (the colossal plunging curtain of water pouring over the precipice into the swirling turquoise abyss with towering billowing vapor mist plumes)** as the grand hero focal point, rather than only downstream river rapids or side canyon walls.
+4. MONUMENTAL HERO WATERFALL & WALL-TO-WALL CASCADE DIRECTIVE:
+   - When the landmark is a waterfall (e.g., Niagara Falls, Victoria Falls, Iguazu, Staubbach Falls), the visual prompt MUST frame an **ultra-close eye-level vantage point directly confronting the plunging water wall where the falling water curtain spans wall-to-wall across 100% of the horizontal frame**. Strictly avoid high-altitude cliff overlooks or distant canyon panoramas.
 
-5. SMOOTH HYPNOTIC KINETICS & SEAMLESS LOOP COMPATIBILITY (LIVING WALLPAPER STANDARD):
-   - Prioritize Fluid & Mist Motion: Continuous self-similar fluid dynamics (smooth laminar waterfall plunge, continuous naturally flowing rapids with moderate-speed water movement, rising vapor plumes, gentle rolling swells). Water and vapor naturally hide looping boundaries without crossfade artifacts.
-   - Micro-Sway for Foliage: Keep pine needles, boughs, grasses, and flower petals to subtle, gentle micro-breathing sway. Strictly avoid wide branch swings to prevent positional jumping or ghosting during seamless loop crossfades.
-   - Constant Environmental Lighting: Maintain stable, uniform illumination matching the scene's time-of-day with zero sudden exposure flickering or lighting shifts.
-   - Clouds & Mist: Slow, tranquil atmospheric drift across towering rock formations.
-   - Strictly prohibit rapid wind gusts, violent shaking, turbulent thrashing, or high-frequency jitter.
+5. SMOOTH HYPNOTIC KINETICS & ANTI-DRIFT CINEMAGRAPH STANDARD:
+   - Zero Environmental Warping: The rock cliffs, horizon line, and overall landscape structure MUST remain 100% frozen, rigid, and static.
+   - Fluid & Mist Animation Only: Animate ONLY the water and vapor channels: continuous downward flowing cataract curtains directly following the paths in the source image into the churning turquoise basin, with soft slow-moving vapor mist rising steadily from the bottom center chasm without shifting the landscape.
+   - Domain Specification: For all waterfall, cascade, river, or coastal scenes, ALWAYS set "domain": "water_fluid" (NEVER "landscape_solid").
 
 6. MODEL-SPECIFIC IMAGE PROMPTS ("image_model_configs"):
    - For every scene, generate model-tailored image prompts inside "image_model_configs" for the target image model ("{image_model}"):
-     * "flux_1_1_pro_ultra": Model "fal-ai/flux-pro/v1.1-ultra". Photographic prompt syntax tailored for FLUX 1.1 Pro Ultra in raw mode:
-       Include Hasselblad H6D-100c 24mm f/5.6 optics, natural dynamic range, monumental geographical hero features, authentic stone and native vegetation textures, and explicit zero-human/zero-structure affirmative constraints. Direct the model with vivid sensory descriptors for the autonomously chosen lighting and atmosphere. Settings: {{ "model": "fal-ai/flux-pro/v1.1-ultra", "aspect_ratio": "16:9", "raw": true }}
+     * "flux_1_1_pro_ultra": Model "fal-ai/flux-pro/v1.1-ultra". Use the wall-to-wall direct landmark formulation:
+       "A photorealistic, ultra-close eye-level frontal view directly confronting the colossal plunging water wall of [Landmark Name]. Symmetrical 16:9 cinematic landscape framing, shot on a locked tripod. The monumental vertical waterfall wall spans wall-to-wall across 100% of the screen from left edge to right edge. Overcast moody sky, heavy diffused mist rising from the basin. Pristine natural wilderness look, strictly zero buildings, zero boats, zero tourists, and zero modern structures."
+       Settings: {{ "model": "fal-ai/flux-pro/v1.1-ultra", "aspect_ratio": "16:9", "raw": true }}
 
 7. MODEL-SPECIFIC VIDEO DIFFUSION DIRECTIVES ("model_configs"):
    - For every scene, you MUST generate model-specific positive prompts, negative prompts, and optimal API settings inside "model_configs" for:
-     * "kling_v1_6_pro": Model "fal-ai/kling-video/v1.6/pro/image-to-video". Directorial action command style with living wallpaper emphasis, subtle foliage micro-sway, and seamless cyclic water motion. Settings: {{ "mode": "pro", "duration": "5", "aspect_ratio": "16:9" }}
-     * "wan_2_1": Model "fal-ai/wan-i2v". Continuous fluid kinetic phrasing with locked stationary frame, steady laminar water flow, and slow tranquil mist drift. Settings: {{ "guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9" }}
+     * "kling_v1_6_pro": Model "fal-ai/kling-video/v1.6/pro/image-to-video". Directorial action command style: "Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Rock cliffs and horizon line remain 100% frozen and static. Continuous downward flowing water cascades directly matching the source image into the churning emerald basin, soft rising vapor mist, seamless cyclic motion, pristine untouched nature, zero humans." Settings: {{ "mode": "pro", "duration": "5", "aspect_ratio": "16:9" }}
+     * "wan_2_1": Model "fal-ai/wan-i2v". Continuous fluid kinetic phrasing: "Living wallpaper cinemagraph, completely stationary static frame. Rock cliffs and landscape structure remain 100% frozen and unmoving. Smooth continuous laminar water cascades flowing steadily downwards into the basin, tranquil rising vapor mist. Stable uniform illumination, seamless loop compatible." Settings: {{ "guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9" }}
 
 8. DIRECTORIAL CAMERA RIG & MANDATORY NEGATIVE PROMPT (Rule 20):
-   - Always provide "motion_negative_prompt" and model-specific negative prompts containing: "camera pan, panning, moving camera, camera movement, camera tilt, camera zoom, zoom in, zoom out, forward camera movement, camera flythrough, walking tour, walking cadence, drone, dolly, tracking shot, handheld camera, camera shake, jitter, violent wind, rapid shaking, fast motion, sudden lighting shift, flickering light, jumping foliage, jumping branches, discontinuous water flow, abrupt mist displacement, temporal jump, loop seam, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings"
+   - Always provide "motion_negative_prompt" and model-specific negative prompts containing: "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings"
 
-9. AUTONOMOUS GEOGRAPHIC & ACOUSTIC DERIVATION (CRITICAL):
-   - Autonomously derive the accurate sub_genre, primary_archetype, secondary_archetype, cluster, geographical region, cultural heritage, attraction_type, and acoustic soundscape matching the specific location/prompt.
-   - If prompt is about Niagara Falls -> sub_genre is 'waterfall_gorge', primary_archetype is 'waterfall_gorge', secondary_archetype is 'mist_cascade', cluster is 'great_lakes_basin', attraction_type is 'River Escarpment & Waterfall Cascade', region is 'Great Lakes Basin / North America', foley is 'thunderous waterfall roar, river rapids, mist foley'.
-   - If prompt is about Swiss Alps -> sub_genre is 'alpine_mountains', primary_archetype is 'alpine_mountains', cluster is 'swiss_alps', attraction_type is 'Glacial Alpine Valley & Granite Peaks', region is 'Central Europe / Alps', foley is 'mountain breeze, distant waterfall, alpine birds'.
-   - If prompt is open/empty -> autonomously curate a breathtaking world-renowned picturesque natural sanctuary (e.g., Lauterbrunnen, Plitvice Lakes, Milford Sound, Oirase Stream, Banff Moraine Lake, Jiuzhaigou, Lofoten Fjords, Isle of Skye, Lake Bled).
+9. AUTONOMOUS "GREATEST LANDMARKS ON EARTH" CURATION (WHEN NO PROMPT IS PROVIDED):
+   - If the user prompt is empty, open, or broad, Gemini MUST systematically select from the world's greatest, most awe-inspiring natural landmarks on Earth:
+     1. Niagara Falls (North America)
+     2. Lauterbrunnen Valley / Staubbach Falls (Swiss Alps)
+     3. Plitvice Lakes National Park (Croatia)
+     4. Milford Sound & Mitre Peak (New Zealand)
+     5. Banff National Park / Moraine Lake & Lake Louise (Canadian Rockies)
+     6. Lake Bled & Julian Alps (Slovenia)
+     7. Victoria Falls (Zambia/Zimbabwe)
+     8. Iguazu Falls (Argentina/Brazil)
+     9. Mount Fuji & Lake Kawaguchi (Japan)
+     10. Dolomites / Tre Cime di Lavaredo & Val di Funes (Italian Alps)
+     11. Oirase Mountain Stream & Moss Gorge (Japan)
+     12. Ha Long Bay (Vietnam)
+     13. Yosemite Valley / El Capitan & Bridalveil Fall (California)
+     14. Geirangerfjord (Norway)
+     15. Isle of Skye / Fairy Pools (Scotland)
+     16. Jiuzhaigou National Park (China)
+     17. Angel Falls (Venezuela)
+     18. Pamukkale Thermal Cascades (Turkey)
+   - Cross-reference with PREVIOUSLY PRODUCED TOPICS (exclusion list). If a landmark has already been produced for this channel, select the next greatest landmark on Earth.
+   - ONLY once all world-renowned landmarks on Earth have been produced in the channel, transition to creative mode: synthesizing novel hidden sanctuaries, unique sub-vantage angles, or seasonal variants (frozen ice falls, peak autumn foliage).
 {exclusion_block}
 ======================================================================
 PRODUCTION SPECIFICATIONS:
 ======================================================================
-- User Prompt / Concept Anchor: "{custom_prompt or 'Autonomously curate the most breathtaking world-famous natural sanctuary'}"
+- User Prompt / Concept Anchor: "{custom_prompt or 'Autonomously curate the greatest world-famous natural landmark on Earth'}"
 - Genre: {genre}
 - Total Duration: {duration_seconds} seconds
 - Shot Count: {num_shots} shots ({per_shot_dur}s per shot)
@@ -188,23 +200,23 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
       "shot_type": "wide_panoramic_picturesque",
       "camera_rig": "{camera_motion}",
       "color_temp_kelvin": 5500,
-      "visual_prompt": "Ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c with prime 24mm f/5.6 lens. Living wallpaper framing, ultra-wide panoramic picturesque landscape with deep optical clarity, dead-center symmetrical frontal vantage point, flat straight horizon line, eye-level head-on perspective. Detailed authentic geographic landscape with smooth naturally flowing water, native vegetation, symmetrically balanced foreground stones, 100% uninhabited virgin wilderness with strictly zero humans, zero modern structures, and zero vehicles.",
+      "visual_prompt": "A photorealistic, ultra-close eye-level frontal view directly confronting the colossal plunging water wall of [Landmark Name]. Symmetrical 16:9 cinematic landscape framing, shot on a locked tripod. The monumental vertical waterfall wall spans wall-to-wall across 100% of the screen from left edge to right edge. Overcast moody sky, heavy diffused mist rising from the basin. Pristine natural wilderness look, strictly zero buildings, zero boats, zero tourists, and zero modern structures.",
       "image_model_configs": {{
         "{image_model}": {{
           "model": "fal-ai/flux-pro/v1.1-ultra",
-          "prompt": "Ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c with prime 24mm f/5.6 lens. Living wallpaper framing, ultra-wide panoramic picturesque landscape with deep optical clarity, dead-center symmetrical frontal vantage point, flat straight horizon line, eye-level head-on perspective. Detailed description of the landmark's monumental hero feature, authentic textures, and pristine untouched wilderness with strictly zero humans, zero modern structures, and zero vehicles.",
+          "prompt": "A photorealistic, ultra-close eye-level frontal view directly confronting the colossal plunging water wall of [Landmark Name]. Symmetrical 16:9 cinematic landscape framing, shot on a locked tripod. The monumental vertical waterfall wall spans wall-to-wall across 100% of the screen from left edge to right edge. Overcast moody sky, heavy diffused mist rising from the basin. Pristine natural wilderness look, strictly zero buildings, zero boats, zero tourists, and zero modern structures.",
           "aspect_ratio": "16:9",
           "raw": true
         }}
       }},
-      "motion_prompt": "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, zero panning, zero tilting, zero zooming. Continuous, naturally flowing cascades/currents with smooth, hypnotic, moderate-speed water movement, gentle atmospheric mist drift, subtle micro-breathing sway in foliage. Uniform stable illumination, seamless loop compatible.",
-      "motion_negative_prompt": "camera pan, panning, moving camera, camera movement, camera tilt, camera zoom, zoom in, zoom out, forward camera movement, camera flythrough, walking tour, walking cadence, drone, dolly, tracking shot, handheld camera, camera shake, jitter, violent wind, rapid shaking, fast motion, sudden lighting shift, flickering light, jumping foliage, jumping branches, discontinuous water flow, abrupt mist displacement, temporal jump, loop seam, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings",
+      "motion_prompt": "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, zero panning, zero tilting, zero zooming. The rock cliffs, horizon line, and overall landscape structure remain 100% frozen and static. Only the water moves: continuous, downward flowing cataract curtains directly following the paths in the source image, into the churning turquoise basin below. Soft, slow-moving vapor mist steadily rises up from the bottom center chasm without shifting the landscape.",
+      "motion_negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings",
       "model_configs": {{
         "kling_v1_6_pro": {{
           "model": "fal-ai/kling-video/v1.6/pro/image-to-video",
           "prompts": {{
-            "positive_prompt": "Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Continuous, naturally flowing water with smooth, hypnotic, moderate-speed downward water movement, soft atmospheric mist, subtle micro-sway in foliage. Stable illumination, seamless cyclic motion, pristine untouched nature, zero humans.",
-            "negative_prompt": "camera pan, panning, moving camera, camera movement, camera tilt, camera zoom, zoom in, zoom out, forward camera movement, camera flythrough, walking tour, walking cadence, drone, dolly, tracking shot, handheld camera, camera shake, jitter, violent wind, rapid shaking, fast motion, sudden lighting shift, flickering light, jumping foliage, discontinuous water flow, loop seam, frozen ice, stagnant water"
+            "positive_prompt": "Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Rock cliffs and horizon line remain 100% frozen and static. Continuous downward flowing water cascades directly matching the source image into the churning emerald basin, soft rising vapor mist, seamless cyclic motion, pristine untouched nature, zero humans.",
+            "negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors"
           }},
           "settings": {{
             "mode": "pro",
@@ -215,8 +227,8 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
         "wan_2_1": {{
           "model": "fal-ai/wan-i2v",
           "prompts": {{
-            "positive_prompt": "Living wallpaper, ultra-wide picturesque landscape, completely stationary static frame. Smooth continuous laminar water current flowing steadily, tranquil mist drift, subtle gentle micro-movement in native vegetation. Pure uninhabited wilderness with stable lighting. Seamless loop compatible.",
-            "negative_prompt": "zoom, zooming, zoom in, zoom out, forward camera movement, camera flythrough, walking tour, walking cadence, dolly, dolly in, tracking shot, camera pan, panning, moving camera, camera movement, camera tilt, handheld camera, camera shake, jitter, violent wind, rapid shaking, fast motion, sudden lighting shift, flickering light, jumping foliage, discontinuous water flow, loop seam, frozen ice, stagnant water"
+            "positive_prompt": "Living wallpaper cinemagraph, completely stationary static frame. Rock cliffs and landscape structure remain 100% frozen and unmoving. Smooth continuous laminar water cascades flowing steadily downwards into the basin, tranquil rising vapor mist. Stable uniform illumination, seamless loop compatible.",
+            "negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors"
           }},
           "settings": {{
             "guide_scale": 5.0,

@@ -32,7 +32,7 @@ def _resolve_scene_negative_prompt(scene: Any, default_camera: str = "locked_tri
     cam = getattr(scene, "camera_rig", "") or default_camera
     extra_tokens = []
     if cam == "locked_tripod":
-        extra_tokens.append("zoom, zooming, zoom in, zoom out, forward camera movement, camera flythrough, walking tour, walking cadence, dolly, dolly in, tracking shot, camera pan, panning, moving camera, camera movement, camera tilt, handheld camera, camera shake, jitter, violent wind, rapid shaking, fast motion, sudden lighting shift, flickering light, jumping foliage, jumping branches, discontinuous water flow, abrupt mist displacement, temporal jump, loop seam")
+        extra_tokens.append("camera movement, camera pan, panning, tilt, zoom, zoom in, zoom out, forward camera movement, camera flythrough, walking tour, walking cadence, dolly, tracking shot, handheld camera, camera shake, jitter, violent wind, rapid shaking, fast motion, sudden lighting shift, flickering light, jumping foliage, jumping branches, discontinuous water flow, abrupt mist displacement, temporal jump, loop seam, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, sunny sky, rainbow, sunlight shifts, altering colors")
     p_text = f"{getattr(scene, 'visual_prompt', '')} {getattr(scene, 'motion_prompt', '')}".lower()
     if "rain" in p_text:
         extra_tokens.append("dry weather, bright sunshine, clear blue sky, cloudless, arid, parched")
@@ -102,8 +102,10 @@ class AmbientWorldProducer:
             # Dual-layer structural fail-safe for symmetrical frontal living wallpapers:
             sub_genre = (getattr(sb, "sub_genre", "") or getattr(sb, "primary_archetype", "") or "").lower()
             if "waterfall" in sub_genre or "cascade" in sub_genre or "gorge" in sub_genre or "river" in sub_genre:
+                for bad_kw in ("shoreline", "wild stone riverbank", "bottom-left and bottom-right corners", "side overlook", "gravel shoreline"):
+                    raw_prompt = raw_prompt.replace(bad_kw, "centered water basin")
                 if "symmetrical" not in raw_prompt.lower() and "dead-center" not in raw_prompt.lower():
-                    raw_prompt = "Dead-center symmetrical frontal vantage point, head-on straight perspective, flat horizon line. " + raw_prompt
+                    raw_prompt = "Dead-center symmetrical frontal vantage point, eye-level head-on straight perspective, centered bilateral composition with zero side-angle, zero three-quarter view. " + raw_prompt
             return raw_prompt
 
         kf_tasks = [

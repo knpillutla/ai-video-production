@@ -14,6 +14,7 @@ from src.studios.ambient_world.ambient_storyboard import (
     generate_ambient_storyboard_gemini,
 )
 from src.studios.ambient_world.relax_director import (
+    RelaxScreenplay,
     generate_relax_screenplay_gemini,
     relax_to_ambient_storyboard,
 )
@@ -58,7 +59,7 @@ CHANNEL_MAP = {
 async def produce_channel_video(
     channel_id: str,
     prompt: str,
-    duration_seconds: float = 10.0,
+    duration_seconds: float = 5.0,
     episode_id: Optional[str] = None,
     photos_only: bool = False,
     script_only: bool = False,
@@ -67,7 +68,7 @@ async def produce_channel_video(
     master_only: bool = False,
     pipeline_strategy: str = "manual",
     no_bgm: bool = False,
-    num_shots: int = 4,
+    num_shots: Optional[int] = None,
     allow_fallback: bool = False,
     user_id: Optional[str] = "user_krishna_01",
     motion_model: str = "auto",
@@ -125,17 +126,32 @@ async def produce_channel_video(
     screenplay_file = (ep_dir / "screenplay.json") if ep_dir else None
     pipeline_state_file = (ep_dir / "pipeline_state.json") if ep_dir else None
     manifest_file = (ep_dir / "episode_manifest.json") if ep_dir else None
+    user_inputs_file = (ep_dir / "user_inputs.json") if ep_dir else None
+
+    # Recover original user settings if available
+    if user_inputs_file and user_inputs_file.is_file():
+        try:
+            saved_u = json.loads(user_inputs_file.read_text("utf-8"))
+            if num_shots is None and saved_u.get("num_shots"):
+                num_shots = int(saved_u["num_shots"])
+        except Exception:
+            pass
 
     existing_sp = None
     if not force_rerun and screenplay_file and screenplay_file.is_file() and screenplay_file.stat().st_size > 50:
         try:
             sp_data = json.loads(screenplay_file.read_text("utf-8"))
-            existing_sp = UniversalScreenplay(**sp_data)
+            existing_sp = RelaxScreenplay(**sp_data)
             logger.info(f"reusing_existing_screenplay: episode='{episode_id}' title='{existing_sp.title}'")
         except Exception as ex:
             logger.warning(f"screenplay_read_error: {ex}")
 
-    effective_shots = num_shots if num_shots and num_shots > 0 else (1 if duration_seconds <= 5.0 else (2 if duration_seconds <= 10.0 else 4))
+    if existing_sp and existing_sp.scenes:
+        effective_shots = len(existing_sp.scenes)
+    elif num_shots is not None and num_shots > 0:
+        effective_shots = num_shots
+    else:
+        effective_shots = 1 if duration_seconds <= 10.0 else 2
 
     if existing_sp:
         universal_sp = existing_sp

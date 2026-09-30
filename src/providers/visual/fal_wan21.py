@@ -93,13 +93,30 @@ class FalWan21Adapter:
 
         job_sidecar = out.with_suffix(out.suffix + ".fal_job.json")
         status_url, response_url = None, None
-        if job_sidecar.exists():
-            try:
-                job_data = json.loads(job_sidecar.read_text(encoding="utf-8"))
-                status_url = job_data.get("status_url")
-                response_url = job_data.get("response_url")
-            except Exception:
-                status_url, response_url = None, None
+        
+        candidates = [
+            job_sidecar,
+            out.parent / f"raw_diff_{out.name}.fal_job.json",
+            out.parent / f"{out.stem}.fal_job.json",
+            out.parent / f"fal_diff_req_{out.stem}.json",
+            out.parent / "fal_diff_req_p1.json",
+            out.parent / "raw_diff_motion_p1.mp4.fal_job.json",
+            out.parent / "motion_p1.mp4.fal_job.json",
+        ]
+        active_sidecar = job_sidecar
+        for cand in candidates:
+            if cand.exists():
+                try:
+                    job_data = json.loads(cand.read_text(encoding="utf-8"))
+                    s_u = job_data.get("status_url")
+                    r_u = job_data.get("response_url")
+                    if s_u and r_u:
+                        status_url, response_url = s_u, r_u
+                        active_sidecar = cand
+                        logger.info(f"fal_wan21_resuming_job: from {cand.name} response_url={response_url}")
+                        break
+                except Exception:
+                    pass
 
         async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0, read=300.0)) as client:
             if not status_url or not response_url:

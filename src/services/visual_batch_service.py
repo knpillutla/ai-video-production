@@ -184,11 +184,18 @@ class VisualBatchService:
                             ffmpeg_bin, "-y", "-i", str(raw_diff),
                             "-vf", "scale=3840:2160:flags=lanczos",
                             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4",
-                            "-c:a", "copy",
+                            "-an",
                             str(task.output_path)
                         ]
-                        subprocess.run(cmd_scale, capture_output=True, check=True)
-                        raw_diff.unlink(missing_ok=True)
+                        res = subprocess.run(cmd_scale, capture_output=True, text=True)
+                        if res.returncode != 0:
+                            logger.warning(f"ffmpeg_scale_warn: {res.stderr[:200]}. Using direct copy.")
+                            import shutil
+                            shutil.copy(str(raw_diff), str(task.output_path))
+                        try:
+                            raw_diff.unlink(missing_ok=True)
+                        except Exception:
+                            pass
                         logger.info(f"ai_diffusion_motion_rendered: model={chosen_model} {task.output_path.name}")
                         return task.output_path
                 except Exception as e:

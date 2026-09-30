@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 def _probe_clip_duration(clip_path: Path) -> float:
-    """Probe the exact duration of a video clip in seconds."""
+    """Probe the exact duration of a media file in seconds."""
     try:
         import re
         ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
@@ -37,6 +37,21 @@ def _probe_clip_duration(clip_path: Path) -> float:
     except Exception:
         pass
     return 5.0
+
+
+def get_media_duration(media_path: Path) -> float:
+    """Probe the exact duration of an audio or video media file in seconds."""
+    return _probe_clip_duration(media_path)
+
+
+def _is_clip_4k(clip_path: Path) -> bool:
+    """Check if a video clip has native 4K resolution (3840x2160 or 2160x3840)."""
+    try:
+        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+        res = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], capture_output=True, text=True, errors="ignore")
+        return "3840x2160" in res.stderr or "2160x3840" in res.stderr
+    except Exception:
+        return False
 
 
 def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf: int = 22) -> Path:
@@ -113,85 +128,73 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     seamless_clips = [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
     n = len(seamless_clips)
-    x_dur = 2.0  # Slow, meditative 2-second cross-dissolve
+    x_dur = 2.0
     total_vid_dur = scene_hold_sec if n == 1 else (n * scene_hold_sec) - ((n - 1) * x_dur)
     
     if n == 1:
-        if audio_path and audio_path.is_file():
+        c_dur = get_media_duration(seamless_clips[0]) or 5.0
+        v_loops = max(1, int(scene_hold_sec / max(1.0, c_dur)) + 2)
+        target_audio = audio_path
+        if not target_audio or not target_audio.is_file():
+            check = subprocess.run([ffmpeg_bin, "-i", str(seamless_clips[0])], capture_output=True, text=True, errors="ignore")
+            if "Audio:" not in check.stderr:
+                foley_wav = out_master.parent / "procedural_nature_foley.wav"
+                if not foley_wav.is_file() or foley_wav.stat().st_size < 1000:
+                    synthesize_foley_stem(weather_type="water stream alpine breeze", setting_type="nature", space="outdoor", duration_seconds=total_vid_dur + 5.0, output_path=foley_wav)
+                target_audio = foley_wav
+
+        if target_audio and target_audio.is_file():
+            a_dur = get_media_duration(target_audio) or 5.0
+            a_loops = max(1, int(scene_hold_sec / max(1.0, a_dur)) + 2)
             cmd = [
                 ffmpeg_bin, "-y",
-                "-stream_loop", "-1", "-i", str(seamless_clips[0]),
-                "-stream_loop", "-1", "-i", str(audio_path),
-                "-map", "0:v:0", "-map", "1:a:0",
-                "-t", str(scene_hold_sec),
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4",
-                "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
+                "-stream_loop", str(v_loops), "-i", str(seamless_clips[0]),
+                "-stream_loop", str(a_loops), "-i", str(target_audio),
+                "-map", "0:v:0", "-map", "1:a:0", "-t", str(scene_hold_sec),
+                "-c:v", "copy" if _is_clip_4k(seamless_clips[0]) else "libx264",
+                "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
                 "-movflags", "+faststart", str(out_master)
             ]
         else:
-            check = subprocess.run([ffmpeg_bin, "-i", str(seamless_clips[0])], capture_output=True, text=True, errors="ignore")
-            if "Audio:" in check.stderr:
-                cmd = [
-                    ffmpeg_bin, "-y",
-                    "-stream_loop", "-1", "-i", str(seamless_clips[0]),
-                    "-map", "0:v:0", "-map", "0:a:0",
-                    "-t", str(scene_hold_sec),
-                    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4",
-                    "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-                    "-movflags", "+faststart", str(out_master)
-                ]
-            else:
-                foley_wav = out_master.parent / "procedural_nature_foley.wav"
-                if not foley_wav.is_file() or foley_wav.stat().st_size < 1000:
-                    synthesize_foley_stem(weather_type="water stream alpine breeze", setting_type="nature", space="outdoor", duration_seconds=total_vid_dur + 5.0, output_path=foley_wav)
-                cmd = [
-                    ffmpeg_bin, "-y",
-                    "-stream_loop", "-1", "-i", str(seamless_clips[0]),
-                    "-stream_loop", "-1", "-i", str(foley_wav),
-                    "-map", "0:v:0", "-map", "1:a:0",
-                    "-t", str(scene_hold_sec),
-                    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4",
-                    "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-                    "-movflags", "+faststart", str(out_master)
-                ]
+            cmd = [
+                ffmpeg_bin, "-y",
+                "-stream_loop", str(v_loops), "-i", str(seamless_clips[0]),
+                "-map", "0:v:0", "-map", "0:a:0", "-t", str(scene_hold_sec),
+                "-c:v", "copy" if _is_clip_4k(seamless_clips[0]) else "libx264",
+                "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
+                "-movflags", "+faststart", str(out_master)
+            ]
     else:
-        # Multi-Shot: Hold each forward cineloop for 60.0 seconds before slow 2.0s cross-dissolve
         inputs = []
         for c in seamless_clips:
-            inputs.extend(["-stream_loop", "-1", "-i", str(c)])
+            c_dur = get_media_duration(c) or 5.0
+            v_loops = max(1, int(scene_hold_sec / max(1.0, c_dur)) + 2)
+            inputs.extend(["-stream_loop", str(v_loops), "-i", str(c)])
         
-        scales = [f"[{i}:v]scale=3840:2160,setsar=1[s{i}]" for i in range(n)]
-        filter_parts = list(scales)
-        prev_tag = "s0"
-        curr_offset = scene_hold_sec - x_dur
+        filter_parts = [f"[{i}:v]scale=3840:2160,setsar=1[s{i}]" for i in range(n)]
+        prev_tag, curr_offset = "s0", scene_hold_sec - x_dur
         for i in range(1, n):
             out_tag = f"v{i}" if i < n - 1 else "v"
             filter_parts.append(f"[{prev_tag}][s{i}]xfade=transition=fade:duration={x_dur:.2f}:offset={curr_offset:.2f}[{out_tag}]")
-            prev_tag = out_tag
-            curr_offset += scene_hold_sec - x_dur
+            prev_tag, curr_offset = out_tag, curr_offset + scene_hold_sec - x_dur
         
-        if audio_path and audio_path.is_file():
-            inputs.extend(["-stream_loop", "-1", "-i", str(audio_path)])
-            cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-map", f"{n}:a", "-t", f"{total_vid_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
-        else:
-            # Native Audio Mode (--no-bgm / Pure Nature): Loop native audio or procedural spatial nature foley
+        target_audio = audio_path
+        if not target_audio or not target_audio.is_file():
             has_clip_audio = all("Audio:" in subprocess.run([ffmpeg_bin, "-i", str(c)], capture_output=True, text=True, errors="ignore").stderr for c in seamless_clips)
-            if has_clip_audio:
-                filter_a = []
-                prev_a = "0:a"
-                for i in range(1, n):
-                    out_a = f"a{i}" if i < n - 1 else "a"
-                    filter_a.append(f"[{prev_a}][{i}:a]acrossfade=d={x_dur:.2f}[{out_a}]")
-                    prev_a = out_a
-                full_filter = ";".join(filter_parts + filter_a)
-                cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", full_filter, "-map", "[v]", "-map", "[a]", "-t", f"{total_vid_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
-            else:
+            if not has_clip_audio:
                 foley_wav = out_master.parent / "procedural_nature_foley.wav"
                 if not foley_wav.is_file() or foley_wav.stat().st_size < 1000:
                     synthesize_foley_stem(weather_type="water stream alpine breeze", setting_type="nature", space="outdoor", duration_seconds=total_vid_dur + 5.0, output_path=foley_wav)
-                inputs.extend(["-stream_loop", "-1", "-i", str(foley_wav)])
-                full_filter = ";".join(filter_parts)
-                cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", full_filter, "-map", "[v]", "-map", f"{n}:a", "-t", f"{total_vid_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
+                target_audio = foley_wav
+
+        if target_audio and target_audio.is_file():
+            a_dur = get_media_duration(target_audio) or 5.0
+            a_loops = max(1, int(total_vid_dur / max(1.0, a_dur)) + 2)
+            inputs.extend(["-stream_loop", str(a_loops), "-i", str(target_audio)])
+            cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-map", f"{n}:a", "-t", f"{total_vid_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
+        else:
+            filter_a = [f"[{'0:a' if i == 1 else f'a{i-1}'}][{i}:a]acrossfade=d={x_dur:.2f}[{'a' if i == n - 1 else f'a{i}'}]" for i in range(1, n)]
+            cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", ";".join(filter_parts + filter_a), "-map", "[v]", "-map", "[a]", "-t", f"{total_vid_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
 
     try:
         subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -199,9 +202,7 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
         err_msg = (err.stderr or err.stdout or str(err)).strip()
         logger.error(f"failed_to_assemble_4k_master: {err_msg}")
         raise RuntimeError(f"FFmpeg assembly failed: {err_msg}") from err
-
     return out_master
-
 
 
 def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], ep_dir: Path, crf: int = 22) -> Dict[str, Path]:

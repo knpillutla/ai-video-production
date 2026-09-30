@@ -174,6 +174,7 @@ def _build_deterministic_relax_screenplay(
                 camera_rig="locked_tripod",
                 color_temp_kelvin=5500,
                 visual_prompt=(
+                    f"Dead-center symmetrical frontal vantage point, head-on straight perspective, centered bilateral composition with zero side-angle. "
                     f"Living wallpaper framing, ultra-wide panoramic picturesque landscape under soft diffused moody overcast skies. "
                     f"Cinematic 8K UHD shot on Hasselblad H6D-100c with 24mm prime lens, {prompt}. "
                     f"Low-hanging clouds, dense billowing vapor mist, cool dark wet stone, strictly zero humans, zero vehicles, zero sunlight."
@@ -183,6 +184,7 @@ def _build_deterministic_relax_screenplay(
                         "model": "fal-ai/flux-pro/v1.1-ultra",
                         "prompt": (
                             f"Ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c with prime 24mm f/5.6 lens. "
+                            f"Dead-center symmetrical frontal vantage point, eye-level head-on straight perspective, centered bilateral composition with zero side-angle, zero three-quarter view. "
                             f"Living wallpaper framing, ultra-wide panoramic picturesque landscape under soft moody overcast skies with low clouds and dense rising vapor mist. "
                             f"{prompt}. Cool slate stones, dark wet rocks, emerald water, and billowing mist. "
                             f"Pristine untouched wilderness, strictly zero humans, zero modern structures, zero vehicles, zero sunlight, zero blue sky."
@@ -193,30 +195,32 @@ def _build_deterministic_relax_screenplay(
                 },
                 motion_prompt=(
                     "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, "
-                    "zero panning, zero tilting, zero zooming. Continuous, naturally flowing cascades with smooth, hypnotic, "
-                    "moderate-speed water movement, slow mist drift, subtle micro-breathing sway in foliage. Seamless loop compatible."
+                    "zero panning, zero tilting, zero zooming. The rock cliffs, horizon line, and overall landscape structure "
+                    "remain 100% frozen and static. Only the water moves: continuous, downward flowing cataract curtains "
+                    "directly following the paths in the source image, into the churning turquoise basin below. "
+                    "Soft, slow-moving vapor mist steadily rises up from the bottom center chasm without shifting the landscape."
                 ),
                 motion_negative_prompt=(
-                    "camera pan, panning, moving camera, camera movement, camera tilt, camera zoom, zoom in, zoom out, "
-                    "forward camera movement, camera flythrough, walking tour, walking cadence, drone, dolly, tracking shot, handheld camera, "
-                    "camera shake, jitter, violent wind, rapid shaking, fast motion, sudden lighting shift, flickering light, jumping foliage, "
-                    "discontinuous water flow, temporal jump, loop seam, dry weather, bright sunshine, sunlight, daylight, clear blue sky, cloudless, arid, parched, "
-                    "frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts"
+                    "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, "
+                    "hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, "
+                    "structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, "
+                    "changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, "
+                    "melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings"
                 ),
                 model_configs={
                     "kling_v1_6_pro": RelaxModelConfigDirective(
                         model="fal-ai/kling-video/v1.6/pro/image-to-video",
                         prompts=RelaxModelPromptsSpec(
-                            positive_prompt="Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Continuous, naturally flowing waterfall with smooth, hypnotic, moderate-speed downward water movement, soft rising mist plumes, subtle micro-sway in foliage. Soft overcast illumination, seamless cyclic motion.",
-                            negative_prompt="camera pan, panning, moving camera, camera movement, camera tilt, camera zoom, zoom in, zoom out, forward camera movement, camera flythrough, walking tour, walking cadence, drone, dolly, tracking shot, handheld camera, camera shake, jitter, violent wind, rapid shaking, fast motion, dry weather, bright sunshine, sunlight, daylight, clear blue sky, cloudless, arid, frozen ice, stagnant water",
+                            positive_prompt="Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Rock cliffs and horizon line remain 100% frozen and static. Continuous downward flowing water cascades directly matching the source image into the churning emerald basin, soft rising vapor mist, seamless cyclic motion, pristine untouched nature, zero humans.",
+                            negative_prompt="camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water",
                         ),
                         settings={"mode": "pro", "duration": "5", "aspect_ratio": "16:9"},
                     ),
                     "wan_2_1": RelaxModelConfigDirective(
                         model="fal-ai/wan-i2v",
                         prompts=RelaxModelPromptsSpec(
-                            positive_prompt="Living wallpaper, ultra-wide picturesque landscape, completely stationary static frame. Smooth continuous laminar water cascades flowing steadily downwards, tranquil rising vapor mist, subtle gentle micro-movement in pine needles. Seamless loop compatible under soft overcast sky.",
-                            negative_prompt="zoom, zooming, zoom in, zoom out, forward camera movement, camera flythrough, walking tour, walking cadence, dolly, dolly in, tracking shot, camera pan, panning, moving camera, camera movement, camera tilt, handheld camera, camera shake, jitter, violent wind, rapid shaking, fast motion, dry weather, bright sunshine, sunlight, daylight, clear blue sky, cloudless, arid, frozen ice, stagnant water",
+                            positive_prompt="Living wallpaper cinemagraph, completely stationary static frame. Rock cliffs and landscape structure remain 100% frozen and unmoving. Smooth continuous laminar water cascades flowing steadily downwards into the basin, tranquil rising vapor mist. Stable uniform illumination, seamless loop compatible.",
+                            negative_prompt="camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water",
                         ),
                         settings={"guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9"},
                     ),
@@ -230,7 +234,7 @@ def _build_deterministic_relax_screenplay(
                     crossfade_seconds=1.2,
                     loop_validation=True,
                 ),
-                domain="landscape_solid" if "water" not in prompt.lower() else "water_fluid",
+                domain="water_fluid",
                 duration_seconds=shot_dur,
             )
         )
