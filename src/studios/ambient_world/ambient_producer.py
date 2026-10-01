@@ -57,6 +57,7 @@ class AmbientWorldProducer:
         sb: AmbientStoryboard,
         episode_id: Optional[str] = None,
         motion_model: str = "auto",
+        image_model: str = "flux_dev",
         long_play_hours: Optional[float] = None,
         fade_to_black_hours: Optional[float] = None,
         generate_short: bool = False,
@@ -90,7 +91,7 @@ class AmbientWorldProducer:
         def _resolve_scene_image_prompt(s: AmbientScenePrompt) -> str:
             raw_prompt = ""
             if getattr(s, "image_model_configs", None) and isinstance(s.image_model_configs, dict):
-                for m_key in ("flux_1_1_pro_ultra", "flux_pro_ultra", "flux_1_1_pro", "flux"):
+                for m_key in ("flux_1_1_pro_ultra", "flux_pro_ultra", "flux_1_1_pro", "flux", "zimage"):
                     if m_key in s.image_model_configs:
                         cfg = s.image_model_configs[m_key]
                         if isinstance(cfg, dict) and cfg.get("prompt"):
@@ -112,7 +113,7 @@ class AmbientWorldProducer:
             (_resolve_scene_image_prompt(scene), ep_dir / f"keyframe_p{scene.scene_index}.jpg", ep_dir / f"fal_req_p{scene.scene_index}.json", scene.scene_index)
             for scene in sb.scenes
         ]
-        keyframe_paths = await visual_batch_service.render_keyframes_batch(kf_tasks, force_rerun=force_rerun)
+        keyframe_paths = await visual_batch_service.render_keyframes_batch(kf_tasks, force_rerun=force_rerun, image_model=image_model)
 
         # Render SEO Thumbnails for both Long-Play (16:9) and Shorts (9:16)
         long_thumb_prompt = f"Award-winning high-CTR YouTube thumbnail landscape photograph of {sb.title}. High contrast, stunning cinematic depth, crisp 35mm bokeh, cozy atmospheric light, 8k, zero text."
@@ -123,6 +124,7 @@ class AmbientWorldProducer:
                 (short_thumb_prompt, ep_dir / "thumbnail_9x16_short.jpg", "9:16"),
             ],
             force_rerun=force_rerun,
+            image_model=image_model,
         )
 
         # Stage 2 Gate: If photos_only is requested, dispatch review notification and stop

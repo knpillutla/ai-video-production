@@ -18,6 +18,7 @@ from src.studios.ambient_world.relax_director import (
     generate_relax_screenplay_gemini,
     relax_to_ambient_storyboard,
 )
+from src.studios.director_dispatcher import dispatch_studio_director
 
 CHANNEL_MAP = {
     "earth_serenade": ChannelPipelineConfig(
@@ -77,6 +78,9 @@ async def produce_channel_video(
     camera_motion: Optional[str] = "locked_tripod",
     execution_mode: str = "test",
     force_rerun: bool = False,
+    genre: Optional[str] = None,
+    sub_genre: Optional[str] = None,
+    primary_archetype: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Execute live channel pipeline script for selected channel inside isolated user channel folder."""
     effective_user = user_id or "user_krishna_01"
@@ -113,7 +117,7 @@ async def produce_channel_video(
     pipeline = BaseChannelPipeline(cfg)
 
     # Determine effective channel genre
-    eff_genre = (
+    eff_genre = genre or (
         "relax/nature" if channel_id in ("earth_serenade", "nature_retreat", "rain_retreat")
         else ("relax/cozy" if channel_id == "cozy_ambiance"
         else ("relax/healing" if channel_id == "healing_relaxation"
@@ -156,14 +160,16 @@ async def produce_channel_video(
     if existing_sp:
         universal_sp = existing_sp
     else:
-        universal_sp = await generate_relax_screenplay_gemini(
+        universal_sp = await dispatch_studio_director(
+            genre=eff_genre,
+            sub_genre=sub_genre,
+            primary_archetype=primary_archetype,
+            channel_id=channel_id,
             custom_prompt=prompt,
             duration_seconds=duration_seconds or 60.0,
             num_shots=effective_shots,
             camera_motion=camera_motion or "locked_tripod",
-            genre=eff_genre,
             user_id=effective_user,
-            channel_id=channel_id,
             raw_output_path=(ep_dir / "raw_gemini_screenplay.json") if ep_dir else None,
             image_model=image_model,
         )
@@ -287,6 +293,7 @@ async def produce_channel_video(
         sb=sb,
         episode_id=episode_id,
         motion_model=eff_motion,
+        image_model=image_model or "flux_dev",
         photos_only=photos_only,
         motion_only=motion_only,
         audio_only=audio_only,

@@ -77,15 +77,13 @@ class GeminiLLMAdapter(LLMProviderProtocol):
                 return data["candidates"][0]["content"]["parts"][0]["text"]
             if resp.status_code == 429:
                 err_msg = "Google AI Studio prepayment credits depleted (HTTP 429 RESOURCE_EXHAUSTED)."
-                logger.warning(f"gemini_api_quota_exhausted: {err_msg}")
-                if self.strict:
-                    raise RuntimeError(f"Production Halted: {err_msg} Please top up credits at https://ai.studio/projects")
+                logger.error(f"gemini_api_quota_exhausted: {err_msg}")
+                raise RuntimeError(f"Gemini API Error: {err_msg} Top up at https://ai.studio/projects")
             else:
-                logger.warning(f"gemini_api_call_non_200: status={resp.status_code}, body={resp.text[:180]}.")
-                if self.strict:
-                    raise RuntimeError(f"Production Halted: Gemini returned HTTP {resp.status_code}: {resp.text[:180]}")
+                logger.error(f"gemini_api_call_non_200: status={resp.status_code}, body={resp.text[:200]}.")
+                raise RuntimeError(f"Gemini API Error (HTTP {resp.status_code}): {resp.text[:200]}")
         except Exception as ex:
-            if self.strict:
+            if not is_mock_mode():
                 raise
             logger.warning(f"gemini_api_call_skipped: {ex}. Using deterministic local synthesis fallback.")
 

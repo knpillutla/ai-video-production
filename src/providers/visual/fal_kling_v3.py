@@ -70,10 +70,7 @@ class FalKlingV3Adapter:
             return await self._fallback_local(out, duration)
 
         if not self.api_key:
-            if force_live:
-                raise ValueError("FAL_KEY is required for LIVE Kling v3 4K generation")
-            logger.warning("fal_kling_v3: no FAL_KEY — using local placeholder")
-            return await self._fallback_local(out, duration)
+            raise ValueError("FAL_KEY is required for Kling v3 4K video motion generation")
 
         actual_url = image_url
         if not (actual_url.startswith("http://") or actual_url.startswith("https://")):

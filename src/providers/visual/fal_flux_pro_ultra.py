@@ -113,8 +113,8 @@ class FalFluxProUltraAdapter:
 
             except Exception as ex:
                 job_sidecar.unlink(missing_ok=True)
-                logger.warning(f"fal_flux_pro_ultra_failed: {ex} — using local placeholder")
-                return await self._fallback_local(prompt, out, aspect_ratio)
+                logger.error(f"fal_flux_pro_ultra_error: {ex}")
+                raise RuntimeError(f"Fal FLUX Pro Ultra failed: {ex}") from ex
 
     async def _fallback_local(self, prompt: str, out: Path, aspect_ratio: str) -> tuple[str, Path]:
         from PIL import Image, ImageDraw

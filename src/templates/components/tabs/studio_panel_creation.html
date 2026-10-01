@@ -68,34 +68,66 @@
       </div>
     </div>
 
-    <!-- THEME PROGRESSIVE NICHE GROUP SELECTOR -->
-    <div id="theme-genre-shelf" class="p-1.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1.5">
-      <!-- High-Level Group Switcher -->
-      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-1">
-        <span class="text-[10px] font-bold text-slate-900 dark:text-gray-200">Genre Niche:</span>
-        <div class="flex items-center gap-1.5 text-[10px]">
-          <label class="flex items-center gap-0.5 cursor-pointer">
-            <input type="radio" name="niche_group_switch" value="relaxation" checked onchange="switchNicheGroupView('relaxation')" class="accent-emerald-600 scale-90">
-            <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">Relax</span>
-          </label>
-          <label class="flex items-center gap-0.5 cursor-pointer">
-            <input type="radio" name="niche_group_switch" value="docs" onchange="switchNicheGroupView('docs')" class="accent-blue-600 scale-90">
-            <span class="text-[10px] font-bold text-blue-700 dark:text-blue-400">Docs</span>
+    <!-- GENRE, SUB-GENRE & ECOSYSTEM ARCHETYPE SELECTOR SHELF -->
+    <div id="theme-genre-shelf" class="p-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1.5">
+      <!-- 1. Genre Selector (Broad Category) -->
+      <div class="space-y-0.5">
+        <div class="flex items-center justify-between">
+          <label for="studio-genre-selector" class="text-[10px] font-bold text-slate-900 dark:text-gray-200 flex items-center gap-1">
+            <i class="fa-solid fa-shapes text-purple-500 text-[9px]"></i>
+            <span>1. Genre (Category):</span>
           </label>
         </div>
+        <select id="studio-genre-selector" onchange="onGenreChange(this.value)" class="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700/80 rounded-lg text-slate-900 dark:text-white text-[10px] font-semibold focus:outline-none focus:border-purple-500">
+          <option value="relax/nature" selected>🏔️ Nature &amp; Alpine Sanctuaries (relax/nature)</option>
+          <option value="relax/rain">🌧️ Rain Retreat &amp; River ASMR (relax/rain)</option>
+          <option value="relax/waterfall">🌊 Monumental Waterfall &amp; Cataracts (relax/waterfall)</option>
+          <option value="relax/hearth">🔥 Beach Campfire &amp; Shoreline Hearth (relax/hearth)</option>
+          <option value="relax/cozy">🪵 Cozy Living Spaces &amp; Fireplace (relax/cozy)</option>
+          <option value="relax/healing">🪷 Zen Gardens &amp; 432Hz Healing (relax/healing)</option>
+          <option value="relax/ambient">🌌 Velvet Ambient World 14 Archetypes (relax/ambient)</option>
+          <option value="documentary">🦅 BBC-Style 24fps Wildlife &amp; Documentary (documentary)</option>
+          <option value="travel_walking">🚶 Travel &amp; 4K 60fps Walking Tours (travel_walking)</option>
+          <option value="dance/folk">💃 Dance, Folk &amp; Music Videos (dance/folk)</option>
+          <option value="comedy/satire">🎭 Telugu Comedy &amp; Satire Shorts (comedy/satire)</option>
+        </select>
       </div>
 
-      <!-- Relaxation Options Sub-Grid (3 Columns for 20% panel) -->
-      <div id="niche-subgrid-relaxation" class="grid grid-cols-3 gap-0.5 text-[9px]">
-        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_ocean" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Ocean</span></label>
-        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_nature" checked onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Nature</span></label>
-        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_mountains" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Mountain</span></label>
-        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_campfire" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Campfire</span></label>
-        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_rain" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Rain ASMR</span></label>
-        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_serenity" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Serenity</span></label>
-        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_retreat" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Retreat</span></label>
-        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_architecture" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Arch</span></label>
-        <label class="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500"><input type="radio" name="niche_theme_radio" value="relax_beaches" onchange="selectNicheRadio(this.value)" class="accent-emerald-600 scale-75"><span class="truncate">Beaches</span></label>
+      <!-- 2. Sub-Genre Selector (Format & Style) -->
+      <div class="space-y-0.5">
+        <div class="flex items-center justify-between">
+          <label for="studio-subgenre-selector" class="text-[10px] font-bold text-slate-900 dark:text-gray-200 flex items-center gap-1">
+            <i class="fa-solid fa-layer-group text-indigo-500 text-[9px]"></i>
+            <span>2. Sub-Genre (Format &amp; Style):</span>
+          </label>
+        </div>
+        <select id="studio-subgenre-selector" onchange="onSubGenreChange(this.value)" class="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700/80 rounded-lg text-slate-900 dark:text-white text-[10px] font-semibold focus:outline-none focus:border-indigo-500">
+          <option value="ambient_soundscape" selected>🌲 Ambient Soundscape (4K Living Wallpaper)</option>
+          <option value="alpine_nature">🏔️ Alpine Nature &amp; Mountain Sanctuaries (Swiss Alps)</option>
+          <option value="waterfall_gorge">🌊 Monumental Waterfall &amp; Cataracts (Niagara / Iguazu)</option>
+          <option value="cozy_hearth">🔥 Cozy Campfire &amp; Hearth ASMR (Beach &amp; Shoreline)</option>
+          <option value="biophilic_retreat">🌧️ Biophilic Rain Retreat &amp; Veranda</option>
+          <option value="zen_healing">🪷 Zen Garden &amp; Healing 432Hz Meditation</option>
+          <option value="cinematic_doc">🦅 24fps Extreme Climate &amp; Wildlife Expedition</option>
+        </select>
+      </div>
+
+      <!-- 3. Ecosystem Archetype Selector (Setting Template) -->
+      <div class="space-y-0.5">
+        <div class="flex items-center justify-between">
+          <label for="studio-archetype-selector" class="text-[10px] font-bold text-slate-900 dark:text-gray-200 flex items-center gap-1">
+            <i class="fa-solid fa-mountain-sun text-emerald-500 text-[9px]"></i>
+            <span>3. Archetype (Setting Template):</span>
+          </label>
+        </div>
+        <select id="studio-archetype-selector" onchange="onArchetypeChange(this.value)" class="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700/80 rounded-lg text-slate-900 dark:text-white text-[10px] font-semibold focus:outline-none focus:border-emerald-500">
+          <option value="alpine_mountains" selected>🏔️ Alpine Mountains &amp; Valleys (Swiss Alps, Dolomites, Peaks)</option>
+          <option value="waterfall_gorge">🌊 Monumental Plunge Waterfalls (Niagara, Victoria, Iguazu)</option>
+          <option value="coastal_ocean">🏖️ Open-Air Beach Shoreline &amp; Campfire (Ocean Waves)</option>
+          <option value="glacial_fjord_lake">🛶 Glacial Mirror Lakes &amp; Fjords (Lake Louise, Bled)</option>
+          <option value="temperate_forest">🌿 Temperate Mossy Rainforest &amp; Glacial Streams</option>
+          <option value="zen_garden">🎋 Kyoto Bamboo Groves &amp; Sacred Lotus Ponds</option>
+        </select>
       </div>
 
       <!-- Relaxation Shot Hold Cadence Radio Group -->

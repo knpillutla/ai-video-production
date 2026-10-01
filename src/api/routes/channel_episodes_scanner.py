@@ -138,13 +138,20 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
         except Exception:
             pass
 
-    title = manifest_data.get("title") or yt_pack.get("title") or ep_id.replace("ep_", "").replace("_", " ").title()
-    desc = yt_pack.get("description", "")
-    story_topic = manifest_data.get("prompt") or ep_id.replace("ep_", "").replace("_", " ").title()
-    if "blizzard" in ep_id:
-        story_topic = "Cozy Timber Cabin in Mountain Blizzard with Starlit Campfire & Glowing Embers"
-    elif "swiss_alps" in ep_id:
-        story_topic = "Swiss Alps Rain & Distant Thunder ~ Cozy Chalet Sleep in Lauterbrunnen"
+    title = (
+        manifest_data.get("title")
+        or screenplay_data.get("title")
+        or yt_pack.get("title")
+        or user_inputs_data.get("prompt")
+        or ep_id.replace("ep_", "").replace("_", " ").title()
+    )
+    desc = yt_pack.get("description") or screenplay_data.get("lore_narrative", "")
+    story_topic = (
+        manifest_data.get("prompt")
+        or screenplay_data.get("story_topic")
+        or user_inputs_data.get("prompt")
+        or ep_id.replace("ep_", "").replace("_", " ").title()
+    )
 
     stat = ep_path.stat()
     created_ts = stat.st_ctime

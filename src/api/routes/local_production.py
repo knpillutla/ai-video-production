@@ -57,6 +57,10 @@ class LocalProduceRequest(BaseModel):
     num_shots: Optional[int] = None
     long_play_hours: Optional[float] = None
     camera_motion: Optional[str] = "locked_tripod"
+    genre: Optional[str] = None
+    sub_genre: Optional[str] = None
+    primary_archetype: Optional[str] = None
+    image_model: Optional[str] = "flux_dev"
     script_only: Optional[bool] = False
     photos_only: Optional[bool] = False
     motion_only: Optional[bool] = False
@@ -152,6 +156,10 @@ async def produce_video_locally(req: LocalProduceRequest):
             long_play_hours=req.long_play_hours,
             camera_motion=req.camera_motion or "locked_tripod",
             force_rerun=bool(req.force_rerun),
+            genre=req.genre,
+            sub_genre=req.sub_genre,
+            primary_archetype=req.primary_archetype,
+            image_model=req.image_model or "flux_dev",
         )
         eff_job_id = result.get("job_id") or job_id
         if eff_script_only:

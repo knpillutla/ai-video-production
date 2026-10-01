@@ -144,7 +144,14 @@ function autoPopulateSlug(name) {
 }
 
 async function saveChannelForm(event) {
-  event.preventDefault();
+  if (event) event.preventDefault();
+  const submitBtn = document.getElementById("crud-submit-btn");
+  const origBtnHtml = submitBtn ? submitBtn.innerHTML : "";
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i><span>Saving...</span>';
+  }
+
   const isEdit = document.getElementById("crud-is-edit").value === "true";
   const chId = document.getElementById("crud-channel-id").value;
   const tagsStr = document.getElementById("crud-channel-tags").value;
@@ -171,15 +178,24 @@ async function saveChannelForm(event) {
       body: JSON.stringify(payload)
     });
     if (!res.ok) {
-      const errData = await res.json();
-      alert(`Error saving channel: ${errData.detail || 'Unknown error'}`);
+      const errData = await res.json().catch(() => ({}));
+      alert(`Error saving channel: ${errData.detail || ('HTTP ' + res.status)}`);
       return;
     }
     closeModal("channel-crud-modal");
     await fetchUserChannels();
     await fetchChannelHubVideos();
+    if (!isEdit && payload.channel_slug) {
+      activateChannelFromHub(payload.channel_slug);
+    }
   } catch (err) {
     console.error("Save channel failure:", err);
+    alert(`Failed to save channel: ${err.message || err}`);
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = origBtnHtml;
+    }
   }
 }
 
@@ -253,16 +269,14 @@ function renderChannelHubTable(episodes = allChannelEpisodes) {
       { edition_id: "default", name: "4K Master Video", icon: "fa-film text-indigo-500", audio_mode: "Music Master", duration: "90s", format: "16:9 Master", status: "completed", url: ep.artifacts?.master_music || "" }
     ];
     const spanCount = editions.length;
-    const stagePill = (ok, label) => ok ? `<span class="px-1 py-0.2 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-950 dark:text-emerald-300 border border-emerald-400 rounded text-[8px] font-mono font-bold">✓ ${label}</span>` : `<span class="px-1 py-0.2 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-gray-500 border border-slate-300 rounded text-[8px] font-mono">○ ${label}</span>`;
+    const stagePill = (ok, label) => `<span class="px-1 py-0.2 ${ok ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-950 dark:text-emerald-300 border-emerald-400 font-bold' : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-gray-500 border-slate-300'} border rounded text-[8px] font-mono">${ok ? '✓' : '○'} ${label}</span>`;
     const stagesHtml = `<div class="flex items-center gap-0.5 justify-center flex-wrap">${stagePill(ep.stages?.stage_1_keyframes, "S1")}${stagePill(ep.stages?.stage_2_cineloop_masters, "S2")}${stagePill(ep.stages?.stage_3_crf22_compression, "S3")}${stagePill(ep.stages?.stage_4_long_play_stretch, "S4")}</div>`;
     const modelsHtml = `<div class="flex flex-col text-[9px] text-black dark:text-gray-300 leading-tight"><span class="font-mono font-bold text-indigo-900 dark:text-indigo-300">🧠 ${ep.models_used?.scripting || 'Gemini'}</span><span class="font-mono font-bold text-purple-900 dark:text-purple-300">🎨 ${ep.models_used?.visuals?.split(' ')[0] || 'FLUX'} + 🎬 ${ep.models_used?.motion?.split(' ')[0] || 'Kling'}</span></div>`;
     const epBg = epIdx % 2 === 0 ? "bg-slate-50/70 dark:bg-slate-900/10" : "bg-white dark:bg-slate-800/10";
 
     editions.forEach((ed, edIdx) => {
-      const isFirst = edIdx === 0;
-      const rowBorder = (edIdx === spanCount - 1) ? "border-b-2 border-indigo-400 dark:border-indigo-500/40" : "border-b border-slate-200 dark:border-slate-800/40";
+      const isFirst = edIdx === 0, rowBorder = (edIdx === spanCount - 1) ? "border-b-2 border-indigo-400 dark:border-indigo-500/40" : "border-b border-slate-200 dark:border-slate-800/40";
       const sBadge = `<span class="px-1.5 py-0.2 ${ed.status === 'published' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-950 dark:text-emerald-400 border-emerald-400' : 'bg-blue-100 dark:bg-blue-500/20 text-blue-950 dark:text-blue-400 border-blue-400'} border rounded font-bold text-[9px]">${ed.status === 'published' ? 'Published' : 'Ready'}</span>`;
-
       let rowHtml = `<tr class="hover:bg-indigo-50/70 dark:hover:bg-indigo-950/20 transition ${rowBorder} ${epBg}">`;
       if (isFirst) {
         rowHtml += `<td rowspan="${spanCount}" class="px-2.5 py-2 align-middle border-r border-slate-200 dark:border-[var(--border)]"><div class="text-[11px] font-bold text-black dark:text-white flex items-center gap-1.5"><i class="fa-solid ${ep.channel_icon} text-${ep.channel_color}-600 dark:text-${ep.channel_color}-400 text-[10px]"></i><span>${ep.channel_name}</span></div><div class="text-[9px] text-black dark:text-gray-400 font-mono font-medium mt-0.5">${ep.channel_handle}</div></td><td rowspan="${spanCount}" class="px-2.5 py-2 align-middle text-center border-r border-slate-200 dark:border-[var(--border)]"><div class="font-mono font-bold text-black dark:text-indigo-300 text-[11px] select-all whitespace-nowrap">${ep.episode_id}</div></td>`;

@@ -18,9 +18,11 @@ from src.core.telemetry import logger
 from src.providers.dance.fal_hunyuan import FalHunyuanAdapter
 from src.providers.dance.fal_kling import FalKlingAdapter
 from src.providers.fal_storage import _fal_api_key
+from src.providers.visual.fal_flux_dev import FalFluxDevAdapter
 from src.providers.visual.fal_flux_pro_ultra import FalFluxProUltraAdapter
 from src.providers.visual.fal_kling_v3 import FalKlingV3Adapter
 from src.providers.visual.fal_wan21 import FalWan21Adapter
+from src.providers.visual.fal_zimage import FalZImageAdapter
 
 
 @dataclass
@@ -88,8 +90,9 @@ class VisualBatchService:
         tasks: List[Tuple[str, Path, Optional[Path], int]],
         aspect_ratio: str = "16:9",
         force_rerun: bool = False,
+        image_model: str = "flux_dev",
     ) -> List[Path]:
-        """Render batch of FLUX 1.1 Pro Ultra keyframes concurrently with disk caching."""
+        """Render batch of keyframes concurrently with disk caching and dynamic image model routing."""
         async def _process_single_keyframe(prompt: str, out_path: Path, req_file: Optional[Path], idx: int) -> Path:
             if not force_rerun and out_path.is_file() and out_path.stat().st_size > 1000:
                 logger.info(f"decision_keyframe_cache_hit: Shot {idx} reusing {out_path.name} ($0.00 spend)")
@@ -101,9 +104,19 @@ class VisualBatchService:
                 if req_file and req_file.exists():
                     req_file.unlink(missing_ok=True)
 
-            logger.info(f"decision_keyframe_invoke_flux: Shot {idx} cache miss (or force_rerun). Synthesizing via FLUX 1.1 Pro Ultra...")
-            print(f"[DECISION - KEYFRAME SYNTHESIS] Shot {idx} synthesizing via FLUX 1.1 Pro Ultra concurrently...")
-            adapter = FalFluxProUltraAdapter(api_key=self.fal_key)
+            model_str = (image_model or "flux_dev").lower()
+            if "zimage" in model_str or "z_image" in model_str:
+                adapter = FalZImageAdapter(api_key=self.fal_key)
+                model_display = "Z-Image Turbo"
+            elif "pro" in model_str or "ultra" in model_str:
+                adapter = FalFluxProUltraAdapter(api_key=self.fal_key)
+                model_display = "FLUX 1.1 Pro Ultra"
+            else:
+                adapter = FalFluxDevAdapter(api_key=self.fal_key)
+                model_display = "FLUX.1-dev"
+
+            logger.info(f"decision_keyframe_invoke: Shot {idx} cache miss (or force_rerun). Synthesizing via {model_display}...")
+            print(f"[DECISION - KEYFRAME SYNTHESIS] Shot {idx} synthesizing via {model_display} concurrently...")
             await adapter.generate_to_file(prompt=prompt, output_path=out_path, aspect_ratio=aspect_ratio, force_live=bool(self.fal_key))
             return out_path
 
@@ -113,6 +126,7 @@ class VisualBatchService:
         self,
         tasks: List[Tuple[str, Path, str]],
         force_rerun: bool = False,
+        image_model: str = "flux_dev",
     ) -> List[Path]:
         """Render batch of YouTube SEO thumbnails (16:9 Long-Play and 9:16 Vertical Shorts) concurrently with disk caching."""
         async def _process_single_thumbnail(prompt: str, out_path: Path, aspect_ratio: str) -> Path:
@@ -124,9 +138,19 @@ class VisualBatchService:
             if force_rerun:
                 out_path.unlink(missing_ok=True)
 
-            logger.info(f"decision_thumbnail_invoke_flux: Synthesizing {out_path.name} ({aspect_ratio}) via FLUX 1.1 Pro Ultra...")
-            print(f"[DECISION - THUMBNAIL SYNTHESIS] Synthesizing SEO thumbnail {out_path.name} ({aspect_ratio})...")
-            adapter = FalFluxProUltraAdapter(api_key=self.fal_key)
+            model_str = (image_model or "flux_dev").lower()
+            if "zimage" in model_str or "z_image" in model_str:
+                adapter = FalZImageAdapter(api_key=self.fal_key)
+                model_display = "Z-Image Turbo"
+            elif "pro" in model_str or "ultra" in model_str:
+                adapter = FalFluxProUltraAdapter(api_key=self.fal_key)
+                model_display = "FLUX 1.1 Pro Ultra"
+            else:
+                adapter = FalFluxDevAdapter(api_key=self.fal_key)
+                model_display = "FLUX.1-dev"
+
+            logger.info(f"decision_thumbnail_invoke: Synthesizing {out_path.name} ({aspect_ratio}) via {model_display}...")
+            print(f"[DECISION - THUMBNAIL SYNTHESIS] Synthesizing SEO thumbnail {out_path.name} ({aspect_ratio}) via {model_display}...")
             await adapter.generate_to_file(prompt=prompt, output_path=out_path, aspect_ratio=aspect_ratio, force_live=bool(self.fal_key))
             return out_path
 

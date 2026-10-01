@@ -194,10 +194,8 @@ class FalH3MaxTurboAdapter:
                 raise RuntimeError(f"Failed to download video from {video_url}")
 
         except Exception as ex:
-            if force_live:
-                raise
-            logger.warning(f"fal_h3_turbo_failed: {ex} — falling back to local steadycam")
-            return await self._fallback_local(image_url, motion_prompt, out, duration)
+            logger.error(f"fal_h3_turbo_failed: {ex}")
+            raise RuntimeError(f"H3 Turbo Video generation failed: {ex}") from ex
 
     async def _fallback_local(self, image_url: str, prompt: str, out: Path, duration: int) -> tuple[str, Path]:
         from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary

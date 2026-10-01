@@ -69,10 +69,7 @@ class FalWan21Adapter:
             return await self._fallback_local(out, duration)
 
         if not self.api_key:
-            if force_live:
-                raise ValueError("FAL_KEY is required for LIVE Wan 2.1 generation")
-            logger.warning("fal_wan21: no FAL_KEY — using local placeholder")
-            return await self._fallback_local(out, duration)
+            raise ValueError("FAL_KEY is required for Wan 2.1 video motion generation")
 
         actual_url = image_url
         if not (actual_url.startswith("http://") or actual_url.startswith("https://")):

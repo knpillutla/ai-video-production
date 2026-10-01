@@ -71,7 +71,9 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
             if chunks:
                 return b"".join(chunks)
         except Exception as ex:
-            logger.warning(f"neural_tts_stream_failed: {ex}. Using synthetic tone.")
+            logger.error(f"neural_tts_stream_failed: {ex}")
+            if not is_mock_mode():
+                raise RuntimeError(f"Azure / Neural TTS Generation failed: {ex}") from ex
 
         # Offline deterministic WAV generator (produces valid 48kHz PCM audio for tests)
         return self._generate_synthetic_wav(duration_seconds=max(2.0, len(text.split()) * 0.4))

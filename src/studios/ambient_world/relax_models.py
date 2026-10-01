@@ -92,11 +92,14 @@ class RelaxPublishingPackage(BaseModel):
     thumbnail_concept_prompts: List[str] = Field(default_factory=list)
 
 
+from pydantic import AliasChoices, BaseModel, Field, field_validator
+
+
 class RelaxScreenplay(BaseModel):
     """Dedicated Directorial Screenplay Schema for Relaxation & Living Wallpapers."""
-    production_id: str = "EP-001"
-    title: str
-    story_topic: str
+    production_id: str = Field(default="EP-001", validation_alias=AliasChoices("production_id", "episode_id", "id"))
+    title: str = Field(default="Natural Sanctuary Soundscape", validation_alias=AliasChoices("title", "production_title", "video_title"))
+    story_topic: str = Field(default="Scenic living wallpaper sanctuary", validation_alias=AliasChoices("story_topic", "synopsis", "story_synopsis", "description"))
     genre: str = "relax/nature"
     sub_genre: Optional[str] = "nature_sanctuary"
     primary_archetype: Optional[str] = None

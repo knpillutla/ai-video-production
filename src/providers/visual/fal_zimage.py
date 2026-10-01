@@ -103,11 +103,8 @@ class FalZImageAdapter:
 
                 raise TimeoutError("Fal Z-Image timed out waiting for completion")
             except Exception as ex:
-                if force_live:
-                    logger.error(f"Fal Z-Image failed in live mode: {ex}")
-                    raise
-                logger.warning(f"fal_zimage_failed_falling_back: {ex}")
-                return await self._fallback_local(prompt, out, aspect_ratio)
+                logger.error(f"Fal Z-Image failed: {ex}")
+                raise RuntimeError(f"Fal Z-Image failed: {ex}") from ex
 
     async def _fallback_local(self, prompt: str, out: Path, aspect_ratio: str) -> tuple[str, Path]:
         """Generate deterministic fallback keyframe."""

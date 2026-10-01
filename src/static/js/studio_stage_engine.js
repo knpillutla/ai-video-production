@@ -127,8 +127,10 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
     if (bb) {
       bb.classList.remove("hidden");
       if (isScriptOnly) bb.textContent = "Stage 1: Generating Script & Storyboard (Gemini 2.5)";
-      else if (isPhotosOnly) bb.textContent = "Stage 2: Synthesizing Keyframes (FLUX 1.1 Pro)";
-      else if (isMotionOnly) bb.textContent = "Stage 3: Synthesizing Motion (Wan 2.1 / Kling)";
+      else if (isPhotosOnly) {
+        const mLabel = (vid.imageModel && (vid.imageModel.includes("pro") || vid.imageModel.includes("ultra"))) ? "FLUX 1.1 Pro Ultra" : ((vid.imageModel && vid.imageModel.includes("zimage")) ? "Z-Image Turbo" : "FLUX.1-dev");
+        bb.textContent = `Stage 2: Synthesizing Keyframes (${mLabel})`;
+      } else if (isMotionOnly) bb.textContent = "Stage 3: Synthesizing Motion (Wan 2.1 / Kling)";
       else if (isAudioOnly) bb.textContent = "Stage 4: Synthesizing Audio (Suno v3.5 & 432Hz DSP)";
       else bb.textContent = `Stage ${vid.currentStage || 5}: Rendering 4K Master & Long-Play Broadcast`;
       bb.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-blue-600 text-white animate-pulse";
@@ -227,6 +229,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         episode_id: epId,
         user_id: uEmail,
         motion_model: vid.motionModel || (durSec <= 10 ? "wan" : "auto"),
+        image_model: vid.imageModel || "flux_dev",
         enable_bgm: vid.enableBgm !== false,
         allow_fallback: vid.allowFallback || false,
         pipeline_strategy: vid.pipelineStrategy || "manual",
@@ -242,6 +245,9 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           ? parseFloat(document.getElementById("studio-stretch-hours")?.value || "3.0")
           : (typeof activeBroadcastHours !== "undefined" ? activeBroadcastHours : (vid.longPlayHours || 0)),
         camera_motion: document.getElementById("studio-camera-motion")?.value || "locked_tripod",
+        genre: document.getElementById("studio-genre-selector")?.value || vid.genre || "relax/nature",
+        sub_genre: document.getElementById("studio-subgenre-selector")?.value || vid.sub_genre || null,
+        primary_archetype: document.getElementById("studio-archetype-selector")?.value || vid.primary_archetype || null,
         force_rerun: Boolean(vid.force_rerun)
       })
     });
@@ -358,7 +364,9 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
       }
       renderInspectorFromVideo(vid);
       if (typeof updateStageGateDock === "function") updateStageGateDock(vid);
-      if (typeof filterChannelArchive === "function") filterChannelArchive();
+      if (typeof saveVideosState === "function") saveVideosState();
+      if (typeof fetchAndRenderChannelArchive === "function") fetchAndRenderChannelArchive();
+      else if (typeof filterChannelArchive === "function") filterChannelArchive();
     } else {
       const errMsg = resData.detail || resData.message || "Synthesis failed.";
       const fStage = detectFailedStage(errMsg, vid.currentStage);
@@ -367,16 +375,17 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
       if (bb) { bb.textContent = `❌ Stage ${fStage} Failed`; bb.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-red-600 text-white shadow-sm"; }
       const banner = document.getElementById("studio-queued-banner");
       if (banner) {
-        banner.className = "shrink-0 p-2.5 bg-white border-2 border-red-500 rounded-xl flex items-center justify-between gap-3 shadow-md transition-all";
+        banner.classList.remove("hidden");
+        banner.className = "shrink-0 p-2.5 bg-red-50 dark:bg-red-950/90 border-2 border-red-500 rounded-xl flex items-center justify-between gap-3 shadow-md transition-all";
         const iconEl = document.getElementById("studio-banner-icon");
         if (iconEl) {
-          iconEl.className = "w-6 h-6 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold text-xs shrink-0 border border-red-300";
+          iconEl.className = "w-6 h-6 rounded-lg bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 flex items-center justify-center font-bold text-xs shrink-0 border border-red-400";
           iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
         }
         const tEl = document.getElementById("studio-banner-title");
-        if (tEl) { tEl.textContent = `Stage ${fStage} Error:`; tEl.className = "font-black text-red-700"; }
+        if (tEl) { tEl.textContent = `Stage ${fStage} Error:`; tEl.className = "font-black text-red-700 dark:text-red-300"; }
         const dEl = document.getElementById("studio-banner-detail");
-        if (dEl) { dEl.textContent = errMsg; dEl.className = "text-[11px] text-red-600 font-bold font-mono truncate"; }
+        if (dEl) { dEl.textContent = errMsg; dEl.className = "text-[11px] text-red-700 dark:text-red-300 font-bold font-mono break-all"; }
       }
       renderInspectorFromVideo(vid);
       if (typeof filterChannelArchive === "function") filterChannelArchive();
@@ -391,16 +400,17 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
     if (bb) { bb.textContent = `❌ Stage ${fStage} Error`; bb.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-red-600 text-white shadow-sm"; }
     const banner = document.getElementById("studio-queued-banner");
     if (banner) {
-      banner.className = "shrink-0 p-2.5 bg-white border-2 border-red-500 rounded-xl flex items-center justify-between gap-3 shadow-md transition-all";
+      banner.classList.remove("hidden");
+      banner.className = "shrink-0 p-2.5 bg-red-50 dark:bg-red-950/90 border-2 border-red-500 rounded-xl flex items-center justify-between gap-3 shadow-md transition-all";
       const iconEl = document.getElementById("studio-banner-icon");
       if (iconEl) {
-        iconEl.className = "w-6 h-6 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold text-xs shrink-0 border border-red-300";
+        iconEl.className = "w-6 h-6 rounded-lg bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 flex items-center justify-center font-bold text-xs shrink-0 border border-red-400";
         iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
       }
       const tEl = document.getElementById("studio-banner-title");
-      if (tEl) { tEl.textContent = `Stage ${fStage} Error:`; tEl.className = "font-black text-red-700"; }
+      if (tEl) { tEl.textContent = `Stage ${fStage} Error:`; tEl.className = "font-black text-red-700 dark:text-red-300"; }
       const dEl = document.getElementById("studio-banner-detail");
-      if (dEl) { dEl.textContent = errMsg; dEl.className = "text-[11px] text-red-600 font-bold font-mono truncate"; }
+      if (dEl) { dEl.textContent = errMsg; dEl.className = "text-[11px] text-red-700 dark:text-red-300 font-bold font-mono break-all"; }
     }
     renderInspectorFromVideo(vid);
     if (typeof filterChannelArchive === "function") filterChannelArchive();
@@ -427,14 +437,22 @@ function retryEpisodeWithFallback(epId) {
   startStudioLiveStageProgress(ep, ep.pipelineStrategy);
 }
 
-function advanceToKeyframesStage(vid) {
-  if (!vid) return;
-  vid.currentStage = 2;
-  vid.status = "processing";
-  vid.progress = 25;
-  renderInspectorFromVideo(vid);
+function advanceToKeyframesStage(vid, imageModelOverride, forceRerun = false) {
+  let target = vid || currentActiveInspectorEpisode;
+  if (!target) return;
+  target.currentStage = 2;
+  target.status = "processing";
+  target.progress = 25;
+  target.force_rerun = Boolean(forceRerun);
+  if (imageModelOverride) {
+    target.imageModel = imageModelOverride;
+  } else if (!target.imageModel) {
+    target.imageModel = "flux_dev";
+  }
+  currentActiveInspectorEpisode = target;
+  renderInspectorFromVideo(target);
   if (typeof filterChannelArchive === "function") filterChannelArchive();
-  startStudioLiveStageProgress(vid, "manual", "photos");
+  startStudioLiveStageProgress(target, "manual", "photos");
 }
 
 function advanceToMotionStage(vid, motionModelOverride, forceRerun = false) {

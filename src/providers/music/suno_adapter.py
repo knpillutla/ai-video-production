@@ -171,6 +171,9 @@ class SunoMusicAdapter(MusicProviderProtocol):
                             )
                             return out
             except Exception as ex:
+                logger.error(f"suno_live_generation_failed: {ex}")
+                if force_live:
+                    raise RuntimeError(f"Suno Music Generation failed: {ex}") from ex
                 logger.warning(f"suno_live_download_failed: {ex}. Checking local audio fallbacks.")
 
         fallback_candidates = [

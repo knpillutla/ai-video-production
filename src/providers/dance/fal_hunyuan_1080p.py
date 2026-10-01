@@ -68,10 +68,7 @@ class FalHunyuan1080pAdapter:
             return await self._fallback_local(out, duration)
 
         if not self.api_key:
-            if force_live:
-                raise ValueError("FAL_KEY is required for LIVE Hunyuan Video generation")
-            logger.warning("fal_hunyuan_1080p: no FAL_KEY — using local placeholder")
-            return await self._fallback_local(out, duration)
+            raise ValueError("FAL_KEY is required for Hunyuan Video generation")
 
         actual_url = image_url
         if not (actual_url.startswith("http://") or actual_url.startswith("https://")):

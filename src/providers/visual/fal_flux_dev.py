@@ -123,8 +123,8 @@ class FalFluxDevAdapter:
 
             except Exception as ex:
                 job_sidecar.unlink(missing_ok=True)
-                logger.warning(f"fal_flux_dev_failed: {ex} — using local placeholder")
-                return await self._fallback_local(prompt, out, aspect_ratio, loras, seed)
+                logger.error(f"fal_flux_dev_failed: {ex}")
+                raise RuntimeError(f"Fal FLUX.1-dev failed: {ex}") from ex
 
     async def _fallback_local(
         self,

@@ -63,7 +63,8 @@ class FalLivePortraitAdapter:
                             logger.info(f"fal_liveportrait_success: {out.name}")
                             return out
             except Exception as ex:
-                logger.warning(f"fal_liveportrait_failed: {ex}. Using local avatar compositor fallback.")
+                logger.error(f"fal_liveportrait_failed: {ex}")
+                raise RuntimeError(f"Fal LivePortrait Lipsync failed: {ex}") from ex
 
         # Local Deterministic Avatar Animator (FFmpeg loop with mouth pulse simulation)
         return await self._synthesize_local_avatar_clip(img, audio, out, duration_seconds)

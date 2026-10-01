@@ -33,8 +33,9 @@ class FalKlingAdapter:
     Quality: State-of-the-art fluid motion, realistic human body kinematics.
     """
 
-    def __init__(self, api_key: str | None = None) -> None:
+    def __init__(self, api_key: str | None = None, endpoint: str | None = None) -> None:
         self.api_key = api_key or _fal_api_key()
+        self.endpoint = endpoint
 
     async def generate_video(
         self,
@@ -171,11 +172,8 @@ class FalKlingAdapter:
                 raise TimeoutError("Kling 1.5 Pro timed out after 320s")
 
         except Exception as ex:
-            if force_live:
-                logger.error(f"fal_kling_live_failed: {ex}")
-                raise RuntimeError(f"Kling video motion generation failed in LIVE mode: {ex}") from ex
-            logger.warning(f"fal_kling_failed: {ex} — falling back to FalMimicMotion")
-            return await self._fallback_mimic(image_url, motion_prompt, out, duration)
+            logger.error(f"fal_kling_failed: {ex}")
+            raise RuntimeError(f"Kling video motion generation failed: {ex}") from ex
 
     async def _fallback_mimic(
         self,
