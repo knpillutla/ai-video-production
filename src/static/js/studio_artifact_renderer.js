@@ -105,7 +105,7 @@ function renderMasterVideosList(vid) {
     return;
   }
 
-  const posterUrl = vid.thumbnailUrl || (vid.keyframes?.[0]?.url) || (vid.artifacts?.keyframes?.[0]?.url) || "";
+  const posterUrl = vid.thumbnailUrl || vid.thumbnail_url || (vid.keyframes?.[0]?.url) || (vid.artifacts?.keyframes?.[0]?.url) || "";
   const bgStyle = posterUrl ? `background-image: url('${posterUrl}'); background-size: cover; background-position: center;` : "";
   const activeVideoEl = document.getElementById("studio-panel-video");
   const activeSrc = activeVideoEl?.src || "";
@@ -411,7 +411,7 @@ function renderMotionClipsList(vid) {
       const borderCls = isSel ? "border-2 border-purple-500" : "border border-slate-300 dark:border-slate-700";
       const kf = (vid.keyframes && vid.keyframes[i]) ? vid.keyframes[i] : (vid.artifacts?.keyframes?.[i] || null);
       const kfUrl = (typeof kf === "object" && kf !== null) ? kf.url : (typeof kf === "string" ? kf : "");
-      const posterUrl = (kfUrl && (kfUrl.startsWith("http") || kfUrl.startsWith("/static/") || kfUrl.startsWith("/storage/"))) ? kfUrl : (vid.thumbnailUrl || "");
+      const posterUrl = (kfUrl && (kfUrl.startsWith("http") || kfUrl.startsWith("/static/") || kfUrl.startsWith("/storage/"))) ? kfUrl : (vid.thumbnailUrl || vid.thumbnail_url || "");
       const bgStyle = posterUrl ? `background-image: url('${posterUrl}'); background-size: cover; background-position: center;` : "";
       const playAction = `selectMasterVideoRender('${url}', '${name} (${model})', this); if (typeof openVideoPopup === 'function') openVideoPopup('${url}', '${epId}: ${name}', '${model} • Raw Video Motion Clip');`;
 

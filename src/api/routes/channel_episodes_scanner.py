@@ -209,6 +209,20 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
     if "velvet_binaural_master_48k.mp3" in files:
         audio_stems.append({"name": "432Hz Velvet Binaural ASMR", "url": f"{rel_prefix}/velvet_binaural_master_48k.mp3?t={int(files['velvet_binaural_master_48k.mp3'].stat().st_mtime)}", "filename": "velvet_binaural_master_48k.mp3", "type": "binaural_nature"})
 
+    thumb_url = None
+    if "thumbnail_music_4k.jpg" in files:
+        thumb_url = f"{rel_prefix}/thumbnail_music_4k.jpg?ep={ep_id}&t={int(files['thumbnail_music_4k.jpg'].stat().st_mtime)}"
+    elif "keyframe_p1.jpg" in files:
+        thumb_url = f"{rel_prefix}/keyframe_p1.jpg?ep={ep_id}&t={int(files['keyframe_p1.jpg'].stat().st_mtime)}"
+    elif keyframes:
+        thumb_url = keyframes[0]["url"]
+
+    thumb_short_url = None
+    if "thumbnail_9x16_short.jpg" in files:
+        thumb_short_url = f"{rel_prefix}/thumbnail_9x16_short.jpg?ep={ep_id}&t={int(files['thumbnail_9x16_short.jpg'].stat().st_mtime)}"
+    elif thumb_url:
+        thumb_short_url = thumb_url
+
     total_cost = sum(item["cost_usd"] for item in cost_by_stage)
     primary_master = master_editions[0]["url"] if master_editions else None
 
@@ -243,6 +257,10 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
         "keyframes": keyframes,
         "motion_clips": motion_clips,
         "audio_stems": audio_stems,
+        "thumbnail_url": thumb_url,
+        "thumbnailUrl": thumb_url,
+        "thumbnail_short_url": thumb_short_url,
+        "thumbnailShortUrl": thumb_short_url,
         "editions": master_editions if master_editions else editions,
         "long_play_editions": long_play_editions,
         "all_editions": editions,
