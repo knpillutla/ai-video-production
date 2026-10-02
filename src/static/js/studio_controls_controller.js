@@ -14,25 +14,24 @@ function setExecutionMode(mode) {
   const optProd = document.getElementById("exec-options-prod");
   const btnProduceText = document.getElementById("btn-produce-text");
 
+  if (btnTest) btnTest.classList.toggle("active", mode === "test");
+  if (btnProd) btnProd.classList.toggle("active", mode === "prod");
+
   if (mode === "test") {
-    if (btnTest) btnTest.className = "px-1.5 py-0.2 text-[9px] font-bold rounded bg-amber-600 text-white shadow";
-    if (btnProd) btnProd.className = "px-1.5 py-0.2 text-[9px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded";
     if (optTest) optTest.classList.remove("hidden");
     if (optProd) optProd.classList.add("hidden");
     if (btnProduceText) {
       btnProduceText.textContent = activePipelineStrategy === "manual" 
-        ? `TEST (MANUAL ${activeShotsCount} Shots)` 
-        : `TEST DRAFT (${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''})`;
+        ? `Run Test (${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''})` 
+        : `Run Draft (${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''})`;
     }
   } else {
-    if (btnTest) btnTest.className = "px-1.5 py-0.2 text-[9px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded";
-    if (btnProd) btnProd.className = "px-1.5 py-0.2 text-[9px] font-bold rounded bg-indigo-600 text-white shadow";
     if (optTest) optTest.classList.add("hidden");
     if (optProd) optProd.classList.remove("hidden");
     if (btnProduceText) {
       btnProduceText.textContent = activePipelineStrategy === "manual"
-        ? "PRODUCE (MANUAL STAGE-GATE)"
-        : "PRODUCE MASTER VIDEO";
+        ? "Produce Video (Gate)"
+        : "Produce Master Video";
     }
   }
   calculateLiveCostEstimate();
@@ -44,15 +43,14 @@ function setPipelineExecutionMode(strat) {
   const btnManual = document.getElementById("btn-pipe-manual");
   const btnProduceText = document.getElementById("btn-produce-text");
 
+  if (btnAuto) btnAuto.classList.toggle("active", strat === "auto");
+  if (btnManual) btnManual.classList.toggle("active", strat === "manual");
+
   if (strat === "auto") {
-    if (btnAuto) btnAuto.className = "px-1.5 py-0.2 text-[9px] font-bold rounded bg-indigo-600 text-white shadow";
-    if (btnManual) btnManual.className = "px-1.5 py-0.2 text-[9px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded";
-    if (btnProduceText) btnProduceText.textContent = activeExecutionMode === "test" ? `TEST DRAFT (${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''})` : "PRODUCE MASTER VIDEO";
+    if (btnProduceText) btnProduceText.textContent = activeExecutionMode === "test" ? `Run Draft (${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''})` : "Produce Master Video";
     document.getElementById("studio-stage-controls-dock")?.classList.add("hidden");
   } else {
-    if (btnAuto) btnAuto.className = "px-1.5 py-0.2 text-[9px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded";
-    if (btnManual) btnManual.className = "px-1.5 py-0.2 text-[9px] font-bold rounded bg-purple-600 text-white shadow";
-    if (btnProduceText) btnProduceText.textContent = activeExecutionMode === "test" ? `TEST (MANUAL ${activeShotsCount} Shots)` : "PRODUCE (MANUAL STAGE-GATE)";
+    if (btnProduceText) btnProduceText.textContent = activeExecutionMode === "test" ? `Run Test (${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''})` : "Produce Video (Gate)";
   }
 
   if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) {

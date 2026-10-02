@@ -4,28 +4,27 @@
     <!-- Left Column: Category Navigation -->
     <div class="lg:col-span-4 space-y-4">
       <div>
-        <h1 class="text-2xl font-black text-white tracking-tight">What do you want to create?</h1>
+        <h1 class="text-xl font-bold text-[var(--text)] tracking-tight">What do you want to create?</h1>
         <div class="relative mt-3">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-xs"></i>
-          <input type="text" id="apps-search-input" onkeyup="filterAppsCatalog()" placeholder="Search apps and tools" class="w-full pl-8 pr-3 py-2 bg-slate-900 border border-[var(--border)] rounded-xl text-white text-xs placeholder-gray-500 focus:outline-none focus:border-indigo-500">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-[var(--text-muted)] text-xs"></i>
+          <input type="text" id="apps-search-input" onkeyup="filterAppsCatalog()" placeholder="Search apps and tools" class="w-full pl-8 pr-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
         </div>
       </div>
 
       <!-- Sub-tabs: Starter Kits, Custom, Image, Video, Audio, Model -->
-      <div class="flex items-center gap-4 overflow-x-auto pb-1 text-xs border-b border-[var(--border)] text-[var(--text-muted)]">
-        <button class="subtab-btn active">Starter Kits</button>
-        <button class="subtab-btn">Custom</button>
-        <button class="subtab-btn">Image</button>
-        <button class="subtab-btn">Video</button>
-        <button class="subtab-btn">Audio</button>
-        <button class="subtab-btn">Model &gt;</button>
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs border-b border-[var(--border)] text-[var(--text-muted)]">
+        <button class="subtab-btn active px-2.5 py-1 font-semibold">Starter Kits</button>
+        <button class="subtab-btn px-2.5 py-1 font-semibold">Custom</button>
+        <button class="subtab-btn px-2.5 py-1 font-semibold">Image</button>
+        <button class="subtab-btn px-2.5 py-1 font-semibold">Video</button>
+        <button class="subtab-btn px-2.5 py-1 font-semibold">Audio</button>
       </div>
 
       <!-- Vertical Category Cards -->
-      <div class="space-y-2">
-        <div onclick="selectAppCategory('film')" id="cat-card-film" class="cat-card-item">
-          <div class="w-9 h-9 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
-            <i class="fa-solid fa-clapperboard text-sm"></i>
+      <div class="space-y-1.5">
+        <div onclick="selectAppCategory('film')" id="cat-card-film" class="cat-card-item p-2.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card-hover)] cursor-pointer transition flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-[var(--card-subtle)] text-[var(--text)] flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-clapperboard text-xs"></i>
           </div>
           <div>
             <div class="cat-title font-bold text-xs text-[var(--text)]">Film or shorts</div>
@@ -33,9 +32,9 @@
           </div>
         </div>
 
-        <div onclick="selectAppCategory('marketing')" id="cat-card-marketing" class="cat-card-item">
-          <div class="w-9 h-9 rounded-lg bg-pink-500/10 text-pink-500 flex items-center justify-center shrink-0">
-            <i class="fa-solid fa-bag-shopping text-sm"></i>
+        <div onclick="selectAppCategory('marketing')" id="cat-card-marketing" class="cat-card-item p-2.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card-hover)] cursor-pointer transition flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-[var(--card-subtle)] text-[var(--text)] flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-bag-shopping text-xs"></i>
           </div>
           <div>
             <div class="cat-title font-bold text-xs text-[var(--text)]">Marketing</div>
@@ -43,9 +42,9 @@
           </div>
         </div>
 
-        <div onclick="selectAppCategory('social')" id="cat-card-social" class="cat-card-item active">
-          <div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
-            <i class="fa-solid fa-mobile-screen text-sm"></i>
+        <div onclick="selectAppCategory('social')" id="cat-card-social" class="cat-card-item active p-2.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card-hover)] cursor-pointer transition flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-[var(--card-subtle)] text-[var(--text)] flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-mobile-screen text-xs"></i>
           </div>
           <div>
             <div class="cat-title font-bold text-xs text-[var(--text)]">Social</div>
@@ -53,9 +52,9 @@
           </div>
         </div>
 
-        <div onclick="selectAppCategory('educational')" id="cat-card-educational" class="cat-card-item">
-          <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-            <i class="fa-solid fa-graduation-cap text-sm"></i>
+        <div onclick="selectAppCategory('educational')" id="cat-card-educational" class="cat-card-item p-2.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card-hover)] cursor-pointer transition flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-[var(--card-subtle)] text-[var(--text)] flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-graduation-cap text-xs"></i>
           </div>
           <div>
             <div class="cat-title font-bold text-xs text-[var(--text)]">Educational content</div>
@@ -63,9 +62,9 @@
           </div>
         </div>
 
-        <div onclick="selectAppCategory('experimental')" id="cat-card-experimental" class="cat-card-item">
-          <div class="w-9 h-9 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center shrink-0">
-            <i class="fa-solid fa-palette text-sm"></i>
+        <div onclick="selectAppCategory('experimental')" id="cat-card-experimental" class="cat-card-item p-2.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card-hover)] cursor-pointer transition flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-[var(--card-subtle)] text-[var(--text)] flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-palette text-xs"></i>
           </div>
           <div>
             <div class="cat-title font-bold text-xs text-[var(--text)]">Experimental art</div>
@@ -78,8 +77,8 @@
     <!-- Right Column: Recommended Apps Grid (Matching Screenshot) -->
     <div class="lg:col-span-8 space-y-4">
       <div>
-        <h2 id="apps-category-title" class="text-2xl font-black text-white">Social</h2>
-        <p id="apps-category-desc" class="text-xs text-gray-400">Recommended apps to get you started</p>
+        <h2 id="apps-category-title" class="text-xl font-bold text-[var(--text)]">Social</h2>
+        <p id="apps-category-desc" class="text-xs text-[var(--text-muted)]">Recommended apps to get you started</p>
       </div>
 
       <div id="apps-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

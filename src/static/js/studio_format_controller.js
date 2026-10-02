@@ -6,22 +6,8 @@ function setStudioFormat(format) {
   
   if (hiddenInput) hiddenInput.value = format;
   
-  if (format === "9:16") {
-    if (landscapeBtn) {
-      landscapeBtn.className = "px-3 py-1 text-xs font-medium text-gray-400 hover:text-white rounded-md transition flex items-center gap-1.5";
-    }
-    if (portraitBtn) {
-      portraitBtn.className = "px-3 py-1 text-xs font-bold rounded-md bg-pink-600 text-white shadow transition flex items-center gap-1.5";
-    }
-  } else {
-    // 16:9 Landscape (Default)
-    if (landscapeBtn) {
-      landscapeBtn.className = "px-3 py-1 text-xs font-bold rounded-md bg-indigo-600 text-white shadow transition flex items-center gap-1.5";
-    }
-    if (portraitBtn) {
-      portraitBtn.className = "px-3 py-1 text-xs font-medium text-gray-400 hover:text-white rounded-md transition flex items-center gap-1.5";
-    }
-  }
+  if (landscapeBtn) landscapeBtn.classList.toggle("active", format === "16:9");
+  if (portraitBtn) portraitBtn.classList.toggle("active", format === "9:16");
 }
 
 function togglePureNatureMode(isPure) {

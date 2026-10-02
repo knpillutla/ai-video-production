@@ -3,34 +3,34 @@
   <!-- Screen Header & Top Action Bar -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-3 shadow-sm">
     <div class="flex items-center gap-2.5">
-      <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-red-600 via-purple-600 to-indigo-600 flex items-center justify-center text-white text-xs shadow">
+      <div class="w-7 h-7 rounded-lg bg-[var(--accent)] flex items-center justify-center text-white text-xs shadow-sm">
         <i class="fa-brands fa-youtube"></i>
       </div>
       <div>
-        <h1 class="text-sm font-bold text-white tracking-tight leading-none flex items-center gap-2">
+        <h1 class="text-sm font-bold text-[var(--text)] tracking-tight leading-none flex items-center gap-2">
           <span>Channel Management &amp; Video Production Hub</span>
-          <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">knpillutla@gmail.com</span>
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold bg-[var(--card-subtle)] text-[var(--text-muted)] border border-[var(--border)]">knpillutla@gmail.com</span>
         </h1>
-        <p class="text-[10px] text-gray-400 mt-0.5">Create, edit, delete, and switch distribution channels. All artifacts persist in your isolated user container.</p>
+        <p class="text-[10px] text-[var(--text-muted)] mt-0.5">Create, edit, delete, and switch distribution channels.</p>
       </div>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
-      <button onclick="openCreateChannelModal()" class="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow transition active:scale-95">
+      <button onclick="openCreateChannelModal()" class="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition active:scale-95">
         <i class="fa-solid fa-plus text-[10px]"></i>
         <span>Create Channel</span>
       </button>
-      <button onclick="fetchChannelHubVideos()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-[var(--border)] text-gray-200 hover:text-white font-bold rounded-lg text-xs flex items-center gap-1 transition active:scale-95 shadow-sm" title="Refresh Channels &amp; Videos">
-        <i id="channel-hub-refresh-icon" class="fa-solid fa-arrows-rotate text-[10px] text-indigo-400"></i>
+      <button onclick="fetchChannelHubVideos()" class="px-2.5 py-1.5 bg-[var(--card-subtle)] hover:bg-[var(--card-hover)] border border-[var(--border)] text-[var(--text)] font-semibold rounded-lg text-xs flex items-center gap-1 transition active:scale-95 shadow-sm" title="Refresh Channels &amp; Videos">
+        <i id="channel-hub-refresh-icon" class="fa-solid fa-arrows-rotate text-[10px] text-[var(--accent)]"></i>
         <span>Refresh</span>
       </button>
-      <button onclick="switchTab('studio')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow transition active:scale-95">
-        <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+      <button onclick="switchTab('studio')" class="px-3 py-1.5 bg-[var(--card-subtle)] hover:bg-[var(--card-hover)] border border-[var(--border)] text-[var(--text)] font-semibold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition active:scale-95">
+        <i class="fa-solid fa-wand-magic-sparkles text-[10px] text-[var(--accent)]"></i>
         <span>Production Studio</span>
       </button>
     </div>
   </div>
 
-  <!-- Dynamic Channel Management Shelf (Cards with Edit, Delete, Activate, Produce actions) -->
+  <!-- Dynamic Channel Management Shelf -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2.5" id="channel-selector-cards">
     <!-- Rendered dynamically by channel_hub_controller.js -->
   </div>
@@ -38,11 +38,11 @@
   <!-- Channel Filter Bar -->
   <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-[11px]">
     <div class="relative flex-1 min-w-[200px]">
-      <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-gray-400 text-[10px]"></i>
-      <input type="text" id="channel-table-search" onkeyup="filterChannelManagementTable()" placeholder="Search channels by name, tag, category, genre, comments..." class="w-full pl-7 pr-2.5 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-[11px] focus:ring-1 focus:ring-indigo-500 outline-none">
+      <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-[var(--text-muted)] text-[10px]"></i>
+      <input type="text" id="channel-table-search" onkeyup="filterChannelManagementTable()" placeholder="Search channels by name, tag, category, genre..." class="w-full pl-7 pr-2.5 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-[11px] outline-none focus:border-[var(--accent)]">
     </div>
     <div class="flex items-center gap-2">
-      <span class="text-[10px] text-gray-400 font-mono" id="channel-table-count">4 channels configured</span>
+      <span class="text-[10px] text-[var(--text-muted)] font-mono" id="channel-table-count">4 channels configured</span>
     </div>
   </div>
 
@@ -50,7 +50,7 @@
   <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
     <div class="overflow-x-auto">
       <table class="w-full text-left text-[11px]">
-        <thead class="bg-slate-900/90 text-gray-400 font-bold border-b border-[var(--border)] text-[10px] uppercase">
+        <thead class="bg-[var(--card-subtle)] text-[var(--text-muted)] font-semibold border-b border-[var(--border)] text-[10px] uppercase">
           <tr>
             <th class="px-3 py-2">Channel &amp; Handle</th>
             <th class="px-3 py-2">Display Tag Badge</th>
@@ -73,18 +73,18 @@
 
 <!-- CREATE / EDIT CHANNEL MODAL -->
 <div id="channel-crud-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-  <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4">
     <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
       <div class="flex items-center gap-2">
-        <div id="crud-modal-icon-badge" class="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-sm">
+        <div id="crud-modal-icon-badge" class="w-8 h-8 rounded-lg bg-[var(--card-subtle)] text-[var(--text)] flex items-center justify-center text-sm border border-[var(--border)]">
           <i class="fa-solid fa-tower-broadcast"></i>
         </div>
         <div>
-          <h2 id="crud-modal-title" class="text-sm font-bold text-white">Create Distribution Channel</h2>
-          <p class="text-[10px] text-gray-400">Organize isolated video pipelines and YouTube metadata.</p>
+          <h2 id="crud-modal-title" class="text-sm font-bold text-[var(--text)]">Create Distribution Channel</h2>
+          <p class="text-[10px] text-[var(--text-muted)]">Organize isolated video pipelines and YouTube metadata.</p>
         </div>
       </div>
-      <button onclick="closeModal('channel-crud-modal')" class="text-gray-400 hover:text-white text-base">
+      <button onclick="closeModal('channel-crud-modal')" class="text-[var(--text-muted)] hover:text-[var(--text)] text-base">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
@@ -95,29 +95,29 @@
 
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="block text-[11px] font-semibold text-gray-300 mb-1">Channel Name *</label>
-          <input type="text" id="crud-channel-name" required placeholder="e.g. Earth Serenade" oninput="autoPopulateSlug(this.value)" class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-xs outline-none focus:border-indigo-500">
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Channel Name *</label>
+          <input type="text" id="crud-channel-name" required placeholder="e.g. Earth Serenade" oninput="autoPopulateSlug(this.value)" class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none focus:border-[var(--accent)]">
         </div>
         <div>
-          <label class="block text-[11px] font-semibold text-gray-300 mb-1">Channel Slug (Folder ID) *</label>
-          <input type="text" id="crud-channel-slug" required placeholder="e.g. earth_serenade" class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white font-mono text-xs outline-none focus:border-indigo-500">
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Channel Slug *</label>
+          <input type="text" id="crud-channel-slug" required placeholder="e.g. earth_serenade" class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] font-mono text-xs outline-none focus:border-[var(--accent)]">
         </div>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="block text-[11px] font-semibold text-gray-300 mb-1 flex items-center gap-1">
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1 flex items-center gap-1">
             <i class="fa-brands fa-youtube text-red-500 text-xs"></i>
             <span>YouTube Channel Handle *</span>
           </label>
           <div class="relative">
-            <span class="absolute left-2.5 top-1.5 text-gray-500 font-mono text-xs">@</span>
-            <input type="text" id="crud-channel-handle" required placeholder="EarthSerenade4K" class="w-full pl-6 pr-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white font-mono text-xs outline-none focus:border-indigo-500">
+            <span class="absolute left-2.5 top-1.5 text-[var(--text-muted)] font-mono text-xs">@</span>
+            <input type="text" id="crud-channel-handle" required placeholder="EarthSerenade4K" class="w-full pl-6 pr-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] font-mono text-xs outline-none focus:border-[var(--accent)]">
           </div>
         </div>
         <div>
-          <label class="block text-[11px] font-semibold text-gray-300 mb-1">Niche / Category</label>
-          <select id="crud-channel-category" class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-gray-200 text-xs outline-none">
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Niche / Category</label>
+          <select id="crud-channel-category" class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none">
             <option value="Travel & Events">Travel &amp; Nature Relaxation</option>
             <option value="Music">Cozy Fireplace &amp; ASMR Sleep</option>
             <option value="Education">Blue-Chip Documentaries</option>
@@ -131,59 +131,59 @@
       <!-- Genre Multi-Selection Chips -->
       <div>
         <div class="flex items-center justify-between mb-1.5">
-          <label class="text-[11px] font-semibold text-gray-300 flex items-center gap-1">
-            <i class="fa-solid fa-shapes text-purple-400"></i>
+          <label class="text-[11px] font-semibold text-[var(--text-muted)] flex items-center gap-1">
+            <i class="fa-solid fa-shapes text-[var(--accent)]"></i>
             <span>Allowed Genres &amp; Formats *</span>
           </label>
-          <span class="text-[9px] text-purple-400 font-medium">Select all that apply</span>
+          <span class="text-[9px] text-[var(--text-muted)] font-medium">Select all that apply</span>
         </div>
         <div id="crud-genres-container" class="grid grid-cols-3 gap-1.5 text-[10px]">
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
-            <input type="checkbox" name="crud_genre" value="relax/nature" class="accent-purple-500 rounded">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
+            <input type="checkbox" name="crud_genre" value="relax/nature" class="accent-[var(--accent)] rounded">
             <span>🏔️ Alpine Nature</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
-            <input type="checkbox" name="crud_genre" value="relax/healing" class="accent-purple-500 rounded">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
+            <input type="checkbox" name="crud_genre" value="relax/healing" class="accent-[var(--accent)] rounded">
             <span>✨ 528Hz Healing</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
-            <input type="checkbox" name="crud_genre" value="relax/zen" class="accent-purple-500 rounded">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
+            <input type="checkbox" name="crud_genre" value="relax/zen" class="accent-[var(--accent)] rounded">
             <span>🪷 Kyoto Zen</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
-            <input type="checkbox" name="crud_genre" value="relax/waterfall" class="accent-purple-500 rounded">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
+            <input type="checkbox" name="crud_genre" value="relax/waterfall" class="accent-[var(--accent)] rounded">
             <span>🌊 Waterfalls</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
-            <input type="checkbox" name="crud_genre" value="relax/hearth" class="accent-purple-500 rounded">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
+            <input type="checkbox" name="crud_genre" value="relax/hearth" class="accent-[var(--accent)] rounded">
             <span>🔥 Beach Hearth</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
-            <input type="checkbox" name="crud_genre" value="relax/rain" class="accent-purple-500 rounded">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
+            <input type="checkbox" name="crud_genre" value="relax/rain" class="accent-[var(--accent)] rounded">
             <span>🌧️ Rain ASMR</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
-            <input type="checkbox" name="crud_genre" value="relax/cozy" class="accent-purple-500 rounded">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
+            <input type="checkbox" name="crud_genre" value="relax/cozy" class="accent-[var(--accent)] rounded">
             <span>🪵 Cozy Living</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
-            <input type="checkbox" name="crud_genre" value="relax/ambient" class="accent-purple-500 rounded">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
+            <input type="checkbox" name="crud_genre" value="relax/ambient" class="accent-[var(--accent)] rounded">
             <span>🌌 Velvet Ambient</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
-            <input type="checkbox" name="crud_genre" value="documentary" class="accent-purple-500 rounded">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
+            <input type="checkbox" name="crud_genre" value="documentary" class="accent-[var(--accent)] rounded">
             <span>🦅 BBC Wildlife</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
-            <input type="checkbox" name="crud_genre" value="travel_walking" class="accent-purple-500 rounded">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
+            <input type="checkbox" name="crud_genre" value="travel_walking" class="accent-[var(--accent)] rounded">
             <span>🚶 Walking Tours</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
-            <input type="checkbox" name="crud_genre" value="dance/folk" class="accent-purple-500 rounded">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
+            <input type="checkbox" name="crud_genre" value="dance/folk" class="accent-[var(--accent)] rounded">
             <span>💃 Folk Dance</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
-            <input type="checkbox" name="crud_genre" value="comedy/satire" class="accent-purple-500 rounded">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
+            <input type="checkbox" name="crud_genre" value="comedy/satire" class="accent-[var(--accent)] rounded">
             <span>🎭 Comedy Satire</span>
           </label>
         </div>
@@ -192,45 +192,45 @@
       <!-- User Intent & Target Audience Prompt -->
       <div>
         <div class="flex items-center justify-between mb-1">
-          <label class="text-[11px] font-semibold text-gray-300 flex items-center gap-1">
-            <i class="fa-solid fa-bullseye text-indigo-400"></i>
-            <span>Channel Vision, User Intent &amp; Audience Vibe</span>
+          <label class="text-[11px] font-semibold text-[var(--text-muted)] flex items-center gap-1">
+            <i class="fa-solid fa-bullseye text-[var(--accent)]"></i>
+            <span>Channel Vision &amp; Audience Vibe</span>
           </label>
-          <button type="button" onclick="triggerGeminiChannelEnrichment()" id="btn-ai-enrich-channel" class="px-2.5 py-0.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-md text-[10px] font-bold shadow flex items-center gap-1 transition">
-            <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i>
+          <button type="button" onclick="triggerGeminiChannelEnrichment()" id="btn-ai-enrich-channel" class="px-2.5 py-0.5 bg-[var(--card-subtle)] hover:bg-[var(--card-hover)] border border-[var(--border)] text-[var(--text)] rounded-md text-[10px] font-semibold shadow-sm flex items-center gap-1 transition">
+            <i class="fa-solid fa-wand-magic-sparkles text-[9px] text-[var(--accent)]"></i>
             <span>✨ Auto-Enrich with Gemini</span>
           </button>
         </div>
-        <textarea id="crud-channel-intent" rows="2" placeholder="e.g. 4K nature relaxation with 432Hz soundscapes for daytime meditation, yoga, and TV living wallpaper..." class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-xs outline-none focus:border-indigo-500 resize-none"></textarea>
+        <textarea id="crud-channel-intent" rows="2" placeholder="e.g. 4K nature relaxation with 432Hz soundscapes for daytime meditation..." class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none focus:border-[var(--accent)] resize-none"></textarea>
       </div>
 
       <!-- AI Enriched Directorial Guardrails Preview Accordion -->
-      <div id="crud-enriched-preview" class="p-3 bg-indigo-950/30 border border-indigo-500/30 rounded-xl space-y-2 hidden">
+      <div id="crud-enriched-preview" class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-2 hidden">
         <div class="flex items-center justify-between">
-          <span class="text-[10px] font-bold text-indigo-300 flex items-center gap-1">
-            <i class="fa-solid fa-sparkles text-amber-400 text-[9px]"></i>
+          <span class="text-[10px] font-bold text-[var(--text)] flex items-center gap-1">
+            <i class="fa-solid fa-sparkles text-amber-500 text-[9px]"></i>
             <span>Gemini Synthesized Directorial Guardrails:</span>
           </span>
-          <span id="crud-enriched-badge" class="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[9px] font-mono">✅ Profile Ready</span>
+          <span id="crud-enriched-badge" class="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded text-[9px] font-mono">✅ Profile Ready</span>
         </div>
-        <div class="grid grid-cols-2 gap-2 text-[10px] text-gray-300">
+        <div class="grid grid-cols-2 gap-2 text-[10px] text-[var(--text-muted)]">
           <div class="space-y-1">
-            <div class="font-semibold text-purple-300">🎵 Audio Policy:</div>
-            <div id="preview-audio-style" class="text-gray-400 text-[9px]"></div>
-            <div id="preview-suno-tags" class="text-[9px] font-mono text-indigo-300 truncate"></div>
+            <div class="font-semibold text-[var(--text)]">🎵 Audio Policy:</div>
+            <div id="preview-audio-style" class="text-[9px]"></div>
+            <div id="preview-suno-tags" class="text-[9px] font-mono text-[var(--accent)] truncate"></div>
           </div>
           <div class="space-y-1">
-            <div class="font-semibold text-emerald-300">💡 Lighting &amp; Purity:</div>
-            <div id="preview-lighting" class="text-gray-400 text-[9px]"></div>
-            <div id="preview-purity" class="text-gray-400 text-[9px] truncate"></div>
+            <div class="font-semibold text-[var(--text)]">💡 Lighting &amp; Purity:</div>
+            <div id="preview-lighting" class="text-[9px]"></div>
+            <div id="preview-purity" class="text-[9px] truncate"></div>
           </div>
         </div>
       </div>
 
       <div class="grid grid-cols-3 gap-3">
         <div>
-          <label class="block text-[11px] font-semibold text-gray-300 mb-1">Audio Language</label>
-          <select id="crud-channel-lang" class="w-full px-2.5 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-gray-200 text-xs outline-none">
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Audio Language</label>
+          <select id="crud-channel-lang" class="w-full px-2.5 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none">
             <option value="en">English (en)</option>
             <option value="te">Telugu (te)</option>
             <option value="hi">Hindi (hi)</option>
@@ -239,8 +239,8 @@
           </select>
         </div>
         <div>
-          <label class="block text-[11px] font-semibold text-gray-300 mb-1">Icon Style</label>
-          <select id="crud-channel-icon" class="w-full px-2.5 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-gray-200 text-xs outline-none">
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Icon Style</label>
+          <select id="crud-channel-icon" class="w-full px-2.5 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none">
             <option value="fa-mountain-sun">Mountain / Nature</option>
             <option value="fa-leaf">Leaf / Forest</option>
             <option value="fa-fire">Fire / Hearth</option>
@@ -252,8 +252,8 @@
           </select>
         </div>
         <div>
-          <label class="block text-[11px] font-semibold text-gray-300 mb-1">Accent Color</label>
-          <select id="crud-channel-color" class="w-full px-2.5 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-gray-200 text-xs outline-none">
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Accent Color</label>
+          <select id="crud-channel-color" class="w-full px-2.5 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none">
             <option value="emerald">Emerald (Green)</option>
             <option value="amber">Amber (Gold/Warm)</option>
             <option value="blue">Blue (Documentary)</option>
@@ -266,36 +266,25 @@
 
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="block text-[11px] font-semibold text-gray-300 mb-1 flex items-center gap-1">
-            <i class="fa-solid fa-tag text-amber-400 text-xs"></i>
-            <span>Display Tag Badge (e.g. 🌿 432Hz Nature) *</span>
-          </label>
-          <input type="text" id="crud-channel-tag" placeholder="e.g. 🌿 432Hz Nature & Meditation" class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-xs outline-none focus:border-indigo-500">
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Display Tag Badge *</label>
+          <input type="text" id="crud-channel-tag" placeholder="e.g. 🌿 432Hz Nature &amp; Meditation" class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none focus:border-[var(--accent)]">
         </div>
         <div>
-          <label class="block text-[11px] font-semibold text-gray-300 mb-1">Description / Headline</label>
-          <input type="text" id="crud-channel-desc" placeholder="e.g. 4K Nature Soundscapes & Ambient Rain Retreats" class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-xs outline-none focus:border-indigo-500">
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Description</label>
+          <input type="text" id="crud-channel-desc" placeholder="e.g. 4K Nature Soundscapes" class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none focus:border-[var(--accent)]">
         </div>
       </div>
 
       <div>
-        <label class="block text-[11px] font-semibold text-gray-300 mb-1 flex items-center gap-1">
-          <i class="fa-solid fa-comment-dots text-sky-400 text-xs"></i>
-          <span>Internal Comments &amp; Strategy Guidelines</span>
-        </label>
-        <textarea id="crud-channel-comments" rows="2" placeholder="e.g. Daytime relaxation channel, avoid dark lighting, strictly keep Suno at 432Hz..." class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-xs outline-none focus:border-indigo-500 resize-none"></textarea>
-      </div>
-
-      <div>
-        <label class="block text-[11px] font-semibold text-gray-300 mb-1">Default SEO Tags (comma-separated)</label>
-        <input type="text" id="crud-channel-tags" placeholder="e.g. 4K, Nature, ASMR, Sleep, Relaxing" class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white font-mono text-xs outline-none focus:border-indigo-500">
+        <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Internal Comments &amp; Guidelines</label>
+        <textarea id="crud-channel-comments" rows="2" placeholder="e.g. Daytime relaxation channel, avoid dark lighting..." class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none focus:border-[var(--accent)] resize-none"></textarea>
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border)]">
-        <button type="button" onclick="closeModal('channel-crud-modal')" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded-lg text-xs font-semibold">
+        <button type="button" onclick="closeModal('channel-crud-modal')" class="px-3.5 py-1.5 bg-[var(--card-subtle)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] rounded-lg text-xs font-semibold">
           Cancel
         </button>
-        <button type="submit" id="crud-submit-btn" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs shadow flex items-center gap-1.5">
+        <button type="submit" id="crud-submit-btn" class="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white font-bold rounded-lg text-xs shadow-sm flex items-center gap-1.5">
           <i class="fa-solid fa-floppy-disk text-[10px]"></i>
           <span>Save Channel</span>
         </button>

@@ -7,6 +7,10 @@ function updateStudioChannelMetas(channelsList) {
   if (Array.isArray(channelsList) && channelsList.length > 0) {
     channelsList.forEach(ch => {
       const slug = ch.channel_slug || ch.channel_name.toLowerCase().replace(/[^a-z0-9]/g, "_");
+      const cachedProf = (typeof cachedChannelProfiles !== "undefined" && cachedChannelProfiles[slug]) ? cachedChannelProfiles[slug] : null;
+      const defaultGenres = (typeof DEFAULT_CHANNEL_GENRES !== "undefined" && DEFAULT_CHANNEL_GENRES[slug]) ? DEFAULT_CHANNEL_GENRES[slug] : null;
+      const allowed = ch.allowed_genres || cachedProf?.allowed_genres || defaultGenres || (ch.primary_genre ? [ch.primary_genre] : null);
+
       studioChannelMetas[slug] = {
         id: ch.id,
         slug: slug,
@@ -18,6 +22,7 @@ function updateStudioChannelMetas(channelsList) {
         category: ch.category || "General",
         tag: ch.tag || ch.raw?.tag || "",
         comments: ch.comments || ch.raw?.comments || "",
+        allowed_genres: allowed,
         raw: ch
       };
     });
@@ -83,6 +88,10 @@ function renderStudioChannelChips() {
   }
 
   updateStudioChannelBadge();
+
+  if (typeof syncGenreDropdownForChannel === "function") {
+    syncGenreDropdownForChannel(selectedStudioChannel);
+  }
 }
 
 function selectStudioChannel(channelId) {

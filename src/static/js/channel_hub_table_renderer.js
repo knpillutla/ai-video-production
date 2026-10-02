@@ -63,48 +63,46 @@ function renderChannelHubTable(channels = userChannels) {
     // Genre badges
     const genreBadges = allowed.map(g => {
       const label = GENRE_LABELS[g] || g;
-      return `<span class="px-1.5 py-0.5 rounded bg-purple-950/60 border border-purple-500/30 text-purple-300 font-mono text-[9px] whitespace-nowrap">${label}</span>`;
+      return `<span class="px-1.5 py-0.5 rounded bg-[var(--card-subtle)] border border-[var(--border)] text-[var(--text-muted)] font-mono text-[9px] whitespace-nowrap">${label}</span>`;
     }).join(" ");
 
     // Audio policy string
     const audioStyle = prof.audio_profile?.style || (ch.channel_slug?.includes("hearth") ? "Pure ASMR" : "Harmonic Soundscape");
     const bgmOn = prof.audio_profile?.bgm_enabled_by_default ?? (!slug.includes("hearth"));
     const lufs = prof.audio_profile?.target_lufs ?? -14.0;
-    const audioBadge = `<div class="space-y-0.5"><div class="font-bold text-slate-200 text-[10px] flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full ${bgmOn ? 'bg-emerald-400' : 'bg-amber-400'}"></span><span>${audioStyle}</span></div><div class="text-[9px] text-gray-400 font-mono">${bgmOn ? 'BGM ON' : 'Pure ASMR (No BGM)'} • ${lufs} LUFS</div></div>`;
+    const audioBadge = `<div class="space-y-0.5"><div class="font-bold text-[var(--text)] text-[10px] flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full ${bgmOn ? 'bg-emerald-500' : 'bg-amber-500'}"></span><span>${audioStyle}</span></div><div class="text-[9px] text-[var(--text-muted)] font-mono">${bgmOn ? 'BGM ON' : 'Pure ASMR'} • ${lufs} LUFS</div></div>`;
 
     // Lighting & Purity
     const lighting = prof.visual_lighting_guardrails?.lighting_temperature || "Natural Daylight (5400K)";
     const purity = prof.visual_lighting_guardrails?.purity_rule || "Pure pristine nature";
-    const visualInfo = `<div class="space-y-0.5 max-w-[160px]"><div class="font-bold text-amber-300 text-[10px] truncate" title="${lighting}">💡 ${lighting}</div><div class="text-[9px] text-gray-400 truncate" title="${purity}">🛡️ ${purity}</div></div>`;
+    const visualInfo = `<div class="space-y-0.5 max-w-[160px]"><div class="font-bold text-[var(--text)] text-[10px] truncate" title="${lighting}">💡 ${lighting}</div><div class="text-[9px] text-[var(--text-muted)] truncate" title="${purity}">🛡️ ${purity}</div></div>`;
 
     // Tag badge
-    const tagBadge = ch.tag ? `<span class="px-2 py-0.5 rounded-lg bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 font-bold font-mono text-[10px] whitespace-nowrap shadow-sm">${ch.tag}</span>` : `<span class="text-[10px] text-gray-500 italic">—</span>`;
+    const tagBadge = ch.tag ? `<span class="px-2 py-0.5 rounded-lg bg-[var(--card-subtle)] border border-[var(--border)] text-[var(--text)] font-bold font-mono text-[10px] whitespace-nowrap shadow-sm">${ch.tag}</span>` : `<span class="text-[10px] text-[var(--text-muted)] italic">—</span>`;
 
     // Comments
-    const commentsText = ch.comments ? `<div class="text-[10px] text-slate-300 line-clamp-2 max-w-[180px]" title="${ch.comments}"><i class="fa-solid fa-comment-dots text-sky-400 text-[9px] mr-1"></i>${ch.comments}</div>` : `<span class="text-[10px] text-gray-500 italic">—</span>`;
-
-    const rowBg = idx % 2 === 0 ? "bg-slate-900/20" : "bg-transparent";
+    const commentsText = ch.comments ? `<div class="text-[10px] text-[var(--text-muted)] line-clamp-2 max-w-[180px]" title="${ch.comments}"><i class="fa-solid fa-comment-dots text-[var(--accent)] text-[9px] mr-1"></i>${ch.comments}</div>` : `<span class="text-[10px] text-[var(--text-muted)] italic">—</span>`;
 
     return `
-      <tr class="hover:bg-indigo-950/30 transition border-b border-[var(--border)] ${rowBg}">
+      <tr class="hover:bg-[var(--card-hover)] transition border-b border-[var(--border)]">
         <td class="px-3 py-2.5 align-middle">
           <div class="flex items-center gap-2">
-            <div class="w-7 h-7 rounded-lg bg-${ch.color || 'indigo'}-500/20 text-${ch.color || 'indigo'}-400 flex items-center justify-center text-xs shrink-0 border border-${ch.color || 'indigo'}-500/30">
+            <div class="w-7 h-7 rounded-lg bg-[var(--card-subtle)] text-[var(--text)] flex items-center justify-center text-xs shrink-0 border border-[var(--border)]">
               <i class="fa-solid ${ch.icon || 'fa-clapperboard'}"></i>
             </div>
             <div>
-              <div class="font-bold text-white text-xs flex items-center gap-1.5">
+              <div class="font-bold text-[var(--text)] text-xs flex items-center gap-1.5">
                 <span>${ch.channel_name}</span>
-                ${isStudioActive ? '<span class="px-1.5 py-0.2 rounded bg-indigo-600 text-white text-[8px] font-bold">Active</span>' : ''}
+                ${isStudioActive ? '<span class="px-1.5 py-0.2 rounded bg-[var(--accent)] text-white text-[8px] font-bold">Active</span>' : ''}
               </div>
-              <div class="text-[10px] text-gray-400 font-mono">${ch.channel_handle || '@' + slug}</div>
+              <div class="text-[10px] text-[var(--text-muted)] font-mono">${ch.channel_handle || '@' + slug}</div>
             </div>
           </div>
         </td>
         <td class="px-3 py-2.5 align-middle">${tagBadge}</td>
         <td class="px-3 py-2.5 align-middle max-w-[150px]">
-          <div class="font-bold text-slate-200 text-[10px]">${ch.category || 'General'}</div>
-          <div class="text-[9px] text-gray-400 line-clamp-1 mt-0.5" title="${ch.description || ''}">${ch.description || 'Target Audience'}</div>
+          <div class="font-bold text-[var(--text)] text-[10px]">${ch.category || 'General'}</div>
+          <div class="text-[9px] text-[var(--text-muted)] line-clamp-1 mt-0.5" title="${ch.description || ''}">${ch.description || 'Target Audience'}</div>
         </td>
         <td class="px-3 py-2.5 align-middle max-w-[180px]">
           <div class="flex items-center gap-1 flex-wrap">${genreBadges}</div>
@@ -112,18 +110,18 @@ function renderChannelHubTable(channels = userChannels) {
         <td class="px-3 py-2.5 align-middle">${audioBadge}</td>
         <td class="px-3 py-2.5 align-middle">${visualInfo}</td>
         <td class="px-3 py-2.5 align-middle">${commentsText}</td>
-        <td class="px-2.5 py-2.5 align-middle text-center font-mono font-bold text-emerald-400 text-xs">${epCount}</td>
+        <td class="px-2.5 py-2.5 align-middle text-center font-mono font-bold text-[var(--text)] text-xs">${epCount}</td>
         <td class="px-3 py-2.5 align-middle text-center">
           <div class="flex items-center gap-1 justify-center">
-            <button onclick="openEditChannelModal('${ch.id}')" class="px-2 py-1 bg-slate-800 hover:bg-indigo-600 hover:text-white text-indigo-300 rounded-lg text-[10px] font-bold flex items-center gap-1 transition shadow-sm" title="Channel Strategy & Guardrails">
+            <button onclick="openEditChannelModal('${ch.id}')" class="px-2 py-1 bg-[var(--card-subtle)] hover:bg-[var(--card-hover)] text-[var(--text)] rounded-lg text-[10px] font-semibold flex items-center gap-1 transition shadow-sm border border-[var(--border)]" title="Channel Strategy & Guardrails">
               <i class="fa-solid fa-sliders text-[9px]"></i>
               <span>Details</span>
             </button>
-            <button onclick="activateChannelFromHub('${slug}'); switchTab('studio');" class="px-2 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 transition shadow-sm" title="Produce in Studio">
+            <button onclick="activateChannelFromHub('${slug}'); switchTab('studio');" class="px-2 py-1 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 transition shadow-sm" title="Produce in Studio">
               <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i>
               <span>Studio</span>
             </button>
-            <button onclick="deleteChannelConfirm('${ch.id}', '${ch.channel_name}')" class="p-1 text-gray-500 hover:text-red-400 transition" title="Delete Channel">
+            <button onclick="deleteChannelConfirm('${ch.id}', '${ch.channel_name}')" class="p-1 text-[var(--text-muted)] hover:text-red-500 transition" title="Delete Channel">
               <i class="fa-solid fa-trash-can text-[10px]"></i>
             </button>
           </div>

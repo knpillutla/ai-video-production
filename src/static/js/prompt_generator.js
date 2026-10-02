@@ -3,29 +3,23 @@ let currentCreationMode = "theme";
 
 function selectProductionTier(tierKey) {
   currentTier = tierKey;
-  const tierColors = {
-    low_cost: { border: "border-emerald-500", ring: "ring-emerald-500/40", bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-600 dark:text-emerald-400", label: "Draft ($0.02)" },
-    balanced: { border: "border-indigo-500", ring: "ring-indigo-500/40", bg: "bg-indigo-50 dark:bg-indigo-950/40", text: "text-indigo-600 dark:text-indigo-400", label: "Balanced ($0.14)" },
-    cinematic: { border: "border-purple-500", ring: "ring-purple-500/40", bg: "bg-purple-50 dark:bg-purple-950/40", text: "text-purple-600 dark:text-purple-400", label: "4K Master ($0.45)" }
+  const tierLabels = {
+    low_cost: "Draft ($0.02)",
+    balanced: "Balanced ($0.14)",
+    cinematic: "4K Master ($0.45)"
   };
-  const activeCfg = tierColors[tierKey] || tierColors.cinematic;
 
   ["low_cost", "balanced", "cinematic"].forEach(t => {
     const card = document.getElementById("tier-card-" + t), radio = document.getElementById("tier-radio-" + t);
     if (!card) return;
-    const isSel = t === tierKey;
-    if (isSel) {
-      card.className = `p-1.5 ${activeCfg.bg} border-2 ${activeCfg.border} rounded-lg cursor-pointer transition text-center space-y-0.2 ring-1 ${activeCfg.ring}`;
-    } else {
-      card.className = "p-1.5 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 hover:border-slate-400 rounded-lg cursor-pointer transition text-center space-y-0.2";
-    }
+    const isSel = (t === tierKey);
+    card.classList.toggle("active", isSel);
     if (radio) radio.checked = isSel;
   });
 
   const badge = document.getElementById("tier-active-badge");
   if (badge) {
-    badge.textContent = activeCfg.label;
-    badge.className = `font-mono text-[9px] ${activeCfg.text}`;
+    badge.textContent = tierLabels[tierKey] || "4K Master ($0.45)";
   }
 
   const sel = document.getElementById("studio-tier-select"), pill = document.getElementById("sidebar-tier-price-pill");
@@ -65,19 +59,19 @@ function selectNicheRadio(nicheKey) {
 
 const MODE_CONFIG = {
   theme: {
-    labelHtml: '<i class="fa-solid fa-compass text-emerald-500 text-xs"></i> <span>Theme / Topic Description (Optional):</span>',
+    labelHtml: '<i class="fa-solid fa-compass text-[var(--text-muted)] text-xs"></i> <span>Theme / Topic Description (Optional):</span>',
     sublabel: "World Cities, Nature, Mountains, Oceans & Architecture",
     ph: "Optional example: A quiet rainforest stream beneath an old-growth canopy...",
     hint: "Theme active • World Cities, Villages, Mountains, Oceans & Architecture"
   },
   idea: {
-    labelHtml: '<i class="fa-solid fa-lightbulb text-yellow-500 text-xs"></i> <span>Story Idea / Concept (Optional):</span>',
+    labelHtml: '<i class="fa-solid fa-lightbulb text-[var(--text-muted)] text-xs"></i> <span>Story Idea / Concept (Optional):</span>',
     sublabel: "Character arcs, satirical situations, narrative premise",
     ph: "Optional: Describe story concept, characters, comedic angle, or leave empty...",
     hint: "Idea active • Narrative concepts, characters & comedy"
   },
   script: {
-    labelHtml: '<i class="fa-solid fa-scroll text-purple-500 text-xs"></i> <span>Script / Screenplay (Optional):</span>',
+    labelHtml: '<i class="fa-solid fa-scroll text-[var(--text-muted)] text-xs"></i> <span>Script / Screenplay (Optional):</span>',
     sublabel: "Full scene screenplay, voiceover narration, dialogue beats",
     ph: "Optional: Paste screenplay, dialogue lines, or leave empty...",
     hint: "Script active • Full screenplay, scene beats or dialogue stems"
@@ -102,13 +96,13 @@ function renderTemplatesForMode(mode) {
   if (titleEl) titleEl.textContent = mode === "theme" ? "Theme Presets (Nature, Wildlife, Heritage, Travel)" : "Creative Templates";
 
   container.innerHTML = templates.map((t, idx) => `
-    <div id="creative-card-${t.id}" onclick="applyTemplate('${mode}', ${idx})" class="p-3.5 bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] hover:border-indigo-500/50 rounded-xl cursor-pointer transition space-y-1 group active:scale-95 shadow-sm">
+    <div id="creative-card-${t.id}" onclick="applyTemplate('${mode}', ${idx})" class="p-3 bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] rounded-xl cursor-pointer transition space-y-1 group active:scale-95 shadow-sm">
       <div class="flex items-center justify-between">
-        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">${t.badge}</span>
-        <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-gray-500 group-hover:text-indigo-400"></i>
+        <span class="text-xs font-bold px-2 py-0.5 rounded bg-[var(--card-subtle)] text-[var(--text)] border border-[var(--border)]">${t.badge}</span>
+        <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-[var(--text-muted)] group-hover:text-[var(--text)]"></i>
       </div>
-      <div class="font-bold text-slate-900 dark:text-white text-xs group-hover:text-indigo-300">${t.title}</div>
-      <div class="text-[10px] text-slate-600 dark:text-gray-400 leading-tight">${t.desc}</div>
+      <div class="font-bold text-[var(--text)] text-xs">${t.title}</div>
+      <div class="text-xs text-[var(--text-muted)] leading-tight">${t.desc}</div>
     </div>`).join("");
 }
 
@@ -120,16 +114,14 @@ function applyTemplate(mode, idxOrObj) {
   if (mode === "youtube") { if (uInput) { uInput.value = t.url || ""; flashPromptInput(uInput); } } else if (uInput) { uInput.value = ""; }
   if (pInput) { pInput.value = t.prompt; flashPromptInput(pInput); }
   clearTemplateCardHighlights();
-  document.getElementById("creative-card-" + t.id)?.classList.add("ring-2", "ring-indigo-500");
+  document.getElementById("creative-card-" + t.id)?.classList.add("ring-2", "ring-[var(--accent)]");
 }
 
 function setCreationMode(mode, autoPopulate = false) {
   currentCreationMode = mode;
   ["theme", "idea", "script", "youtube"].forEach(m => {
     const btn = document.getElementById("mode-pill-" + m);
-    if (btn) btn.className = m === mode
-      ? "px-3.5 py-1 text-xs font-bold rounded-lg transition bg-indigo-600 text-white shadow flex items-center gap-1.5 ring-1 ring-indigo-400"
-      : "px-3.5 py-1 text-xs font-medium text-gray-400 hover:text-white rounded-lg transition flex items-center gap-1.5";
+    if (btn) btn.classList.toggle("active", m === mode);
   });
 
   const textarea = document.getElementById("youtube-prompt-input"), urlInput = document.getElementById("youtube-url-input");

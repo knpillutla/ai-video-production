@@ -4,10 +4,11 @@ let activeInspectorTab = "stems", currentActiveInspectorEpisode = null;
 function switchInspectorView(tabKey) {
   activeInspectorTab = tabKey;
   const bS = document.getElementById("btn-inspector-view-stems"), bC = document.getElementById("btn-inspector-view-console"), bD = document.getElementById("btn-inspector-view-dist");
-  const act = "px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-600 text-white shadow", inact = "px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded";
-  if (bS) bS.className = (tabKey === "stems") ? act : inact;
-  if (bC) bC.className = (tabKey === "console") ? act : inact;
-  if (bD) bD.className = (tabKey === "distribution") ? act : inact;
+
+  if (bS) bS.classList.toggle("active", tabKey === "stems");
+  if (bC) bC.classList.toggle("active", tabKey === "console");
+  if (bD) bD.classList.toggle("active", tabKey === "distribution");
+
   document.getElementById("inspector-view-stems")?.classList.toggle("hidden", tabKey !== "stems");
   document.getElementById("inspector-view-console")?.classList.toggle("hidden", tabKey !== "console");
   document.getElementById("inspector-view-distribution")?.classList.toggle("hidden", tabKey !== "distribution");

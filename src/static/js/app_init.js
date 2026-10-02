@@ -37,6 +37,10 @@ document.addEventListener("DOMContentLoaded", () => {
     renderEmptyInspectorState();
   }
 
+  if (typeof fetchUserChannels === "function") {
+    fetchUserChannels();
+  }
+
   if (typeof syncChannelEpisodesFromBackend === "function") {
     syncChannelEpisodesFromBackend();
   }

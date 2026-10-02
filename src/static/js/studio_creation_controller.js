@@ -7,58 +7,44 @@ function switchCreationTab(tabKey) {
   const btnNew = document.getElementById("btn-tab-creation-new"), btnArch = document.getElementById("btn-tab-creation-archive");
   const viewNew = document.getElementById("view-creation-new"), viewArch = document.getElementById("view-creation-archive");
 
+  if (btnNew) btnNew.classList.toggle("active", tabKey === "new");
+  if (btnArch) btnArch.classList.toggle("active", tabKey === "archive");
+
   if (tabKey === "new") {
-    if (btnNew) btnNew.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-lg transition bg-indigo-600 text-white shadow flex items-center gap-1";
-    if (btnArch) btnArch.className = "px-2.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded-lg transition flex items-center gap-1";
     if (viewNew) viewNew.classList.remove("hidden");
     if (viewArch) viewArch.classList.add("hidden");
     if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
   } else {
-    if (btnNew) btnNew.className = "px-2.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded-lg transition flex items-center gap-1";
-    if (btnArch) btnArch.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-lg transition bg-indigo-600 text-white shadow flex items-center gap-1";
     if (viewNew) viewNew.classList.add("hidden");
     if (viewArch) viewArch.classList.remove("hidden");
     fetchAndRenderChannelArchive();
   }
 }
 
-const ALL_STUDIO_GENRES = {
-  "relax/nature": "🏔️ Nature & Alpine Sanctuaries (relax/nature)",
-  "relax/healing": "✨ Global Healing Sanctuaries & 528Hz (relax/healing)",
-  "relax/zen": "🪷 Japanese Zen Gardens & Engawa (relax/zen)",
-  "relax/waterfall": "🌊 Monumental Waterfall & Cataracts (relax/waterfall)",
-  "relax/hearth": "🔥 Beach Campfire & Shoreline Hearth (relax/hearth)",
-  "relax/rain": "🌧️ Rain Retreat & River ASMR (relax/rain)",
-  "relax/cozy": "🪵 Cozy Living Spaces & Fireplace (relax/cozy)",
-  "relax/ambient": "🌌 Velvet Ambient World 14 Archetypes (relax/ambient)",
-  "documentary": "🦅 BBC-Style 24fps Wildlife & Documentary (documentary)",
-  "travel_walking": "🚶 Travel & 4K 60fps Walking Tours (travel_walking)",
-  "dance/folk": "💃 Dance, Folk & Music Videos (dance/folk)",
-  "comedy/satire": "🎭 Telugu Comedy & Satire Shorts (comedy/satire)"
-};
-
-const DEFAULT_CHANNEL_GENRES = {
-  "earth_serenade": ["relax/nature", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient"],
-  "silent_hearth": ["relax/hearth", "relax/rain", "relax/cozy"],
-  "cineai_docs": ["documentary"],
-  "telugu_comedy": ["comedy/satire", "dance/folk"]
-};
-
 function syncGenreDropdownForChannel(channelSlug) {
   const gSelector = document.getElementById("studio-genre-selector");
   if (!gSelector) return;
 
+  const genresDict = (typeof ALL_STUDIO_GENRES !== "undefined") ? ALL_STUDIO_GENRES : {};
+  const channelGenres = (typeof DEFAULT_CHANNEL_GENRES !== "undefined") ? DEFAULT_CHANNEL_GENRES : {};
+
   let allowed = null;
-  if (typeof studioChannelMetas !== "undefined" && studioChannelMetas[channelSlug]?.raw?.allowed_genres?.length) {
+  if (typeof cachedChannelProfiles !== "undefined" && cachedChannelProfiles[channelSlug]?.allowed_genres?.length) {
+    allowed = cachedChannelProfiles[channelSlug].allowed_genres;
+  } else if (typeof studioChannelMetas !== "undefined" && studioChannelMetas[channelSlug]?.allowed_genres?.length) {
+    allowed = studioChannelMetas[channelSlug].allowed_genres;
+  } else if (typeof studioChannelMetas !== "undefined" && studioChannelMetas[channelSlug]?.raw?.allowed_genres?.length) {
     allowed = studioChannelMetas[channelSlug].raw.allowed_genres;
-  } else if (DEFAULT_CHANNEL_GENRES[channelSlug]) {
-    allowed = DEFAULT_CHANNEL_GENRES[channelSlug];
+  } else if (typeof studioChannelMetas !== "undefined" && studioChannelMetas[channelSlug]?.raw?.primary_genre) {
+    allowed = [studioChannelMetas[channelSlug].raw.primary_genre];
+  } else if (channelGenres[channelSlug]) {
+    allowed = channelGenres[channelSlug];
   }
 
-  const genresToShow = (allowed && allowed.length > 0 && channelSlug !== "all") ? allowed : Object.keys(ALL_STUDIO_GENRES);
+  const genresToShow = (allowed && allowed.length > 0 && channelSlug !== "all") ? allowed : Object.keys(genresDict);
 
   gSelector.innerHTML = genresToShow.map(k => {
-    const label = ALL_STUDIO_GENRES[k] || k;
+    const label = genresDict[k] || k;
     return `<option value="${k}">${label}</option>`;
   }).join("");
 
@@ -71,22 +57,8 @@ function onGenreChange(genreVal) {
   const subSelector = document.getElementById("studio-subgenre-selector");
   if (!subSelector) return;
 
-  const subOptions = {
-    "relax/nature": [{ val: "alpine_nature", label: "🏔️ Alpine Nature & Mountain Sanctuaries (Swiss Alps)" }, { val: "glacial_fjord_lake", label: "🛶 Glacial Mirror Lakes & Fjords" }, { val: "temperate_forest", label: "🌲 Temperate Mossy Rainforest & Streams" }],
-    "relax/rain": [{ val: "forest_rain", label: "🌧️ Forest River Rainfall & ASMR" }, { val: "veranda_rain", label: "🏡 Biophilic Glass Veranda Rain" }, { val: "droplet_ripples", label: "💧 Water Droplet Ripples & Lake Reflections" }],
-    "relax/waterfall": [{ val: "waterfall_gorge", label: "🌊 Monumental Plunge Cataracts (Niagara / Iguazu)" }, { val: "tiered_cascade", label: "🏞️ Multi-Tiered Glacial Cascades (Plitvice)" }],
-    "relax/hearth": [{ val: "cozy_hearth", label: "🔥 Open-Air Beach Campfire & Shoreline Hearth" }, { val: "stone_hearth", label: "🪵 Rustic Cabin Stone Fireplace" }],
-    "relax/cozy": [{ val: "biophilic_living", label: "🪵 Biophilic Living Space & Terraces" }, { val: "rainy_patio", label: "☕ Rainy Garden Patio & Warm Hearth" }],
-    "relax/healing": [{ val: "global_healing", label: "✨ Global Sacred Sanctuaries & 528Hz Solfeggio" }, { val: "himalayan_valley", label: "🏔️ Himalayan Singing Bowl Valley & Mist" }, { val: "geothermal_springs", label: "♨️ Geothermal Hot Springs & Travertine Pools" }, { val: "redwood_cathedral", label: "🌲 Ancient Redwood Grove Sanctuary" }],
-    "relax/zen": [{ val: "zen_garden", label: "🪷 Kyoto Zen Temple & Raked Rock Garden" }, { val: "bamboo_grove", label: "🎋 Sagano Bamboo Grove & Tsukubai Basin" }, { val: "lotus_pond", label: "🪷 Sacred Lotus Pond & Water Basin Flow" }],
-    "relax/ambient": [{ val: "ambient_soundscape", label: "🌌 Velvet Ambient World (14 Ecosystems)" }, { val: "twilight_sanctuary", label: "✨ Twilight Aurora & Velvet Night Sky" }],
-    "documentary": [{ val: "cinematic_doc", label: "🦅 BBC-Style 24fps Wildlife & Climate Expedition" }, { val: "volcano_arctic", label: "🌋 Volcanic Landscapes & Glacial Ice" }, { val: "ocean_depths", label: "🐋 Deep Marine Life & Coral Reefs" }],
-    "travel_walking": [{ val: "alpine_village_walk", label: "🏡 Swiss Alpine Countryside Walk (1.5 km/h)" }, { val: "city_walk_pov", label: "🏙️ 4K 60fps Historic City & Night Walk" }, { val: "coastal_promenade", label: "🏖️ Secluded Ocean Bluff Walk" }],
-    "dance/folk": [{ val: "mass_folk_dance", label: "💃 High-Energy Mass Folk Dance (30fps)" }, { val: "classical_dance", label: "🪘 Cultural Classical Choreography" }],
-    "comedy/satire": [{ val: "satirical_short", label: "🎭 Modern Satire & Relatable Comedy Short" }]
-  };
-
-  const list = subOptions[genreVal] || subOptions["relax/nature"];
+  const subMap = (typeof STUDIO_SUBOPTIONS_MAP !== "undefined") ? STUDIO_SUBOPTIONS_MAP : {};
+  const list = subMap[genreVal] || subMap["relax/nature"] || [];
   subSelector.innerHTML = list.map(item => `<option value="${item.val}">${item.label}</option>`).join("");
   onSubGenreChange(subSelector.value);
 
@@ -106,37 +78,7 @@ function onSubGenreChange(val) {
   const archSelector = document.getElementById("studio-archetype-selector");
   const bgmToggle = document.getElementById("studio-toggle-bgm");
   
-  const placeholders = {
-    alpine_nature: "e.g. Majestic Swiss Alps panoramic peaks, wildflower valley, and crystal glacial stream...",
-    glacial_fjord_lake: "e.g. Glassy mirror-still turquoise glacial lake reflecting towering forested cliffs...",
-    temperate_forest: "e.g. Ancient mossy rainforest and gentle babbling river over rounded stones...",
-    forest_rain: "e.g. Gentle rain falling on mossy temperate rainforest river and floating leaf ripples...",
-    veranda_rain: "e.g. Biophilic glass veranda overlooking misty mountain forest during gentle twilight rainfall...",
-    droplet_ripples: "e.g. Ultra-macro 4K raindrops creating concentric ripples on mirror-still mountain pond...",
-    waterfall_gorge: "e.g. Monumental cascading cataract with heavy rising mist and turquoise plunge pool...",
-    tiered_cascade: "e.g. Multi-tiered emerald forest cascades flowing gently over moss-covered limestone ledges...",
-    cozy_hearth: "e.g. Gentle night rain on cozy stone campfire burning on wet pebble beach by ocean surf...",
-    stone_hearth: "e.g. Glowing cedar log hearth in rustic mountain stone lodge with snowy forest view...",
-    biophilic_living: "e.g. Modern biophilic living terrace with warm glowing fire and lush interior plants...",
-    rainy_patio: "e.g. Cozy sheltered patio with amber lanterns and rain pattering softly on foliage...",
-    zen_garden: "e.g. Tranquil Kyoto dry raked stone karesansui garden, weathered cedar engawa, and mossy stone lanterns...",
-    bamboo_grove: "e.g. Ethereal Sagano bamboo grove with gentle morning mist, tsukubai water basin, and shakuhachi tones...",
-    lotus_pond: "e.g. Sacred temple lotus pond with blooming water lilies and gentle bamboo fountain...",
-    global_healing: "e.g. Sacred mountain sanctuary with 528Hz Solfeggio sound therapy, crystal bowls, and morning sunlight...",
-    himalayan_valley: "e.g. Misty Himalayan sacred valley with Tibetan singing bowls, prayer flags, and glacial stream...",
-    geothermal_springs: "e.g. Natural turquoise geothermal travertine mineral pools with soft rising steam vapors in Tuscany...",
-    redwood_cathedral: "e.g. Ancient giant California Redwood grove cathedral with sunbeams piercing morning mist...",
-    ambient_soundscape: "e.g. Majestic 4K nature living wallpaper with tranquil mountain valley morning glow...",
-    twilight_sanctuary: "e.g. Ethereal twilight mountain sanctuary under soft purple skies and velvet stars...",
-    cinematic_doc: "e.g. BBC-style 24fps cinematic wildlife documentary across rugged alpine peaks...",
-    volcano_arctic: "e.g. Dramatic volcanic black sand coast meets glacial blue ice caves...",
-    ocean_depths: "e.g. Deep marine coral reefs with schools of luminous fish in crystal blue waters...",
-    alpine_village_walk: "e.g. Ultra-slow 1.5 km/h human walking tour through Swiss alpine village and meadow path...",
-    city_walk_pov: "e.g. 4K 60fps tranquil historic European cobblestone street walk at twilight...",
-    mass_folk_dance: "e.g. High-energy festive village celebration with dynamic troupe choreography...",
-    satirical_short: "e.g. Relatable everyday comedy satire with sharp comedic timing and witty dialogue..."
-  };
-
+  const placeholders = (typeof STUDIO_SUBGENRE_PLACEHOLDERS !== "undefined") ? STUDIO_SUBGENRE_PLACEHOLDERS : {};
   if (promptInput && placeholders[val]) promptInput.placeholder = placeholders[val];
 
   if (archSelector) {
@@ -159,15 +101,7 @@ function onSubGenreChange(val) {
 
 function onArchetypeChange(val) {
   const promptInput = document.getElementById("youtube-prompt-input");
-  const hints = {
-    alpine_mountains: "e.g. Towering Swiss Alps snow-capped jagged peaks, lush wildflower meadows, and crystal mountain stream...",
-    waterfall_gorge: "e.g. Monumental roaring cataract plunging into turquoise pool with heavy rising mist...",
-    coastal_ocean: "e.g. Gentle rain falling on warm driftwood campfire burning on wet pebble shoreline by ocean surf...",
-    glacial_fjord_lake: "e.g. Mirror-still turquoise glacial lake reflecting towering pine-covered granite cliffs...",
-    temperate_forest: "e.g. Ancient mossy rainforest canopy with gentle stream and floating leaves...",
-    zen_garden: "e.g. Peaceful Kyoto dry raked stone garden, bamboo water fountain, and cedar veranda...",
-    sacred_sanctuary: "e.g. Sacred Himalayan valley with singing bowls, crystal dawn sunbeams, and restorative 528Hz serenity..."
-  };
+  const hints = (typeof STUDIO_ARCHETYPE_HINTS !== "undefined") ? STUDIO_ARCHETYPE_HINTS : {};
   if (promptInput && hints[val]) promptInput.placeholder = hints[val];
 }
 

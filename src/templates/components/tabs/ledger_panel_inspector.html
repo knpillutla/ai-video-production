@@ -20,14 +20,14 @@
 
     <!-- Actions & Dual Tab Switcher -->
     <div class="flex items-center gap-1 shrink-0">
-      <div class="inline-flex items-center p-0.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg">
-        <button type="button" onclick="switchLedgerInspectorView('stems')" id="btn-ledger-inspector-stems" class="px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-600 text-white shadow">🎬 Stems</button>
-        <button type="button" onclick="switchLedgerInspectorView('distribution')" id="btn-ledger-inspector-dist" class="px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-gray-400 hover:text-white rounded">🚀 YouTube</button>
+      <div class="segmented-track">
+        <button type="button" onclick="switchLedgerInspectorView('stems')" id="btn-ledger-inspector-stems" class="segmented-btn active">🎬 Stems</button>
+        <button type="button" onclick="switchLedgerInspectorView('distribution')" id="btn-ledger-inspector-dist" class="segmented-btn">🚀 YouTube</button>
       </div>
-      <button onclick="toggleRightPanelFullscreen()" id="btn-expand-right-panel" class="p-1 text-gray-400 hover:text-white rounded hover:bg-slate-800 transition" title="Toggle Fullscreen">
+      <button onclick="toggleRightPanelFullscreen()" id="btn-expand-right-panel" class="btn-runway-secondary p-1 text-xs" title="Toggle Fullscreen">
         <i id="panel-expand-icon" class="fa-solid fa-expand text-xs"></i>
       </button>
-      <button onclick="toggleRightPanelVisibility()" id="btn-close-right-panel" class="p-1 text-gray-400 hover:text-white rounded hover:bg-slate-800 transition" title="Hide Panel">
+      <button onclick="toggleRightPanelVisibility()" id="btn-close-right-panel" class="btn-runway-secondary p-1 text-xs" title="Hide Panel">
         <i class="fa-solid fa-xmark text-xs"></i>
       </button>
     </div>
@@ -43,7 +43,7 @@
         </span>
         <div class="flex items-center gap-1.5">
           <span id="ledger-panel-video-badge" class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[8px] font-mono font-bold">4K Master (90s)</span>
-          <button type="button" onclick="openActiveVideoInPopup()" class="px-2 py-0.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[9px] flex items-center gap-1 shadow transition" title="Open active video in large popup player">
+          <button type="button" onclick="openActiveVideoInPopup()" class="btn-runway-secondary py-0.5 px-2 text-xs" title="Open active video in large popup player">
             <i class="fa-solid fa-up-right-from-square text-[8px]"></i>
             <span>Popup Player</span>
           </button>
@@ -212,10 +212,10 @@
       <textarea id="ledger-dist-yt-desc" rows="4" readonly class="w-full p-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-[11px] font-mono resize-none"></textarea>
     </div>
     <div class="flex items-center gap-1.5 pt-1">
-      <button onclick="downloadActiveSubtitle()" class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-[10px] flex items-center justify-center gap-1">
+      <button onclick="downloadActiveSubtitle()" class="btn-runway-secondary flex-1 py-1.5 text-xs">
         <i class="fa-solid fa-download"></i> <span>Download .ASS Captions</span>
       </button>
-      <button onclick="copyLedgerScript()" class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-gray-200 rounded-lg font-bold text-[10px] flex items-center justify-center gap-1">
+      <button onclick="copyLedgerScript()" class="btn-runway-secondary flex-1 py-1.5 text-xs">
         <i class="fa-solid fa-copy"></i> <span>Copy Script</span>
       </button>
     </div>
