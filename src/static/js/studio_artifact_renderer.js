@@ -440,7 +440,7 @@ function renderAudioStemsList(vid) {
   const c = document.getElementById("panel-section-audio");
   if (!c) return;
   const isProc = vid.status === "processing", isFailed = vid.status === "failed", stage = vid.currentStage || 1;
-  let stems = (vid.audio_stems && vid.audio_stems.length > 0) ? vid.audio_stems : (vid.artifacts?.audio_stems || []);
+  const rawStems = (vid.audio_stems && vid.audio_stems.length > 0) ? vid.audio_stems : (vid.artifacts?.audio_stems || []);
 
   if (isFailed && vid.failedStage === 4) {
     c.innerHTML = `<div class="col-span-3 p-3 bg-white border-2 border-red-500 rounded-xl flex flex-col gap-2 shadow-md">
@@ -452,16 +452,15 @@ function renderAudioStemsList(vid) {
     </div>`;
     return;
   }
-  if (stems.length === 0) {
-    if (isProc && stage < 4) {
-      c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-slate-400 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 4 Audio</span><span class="text-[7px] text-slate-400 font-mono">(Suno v3.5 &amp; 3D Velvet DSP)</span></div>`;
-      return;
-    }
-    if (isProc && stage === 4) {
-      stems = [{ name: "Suno Soundtrack", model: "Suno v3.5", duration: "10s", isGenerating: true, color: "cyan" }, { name: "Velvet 432Hz Master", model: "Spatial DSP", duration: "10s", isGenerating: true, color: "emerald" }];
-    }
+
+  // If Stage < 4 and not processing Stage 4
+  if (isProc && stage < 4 && rawStems.length === 0) {
+    c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-slate-400 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 4 Audio</span><span class="text-[7px] text-slate-400 font-mono">(Suno v3.5 &amp; 3D Velvet DSP)</span></div>`;
+    return;
   }
-  if (stems.length === 0) {
+
+  // If not processing and no stems yet
+  if (!isProc && rawStems.length === 0) {
     const hasMot = Boolean((vid.motion_clips && vid.motion_clips.length > 0) || (vid.artifacts?.motion_clips && vid.artifacts.motion_clips.length > 0) || vid.currentStage === 3);
     if (hasMot) {
       c.innerHTML = `<div class="col-span-3 p-1.5 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/40 dark:to-blue-950/40 border border-cyan-300 dark:border-cyan-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
@@ -473,8 +472,64 @@ function renderAudioStemsList(vid) {
     }
     return;
   }
-  c.innerHTML = stems.map((s, i) => {
-    if (s.isGenerating) return `<div class="px-2 py-1 bg-slate-50 dark:bg-slate-950/70 rounded-lg border border-cyan-500/40 flex flex-col gap-0.5"><div class="flex items-center justify-between text-[9px]"><span class="font-mono truncate text-cyan-600 dark:text-cyan-400 font-bold flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[7px]"></i> ${s.name}</span><span class="text-[8px] font-mono text-cyan-500">Synthesizing...</span></div><div class="w-full bg-slate-200 dark:bg-slate-800 h-1 rounded-full overflow-hidden"><div class="h-full bg-cyan-500 rounded-full animate-pulse" style="width: 70%"></div></div></div>`;
-    return `<div class="px-2 py-1 bg-slate-50 dark:bg-slate-950/70 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col gap-0.5"><div class="flex items-center justify-between text-[9px]"><span class="font-mono truncate text-${s.color || 'cyan'}-600 dark:text-${s.color || 'cyan'}-400">${s.name || s.filename}</span><div class="flex items-center gap-1"><span class="text-[8px] font-mono">⏱ ${s.duration || '2.0s'}</span><button type="button" onclick="promptDeleteArtifact('Audio', ${i}, '${s.name || s.filename}', 'Audio Stem');" class="text-slate-400 hover:text-rose-500 text-[9px] px-0.5 font-bold" title="Delete Stem">✕</button></div></div><audio controls preload="none" src="${s.url}" class="h-3.5 w-full scale-95 origin-center"></audio></div>`;
+
+  // Find Suno stem and Velvet stem
+  const sunoStem = rawStems.find(s => s.filename === "raw_soundtrack.mp3" || (s.name && s.name.toLowerCase().includes("suno")));
+  const velvetStem = rawStems.find(s => s.filename === "velvet_binaural_master_48k.mp3" || (s.name && s.name.toLowerCase().includes("velvet")));
+
+  const items = [
+    {
+      name: "Suno Soundtrack",
+      stem: sunoStem,
+      color: "cyan",
+      model: "Suno v3.5",
+      isGenerating: isProc && stage >= 4 && !sunoStem,
+    },
+    {
+      name: "Velvet 432Hz Master",
+      stem: velvetStem,
+      color: "emerald",
+      model: "Spatial DSP",
+      isGenerating: isProc && stage >= 4 && !velvetStem,
+    }
+  ];
+
+  c.innerHTML = items.map((item, i) => {
+    if (item.stem && item.stem.url) {
+      return `
+      <div class="px-2 py-1 bg-white dark:bg-slate-950/70 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col gap-0.5 shadow-sm">
+        <div class="flex items-center justify-between text-[9px]">
+          <span class="font-mono truncate text-${item.color}-600 dark:text-${item.color}-400 font-bold flex items-center gap-1">
+            <i class="fa-solid fa-circle-check text-emerald-500 text-[8px]"></i> ${item.name}
+          </span>
+          <div class="flex items-center gap-1">
+            <span class="text-[8px] font-mono text-slate-500 dark:text-slate-400">⏱ ${item.stem.duration || 'Ready'}</span>
+            <button type="button" onclick="promptDeleteArtifact('Audio', ${i}, '${item.name}', 'Audio Stem');" class="text-slate-400 hover:text-rose-500 text-[9px] px-0.5 font-bold" title="Delete Stem">✕</button>
+          </div>
+        </div>
+        <audio controls preload="none" src="${item.stem.url}" class="h-4 w-full scale-95 origin-center"></audio>
+      </div>`;
+    }
+
+    if (item.isGenerating) {
+      return `
+      <div class="px-2 py-1 bg-slate-50 dark:bg-slate-950/70 rounded-lg border border-${item.color}-500/40 flex flex-col gap-0.5 shadow-sm">
+        <div class="flex items-center justify-between text-[9px]">
+          <span class="font-mono truncate text-${item.color}-600 dark:text-${item.color}-400 font-bold flex items-center gap-1">
+            <div class="w-2.5 h-2.5 rounded-full border-2 border-${item.color}-500 border-t-transparent animate-spin shrink-0"></div> ${item.name}
+          </span>
+          <span class="text-[8px] font-mono text-${item.color}-500 font-semibold animate-pulse">Synthesizing...</span>
+        </div>
+        <div class="w-full bg-slate-200 dark:bg-slate-800 h-1 rounded-full overflow-hidden">
+          <div class="h-full bg-${item.color}-500 rounded-full animate-pulse" style="width: 75%"></div>
+        </div>
+      </div>`;
+    }
+
+    return `
+    <div class="px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-300 dark:border-slate-800 rounded-lg flex items-center justify-between text-slate-400 text-[9px] opacity-70">
+      <span class="font-mono flex items-center gap-1"><i class="fa-solid fa-hourglass text-[7px]"></i> ${item.name}</span>
+      <span class="text-[7px] font-mono">Queued</span>
+    </div>`;
   }).join("");
 }

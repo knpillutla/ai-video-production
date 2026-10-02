@@ -204,10 +204,24 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
     keyframes = [{"name": f"Shot {k.replace('keyframe_p', '').replace('.jpg', '')}", "url": f"{rel_prefix}/{k}?t={int(files[k].stat().st_mtime)}", "filename": k} for k in sorted(files.keys()) if k.startswith("keyframe_p") and k.endswith(".jpg")]
     motion_clips = [{"name": f"Motion {m.replace('motion_p', '').replace('.mp4', '')}", "url": f"{rel_prefix}/{m}?t={int(files[m].stat().st_mtime)}", "filename": m, "model": "Kling Pro" if "p1" in m else "Wan 2.1"} for m in sorted(files.keys()) if m.startswith("motion_p") and m.endswith(".mp4") and not m.endswith("_fwd_seamless.mp4")]
     audio_stems = []
-    if "raw_soundtrack.mp3" in files:
-        audio_stems.append({"name": "Suno Master Soundtrack", "url": f"{rel_prefix}/raw_soundtrack.mp3?t={int(files['raw_soundtrack.mp3'].stat().st_mtime)}", "filename": "raw_soundtrack.mp3", "type": "suno_bgm"})
-    if "velvet_binaural_master_48k.mp3" in files:
-        audio_stems.append({"name": "432Hz Velvet Binaural ASMR", "url": f"{rel_prefix}/velvet_binaural_master_48k.mp3?t={int(files['velvet_binaural_master_48k.mp3'].stat().st_mtime)}", "filename": "velvet_binaural_master_48k.mp3", "type": "binaural_nature"})
+    if "raw_soundtrack.mp3" in files and files["raw_soundtrack.mp3"].stat().st_size > 1000:
+        audio_stems.append({
+            "name": "Suno Soundtrack",
+            "url": f"{rel_prefix}/raw_soundtrack.mp3?t={int(files['raw_soundtrack.mp3'].stat().st_mtime)}",
+            "filename": "raw_soundtrack.mp3",
+            "type": "suno_bgm",
+            "model": "Suno v3.5",
+            "color": "cyan",
+        })
+    if "velvet_binaural_master_48k.mp3" in files and files["velvet_binaural_master_48k.mp3"].stat().st_size > 1000:
+        audio_stems.append({
+            "name": "Velvet 432Hz Master",
+            "url": f"{rel_prefix}/velvet_binaural_master_48k.mp3?t={int(files['velvet_binaural_master_48k.mp3'].stat().st_mtime)}",
+            "filename": "velvet_binaural_master_48k.mp3",
+            "type": "binaural_nature",
+            "model": "Spatial DSP",
+            "color": "emerald",
+        })
 
     thumb_url = None
     if "thumbnail_music_4k.jpg" in files:

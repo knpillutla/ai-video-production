@@ -176,11 +176,12 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
   "cast": [],
   "audio_master": {{
     "audio_mode": "ambient_nature",
-    "spoken_narration_script": "",
+    "spoken_narration_script": "Mindful, poetic, and educational voiceover narration describing the natural sanctuary, geography, and tranquil atmosphere, paced at 125 wpm.",
     "singing_lyrics_spec": "",
     "suno_musical_tags": "432Hz ambient, authentic foley matching the terrain, soft acoustic drone, -14 LUFS",
     "vocal_gender": "female",
     "tempo_bpm": 64,
+    "speech_cadence_wpm": 125,
     "target_lufs": -14.0,
     "ducking_db": -18.0
   }},
@@ -244,7 +245,21 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
       "domain": "water_fluid",
       "duration_seconds": {per_shot_dur}
     }}
-  ]
+  ],
+  "publishing": {{
+    "ctr_titles": [
+      "Authentic High-CTR Title 1 | 4K Living Wallpaper",
+      "Authentic High-CTR Title 2 | Deep Nature Relaxation",
+      "Authentic High-CTR Title 3 | Pure Soundscape 60 FPS"
+    ],
+    "description_with_timestamps": "Immerse yourself in the majestic beauty of [Landmark Name]. Filmed with broadcast 4K clarity, authentic spatial acoustics, and tranquil soundscapes.\\n\\n⏱️ Chapters:\\n0:00 - Sanctuary Vista\\n\\n🌿 Sanctuary Details:\\n- Location: [Landmark Name], [Country]\\n- Audio: 432Hz Natural Spatial Soundscape\\n- Mastered for deep sleep, meditation, and focus.",
+    "seo_tags": ["nature relaxation", "living wallpaper", "4k nature", "meditation soundscape", "sleep aid", "ambient nature"],
+    "has_synthetic_media": true,
+    "ypp_monetization_safety": "100% AdSense Advertiser-Friendly (Green Dollar Guarantee)",
+    "thumbnail_concept_prompts": [
+      "Ultra-crisp 16:9 cinematic shot of [Landmark Name], striking lighting, vibrant natural colors, award-winning landscape photography."
+    ]
+  }}
 }}
 Do NOT output markdown backticks or preamble. Output raw JSON only.
 """

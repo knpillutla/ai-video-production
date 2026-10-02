@@ -84,12 +84,23 @@ class RelaxSceneDirective(BaseModel):
 
 class RelaxPublishingPackage(BaseModel):
     """YouTube Publishing & SEO Metadata for Relaxation Living Wallpapers."""
-    ctr_titles: List[str] = Field(default_factory=list)
-    description_with_timestamps: str = ""
-    seo_tags: List[str] = Field(default_factory=list)
+    ctr_titles: List[str] = Field(default_factory=list, validation_alias=AliasChoices("ctr_titles", "seo_titles", "titles"))
+    description_with_timestamps: str = Field(default="", validation_alias=AliasChoices("description_with_timestamps", "seo_description", "description"))
+    seo_tags: List[str] = Field(default_factory=list, validation_alias=AliasChoices("seo_tags", "tags"))
     has_synthetic_media: bool = True
     ypp_monetization_safety: str = "100% AdSense Advertiser-Friendly (Green Dollar Guarantee)"
-    thumbnail_concept_prompts: List[str] = Field(default_factory=list)
+    thumbnail_concept_prompts: List[str] = Field(default_factory=list, validation_alias=AliasChoices("thumbnail_concept_prompts", "thumbnail_prompts"))
+
+    @field_validator("thumbnail_concept_prompts", mode="before")
+    @classmethod
+    def coerce_thumbnails(cls, v: Any) -> List[str]:
+        if isinstance(v, dict):
+            return [str(val) for val in v.values() if val]
+        if isinstance(v, str):
+            return [v]
+        if isinstance(v, list):
+            return [str(item) for item in v if item]
+        return []
 
 
 class RelaxScreenplay(BaseModel):
