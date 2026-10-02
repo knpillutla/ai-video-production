@@ -70,8 +70,8 @@ function toggleModalMediaFullscreen() {
   }
 }
 
-function playStudioVideo(id) {
-  const vid = (typeof studioVideos !== "undefined" ? studioVideos : []).find(v => v.id === id);
+function playStudioVideo(id, channelId) {
+  const vid = findStudioEpisodeById(id, channelId);
   if (!vid) return;
   currentlyPlayingVideo = vid;
 
@@ -94,6 +94,6 @@ function closeVideoPlayerModal() {
 function publishCurrentPlayingVideo() {
   if (currentlyPlayingVideo && typeof publishVideoToYouTube === "function") {
     publishVideoToYouTube(currentlyPlayingVideo.jobId);
-    playStudioVideo(currentlyPlayingVideo.id);
+    playStudioVideo(currentlyPlayingVideo.id, currentlyPlayingVideo.channelId || currentlyPlayingVideo.channel_id);
   }
 }

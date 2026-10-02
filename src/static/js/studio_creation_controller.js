@@ -33,6 +33,7 @@ function onGenreChange(genreVal) {
     "relax/hearth": [{ val: "cozy_hearth", label: "🔥 Open-Air Beach Campfire & Shoreline Hearth" }, { val: "stone_hearth", label: "🪵 Rustic Cabin Stone Fireplace" }],
     "relax/cozy": [{ val: "biophilic_living", label: "🪵 Biophilic Living Space & Terraces" }, { val: "rainy_patio", label: "☕ Rainy Garden Patio & Warm Hearth" }],
     "relax/healing": [{ val: "zen_healing", label: "🪷 Zen Temple Bamboo Grove & 432Hz Bells" }, { val: "lotus_pond", label: "🎋 Sacred Lotus Pond & Water Basin Flow" }],
+    "relax/zen": [{ val: "zen_healing", label: "🪷 Zen Temple Bamboo Grove & 432Hz Bells" }, { val: "lotus_pond", label: "🎋 Sacred Lotus Pond & Water Basin Flow" }],
     "relax/ambient": [{ val: "ambient_soundscape", label: "🌌 Velvet Ambient World (14 Ecosystems)" }, { val: "twilight_sanctuary", label: "✨ Twilight Aurora & Velvet Night Sky" }],
     "documentary": [{ val: "cinematic_doc", label: "🦅 BBC-Style 24fps Wildlife & Climate Expedition" }, { val: "volcano_arctic", label: "🌋 Volcanic Landscapes & Glacial Ice" }, { val: "ocean_depths", label: "🐋 Deep Marine Life & Coral Reefs" }],
     "travel_walking": [{ val: "alpine_village_walk", label: "🏡 Swiss Alpine Countryside Walk (1.5 km/h)" }, { val: "city_walk_pov", label: "🏙️ 4K 60fps Historic City & Night Walk" }, { val: "coastal_promenade", label: "🏖️ Secluded Ocean Bluff Walk" }],
@@ -202,16 +203,18 @@ function filterChannelArchive() {
     return;
   }
 
-  const activeEpId = (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) ? (currentActiveInspectorEpisode.id || currentActiveInspectorEpisode.episode_id) : null;
+  const activeEpisode = (typeof currentActiveInspectorEpisode !== "undefined") ? currentActiveInspectorEpisode : null;
+  const activeEpId = activeEpisode ? (activeEpisode.id || activeEpisode.episode_id) : null;
+  const activeChannelId = activeEpisode ? (activeEpisode.channelId || activeEpisode.channel_id) : null;
 
   container.innerHTML = filtered.map(ep => {
-    const isSel = activeEpId === ep.episode_id;
+    const isSel = activeEpId === ep.episode_id && activeChannelId === ep.channel_id;
     const isProc = (ep.status === "processing" || ep.status === "queued");
     const isApp = Boolean(ep.is_approved || ep.approved);
     const bCls = isSel ? "border-2 border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/40 ring-1 ring-indigo-500/30" : "border border-slate-200 dark:border-slate-800 hover:border-indigo-400 bg-slate-50 dark:bg-slate-950/80";
     const badge = isProc ? `<span class="text-[8px] font-mono px-1.5 py-0.2 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30 font-bold animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-0.5"></i> In Progress</span>` : (isApp ? `<span class="text-[8px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold">✓ Approved</span>` : `<span class="text-[8px] font-mono px-1.5 py-0.2 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold">⏳ Unapproved</span>`);
     const pBar = isProc ? `<div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1"><div class="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-300" style="width: ${ep.progress || 45}%"></div></div>` : "";
-    return `<div onclick="selectArchiveEpisode('${ep.episode_id}', '${ep.channel_id}')" class="p-2 ${bCls} rounded-xl cursor-pointer transition space-y-1 group relative"><div class="flex items-center justify-between"><div class="flex items-center gap-1.5"><span class="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400">${ep.episode_id}</span><button type="button" onclick="event.stopPropagation(); deleteStudioEpisode('${ep.episode_id}', event);" class="p-1 text-slate-400 hover:text-red-600 rounded transition" title="Delete Episode"><i class="fa-solid fa-trash-can text-[10px]"></i></button></div>${badge}</div><div class="font-bold text-slate-900 dark:text-white text-xs group-hover:text-indigo-600 dark:group-hover:text-indigo-300 truncate">${ep.title}</div><div class="text-[10px] text-slate-500 dark:text-gray-400 line-clamp-1">${ep.story_topic}</div>${pBar}</div>`;
+    return `<div onclick="selectArchiveEpisode('${ep.episode_id}', '${ep.channel_id}')" class="p-2 ${bCls} rounded-xl cursor-pointer transition space-y-1 group relative"><div class="flex items-center justify-between"><div class="flex items-center gap-1.5"><span class="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400">${ep.episode_id}</span><button type="button" onclick="event.stopPropagation(); deleteStudioEpisode('${ep.episode_id}', event, '${ep.channel_id}');" class="p-1 text-slate-400 hover:text-red-600 rounded transition" title="Delete Episode"><i class="fa-solid fa-trash-can text-[10px]"></i></button></div>${badge}</div><div class="font-bold text-slate-900 dark:text-white text-xs group-hover:text-indigo-600 dark:group-hover:text-indigo-300 truncate">${ep.title}</div><div class="text-[10px] text-slate-500 dark:text-gray-400 line-clamp-1">${ep.story_topic}</div>${pBar}</div>`;
   }).join("");
 }
 
@@ -220,7 +223,7 @@ async function approveCurrentEpisode() {
   const epId = currentActiveInspectorEpisode.id || currentActiveInspectorEpisode.episode_id;
   if (!epId || epId === "NEW") return;
   const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
-  const chSlug = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : (currentActiveInspectorEpisode.channel_id || "earth_serenade");
+  const chSlug = currentActiveInspectorEpisode.channelId || currentActiveInspectorEpisode.channel_id || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : "earth_serenade");
 
   const btn = document.getElementById("btn-studio-approve");
   const btnTxt = document.getElementById("btn-studio-approve-text");
@@ -234,10 +237,10 @@ async function approveCurrentEpisode() {
       currentActiveInspectorEpisode.is_approved = true;
       currentActiveInspectorEpisode.approved = true;
       if (typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) {
-        const v = studioVideos.find(x => x.id === epId || x.episode_id === epId);
+        const v = findStudioEpisodeById(epId, chSlug);
         if (v) { v.is_approved = true; v.approved = true; }
       }
-      const archEp = channelArchiveEpisodes.find(x => x.episode_id === epId);
+      const archEp = channelArchiveEpisodes.find(x => x.episode_id === epId && x.channel_id === chSlug);
       if (archEp) { archEp.is_approved = true; archEp.approved = true; }
       if (typeof saveVideosState === "function") saveVideosState();
       if (typeof renderInspectorFromVideo === "function") renderInspectorFromVideo(currentActiveInspectorEpisode);
@@ -262,22 +265,24 @@ function selectArchiveEpisode(epId, chId) {
   filterChannelArchive();
 }
 
-async function deleteStudioEpisode(epId, event) {
+async function deleteStudioEpisode(epId, event, channelId) {
   if (event) event.stopPropagation();
   const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
-  const chSlug = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : "earth_serenade";
+  const vid = findStudioEpisodeById(epId, channelId);
+  const chSlug = channelId || vid?.channelId || vid?.channel_id || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : null);
+  if (!chSlug) return;
   try {
     await fetch(`/api/production/episodes/${epId}?channel_id=${chSlug}&user_id=${encodeURIComponent(uEmail)}`, { method: "DELETE" });
   } catch (e) { console.warn("Delete episode request notice:", e); }
   if (typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) {
-    const idx = studioVideos.findIndex(x => x.id === epId || x.episode_id === epId);
+    const idx = studioVideos.findIndex(x => (x.id === epId || x.episode_id === epId) && (x.channelId || x.channel_id || "earth_serenade") === chSlug);
     if (idx >= 0) studioVideos.splice(idx, 1);
   }
-  channelArchiveEpisodes = channelArchiveEpisodes.filter(x => x.episode_id !== epId);
+  channelArchiveEpisodes = channelArchiveEpisodes.filter(x => x.episode_id !== epId || x.channel_id !== chSlug);
   if (typeof saveVideosState === "function") saveVideosState();
   if (typeof renderStudioVideoHistory === "function") renderStudioVideoHistory();
   filterChannelArchive();
-  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id === epId || currentActiveInspectorEpisode.episode_id === epId)) {
+  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id === epId || currentActiveInspectorEpisode.episode_id === epId) && (currentActiveInspectorEpisode.channelId || currentActiveInspectorEpisode.channel_id) === chSlug) {
     if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
   }
   if (typeof showProfileStatusToast === "function") showProfileStatusToast(`Episode ${epId} deleted.`);
@@ -286,7 +291,7 @@ async function deleteStudioEpisode(epId, event) {
 function deleteActiveInspectorEpisode() {
   if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) {
     const epId = currentActiveInspectorEpisode.id || currentActiveInspectorEpisode.episode_id;
-    if (epId && epId !== "NEW") deleteStudioEpisode(epId);
+    if (epId && epId !== "NEW") deleteStudioEpisode(epId, null, currentActiveInspectorEpisode.channelId || currentActiveInspectorEpisode.channel_id);
   }
 }
 

@@ -14,6 +14,7 @@ from src.core.telemetry import logger
 from src.providers.visual.fal_flux_pro_ultra import FalFluxProUltraAdapter
 from src.services.audio_vault import audio_vault
 from src.services.topic_memory import topic_memory
+from src.services.audio_tag_service import normalize_audio_tags
 from src.studios.zen_studio.zen_director import ZenStoryboard, generate_zen_storyboard
 
 
@@ -96,7 +97,8 @@ class ZenStudioProducer:
 
     async def _synthesize_audio(self, title: str, tags: str, out_path: Path, total_duration: float):
         """Retrieve cached soundtrack from AudioVault or synthesize via Suno v3.5 Pro."""
-        cached = audio_vault.find_matching_stem(genre="healing relaxation", theme="zen meditation", concept=title, tags=tags, min_similarity=0.70)
+        tags = normalize_audio_tags(tags)
+        cached = audio_vault.find_matching_stem(genre="zen meditation", theme="zen meditation", concept=title, tags=tags, min_similarity=0.70)
         if cached and cached.is_file():
             import shutil
             shutil.copy2(cached, out_path)
@@ -127,7 +129,11 @@ async def handle_orchestrated_zen(job_id: str, request: Any) -> Any:
 
     storage = get_storage_provider()
     from src.studios.zen_studio.zen_director import generate_zen_storyboard_gemini
-    sb = await generate_zen_storyboard_gemini(theme=request.topic, duration_seconds=float(request.duration_seconds))
+    sb = await generate_zen_storyboard_gemini(
+        theme=request.topic,
+        duration_seconds=float(request.duration_seconds),
+        num_shots=max(1, int(getattr(request, "num_shots", 1) or 1)),
+    )
     producer = ZenStudioProducer()
     result = await producer.produce(sb)
 

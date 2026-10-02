@@ -38,6 +38,42 @@ function saveVideosState() {
 
 let studioVideos = loadSavedVideos();
 
+function findStudioEpisodeById(episodeId, channelId) {
+  if (!episodeId) return null;
+  const matchesId = episode => episode && (episode.id === episodeId || episode.episode_id === episodeId);
+  const active = (typeof currentActiveInspectorEpisode !== "undefined") ? currentActiveInspectorEpisode : null;
+  if (matchesId(active) && (!channelId || channelId === "all" || (active.channelId || active.channel_id) === channelId)) return active;
+
+  const selectedChannel = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all")
+    ? selectedStudioChannel
+    : null;
+  const targetChannel = (channelId && channelId !== "all") || selectedChannel;
+  const records = [
+    ...(Array.isArray(studioVideos) ? studioVideos : []),
+    ...(typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes) ? channelArchiveEpisodes : []),
+  ];
+  const matches = records.filter(matchesId);
+  if (targetChannel) {
+    return matches.find(episode => (episode.channelId || episode.channel_id || "earth_serenade") === targetChannel) || null;
+  }
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function nextEpisodeIdForChannel(channelId) {
+  const records = [
+    ...(Array.isArray(studioVideos) ? studioVideos : []),
+    ...(typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes) ? channelArchiveEpisodes : [])
+  ];
+  const prefix = /^EP-(\d+)$/i;
+  let highest = 0;
+  records.forEach(record => {
+    if ((record.channelId || record.channel_id) !== channelId) return;
+    const match = String(record.episode_id || record.id || "").match(prefix);
+    if (match) highest = Math.max(highest, Number(match[1]));
+  });
+  return `EP-${String(highest + 1).padStart(3, "0")}`;
+}
+
 async function syncChannelEpisodesFromBackend() {
   try {
     const res = await fetch("/api/channels/episodes");
@@ -49,12 +85,14 @@ async function syncChannelEpisodesFromBackend() {
         const hasMaster = Boolean(eds.length > 0 && eds[0]?.url && !eds[0].url.includes("preview_master"));
         const masterUrl = hasMaster ? eds[0].url : null;
         const curStage = hasMaster ? 5 : ((ep.motion_clips && ep.motion_clips.length > 0) ? 3 : ((ep.keyframes && ep.keyframes.length > 0) ? 2 : 1));
+        const sceneCount = ep.screenplay?.scenes?.length || ep.script?.scenes?.length || ep.scenes?.length || ep.user_inputs?.num_shots || 1;
 
         return {
           id: ep.episode_id, jobId: `job_${ep.episode_id}`, title: ep.title || ep.story_topic,
           concept: ep.story_topic || ep.title, videoType: ep.category === "Music" ? "Relaxation & ASMR" : "Nature Soundscape",
           formatType: "Long (16:9)", styleType: "Cinematic 4K", productionType: "Theme",
           channelId: ep.channel_id,
+          numShots: sceneCount, num_shots: sceneCount,
           status: hasMaster ? "completed" : "ready",
           currentStage: curStage,
           progress: hasMaster ? 100 : (curStage === 3 ? 50 : (curStage === 2 ? 35 : 15)),
@@ -138,15 +176,16 @@ function renderStudioVideoHistory() {
     const ytBadge = v.youtubeStatus === "published"
       ? `<div class="space-y-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border border-red-300 dark:border-red-500/40"><i class="fa-brands fa-youtube text-red-600"></i> Published</span><div class="font-mono text-[9px] text-red-700 dark:text-red-300">${formatTimestamp(v.publishedAt)}</div></div>`
       : `<div class="space-y-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-gray-400 border border-slate-300 dark:border-slate-700">Unpublished</span><div class="font-mono text-[9px] text-slate-400 dark:text-gray-500">—</div></div>`;
-    const playBtn = `<button onclick="playStudioVideo('${v.id}')" class="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-600/30 hover:bg-indigo-100 dark:hover:bg-indigo-600/50 border border-indigo-300 dark:border-indigo-500/50 text-indigo-700 dark:text-indigo-300 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-play text-[9px]"></i> Watch</button>`;
+    const channelId = v.channelId || v.channel_id || "earth_serenade";
+    const playBtn = `<button onclick="playStudioVideo('${v.id}', '${channelId}')" class="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-600/30 hover:bg-indigo-100 dark:hover:bg-indigo-600/50 border border-indigo-300 dark:border-indigo-500/50 text-indigo-700 dark:text-indigo-300 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-play text-[9px]"></i> Watch</button>`;
     const ytBtn = v.youtubeStatus === "published"
       ? `<a href="${v.youtubeUrl || '#'}" target="_blank" class="px-2.5 py-1 bg-red-50 dark:bg-red-600/20 hover:bg-red-100 dark:hover:bg-red-600/30 border border-red-300 dark:border-red-500/40 text-red-700 dark:text-red-300 rounded-lg text-[10px] font-bold inline-flex items-center gap-1"><i class="fa-brands fa-youtube"></i> View</a>`
       : `<button onclick="publishVideoToYouTube('${v.jobId}')" class="px-2.5 py-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold rounded-lg text-[10px] inline-flex items-center gap-1 shadow"><i class="fa-brands fa-youtube"></i> 1-Click</button>`;
     const actionCell = v.status === "completed" ? `<div class="flex items-center justify-center gap-1.5">${playBtn}${ytBtn}</div>` : (v.status === "processing" ? '<span class="text-[11px] text-blue-600 dark:text-blue-400 font-semibold animate-pulse"><i class="fa-solid fa-spinner fa-spin"></i> Processing</span>' : '<span class="text-[11px] text-amber-600 dark:text-amber-400 font-semibold"><i class="fa-solid fa-clock"></i> Queued</span>');
 
     return `
-      <tr data-video-id="${v.id}" class="hover:bg-slate-100/70 dark:hover:bg-slate-800/40 transition">
-        <td class="p-3"><div class="font-mono font-bold text-slate-900 dark:text-white text-xs">${v.id}</div><div class="font-mono text-[9px] text-indigo-600 dark:text-indigo-400 cursor-pointer hover:underline truncate max-w-[120px]" onclick="viewEpisodeArtifacts('${v.id}')">${v.jobId}</div></td>
+      <tr data-video-id="${v.id}" data-video-channel="${channelId}" onclick="onLedgerRowClick(event, '${v.id}', '${channelId}')" class="hover:bg-slate-100/70 dark:hover:bg-slate-800/40 transition">
+        <td class="p-3"><div class="font-mono font-bold text-slate-900 dark:text-white text-xs">${v.id}</div><div class="font-mono text-[9px] text-indigo-600 dark:text-indigo-400 cursor-pointer hover:underline truncate max-w-[120px]" onclick="viewEpisodeArtifacts('${v.id}', '${channelId}')">${v.jobId}</div></td>
         <td class="p-3"><div class="font-bold text-slate-900 dark:text-white text-xs">${v.title}</div><div class="text-[10px] text-slate-500 dark:text-gray-400 max-w-md">${v.concept}</div></td>
         <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-800 dark:text-blue-300 border border-blue-500/30">${v.videoType || "Series"}</span></td>
         <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${fmtBadge}">${v.formatType || "16:9"}</span></td>
@@ -161,9 +200,9 @@ function renderStudioVideoHistory() {
         <td class="p-3 text-center">${ytBadge}</td>
         <td class="p-3 text-center">
           <div class="flex items-center justify-center gap-1.5">
-            <button onclick="viewEpisodeArtifacts('${v.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-purple-700 dark:text-purple-300 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 shadow-sm transition"><i class="fa-solid fa-box-archive text-[9px]"></i> Artifacts</button>
+            <button onclick="viewEpisodeArtifacts('${v.id}', '${channelId}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-purple-700 dark:text-purple-300 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 shadow-sm transition"><i class="fa-solid fa-box-archive text-[9px]"></i> Artifacts</button>
             ${actionCell}
-            <button type="button" onclick="event.stopPropagation(); deleteLedgerEpisode('${v.id}', event);" class="p-1.5 bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-900/40 border border-slate-300 dark:border-slate-700 hover:border-rose-400 text-slate-500 hover:text-rose-600 dark:text-gray-400 dark:hover:text-rose-400 rounded-lg text-xs transition" title="Delete Episode from disk">
+            <button type="button" onclick="event.stopPropagation(); deleteLedgerEpisode('${v.id}', event, '${channelId}');" class="p-1.5 bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-900/40 border border-slate-300 dark:border-slate-700 hover:border-rose-400 text-slate-500 hover:text-rose-600 dark:text-gray-400 dark:hover:text-rose-400 rounded-lg text-xs transition" title="Delete Episode from disk">
               <i class="fa-solid fa-trash-can text-[10px]"></i>
             </button>
           </div>
@@ -173,11 +212,12 @@ function renderStudioVideoHistory() {
   }).join("");
 }
 
-async function deleteLedgerEpisode(epId, event) {
+async function deleteLedgerEpisode(epId, event, channelId) {
   if (event) event.stopPropagation();
   const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
-  const vid = studioVideos.find(x => x.id === epId || x.episode_id === epId);
-  const chSlug = vid?.channelId || vid?.channel_id || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : "earth_serenade");
+  const vid = findStudioEpisodeById(epId, channelId);
+  const chSlug = channelId || vid?.channelId || vid?.channel_id;
+  if (!chSlug) return;
 
   try {
     await fetch(`/api/production/episodes/${epId}?channel_id=${chSlug}&user_id=${encodeURIComponent(uEmail)}`, { method: "DELETE" });
@@ -185,24 +225,24 @@ async function deleteLedgerEpisode(epId, event) {
     console.warn("Delete episode notice:", e);
   }
 
-  const idx = studioVideos.findIndex(x => x.id === epId || x.episode_id === epId);
+  const idx = studioVideos.findIndex(x => (x.id === epId || x.episode_id === epId) && (x.channelId || x.channel_id || "earth_serenade") === chSlug);
   if (idx >= 0) studioVideos.splice(idx, 1);
   if (typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) {
-    channelArchiveEpisodes = channelArchiveEpisodes.filter(x => x.episode_id !== epId);
+    channelArchiveEpisodes = channelArchiveEpisodes.filter(x => x.episode_id !== epId || x.channel_id !== chSlug);
   }
 
   saveVideosState();
   renderStudioVideoHistory();
   if (typeof filterChannelArchive === "function") filterChannelArchive();
-  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id === epId || currentActiveInspectorEpisode.episode_id === epId)) {
+  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id === epId || currentActiveInspectorEpisode.episode_id === epId) && (currentActiveInspectorEpisode.channelId || currentActiveInspectorEpisode.channel_id) === chSlug) {
     if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
   }
   if (typeof showProfileStatusToast === "function") showProfileStatusToast(`Episode ${epId} deleted.`);
 }
 
-function onLedgerRowClick(event, id) {
+function onLedgerRowClick(event, id, channelId) {
   if (event.target.closest("button") || event.target.closest("a") || event.target.closest("input")) return;
-  if (typeof selectLedgerVideo === "function") selectLedgerVideo(id);
+  if (typeof selectLedgerVideo === "function") selectLedgerVideo(id, channelId);
 }
 
 function publishVideoToYouTube(jobId) {
@@ -237,13 +277,13 @@ function startLocalVideoProductionJob(newVid) {
     newVid.startedAt = Date.now();
     saveVideosState();
     renderStudioVideoHistory();
-    if (typeof selectLedgerVideo === "function" && selectedLedgerVideoId === newVid.id) selectLedgerVideo(newVid.id);
+    if (typeof selectLedgerVideo === "function" && selectedLedgerVideoId === newVid.id) selectLedgerVideo(newVid.id, newVid.channelId);
 
     fetch("/api/production/local-produce", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        prompt: newVid.concept || newVid.title || "Explore Niagara Falls",
+        prompt: newVid.concept ?? "",
         title: newVid.title || "Explore Niagara Falls",
         episode_id: newVid.id || "EP-001",
         user_id: (typeof currentUser !== "undefined" && currentUser.id) ? currentUser.id : "user_krishna_01",
@@ -268,7 +308,7 @@ function startLocalVideoProductionJob(newVid) {
         if (data.artifacts) newVid.artifacts = data.artifacts;
         saveVideosState();
         renderStudioVideoHistory();
-        if (typeof selectLedgerVideo === "function" && selectedLedgerVideoId === newVid.id) selectLedgerVideo(newVid.id);
+        if (typeof selectLedgerVideo === "function" && selectedLedgerVideoId === newVid.id) selectLedgerVideo(newVid.id, newVid.channelId);
       })
       .catch(err => {
         console.warn("Local production fallback:", err);

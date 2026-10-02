@@ -69,7 +69,7 @@ async def produce_channel_video(
     master_only: bool = False,
     pipeline_strategy: str = "manual",
     no_bgm: bool = False,
-    num_shots: Optional[int] = None,
+    num_shots: Optional[int] = 1,
     allow_fallback: bool = False,
     user_id: Optional[str] = "user_krishna_01",
     motion_model: str = "auto",
@@ -81,6 +81,7 @@ async def produce_channel_video(
     genre: Optional[str] = None,
     sub_genre: Optional[str] = None,
     primary_archetype: Optional[str] = None,
+    selection_labels: Optional[dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Execute live channel pipeline script for selected channel inside isolated user channel folder."""
     effective_user = user_id or "user_krishna_01"
@@ -120,11 +121,19 @@ async def produce_channel_video(
     eff_genre = genre or (
         "relax/nature" if channel_id in ("earth_serenade", "nature_retreat", "rain_retreat")
         else ("relax/cozy" if channel_id == "cozy_ambiance"
-        else ("relax/healing" if channel_id == "healing_relaxation"
+        else ("relax/zen" if channel_id in ("healing_relaxation", "zen_studio")
         else ("comedy/telugu" if channel_id == "telugu_comedy"
         else ("documentary/cineai" if channel_id == "cineai_docs"
         else (channel_id or "relax/nature")))))
     )
+    selected_options = {
+        "genre": {"value": eff_genre, "label": (selection_labels or {}).get("genre", "")},
+        "sub_genre": {"value": sub_genre or "", "label": (selection_labels or {}).get("sub_genre", "")},
+        "primary_archetype": {
+            "value": primary_archetype or "",
+            "label": (selection_labels or {}).get("primary_archetype", ""),
+        },
+    }
 
     ep_dir = (user_chan_dir / episode_id) if episode_id else None
     screenplay_file = (ep_dir / "screenplay.json") if ep_dir else None
@@ -132,21 +141,41 @@ async def produce_channel_video(
     manifest_file = (ep_dir / "episode_manifest.json") if ep_dir else None
     user_inputs_file = (ep_dir / "user_inputs.json") if ep_dir else None
 
-    # Recover original user settings if available
+    saved_inputs: dict[str, Any] = {}
     if user_inputs_file and user_inputs_file.is_file():
         try:
-            saved_u = json.loads(user_inputs_file.read_text("utf-8"))
-            if num_shots is None and saved_u.get("num_shots"):
-                num_shots = int(saved_u["num_shots"])
+            saved_inputs = json.loads(user_inputs_file.read_text("utf-8"))
+            if (num_shots is None or num_shots <= 0) and saved_inputs.get("num_shots"):
+                num_shots = int(saved_inputs["num_shots"])
         except Exception:
             pass
 
+    inputs_match = (
+        saved_inputs.get("input_schema_version") == 1
+        and saved_inputs.get("screenplay_generation_status") == "completed"
+        and saved_inputs.get("prompt", "") == (prompt or "")
+        and saved_inputs.get("selected_options") == selected_options
+        and saved_inputs.get("num_shots") == num_shots
+    )
     existing_sp = None
-    if not force_rerun and screenplay_file and screenplay_file.is_file() and screenplay_file.stat().st_size > 50:
+    if not force_rerun and inputs_match and screenplay_file and screenplay_file.is_file() and screenplay_file.stat().st_size > 50:
         try:
             sp_data = json.loads(screenplay_file.read_text("utf-8"))
-            existing_sp = RelaxScreenplay(**sp_data)
-            logger.info(f"reusing_existing_screenplay: episode='{episode_id}' title='{existing_sp.title}'")
+            is_legacy_fallback = (
+                str(sp_data.get("title", "")).startswith("8K Living Wallpaper:")
+                and str(sp_data.get("story_topic", "")).startswith(
+                    "Ultra-tranquil living wallpaper soundscape capturing "
+                )
+            )
+            if is_legacy_fallback:
+                logger.warning(f"ignoring_legacy_fallback_screenplay: episode='{episode_id}'")
+            else:
+                existing_sp = RelaxScreenplay(**sp_data)
+                if num_shots and len(existing_sp.scenes) != num_shots:
+                    logger.info(f"screenplay_cache_shot_count_mismatch: episode='{episode_id}' requested={num_shots} cached={len(existing_sp.scenes)}; regenerating")
+                    existing_sp = None
+                else:
+                    logger.info(f"reusing_existing_screenplay: episode='{episode_id}' title='{existing_sp.title}'")
         except Exception as ex:
             logger.warning(f"screenplay_read_error: {ex}")
 
@@ -155,7 +184,37 @@ async def produce_channel_video(
     elif num_shots is not None and num_shots > 0:
         effective_shots = num_shots
     else:
-        effective_shots = 1 if duration_seconds <= 10.0 else 2
+        effective_shots = 1
+
+    user_inputs_payload = {
+        "input_schema_version": 1,
+        "prompt": prompt or "",
+        "channel_id": channel_id,
+        "genre": eff_genre,
+        "sub_genre": sub_genre or "",
+        "primary_archetype": primary_archetype or "",
+        "selected_options": selected_options,
+        "screenplay_generation_status": "pending",
+        "episode_id": episode_id or "EP-001",
+        "user_id": effective_user,
+        "duration_seconds": duration_seconds,
+        "long_play_hours": long_play_hours,
+        "num_shots": effective_shots,
+        "image_model": image_model,
+        "motion_model": motion_model,
+        "camera_motion": camera_motion,
+        "pipeline_strategy": pipeline_strategy,
+        "allow_fallback": allow_fallback,
+    }
+    if user_inputs_file:
+        try:
+            from datetime import datetime, timezone
+            user_inputs_payload["created_at"] = datetime.now(timezone.utc).isoformat()
+            user_inputs_file.parent.mkdir(parents=True, exist_ok=True)
+            user_inputs_file.write_text(json.dumps(user_inputs_payload, indent=2, ensure_ascii=False), encoding="utf-8")
+            logger.info(f"user_inputs_saved: {user_inputs_file.name}")
+        except Exception as ex:
+            logger.warning(f"failed_to_write_user_inputs: {ex}")
 
     if existing_sp:
         universal_sp = existing_sp
@@ -173,48 +232,39 @@ async def produce_channel_video(
             raw_output_path=(ep_dir / "raw_gemini_screenplay.json") if ep_dir else None,
             image_model=image_model,
         )
-        if screenplay_file:
-            try:
-                screenplay_file.parent.mkdir(parents=True, exist_ok=True)
-                screenplay_file.write_text(json.dumps(universal_sp.model_dump(), indent=2), encoding="utf-8")
-            except Exception as ex:
-                logger.warning(f"failed_to_write_screenplay_file: {ex}")
 
-    sub_genre = getattr(universal_sp, "sub_genre", None) or eff_genre
+    if episode_id:
+        universal_sp.production_id = episode_id
+    if screenplay_file:
+        try:
+            screenplay_file.parent.mkdir(parents=True, exist_ok=True)
+            screenplay_file.write_text(json.dumps(universal_sp.model_dump(), indent=2), encoding="utf-8")
+        except Exception as ex:
+            logger.warning(f"failed_to_write_screenplay_file: {ex}")
+
+    generated_sub_genre = getattr(universal_sp, "sub_genre", None) or eff_genre
     sb = relax_to_ambient_storyboard(universal_sp)
 
-    primary_archetype = getattr(universal_sp, "primary_archetype", None) or sub_genre
+    generated_primary_archetype = getattr(universal_sp, "primary_archetype", None) or generated_sub_genre
     secondary_archetype = getattr(universal_sp, "secondary_archetype", None)
     cluster_val = getattr(universal_sp, "cluster", None) or sb.cluster
 
-    user_inputs_file = (ep_dir / "user_inputs.json") if ep_dir else None
     if user_inputs_file:
         try:
-            from datetime import datetime, timezone
-            user_inputs_payload = {
-                "prompt": prompt,
-                "channel_id": channel_id,
-                "genre": eff_genre,
-                "primary_archetype": primary_archetype,
-                "secondary_archetype": secondary_archetype,
-                "cluster": cluster_val,
-                "episode_id": episode_id or "EP-001",
-                "user_id": effective_user,
-                "duration_seconds": duration_seconds,
-                "long_play_hours": long_play_hours,
-                "num_shots": effective_shots,
-                "image_model": image_model,
-                "motion_model": motion_model,
-                "camera_motion": camera_motion,
-                "pipeline_strategy": pipeline_strategy,
-                "allow_fallback": allow_fallback,
-                "created_at": datetime.now(timezone.utc).isoformat(),
+            user_inputs_payload["screenplay_generation_status"] = "completed"
+            user_inputs_payload["generated_output"] = {
+                "title": universal_sp.title,
+                "story_topic": universal_sp.story_topic,
+                "genre": universal_sp.genre,
+                "sub_genre": universal_sp.sub_genre,
+                "primary_archetype": universal_sp.primary_archetype,
+                "secondary_archetype": universal_sp.secondary_archetype,
+                "cluster": universal_sp.cluster,
             }
-            user_inputs_file.parent.mkdir(parents=True, exist_ok=True)
-            user_inputs_file.write_text(json.dumps(user_inputs_payload, indent=2), encoding="utf-8")
-            logger.info(f"user_inputs_saved: {user_inputs_file.name}")
+            user_inputs_file.write_text(json.dumps(user_inputs_payload, indent=2, ensure_ascii=False), encoding="utf-8")
+            logger.info(f"user_inputs_output_saved: {user_inputs_file.name}")
         except Exception as ex:
-            logger.warning(f"failed_to_write_user_inputs: {ex}")
+            logger.warning(f"failed_to_update_user_inputs_output: {ex}")
 
     # Pure operational pipeline state (Separated from creative script)
     pipeline_state_payload = {
@@ -241,7 +291,7 @@ async def produce_channel_video(
         "title": universal_sp.title,
         "prompt": prompt,
         "genre": eff_genre,
-        "primary_archetype": primary_archetype,
+        "primary_archetype": generated_primary_archetype,
         "secondary_archetype": secondary_archetype,
         "cluster": cluster_val,
         "story_topic": universal_sp.story_topic,

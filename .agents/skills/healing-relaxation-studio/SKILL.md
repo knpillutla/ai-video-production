@@ -3,9 +3,9 @@ name: healing-relaxation-studio
 description: Studio-grade 4K Zen Gardens, Sacred Lotus Ponds, and 432Hz Healing Soundscapes producer with 2-perspective long-play architecture, melodic acoustic scores, and ultra-low cost ($1.80-$2.20).
 ---
 
-# Healing Relaxation Studio Skill
+# Zen Studio Skill
 
-Specialized studio skill for directing and producing 4K broadcast-grade **Healing Meditation, Zen Temple Gardens, Sacred Lotus Ponds, and 432Hz Soundscapes**. Built on and strictly adhering to the [ai-video-producer-core](file:///c:/neel-1/projects/content-generation/.agents/skills/ai-video-producer-core/SKILL.md) skill.
+Specialized studio skill for directing and producing 4K broadcast-grade **Zen Temple Gardens, Sacred Lotus Ponds, and 432Hz Meditation Soundscapes**. Built on and strictly adhering to the [ai-video-producer-core](file:///c:/neel-1/projects/content-generation/.agents/skills/ai-video-producer-core/SKILL.md) skill.
 
 ---
 
@@ -29,5 +29,5 @@ Specialized studio skill for directing and producing 4K broadcast-grade **Healin
 
 ```bash
 # Generate 1-minute 4K Healing Meditation video
-python -m src.studios.healing_relaxation.healing_agent --theme "Tranquil Zen Garden & Sacred Lotus Pond at Dawn" --duration 60
+python -m src.studios.zen_studio.zen_agent --theme "Tranquil Zen Garden & Sacred Lotus Pond at Dawn" --duration 60
 ```

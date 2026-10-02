@@ -43,9 +43,22 @@ def build_ambient_directorial_prompt(
     camera_motion: str = "locked_tripod",
     excluded_topics: Optional[list[str]] = None,
     image_model: str = "flux_1_1_pro_ultra",
+    google_search_enabled: bool = False,
 ) -> str:
     """Build dynamic nature & relaxation directorial system instructions for Gemini."""
     per_shot_dur = round(duration_seconds / max(1, num_shots), 1)
+    landmark_research_directive = (
+      "Use Google Search grounding alongside built-in geographic knowledge to verify current facts and destination interest. "
+      "Do not claim a place is trending unless the search evidence supports it."
+      if google_search_enabled else
+      "Use built-in geographic and cultural knowledge to choose an established notable destination. "
+      "Do not claim current trends or real-time popularity; no web search is enabled for this request."
+    )
+    concept_anchor = custom_prompt or (
+      "No user prompt supplied; select a notable destination matching the genre and archetype using grounded search."
+      if google_search_enabled else
+      "No user prompt supplied; select a notable destination matching the genre and archetype using built-in knowledge."
+    )
 
     relaxation_guardrails = get_relaxation_pipeline_constraints(archetype) if "relax" in genre.lower() or "nature" in genre.lower() else ""
 
@@ -123,33 +136,16 @@ STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
 8. DIRECTORIAL CAMERA RIG & MANDATORY NEGATIVE PROMPT (Rule 20):
    - Always provide "motion_negative_prompt" and model-specific negative prompts containing: "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings"
 
-9. AUTONOMOUS "GREATEST LANDMARKS ON EARTH" CURATION (WHEN NO PROMPT IS PROVIDED):
-   - If the user prompt is empty, open, or broad, Gemini MUST systematically select from the world's greatest, most awe-inspiring natural landmarks on Earth:
-     1. Niagara Falls (North America)
-     2. Lauterbrunnen Valley / Staubbach Falls (Swiss Alps)
-     3. Plitvice Lakes National Park (Croatia)
-     4. Milford Sound & Mitre Peak (New Zealand)
-     5. Banff National Park / Moraine Lake & Lake Louise (Canadian Rockies)
-     6. Lake Bled & Julian Alps (Slovenia)
-     7. Victoria Falls (Zambia/Zimbabwe)
-     8. Iguazu Falls (Argentina/Brazil)
-     9. Mount Fuji & Lake Kawaguchi (Japan)
-     10. Dolomites / Tre Cime di Lavaredo & Val di Funes (Italian Alps)
-     11. Oirase Mountain Stream & Moss Gorge (Japan)
-     12. Ha Long Bay (Vietnam)
-     13. Yosemite Valley / El Capitan & Bridalveil Fall (California)
-     14. Geirangerfjord (Norway)
-     15. Isle of Skye / Fairy Pools (Scotland)
-     16. Jiuzhaigou National Park (China)
-     17. Angel Falls (Venezuela)
-     18. Pamukkale Thermal Cascades (Turkey)
-   - Cross-reference with PREVIOUSLY PRODUCED TOPICS (exclusion list). If a landmark has already been produced for this channel, select the next greatest landmark on Earth.
-   - ONLY once all world-renowned landmarks on Earth have been produced in the channel, transition to creative mode: synthesizing novel hidden sanctuaries, unique sub-vantage angles, or seasonal variants (frozen ice falls, peak autumn foliage).
+9. AUTONOMOUS LANDMARK DISCOVERY (WHEN NO PROMPT IS PROVIDED):
+  - Use the supplied genre and archetype to choose a real, geographically accurate destination; do not substitute a generic or unrelated default location.
+  - {landmark_research_directive}
+  - Select one destination and derive a fresh title and story around its authentic landscape, while excluding previously produced topics listed above.
+  - If the user supplied a prompt, treat it as the creative anchor and do not replace it with an unrelated destination.
 {exclusion_block}
 ======================================================================
 PRODUCTION SPECIFICATIONS:
 ======================================================================
-- User Prompt / Concept Anchor: "{custom_prompt or 'Autonomously curate the greatest world-famous natural landmark on Earth'}"
+- User Prompt / Concept Anchor: "{concept_anchor}"
 - Genre: {genre}
 - Total Duration: {duration_seconds} seconds
 - Shot Count: {num_shots} shots ({per_shot_dur}s per shot)

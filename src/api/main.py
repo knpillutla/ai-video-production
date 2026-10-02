@@ -41,8 +41,8 @@ async def lifespan(app: FastAPI):
         import src.studios.nature_retreat       # noqa: F401
         import src.studios.cozy_ambiance        # noqa: F401
         import src.studios.rain_retreat         # noqa: F401
-        import src.studios.healing_relaxation   # noqa: F401
-        logger.info("studios_initialized: nature_retreat, cozy_ambiance, rain_retreat, healing_relaxation")
+        import src.studios.zen_studio           # noqa: F401
+        logger.info("studios_initialized: nature_retreat, cozy_ambiance, rain_retreat, zen_studio")
     except Exception as exc:
         logger.warning(f"studio_initialization_warning: {exc}")
 

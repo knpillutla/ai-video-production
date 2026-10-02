@@ -231,7 +231,7 @@ def create_base_channel_parser(
     parser.add_argument("--id", type=str, default=None, help="Episode ID to resume or reuse cached artifacts")
     parser.add_argument("--motion-model", type=str, default="auto", choices=["auto", "kling_v3", "kling_4k", "wan", "kling", "hunyuan", "lanczos"], help="Motion model (default: auto -> kling_v3 for <=5 shots)")
     parser.add_argument("--master-duration", type=float, default=None, choices=[60.0, 90.0, 120.0], help="Master duration in seconds")
-    parser.add_argument("--shots", type=int, default=None, choices=[1, 2, 3, 4], help="Explicit visual shot count (1, 2, 3, or 4)")
+    parser.add_argument("--shots", type=int, default=1, choices=[1, 2, 3, 4], help="Visual shot count (default: 1)")
     parser.add_argument("--hours", type=float, default=default_hours, help=f"Long-play target duration in hours (default: {default_hours})")
     parser.add_argument("--sleep", action="store_true", help="Enable circadian fade-to-black sleep mode (fades to black after 2.0h)")
     parser.add_argument("--fade-black", type=float, default=default_fade_black, help="Explicit hours after which video fades to black (e.g. 2.0)")

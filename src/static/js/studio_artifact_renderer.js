@@ -225,8 +225,10 @@ function renderKeyframesList(vid) {
   const c = document.getElementById("panel-section-images"), countEl = document.getElementById("panel-images-count");
   if (!c) return;
   const isProc = vid.status === "processing", isFailed = vid.status === "failed", stage = vid.currentStage || 1;
-  const numShots = parseInt(vid.numShots || vid.num_shots || 1, 10);
   const rawKfs = (vid.keyframes && vid.keyframes.length > 0) ? vid.keyframes : (vid.artifacts?.keyframes || []);
+  const screenplaySceneCount = vid.screenplay?.scenes?.length || vid.script?.scenes?.length || vid.scenes?.length || 0;
+  const requestedShotCount = parseInt(vid.numShots || vid.num_shots || 1, 10) || 1;
+  const numShots = Math.max(screenplaySceneCount || requestedShotCount, rawKfs.length);
   const completedKfs = rawKfs.filter(kf => {
     const url = (typeof kf === "object") ? kf.url : kf;
     return url && (url.startsWith("http") || url.startsWith("/static/") || url.startsWith("/storage/")) && !url.includes("placeholder_");
@@ -306,7 +308,7 @@ function renderKeyframesList(vid) {
       return `<div class="flex flex-col items-center gap-0.5 w-full"><div class="relative w-full h-12 rounded-lg bg-blue-50/80 dark:bg-slate-900 border-2 border-blue-500 shadow-sm flex flex-col justify-between p-1.5 ring-2 ring-blue-500/20"><div class="flex items-center justify-between w-full"><span class="text-[8px] font-mono font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[7px]"></i> ${activeImgLabel}</span><span class="text-[7px] font-mono text-blue-600 dark:text-blue-400 font-bold">${pVal}%</span></div><div class="w-full bg-blue-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full animate-pulse" style="width: ${pVal}%"></div></div></div><span class="text-[8px] font-bold text-blue-600 dark:text-blue-400 truncate w-full text-center">${name}</span></div>`;
     }
 
-    if (hasImage && !vid.force_rerun) {
+    if (hasImage && (!vid.force_rerun || !isGeneratingPhotos)) {
       const liveUrl = url;
       const borderCls = isSel ? "border-2 border-emerald-500 ring-1 ring-emerald-500/50" : "border border-slate-300 dark:border-slate-800 opacity-40 grayscale";
       const clickAction = `openImagePopup('${liveUrl}', '${epId}: ${name}', '${activeImgLabel} • 4K UHD Keyframe Photo')`;

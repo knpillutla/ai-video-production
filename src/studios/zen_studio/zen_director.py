@@ -1,14 +1,16 @@
 """Directorial Storyboard Generator for Healing Meditation & Relaxing Music."""
 
 import json
-from typing import List
+from pathlib import Path
+from typing import Any, List, Optional
 from pydantic import BaseModel, Field
 from src.core.telemetry import logger
 from src.studios.ambient_world.relax_models import RelaxAudioMasterSpec, RelaxSceneDirective, RelaxScreenplay
+from src.services.audio_tag_service import normalize_audio_tags
 
 
 class ZenScenePrompt(BaseModel):
-    """Prompt definition for a healing relaxation scene."""
+    """Prompt definition for a Zen Studio scene."""
     scene_index: int
     perspective_type: str  # wide_zen_landscape, intimate_lotus_stream
     visual_prompt: str
@@ -19,7 +21,7 @@ class ZenScenePrompt(BaseModel):
 
 
 class ZenStoryboard(BaseModel):
-    """Complete 2-perspective storyboard specification for Healing Relaxation."""
+    """Complete 2-perspective storyboard specification for Zen Studio."""
     title: str
     theme: str
     story_topic: str = ""
@@ -30,7 +32,7 @@ class ZenStoryboard(BaseModel):
     cluster: str = ""
     total_duration: float = 60.0
     recommended_fps: int = 24
-    audio_tags: str
+    audio_tags: Any
     scenes: List[ZenScenePrompt] = Field(default_factory=list)
 
 
@@ -56,9 +58,11 @@ ZEN_ARCHETYPE_DIRECTIVES = {
 def generate_zen_storyboard(
     theme: str = "Tranquil Zen Garden & Sacred Lotus Pond at Dawn",
     duration_seconds: float = 60.0,
+    num_shots: int = 1,
 ) -> ZenStoryboard:
-    """Generate the 2-perspective healing meditation directorial storyboard."""
-    logger.info(f"generating_healing_storyboard: theme='{theme}' duration={duration_seconds}s")
+    """Generate a Zen storyboard with one scene for each requested shot."""
+    num_shots = max(1, int(num_shots))
+    logger.info(f"generating_zen_storyboard: theme='{theme}' duration={duration_seconds}s shots={num_shots}")
 
     p1_visual = (
         f"Masterpiece 4K photograph of a sacred tranquil Japanese Zen garden with lotus pond in {theme}. "
@@ -83,22 +87,22 @@ def generate_zen_storyboard(
         "peaceful stationary camera."
     )
 
-    s1 = ZenScenePrompt(
-        scene_index=1,
-        perspective_type="wide_zen_landscape",
-        visual_prompt=p1_visual,
-        motion_prompt=p1_motion,
-        duration_seconds=duration_seconds / 2.0,
-        domain="landscape_solid",
-    )
-    s2 = ZenScenePrompt(
-        scene_index=2,
-        perspective_type="intimate_lotus_stream",
-        visual_prompt=p2_visual,
-        motion_prompt=p2_motion,
-        duration_seconds=duration_seconds / 2.0,
-        domain="water_fluid",
-    )
+    perspectives = [
+        ("wide_zen_landscape", p1_visual, p1_motion, "landscape_solid"),
+        ("intimate_lotus_stream", p2_visual, p2_motion, "water_fluid"),
+    ]
+    scenes = [
+        ZenScenePrompt(
+            scene_index=index + 1,
+            perspective_type=perspective,
+            visual_prompt=visual,
+            motion_prompt=motion,
+            duration_seconds=duration_seconds / num_shots,
+            domain=domain,
+        )
+        for index in range(num_shots)
+        for perspective, visual, motion, domain in [perspectives[index % len(perspectives)]]
+    ]
 
     audio_tags = (
         f"[healing meditation music], 432Hz deep inner peace melody, soothing acoustic piano, Japanese bamboo shakuhachi flute, "
@@ -111,7 +115,7 @@ def generate_zen_storyboard(
         total_duration=duration_seconds,
         recommended_fps=24,
         audio_tags=audio_tags,
-        scenes=[s1, s2],
+        scenes=scenes,
     )
 
 
@@ -122,11 +126,14 @@ async def generate_zen_storyboard_gemini(
     genre: str = "relax/zen",
     sub_genre: str = "zen_healing",
     primary_archetype: str = "zen_garden",
+    num_shots: int = 1,
+    raw_output_path: Optional[str | Path] = None,
 ) -> ZenStoryboard:
     """Dynamically generate 432Hz healing meditation storyboard via Gemini LLM."""
-    print(f"\n[GEMINI HEALING RELAXATION AGENT INVOKED]")
+    print(f"\n[GEMINI ZEN STUDIO AGENT INVOKED]")
     print(f"   * Theme:              \"{theme}\"")
-    print(f"   * Duration:           {duration_seconds}s (2 Perspectives @ {duration_seconds/2.0}s each)")
+    num_shots = max(1, int(num_shots))
+    print(f"   * Duration:           {duration_seconds}s ({num_shots} scenes @ {duration_seconds/num_shots:.1f}s each)")
 
     try:
         import json
@@ -136,12 +143,13 @@ async def generate_zen_storyboard_gemini(
         subgenre_directive = ZEN_SUBGENRE_DIRECTIVES.get(sub_genre, "Use a tranquil healing nature setting matching the selected sub-genre.")
         archetype_directive = ZEN_ARCHETYPE_DIRECTIVES.get(primary_archetype, "Preserve the selected ecosystem archetype exactly.")
         system_prompt = (
-            "You are the dedicated Healing Relaxation Studio director, specializing in 432Hz Zen gardens, bamboo temples, and sacred lotus sanctuaries. "
+            "You are the dedicated Zen Studio director, specializing in 432Hz Zen gardens, bamboo temples, and sacred lotus sanctuaries. "
             "Treat the selected genre, sub-genre, and archetype as binding ecosystem constraints. Never replace Zen gardens with rainforest, alpine, canyon, or unrelated river scenes. "
             "When no free-text prompt is supplied, use your built-in geographic knowledge to select a notable real Zen garden or bamboo sanctuary matching the selected archetype. "
             f"SUB-GENRE DIRECTIVE ({sub_genre}): {subgenre_directive} "
             f"ARCHETYPE DIRECTIVE ({primary_archetype}): {archetype_directive} "
-            "Generate an 8K UHD 2-perspective cinematic storyboard (Perspective 1: Wide Zen Sanctuary Landscape, Perspective 2: Intimate Lotus Macro/Stream Reflection). "
+            f"Generate exactly {num_shots} 8K UHD cinematic scene(s). Never add scenes beyond the requested count. "
+            "For one scene use a wide Zen sanctuary landscape; when multiple are requested, progress from wide landscape to intimate lotus/water details. "
             "CRITICAL ANTI-FATIGUE DIRECTIVES:\n"
             "- ANTI-FATIGUE VIDEO MOTION: Locked tripod framing, hypnotic ultra-slow morning mist drift, glassy water ripples, zero abrupt zooms, zero camera shake, pure tranquility.\n"
             "- ANTI-FATIGUE ACOUSTIC MASTERING: 432Hz meditative Celtic harp, bamboo shakuhachi flute, soft singing bowl resonance, binaural nature foley, zero sharp high-frequency peaks, zero jarring drums, velvet -14 LUFS.\n"
@@ -153,15 +161,15 @@ async def generate_zen_storyboard_gemini(
         user_msg = (
             f"Optional user prompt: '{theme or '(none supplied)'}'.\n"
             f"Selected genre: {genre}.\nSelected sub-genre: {sub_genre}.\nSelected primary archetype: {primary_archetype}.\n"
-            f"Generate a screenplay that preserves these selections. Duration: {duration_seconds}s.\n\n"
+            f"Generate exactly {num_shots} scenes and preserve these selections. Duration: {duration_seconds}s; each scene is {duration_seconds/num_shots:.1f}s.\n\n"
             f"Output JSON with fields:\n"
-            f"- 'title': High-CTR healing relaxation YouTube title\n"
+            f"- 'title': High-CTR Zen Studio YouTube title\n"
             f"- 'story_topic': Story synopsis for the selected Zen destination\n"
             f"- 'destination_name': Real Zen garden or bamboo sanctuary name\n"
             f"- 'country': Destination country\n"
             f"- 'cluster': Geographic region identifier\n"
             f"- 'audio_tags': 432Hz deep meditative anti-fatigue acoustic tags (bamboo flute, Celtic harp, gentle stream, zero harshness)\n"
-            f"- 'scenes': Array of 2 scene objects each containing:\n"
+            f"- 'scenes': Array of exactly {num_shots} scene object(s), each containing:\n"
             f"    - 'scene_index': int (1, 2)\n"
             f"    - 'perspective_type': 'wide_zen_landscape' or 'intimate_lotus_stream'\n"
             f"    - 'visual_prompt': detailed 8K photoreal prompt for Fal FLUX 1.1 Pro\n"
@@ -171,24 +179,33 @@ async def generate_zen_storyboard_gemini(
         )
 
         full_prompt = f"{system_prompt}\n\n{user_msg}"
-        logger.info(f"gemini_healing_request_sent: theme='{theme}'\n--- PROMPT SENT TO GEMINI ---\n{full_prompt}\n-----------------------------")
-        print(f"\n[GEMINI HEALING REQUEST DISPATCHED]")
+        logger.info(f"gemini_zen_request_sent: theme='{theme}'\n--- PROMPT SENT TO GEMINI ---\n{full_prompt}\n-----------------------------")
+        print(f"\n[GEMINI ZEN STUDIO REQUEST DISPATCHED]")
         print(f"--- PROMPT SENT TO GEMINI ---\n{full_prompt}\n-----------------------------")
 
         data = await llm.generate_structured(full_prompt)
-        logger.info(f"gemini_healing_response_received:\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}")
-        print(f"\n[GEMINI HEALING RESPONSE RECEIVED]\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}\n")
+        raw_json = json.dumps(data, indent=2, ensure_ascii=False)
+        if raw_output_path:
+            try:
+                raw_path = Path(raw_output_path)
+                raw_path.parent.mkdir(parents=True, exist_ok=True)
+                raw_path.write_text(raw_json, encoding="utf-8")
+                logger.info(f"raw_gemini_screenplay_saved: {raw_path}")
+            except OSError as save_error:
+                logger.warning(f"failed_to_save_raw_gemini_screenplay: {save_error}")
+        logger.info(f"gemini_zen_response_received:\n{raw_json}")
+        print(f"\n[GEMINI ZEN RESPONSE RECEIVED]\n{raw_json}\n")
 
-        if data and isinstance(data, dict) and data.get("scenes") and len(data["scenes"]) >= 2:
+        if data and isinstance(data, dict) and isinstance(data.get("scenes"), list) and len(data["scenes"]) == num_shots:
             scenes = []
-            for idx, sc in enumerate(data["scenes"][:2]):
+            for idx, sc in enumerate(data["scenes"]):
                 scenes.append(
                     ZenScenePrompt(
                         scene_index=idx + 1,
                         perspective_type=sc.get("perspective_type", "wide_zen_landscape" if idx == 0 else "intimate_lotus_stream"),
                         visual_prompt=sc.get("visual_prompt", ""),
                         motion_prompt=sc.get("motion_prompt", ""),
-                        duration_seconds=duration_seconds / 2.0,
+                        duration_seconds=duration_seconds / num_shots,
                         domain=sc.get("domain", "water_fluid"),
                         location_hub=sc.get("location_hub", ""),
                     )
@@ -208,13 +225,14 @@ async def generate_zen_storyboard_gemini(
                 audio_tags=data.get("audio_tags") or "healing meditation music, 432Hz deep inner peace, bamboo shakuhachi flute, 48kHz master",
                 scenes=scenes,
             )
-            print(f"[GEMINI HEALING STORYBOARD SUCCESS] Synthesized '{sb.title}' with 2 custom perspectives.")
+            print(f"[GEMINI ZEN STORYBOARD SUCCESS] Synthesized '{sb.title}' with {num_shots} custom scene(s).")
             return sb
-        raise RuntimeError(f"Gemini LLM returned empty or malformed healing storyboard data: {data}")
+        actual_count = len(data.get("scenes", [])) if isinstance(data, dict) and isinstance(data.get("scenes"), list) else 0
+        raise RuntimeError(f"Gemini returned {actual_count} Zen scene(s); exactly {num_shots} requested.")
     except Exception as ex:
-        logger.error(f"gemini_healing_storyboard_fatal_error: {ex}")
-        print(f"\n[GEMINI FATAL ERROR] Healing directorial screenplay synthesis failed: {ex}\n")
-        raise RuntimeError(f"Gemini healing directorial screenplay generation failed: {ex}") from ex
+        logger.error(f"gemini_zen_storyboard_fatal_error: {ex}")
+        print(f"\n[GEMINI FATAL ERROR] Zen directorial screenplay synthesis failed: {ex}\n")
+        raise RuntimeError(f"Gemini Zen directorial screenplay generation failed: {ex}") from ex
 
 
 async def generate_zen_screenplay_gemini(
@@ -224,8 +242,10 @@ async def generate_zen_screenplay_gemini(
     custom_prompt: str,
     duration_seconds: float,
     user_id: str,
+    num_shots: int = 1,
+    raw_output_path: Optional[str | Path] = None,
 ) -> RelaxScreenplay:
-    """Generate a Zen screenplay using the dedicated Healing Relaxation director."""
+    """Generate a Zen screenplay using the dedicated Zen Studio director."""
     storyboard = await generate_zen_storyboard_gemini(
         theme=custom_prompt,
         duration_seconds=duration_seconds,
@@ -233,6 +253,8 @@ async def generate_zen_screenplay_gemini(
         genre=genre,
         sub_genre=sub_genre,
         primary_archetype=primary_archetype,
+        num_shots=num_shots,
+        raw_output_path=raw_output_path,
     )
     return RelaxScreenplay(
         title=storyboard.title,
@@ -247,7 +269,7 @@ async def generate_zen_screenplay_gemini(
         cast=[],
         audio_master=RelaxAudioMasterSpec(
             audio_mode="ambient_nature",
-            suno_musical_tags=storyboard.audio_tags,
+            suno_musical_tags=normalize_audio_tags(storyboard.audio_tags),
             target_lufs=-14.0,
         ),
         scenes=[

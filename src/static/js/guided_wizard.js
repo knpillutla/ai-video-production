@@ -100,8 +100,6 @@ function wizardConfirmAndProduce() {
   currentUser.balance_usd = Math.max(0, currentUser.balance_usd - tier.priceUsd);
   saveUserState();
 
-  const newId = `EP-00${studioVideos.length + 1}`;
-  const uniqueJobId = `job_${newId.toLowerCase()}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
   const voiceGenderSelect = document.getElementById("wizard-voice-gender-select");
   const durationSelect = document.getElementById("wizard-duration-select");
   const durationSec = durationSelect ? parseInt(durationSelect.value, 10) : 10;
@@ -117,6 +115,8 @@ function wizardConfirmAndProduce() {
   const enableLipsync = enableLipsyncToggle ? enableLipsyncToggle.checked : false;
 
   const chId = (typeof currentActiveChannelId !== "undefined" && currentActiveChannelId !== "all") ? currentActiveChannelId : "silent_hearth";
+  const newId = nextEpisodeIdForChannel(chId);
+  const uniqueJobId = `job_${newId.toLowerCase()}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
   const isTestMode = (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test");
   const effCost = isTestMode ? 0.02 : tier.priceUsd;
   const newVid = {

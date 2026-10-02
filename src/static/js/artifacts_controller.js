@@ -1,12 +1,20 @@
 // CineAI Studio: Artifacts & Episode Details Inspector Controller
-function viewEpisodeArtifacts(epOrId) {
+function viewEpisodeArtifacts(epOrId, channelId) {
   let vid = null;
   if (typeof epOrId === "object" && epOrId !== null) vid = epOrId;
   else if (typeof epOrId === "string") {
-    if (typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) vid = studioVideos.find(v => (v.id === epOrId || v.episode_id === epOrId));
-    if (!vid && typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) vid = channelArchiveEpisodes.find(v => v.episode_id === epOrId);
+    if (typeof findStudioEpisodeById === "function") vid = findStudioEpisodeById(epOrId, channelId);
+    if (!vid && typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) {
+      const matches = channelArchiveEpisodes.filter(v => v.episode_id === epOrId);
+      vid = channelId
+        ? matches.find(v => v.channel_id === channelId)
+        : (matches.length === 1 ? matches[0] : null);
+    }
   }
-  if (!vid && typeof currentActiveInspectorEpisode !== "undefined") vid = currentActiveInspectorEpisode;
+  if (!vid && typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode &&
+      (typeof epOrId !== "string" || currentActiveInspectorEpisode.id === epOrId || currentActiveInspectorEpisode.episode_id === epOrId)) {
+    vid = currentActiveInspectorEpisode;
+  }
   if (!vid) return;
 
   const epId = vid.id || vid.episode_id || "EP-001";

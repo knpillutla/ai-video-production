@@ -31,7 +31,7 @@ async function stopStudioProduction(episodeId) {
     studioAbortController.abort();
     studioAbortController = null;
   }
-  const ep = (typeof studioVideos !== "undefined") ? studioVideos.find(v => v.id === episodeId || v.episode_id === episodeId) : null;
+  const ep = typeof findStudioEpisodeById === "function" ? findStudioEpisodeById(episodeId) : null;
   if (ep) {
     ep.status = "paused";
     if (typeof saveVideosState === "function") saveVideosState();
@@ -54,8 +54,7 @@ async function stopStudioProduction(episodeId) {
 }
 
 async function resumeStudioProduction(episodeId) {
-  let ep = (typeof studioVideos !== "undefined") ? studioVideos.find(v => v.id === episodeId || v.episode_id === episodeId) : null;
-  if (!ep && typeof channelArchiveEpisodes !== "undefined") ep = channelArchiveEpisodes.find(v => v.episode_id === episodeId || v.id === episodeId);
+  let ep = typeof findStudioEpisodeById === "function" ? findStudioEpisodeById(episodeId) : null;
   if (!ep) ep = currentActiveInspectorEpisode;
   if (!ep) return;
   ep.status = "processing";
@@ -150,7 +149,6 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
       const res = await fetch(`/api/production/poll-artifacts?channel_id=${chSlug}&episode_id=${epId}&user_id=${encodeURIComponent(uEmail)}`);
       if (res.ok) {
         const data = await res.json();
-        const reqShots = vid.numShots || vid.num_shots || 1;
         let changed = false;
         if (data.script && !vid.script) {
           vid.script = data.script;
@@ -168,6 +166,13 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           vid.manifest = data.manifest;
           changed = true;
         }
+        const sceneCount = data.screenplay?.scenes?.length || data.script?.scenes?.length || data.scenes?.length || vid.screenplay?.scenes?.length || vid.script?.scenes?.length || vid.scenes?.length || 0;
+        if (sceneCount > 0 && (vid.numShots !== sceneCount || vid.num_shots !== sceneCount)) {
+          vid.numShots = sceneCount;
+          vid.num_shots = sceneCount;
+          changed = true;
+        }
+        const reqShots = sceneCount || vid.numShots || vid.num_shots || 1;
         if (data.keyframes && data.keyframes.length > 0 && (!vid.keyframes || vid.keyframes.length !== data.keyframes.length || vid.keyframes[0]?.isGenerating)) {
           vid.keyframes = data.keyframes;
           if (!isManual && data.keyframes.length >= reqShots && vid.currentStage < 2) vid.currentStage = 2;
@@ -223,7 +228,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
       signal: studioAbortController.signal,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        prompt: vid.concept || vid.title || vid.story_topic || "4K Scenic Nature Sanctuary",
+        prompt: vid.concept ?? "",
         channel_id: chSlug,
         duration_seconds: durSec,
         episode_id: epId,
@@ -246,8 +251,11 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           : (typeof activeBroadcastHours !== "undefined" ? activeBroadcastHours : (vid.longPlayHours || 0)),
         camera_motion: document.getElementById("studio-camera-motion")?.value || "locked_tripod",
         genre: document.getElementById("studio-genre-selector")?.value || vid.genre || "relax/nature",
+        genre_label: document.getElementById("studio-genre-selector")?.selectedOptions?.[0]?.textContent?.trim() || "",
         sub_genre: document.getElementById("studio-subgenre-selector")?.value || vid.sub_genre || null,
+        sub_genre_label: document.getElementById("studio-subgenre-selector")?.selectedOptions?.[0]?.textContent?.trim() || "",
         primary_archetype: document.getElementById("studio-archetype-selector")?.value || vid.primary_archetype || null,
+        primary_archetype_label: document.getElementById("studio-archetype-selector")?.selectedOptions?.[0]?.textContent?.trim() || "",
         force_rerun: Boolean(vid.force_rerun)
       })
     });
@@ -261,10 +269,16 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         if (resData.script.title) vid.title = resData.script.title;
         if (resData.script.story_topic) vid.story_topic = resData.script.story_topic;
         if (resData.script.audio_tags) vid.audio_tags = resData.script.audio_tags;
+        const screenplaySceneCount = resData.script.scenes?.length || 0;
+        if (screenplaySceneCount > 0) {
+          vid.numShots = screenplaySceneCount;
+          vid.num_shots = screenplaySceneCount;
+        }
       }
       if (resData.keyframes?.length) {
         vid.keyframes = resData.keyframes;
         vid.selectedKeyframeIds = vid.keyframes.map((_, i) => i);
+        vid.force_rerun = false;
       }
       if (resData.motion_clips?.length) vid.motion_clips = resData.motion_clips;
       if (resData.audio_stems?.length) vid.audio_stems = resData.audio_stems;
@@ -294,6 +308,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         vid.status = "ready";
         vid.progress = 40;
         vid.currentStage = 2;
+        vid.force_rerun = false;
         vid.errorMessage = null;
         vid.failedStage = null;
         const bb = document.getElementById("studio-banner-phase-badge");
@@ -428,7 +443,7 @@ function detectFailedStage(errMsg, currentStage) {
 }
 
 function retryEpisodeWithFallback(epId) {
-  const ep = (typeof studioVideos !== "undefined") ? studioVideos.find(v => v.id === epId || v.episode_id === epId) : null;
+  const ep = typeof findStudioEpisodeById === "function" ? findStudioEpisodeById(epId) : null;
   if (!ep) return;
   ep.allowFallback = true;
   ep.status = "processing";
@@ -499,11 +514,11 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
   let ep = currentActiveInspectorEpisode;
   const targetId = episodeId || (ep ? (ep.id || ep.episode_id) : "EP-001");
   if (typeof studioVideos !== "undefined") {
-    const found = studioVideos.find(v => v.id === targetId || v.episode_id === targetId);
+    const found = typeof findStudioEpisodeById === "function" ? findStudioEpisodeById(targetId) : null;
     if (found) ep = found;
   }
   if (!ep && typeof channelArchiveEpisodes !== "undefined") {
-    const found = channelArchiveEpisodes.find(v => v.episode_id === targetId || v.id === targetId);
+    const found = typeof findStudioEpisodeById === "function" ? findStudioEpisodeById(targetId) : null;
     if (found) ep = found;
   }
   if (!ep) {

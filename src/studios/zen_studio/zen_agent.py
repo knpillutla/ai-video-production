@@ -14,15 +14,16 @@ async def main():
     parser = argparse.ArgumentParser(description="Produce a 4K Zen Studio video")
     parser.add_argument("--theme", type=str, default="Tranquil Zen Garden & Sacred Lotus Pond at Dawn", help="Zen theme")
     parser.add_argument("--duration", type=float, default=60.0, help="Total duration in seconds")
+    parser.add_argument("--shots", type=int, default=1, help="Number of scenes/keyframes (default: 1)")
     args = parser.parse_args()
 
     print(f"\n=======================================================")
     print(f"🧘 Zen Studio: Directing 4K Master Video")
     print(f"Theme: {args.theme}")
-    print(f"Duration: {args.duration}s | Pacing: 2-Perspective Long-Play")
+    print(f"Duration: {args.duration}s | Scenes: {args.shots}")
     print(f"=======================================================\n")
 
-    sb = generate_zen_storyboard(theme=args.theme, duration_seconds=args.duration)
+    sb = generate_zen_storyboard(theme=args.theme, duration_seconds=args.duration, num_shots=args.shots)
     producer = ZenStudioProducer()
     result = await producer.produce(sb)
 

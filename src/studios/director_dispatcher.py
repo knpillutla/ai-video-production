@@ -16,6 +16,7 @@ from src.studios.alpine_studio.alpine_director import generate_alpine_screenplay
 from src.studios.waterfall_studio.waterfall_director import generate_waterfall_screenplay
 from src.studios.silent_hearth.hearth_director import generate_hearth_screenplay
 from src.studios.ambient_world.relax_director import generate_relax_screenplay_gemini
+from src.studios.zen_studio.zen_director import generate_zen_screenplay_gemini
 
 
 async def dispatch_studio_director(
@@ -37,6 +38,19 @@ async def dispatch_studio_director(
     genre_lower = (genre or "").lower()
     sub_lower = (sub_genre or "").lower()
     arch_lower = (primary_archetype or "").lower()
+
+    if genre_lower in {"relax/healing", "relax/zen"} or sub_lower in {"zen_healing", "lotus_pond"} or arch_lower == "zen_garden":
+        logger.info(f"dispatcher_route: target='ZenStudio' genre='{genre}' sub_genre='{sub_genre}' archetype='{primary_archetype}'")
+        return await generate_zen_screenplay_gemini(
+            genre=genre,
+            sub_genre=sub_genre or "zen_healing",
+            primary_archetype=primary_archetype or "zen_garden",
+            custom_prompt=custom_prompt or "",
+            duration_seconds=duration_seconds,
+            user_id=user_id or "user_krishna_01",
+            num_shots=num_shots,
+            raw_output_path=raw_output_path,
+        )
 
     # 1. Waterfall Studio Dispatch
     if (

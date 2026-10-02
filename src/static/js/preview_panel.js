@@ -1,5 +1,6 @@
 // CineAI Studio: Video Production Ledger Right Inspector Panel Controller
-let selectedLedgerVideoId = "EP-001";
+let selectedLedgerVideoId = null;
+let selectedLedgerVideoChannelId = null;
 let activeLedgerInspectorTab = "stems";
 let activePlayingAudioStemId = null;
 
@@ -42,7 +43,7 @@ function selectLedgerMasterVideoRender(url, label, cardEl) {
 
 function openActiveVideoInPopup() {
   const video = document.getElementById("studio-panel-video");
-  const vid = (typeof studioVideos !== "undefined" ? studioVideos : []).find(v => v.id === selectedLedgerVideoId);
+  const vid = findStudioEpisodeById(selectedLedgerVideoId, selectedLedgerVideoChannelId);
   const src = (video && video.src) ? video.src : (vid?.videoUrl || "/static/videos/preview_master.mp4");
   const title = vid ? `${vid.id}: ${vid.title}` : "Master Video";
   const meta = vid ? `${vid.format || '4K UHD'} • ${vid.style || 'Cinematic'}` : "4K Master Render";
@@ -79,6 +80,7 @@ function stopAudioStemPlay(audioId) {
 
 function clearLedgerInspector() {
   selectedLedgerVideoId = null;
+  selectedLedgerVideoChannelId = null;
   updateLedgerRowHighlights();
   const epIdEl = document.getElementById("ledger-header-ep-id");
   const typeBadge = document.getElementById("ledger-header-type-badge");
@@ -107,12 +109,13 @@ function clearLedgerInspector() {
   if (audioStemsContainer) audioStemsContainer.innerHTML = `<div class="col-span-full py-2.5 text-center text-xs text-slate-400 dark:text-gray-500 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">No audio stems available.</div>`;
 }
 
-function selectLedgerVideo(id) {
+function selectLedgerVideo(id, channelId) {
   if (!id) { clearLedgerInspector(); return; }
-  const vid = (typeof studioVideos !== "undefined" ? studioVideos : []).find(v => v.id === id);
+  const vid = findStudioEpisodeById(id, channelId);
   if (!vid) { clearLedgerInspector(); return; }
 
   selectedLedgerVideoId = id;
+  selectedLedgerVideoChannelId = vid.channelId || vid.channel_id || channelId || null;
   updateLedgerRowHighlights();
 
   const panel = document.getElementById("studio-preview-panel");
@@ -245,9 +248,10 @@ function selectLedgerVideo(id) {
 
 function updateLedgerRowHighlights() {
   document.querySelectorAll("#studio-video-history-rows tr").forEach(tr => {
-    tr.classList.toggle("bg-indigo-950/40", tr.getAttribute("data-video-id") === selectedLedgerVideoId);
-    tr.classList.toggle("border-l-4", tr.getAttribute("data-video-id") === selectedLedgerVideoId);
-    tr.classList.toggle("border-indigo-500", tr.getAttribute("data-video-id") === selectedLedgerVideoId);
+    const selected = tr.getAttribute("data-video-id") === selectedLedgerVideoId && tr.getAttribute("data-video-channel") === selectedLedgerVideoChannelId;
+    tr.classList.toggle("bg-indigo-950/40", selected);
+    tr.classList.toggle("border-l-4", selected);
+    tr.classList.toggle("border-indigo-500", selected);
   });
 }
 

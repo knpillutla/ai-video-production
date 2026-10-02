@@ -36,7 +36,7 @@ function selectProductionTier(tierKey) {
 
 function syncCameraAngleVisibility(key) {
   const k = (key || "").toLowerCase();
-  const isRelax = k.startsWith("relax_") || ["earth_serenade", "rain_retreat", "healing_relaxation", "cozy_ambiance", "study_focus_cafe", "default_channel"].includes(k) || k.includes("relax") || k.includes("serenade") || k.includes("retreat");
+  const isRelax = k.startsWith("relax_") || ["earth_serenade", "rain_retreat", "healing_relaxation", "zen_studio", "cozy_ambiance", "study_focus_cafe", "default_channel"].includes(k) || k.includes("relax") || k.includes("serenade") || k.includes("retreat");
   const motionWrap = document.getElementById("studio-camera-motion-wrap");
   const motionSelect = document.getElementById("studio-camera-motion");
   const fpsSelect = document.getElementById("studio-fps");
@@ -57,8 +57,6 @@ function syncCameraAngleVisibility(key) {
 function selectNicheRadio(nicheKey) {
   const cfg = (typeof NICHE_RADIO_CONFIGS !== "undefined" ? NICHE_RADIO_CONFIGS : {})[nicheKey];
   if (!cfg) return;
-  const promptInput = document.getElementById("youtube-prompt-input");
-  if (promptInput) { promptInput.value = cfg.prompt; flashPromptInput(promptInput); }
   const setC = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
   const setV = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
   setC("studio-toggle-bgm", cfg.bgm); setC("studio-toggle-voice-over", cfg.voice); setV("studio-fps", cfg.fps || "24");
@@ -69,7 +67,7 @@ const MODE_CONFIG = {
   theme: {
     labelHtml: '<i class="fa-solid fa-compass text-emerald-500 text-xs"></i> <span>Theme / Topic Description (Optional):</span>',
     sublabel: "World Cities, Nature, Mountains, Oceans & Architecture",
-    ph: "Optional: Describe custom theme, mood, or leave empty to use channel default...",
+    ph: "Optional example: A quiet rainforest stream beneath an old-growth canopy...",
     hint: "Theme active • World Cities, Villages, Mountains, Oceans & Architecture"
   },
   idea: {
@@ -178,29 +176,12 @@ function deriveTitleFromInput(text, mode) {
 
 function quickTestProduceFromPrompt() {
   const promptInput = document.getElementById("youtube-prompt-input"), urlInput = document.getElementById("youtube-url-input");
-  let userPrompt = (promptInput?.value || "").trim();
+  const userPrompt = (promptInput?.value || "").trim();
   const userUrl = (urlInput?.value || "").trim();
 
   const selChan = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel && selectedStudioChannel !== "all")
     ? selectedStudioChannel
     : ((typeof currentActiveChannelId !== "undefined" && currentActiveChannelId && currentActiveChannelId !== "all") ? currentActiveChannelId : null);
-
-  if (!userPrompt && !userUrl) {
-    const checkedRadio = document.querySelector("input[name='niche_theme_radio']:checked");
-    if (checkedRadio && typeof NICHE_RADIO_CONFIGS !== "undefined" && NICHE_RADIO_CONFIGS[checkedRadio.value]) {
-      userPrompt = NICHE_RADIO_CONFIGS[checkedRadio.value].prompt;
-    } else if (selChan === "earth_serenade") {
-      userPrompt = "Scenic Nature Sanctuary & Alpine Streams";
-    } else if (selChan === "silent_hearth") {
-      userPrompt = "Cozy Fireplace Hearth & Snowy Cabin ASMR";
-    } else if (selChan === "rain_retreat") {
-      userPrompt = "Forest River Rain & Relaxing Water Ripples";
-    } else if (selChan === "cineai_docs") {
-      userPrompt = "Blue-Chip Nature Wildlife & Mountain Documentary";
-    } else {
-      userPrompt = "4K Cinematic Visual Landscape";
-    }
-  }
 
   if (promptInput) promptInput.value = "";
   if (urlInput) urlInput.value = "";
@@ -251,7 +232,7 @@ function quickTestProduceFromPrompt() {
   const chId = selChan;
   const chGenre = (chId === "silent_hearth") ? "Fireplace & ASMR" : (chId === "earth_serenade" ? "4K Nature Ambiance" : (chId === "cineai_docs" ? "24fps BBC Nature Doc" : (chId === "telugu_comedy" ? "Comedy Satire Shorts" : vType)));
 
-  const newId = `EP-00${studioVideos.length + 1}`;
+  const newId = nextEpisodeIdForChannel(chId);
   const uniqueJobId = `job_${newId.toLowerCase()}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
   const newVid = {
     id: newId, episode_id: newId, jobId: uniqueJobId, title, concept, story_topic: concept,
@@ -288,7 +269,4 @@ document.addEventListener("DOMContentLoaded", () => {
   if (pInput) pInput.addEventListener("input", clearTemplateCardHighlights);
   if (uInput) uInput.addEventListener("input", clearTemplateCardHighlights);
   setCreationMode("theme", false);
-  const natureRadio = document.querySelector("input[name='niche_theme_radio'][value='relax_nature']");
-  if (natureRadio) natureRadio.checked = true;
-  selectNicheRadio("relax_nature");
 });

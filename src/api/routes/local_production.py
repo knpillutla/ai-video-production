@@ -23,7 +23,7 @@ class LocalProduceRequest(BaseModel):
     """Payload for local video synthesis and storage persistence."""
     prompt: str = Field(..., description="Prompt concept, theme, or script")
     title: Optional[str] = None
-    episode_id: Optional[str] = Field("EP-001", description="Traceable Episode ID")
+    episode_id: Optional[str] = Field(None, description="Channel-scoped episode ID; generated when omitted")
     user_id: Optional[str] = "user_krishna_01"
     production_type: Optional[str] = "Theme"
     tier: Optional[str] = "low_cost"
@@ -54,12 +54,15 @@ class LocalProduceRequest(BaseModel):
     channel_id: Optional[str] = None
     motion_model: Optional[str] = "wan"
     allow_fallback: Optional[bool] = False
-    num_shots: Optional[int] = None
+    num_shots: Optional[int] = 1
     long_play_hours: Optional[float] = None
     camera_motion: Optional[str] = "locked_tripod"
     genre: Optional[str] = None
+    genre_label: Optional[str] = None
     sub_genre: Optional[str] = None
+    sub_genre_label: Optional[str] = None
     primary_archetype: Optional[str] = None
+    primary_archetype_label: Optional[str] = None
     image_model: Optional[str] = "flux_dev"
     script_only: Optional[bool] = False
     photos_only: Optional[bool] = False
@@ -93,10 +96,32 @@ class LocalProduceResponse(BaseModel):
     stage: Optional[int] = 1
 
 
+def _reserve_next_episode_id(user_id: str, channel_id: str) -> str:
+    """Atomically reserve the next sequential episode ID within one channel."""
+    channel_dir = storage_service.get_user_container_path(user_id) / "channels" / channel_id
+    channel_dir.mkdir(parents=True, exist_ok=True)
+    highest = 0
+    for path in channel_dir.iterdir():
+        if not path.is_dir() or not path.name.upper().startswith("EP-"):
+            continue
+        suffix = path.name[3:]
+        if suffix.isdigit():
+            highest = max(highest, int(suffix))
+
+    next_number = highest + 1
+    while True:
+        episode_id = f"EP-{next_number:03d}"
+        try:
+            (channel_dir / episode_id).mkdir()
+            return episode_id
+        except FileExistsError:
+            next_number += 1
+
+
 @router.post("/local-produce", response_model=LocalProduceResponse, status_code=status.HTTP_200_OK)
 async def produce_video_locally(req: LocalProduceRequest):
     """Synthesize a complete broadcast-grade MP4 video with scenes and audio stems."""
-    title = req.title or (req.prompt[:36] if len(req.prompt) > 36 else req.prompt) or "Explore Niagara Falls"
+    title = req.title or (req.prompt[:36] if len(req.prompt) > 36 else req.prompt) or "Gemini-Directed Production"
     capped_duration = min(120.0, max(4.0, float(req.duration_seconds or 6.0)))
     eff_bgm = req.enable_bgm if req.enable_bgm is not None else (req.bgm if req.bgm is not None else True)
     user_id_val = req.user_id or "user_krishna_01"
@@ -118,19 +143,22 @@ async def produce_video_locally(req: LocalProduceRequest):
             if user_chans:
                 eff_channel_id = user_chans[0].channel_slug
     eff_channel_id = eff_channel_id or "default_channel"
+    episode_id = req.episode_id or _reserve_next_episode_id(user_id_val, eff_channel_id)
 
-    topic_check = await check_topic_duplicate(
-        topic=title, metadata={"video_type": req.video_type, "format_type": req.format_type, "style_type": req.style_type},
-        final_story=req.prompt, user_id=user_id_val, channel_id=eff_channel_id, threshold=0.80,
-    )
-    if topic_check.get("is_duplicate"):
+    topic_check = None
+    if req.prompt.strip():
+        topic_check = await check_topic_duplicate(
+            topic=title, metadata={"video_type": req.video_type, "format_type": req.format_type, "style_type": req.style_type},
+            final_story=req.prompt, user_id=user_id_val, channel_id=eff_channel_id, threshold=0.80,
+        )
+    if topic_check and topic_check.get("is_duplicate"):
         logger.info(f"topic_duplicate_pivot: {title} matches {topic_check.get('matched_episode')}. Auto-pivoting angle.")
         pivots = ["Golden Twilight & Evening Mist", "Morning Glacial Mist & Soft Sunlight", "Tranquil Sunset Glow", "Lush Rainforest Canopy"]
         pivot_tag = pivots[int(time.time()) % len(pivots)]
         title = f"{title} ~ {pivot_tag}"
 
-    job_id = f"job_{req.episode_id.lower() if req.episode_id else 'ep001'}_{int(time.time())}"
-    job_manager.create_job(job_id=job_id, episode_id=req.episode_id or "EP-001", title=title, channel_id=eff_channel_id, user_id=user_id_val)
+    job_id = f"job_{episode_id.lower()}_{int(time.time())}"
+    job_manager.create_job(job_id=job_id, episode_id=episode_id, title=title, channel_id=eff_channel_id, user_id=user_id_val)
 
     has_fal = bool(_fal_api_key())
     eff_fallback = bool(req.allow_fallback or not has_fal)
@@ -141,7 +169,7 @@ async def produce_video_locally(req: LocalProduceRequest):
             channel_id=eff_channel_id,
             prompt=req.prompt,
             duration_seconds=capped_duration,
-            episode_id=req.episode_id or "EP-001",
+            episode_id=episode_id,
             script_only=eff_script_only,
             photos_only=eff_photos_only,
             motion_only=eff_motion_only,
@@ -159,6 +187,11 @@ async def produce_video_locally(req: LocalProduceRequest):
             genre=req.genre,
             sub_genre=req.sub_genre,
             primary_archetype=req.primary_archetype,
+            selection_labels={
+                "genre": req.genre_label or "",
+                "sub_genre": req.sub_genre_label or "",
+                "primary_archetype": req.primary_archetype_label or "",
+            },
             image_model=req.image_model or "flux_dev",
         )
         eff_job_id = result.get("job_id") or job_id
@@ -192,8 +225,8 @@ async def produce_video_locally(req: LocalProduceRequest):
                 audio_stems=result.get("audio_stems", []), video_url=result.get("video_url"),
             )
             await remember_topic(
-                topic=title, metadata={"video_type": req.video_type, "format_type": req.format_type, "style_type": req.style_type},
-                final_story=req.prompt, episode_id=req.episode_id or "EP-001", user_id=user_id_val, channel_id=eff_channel_id,
+                topic=result.get("title") or title, metadata={"video_type": req.video_type, "format_type": req.format_type, "style_type": req.style_type},
+                final_story=req.prompt, episode_id=episode_id, user_id=user_id_val, channel_id=eff_channel_id,
             )
         return LocalProduceResponse(**result)
     except HTTPException:

@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple
 from pydantic import BaseModel, Field, field_validator
 from src.core.telemetry import logger
 from src.studios.ambient_world.ambient_catalog import ARCHETYPES, AtmosphericArchetype
+from src.services.audio_tag_service import normalize_audio_tags
 
 
 class AmbientScenePrompt(BaseModel):
@@ -37,9 +38,7 @@ class AmbientStoryboard(BaseModel):
     @field_validator("audio_tags", mode="before")
     @classmethod
     def normalize_audio_tags(cls, v):
-        if isinstance(v, list):
-            return ", ".join(str(x) for x in v)
-        return str(v) if v is not None else ""
+        return normalize_audio_tags(v)
 
 
 def resolve_archetype(key_or_name: str) -> AtmosphericArchetype:
@@ -57,28 +56,28 @@ def resolve_contextual_defaults(cluster: str, user_duration: Optional[float], us
     """Autonomously determine optimal master duration and shot count with explicit directorial rationale."""
     if user_duration is None:
         if cluster in ("alpine", "aquatic", "forest_seasonal"):
-            dur, default_shots = 120.0, 4
-            rationale = "Scenic Nature & Mountain Retreat: 120s master across 4 distinct perspectives (Panoramic Valley, Alpine Stream/Meadow, Macro Flora/Texture, Golden Ridge) to deliver dynamic scenic progression and eliminate visual fatigue over multi-hour broadcasts."
+            dur, default_shots = 30.0, 1
+            rationale = "Scenic Nature & Mountain Retreat: 30s master in one panoramic perspective; request more shots for additional views."
         elif cluster in ("deep_sleep", "cozy_hearth"):
-            dur, default_shots = 90.0, 3
-            rationale = "Deep Sleep & Insomnia Sanctuary: 90s master across 3 steady hypnotic perspectives (Wide Snowy Cabin Exterior, Warm Hearth Ember Macro, Cozy Bedside/Window Nook) to maximize continuous tranquility and rich visual atmosphere."
+            dur, default_shots = 30.0, 1
+            rationale = "Deep Sleep & Insomnia Sanctuary: 30s master in one steady hypnotic perspective; request more shots for additional views."
         else:
-            dur, default_shots = 90.0, 3
-            rationale = "Study Focus & Cozy Cafe: 90s master across 3 cozy focal zones (Ambient Window Desk, Steaming Mug Macro, Rainy Glass Nook) to maintain calm flow-state immersion."
+            dur, default_shots = 30.0, 1
+            rationale = "Study Focus & Cozy Cafe: 30s master in one calm focal zone; request more shots for additional views."
     else:
         dur = user_duration
         if cluster in ("deep_sleep", "cozy_hearth"):
-            default_shots = 3
-            rationale = f"Custom Duration {dur}s in Deep Sleep: Utilizing 3 long, hypnotic shots ({dur/3:.1f}s each) to protect delta-wave entrainment."
+            default_shots = 1
+            rationale = f"Custom Duration {dur}s in Deep Sleep: Using one long, hypnotic shot ({dur:.1f}s) to protect delta-wave entrainment."
         elif dur <= 60.0:
-            default_shots = 2
-            rationale = f"Custom Duration {dur}s: Using 2 balanced perspectives (Wide Atmospheric + Intimate Macro) for compact loop cadence."
+            default_shots = 1
+            rationale = f"Custom Duration {dur}s: Using one balanced perspective for compact loop cadence."
         elif cluster in ("alpine", "aquatic", "forest_seasonal"):
-            default_shots = 4
-            rationale = f"Custom Duration {dur}s in Nature Retreat: Utilizing 4 progressive angles ({dur/4:.1f}s each) for comprehensive scenic coverage."
+            default_shots = 1
+            rationale = f"Custom Duration {dur}s in Nature Retreat: Using one progressive angle ({dur:.1f}s) by default."
         else:
-            default_shots = 3
-            rationale = f"Custom Duration {dur}s in Focus Setting: Utilizing 3 balanced focal angles ({dur/3:.1f}s each)."
+            default_shots = 1
+            rationale = f"Custom Duration {dur}s in Focus Setting: Using one balanced focal angle ({dur:.1f}s) by default."
 
     shots = user_shots if (user_shots and user_shots in (1, 2, 3, 4)) else default_shots
     if shots == 1 and user_duration is None:
@@ -93,7 +92,7 @@ def generate_ambient_storyboard(
     custom_title: Optional[str] = None,
     custom_prompt: Optional[str] = None,
     duration_seconds: Optional[float] = None,
-    num_shots: Optional[int] = None,
+    num_shots: Optional[int] = 1,
     camera_motion: Optional[str] = "locked_tripod",
 ) -> AmbientStoryboard:
     """Generate adaptive directorial storyboard tailored to duration, shots count, and camera motion style."""
@@ -228,7 +227,7 @@ async def generate_ambient_storyboard_gemini(
     custom_title: Optional[str] = None,
     custom_prompt: Optional[str] = None,
     duration_seconds: Optional[float] = None,
-    num_shots: Optional[int] = None,
+    num_shots: Optional[int] = 1,
     camera_motion: Optional[str] = "locked_tripod",
     user_id: Optional[str] = "user_krishna_01",
 ) -> AmbientStoryboard:

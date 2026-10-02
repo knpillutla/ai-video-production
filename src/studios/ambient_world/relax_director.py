@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import json
 import os
-import random
 from typing import Any, Dict, Optional
 
 from src.core.telemetry import logger
@@ -32,27 +31,11 @@ from src.studios.ambient_world.relax_models import (
 )
 from src.services.topic_memory import topic_memory
 
-GLOBAL_LANDMARK_POOL = [
-    "Lauterbrunnen Valley & Staubbach Falls, Switzerland",
-    "Plitvice Lakes Cascades & Emerald Waters, Croatia",
-    "Milford Sound Fjords & Mitre Peak, New Zealand",
-    "Oirase Mountain Stream & Mossy Boulders, Tohoku Japan",
-    "Banff Moraine Lake & Valley of the Ten Peaks, Canadian Rockies",
-    "Dolomites Val di Funes & Seceda Granite Spires, Italian Alps",
-    "Isle of Skye Fairy Pools & Misty Glens, Scotland",
-    "Jiuzhaigou Emerald Ponds & Multi-Tiered Cascades, Sichuan China",
-    "Lofoten Islands Glassy Arctic Fjords, Norway",
-    "Lake Bled & Julian Alps Morning Mist, Slovenia",
-    "Hallstatt Alpine Lake Sanctuary, Austria",
-    "Yosemite Mist Trail & Merced River Cataracts, California",
-]
-
-
 async def generate_relax_screenplay_gemini(
     primary: str = "",
     custom_prompt: Optional[str] = None,
     duration_seconds: float = 60.0,
-    num_shots: int = 4,
+    num_shots: int = 1,
     camera_motion: str = "locked_tripod",
     genre: str = "relax/nature",
     user_id: Optional[str] = None,
@@ -64,16 +47,7 @@ async def generate_relax_screenplay_gemini(
     # Retrieve recently generated topics for this user channel to strictly prevent repeats (Rule 10)
     recent_topics = topic_memory.get_recent_topics(user_id=user_id, channel_id=channel_id, limit=20)
 
-    if custom_prompt and custom_prompt.strip():
-        eff_prompt = custom_prompt.strip()
-    else:
-        # Filter pool to candidates not in recent topics
-        unseen_pool = [
-            lm for lm in GLOBAL_LANDMARK_POOL
-            if not any(lm.split(',')[0].lower() in t.lower() for t in recent_topics)
-        ]
-        chosen_landmark = random.choice(unseen_pool if unseen_pool else GLOBAL_LANDMARK_POOL)
-        eff_prompt = f"Breathtaking 8K living wallpaper at {chosen_landmark}"
+    eff_prompt = custom_prompt.strip() if custom_prompt and custom_prompt.strip() else ""
 
     from src.core.config import settings
     from src.providers.base import HTTPClientPool
@@ -85,8 +59,9 @@ async def generate_relax_screenplay_gemini(
         or os.getenv("GOOGLE_API_KEY", "")
     )
     if not api_key:
-        logger.warning("gemini_api_key_missing: Falling back to deterministic relax screenplay synthesis.")
-        return _build_deterministic_relax_screenplay(primary, eff_prompt, duration_seconds, num_shots)
+        raise RuntimeError("Gemini API key is missing. Set GEMINI_API_KEY or GOOGLE_API_KEY.")
+
+    google_search_enabled = bool(settings.llm.gemini_google_search_enabled and not eff_prompt)
 
     # Genre-Specific Relaxation Directorial System Prompt with Negative Topic Exclusions
     sys_prompt = build_ambient_directorial_prompt(
@@ -98,8 +73,10 @@ async def generate_relax_screenplay_gemini(
         camera_motion=camera_motion,
         excluded_topics=recent_topics,
         image_model=image_model,
+        google_search_enabled=google_search_enabled,
     )
-    logger.info(f"gemini_relax_director_dispatch: archetype='{primary}' prompt='{eff_prompt}' exclusions={len(recent_topics)} chan='{channel_id}'")
+    discovery_mode = "grounded_search" if google_search_enabled else ("knowledge_base" if not eff_prompt else "user_prompt")
+    logger.info(f"gemini_relax_director_dispatch: mode='{discovery_mode}' archetype='{primary}' prompt='{eff_prompt}' exclusions={len(recent_topics)} chan='{channel_id}'")
 
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
@@ -110,15 +87,39 @@ async def generate_relax_screenplay_gemini(
                 "temperature": 0.7,
             },
         }
+        if google_search_enabled:
+            payload["tools"] = [{"google_search": {}}]
         client = HTTPClientPool.get_client()
+        request_body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        logger.info(f"gemini_api_request: model=gemini-flash-latest payload={request_body}")
         response = await client.post(url, json=payload, timeout=45.0)
+        response_body = response.text
+        logger.info(f"gemini_api_response: status={response.status_code} body={response_body}")
 
         if response.status_code != 200:
-            logger.error(f"gemini_api_http_error: status={response.status_code} body={response.text[:200]}")
-            return _build_deterministic_relax_screenplay(primary, eff_prompt, duration_seconds, num_shots)
+            error_body = response_body[:2000]
+            logger.error(f"gemini_api_http_error: status={response.status_code} body={error_body}")
+            raise RuntimeError(f"Gemini API request failed (HTTP {response.status_code}): {error_body}")
 
         data = response.json()
-        raw_json = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        candidates = data.get("candidates") if isinstance(data, dict) else None
+        if not isinstance(candidates, list) or not candidates:
+            details = data.get("error") or data.get("promptFeedback") or data
+            detail_text = json.dumps(details, ensure_ascii=True)[:2000]
+            logger.error(f"gemini_response_missing_candidates: body={detail_text}")
+            raise RuntimeError(f"Gemini returned no screenplay candidates (HTTP 200): {detail_text}")
+
+        candidate = candidates[0]
+        parts = candidate.get("content", {}).get("parts", [])
+        raw_json = next(
+            (part.get("text", "").strip() for part in parts if isinstance(part, dict) and part.get("text")),
+            "",
+        )
+        if not raw_json:
+            reason = candidate.get("finishReason") or candidate.get("safetyRatings") or candidate
+            detail_text = json.dumps(reason, ensure_ascii=True)[:2000]
+            logger.error(f"gemini_candidate_missing_text: details={detail_text}")
+            raise RuntimeError(f"Gemini returned a candidate without screenplay text: {detail_text}")
 
         # Save raw Gemini response JSON for permanent reference
         if raw_output_path:
@@ -128,6 +129,11 @@ async def generate_relax_screenplay_gemini(
                 raw_p.parent.mkdir(parents=True, exist_ok=True)
                 raw_p.write_text(raw_json, encoding="utf-8")
                 logger.info(f"raw_gemini_screenplay_saved: {raw_p}")
+                grounding = candidate.get("groundingMetadata")
+                if grounding:
+                    grounding_path = raw_p.with_suffix(".grounding.json")
+                    grounding_path.write_text(json.dumps(grounding, indent=2), encoding="utf-8")
+                    logger.info(f"gemini_grounding_metadata_saved: {grounding_path}")
             except Exception as raw_save_err:
                 logger.warning(f"failed_to_save_raw_gemini_json: {raw_save_err}")
 
@@ -152,9 +158,11 @@ async def generate_relax_screenplay_gemini(
 
         return screenplay
 
+    except RuntimeError:
+        raise
     except Exception as exc:
-        logger.error(f"gemini_relax_director_failed: {exc}. Using deterministic fallback.")
-        return _build_deterministic_relax_screenplay(primary, eff_prompt, duration_seconds, num_shots)
+        logger.exception(f"gemini_relax_director_failed: {exc}")
+        raise RuntimeError(f"Gemini screenplay generation failed: {exc}") from exc
 
 
 def _build_deterministic_relax_screenplay(
