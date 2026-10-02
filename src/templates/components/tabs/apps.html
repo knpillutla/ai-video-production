@@ -12,64 +12,64 @@
       </div>
 
       <!-- Sub-tabs: Starter Kits, Custom, Image, Video, Audio, Model -->
-      <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs border-b border-[var(--border)] text-gray-400">
-        <button class="pb-2 font-bold text-white border-b-2 border-white whitespace-nowrap">Starter Kits</button>
-        <button class="pb-2 hover:text-white whitespace-nowrap">Custom</button>
-        <button class="pb-2 hover:text-white whitespace-nowrap">Image</button>
-        <button class="pb-2 hover:text-white whitespace-nowrap">Video</button>
-        <button class="pb-2 hover:text-white whitespace-nowrap">Audio</button>
-        <button class="pb-2 hover:text-white whitespace-nowrap">Model &gt;</button>
+      <div class="flex items-center gap-4 overflow-x-auto pb-1 text-xs border-b border-[var(--border)] text-[var(--text-muted)]">
+        <button class="subtab-btn active">Starter Kits</button>
+        <button class="subtab-btn">Custom</button>
+        <button class="subtab-btn">Image</button>
+        <button class="subtab-btn">Video</button>
+        <button class="subtab-btn">Audio</button>
+        <button class="subtab-btn">Model &gt;</button>
       </div>
 
       <!-- Vertical Category Cards -->
       <div class="space-y-2">
-        <div onclick="selectAppCategory('film')" id="cat-card-film" class="p-3 bg-slate-900/60 hover:bg-slate-800/80 border border-[var(--border)] rounded-xl cursor-pointer transition flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+        <div onclick="selectAppCategory('film')" id="cat-card-film" class="cat-card-item">
+          <div class="w-9 h-9 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
             <i class="fa-solid fa-clapperboard text-sm"></i>
           </div>
           <div>
-            <div class="font-bold text-white text-xs">Film or shorts</div>
-            <div class="text-[11px] text-gray-400">Scenes, characters, VFX &amp; Narrative</div>
+            <div class="cat-title font-bold text-xs text-[var(--text)]">Film or shorts</div>
+            <div class="text-[11px] text-[var(--text-muted)]">Scenes, characters, VFX &amp; Narrative</div>
           </div>
         </div>
 
-        <div onclick="selectAppCategory('marketing')" id="cat-card-marketing" class="p-3 bg-slate-900/60 hover:bg-slate-800/80 border border-[var(--border)] rounded-xl cursor-pointer transition flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center shrink-0">
+        <div onclick="selectAppCategory('marketing')" id="cat-card-marketing" class="cat-card-item">
+          <div class="w-9 h-9 rounded-lg bg-pink-500/10 text-pink-500 flex items-center justify-center shrink-0">
             <i class="fa-solid fa-bag-shopping text-sm"></i>
           </div>
           <div>
-            <div class="font-bold text-white text-xs">Marketing</div>
-            <div class="text-[11px] text-gray-400">Product, campaign &amp; brand content</div>
+            <div class="cat-title font-bold text-xs text-[var(--text)]">Marketing</div>
+            <div class="text-[11px] text-[var(--text-muted)]">Product, campaign &amp; brand content</div>
           </div>
         </div>
 
-        <div onclick="selectAppCategory('social')" id="cat-card-social" class="p-3 bg-indigo-600/20 border-2 border-indigo-500 rounded-xl cursor-pointer transition flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-indigo-500/30 text-indigo-300 flex items-center justify-center shrink-0">
+        <div onclick="selectAppCategory('social')" id="cat-card-social" class="cat-card-item active">
+          <div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
             <i class="fa-solid fa-mobile-screen text-sm"></i>
           </div>
           <div>
-            <div class="font-bold text-white text-xs">Social</div>
-            <div class="text-[11px] text-gray-300">Reels, TikToks &amp; platform-ready content</div>
+            <div class="cat-title font-bold text-xs text-[var(--text)]">Social</div>
+            <div class="text-[11px] text-[var(--text-muted)]">Reels, TikToks &amp; platform-ready content</div>
           </div>
         </div>
 
-        <div onclick="selectAppCategory('educational')" id="cat-card-educational" class="p-3 bg-slate-900/60 hover:bg-slate-800/80 border border-[var(--border)] rounded-xl cursor-pointer transition flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+        <div onclick="selectAppCategory('educational')" id="cat-card-educational" class="cat-card-item">
+          <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
             <i class="fa-solid fa-graduation-cap text-sm"></i>
           </div>
           <div>
-            <div class="font-bold text-white text-xs">Educational content</div>
-            <div class="text-[11px] text-gray-400">Animation &amp; storytelling</div>
+            <div class="cat-title font-bold text-xs text-[var(--text)]">Educational content</div>
+            <div class="text-[11px] text-[var(--text-muted)]">Animation &amp; storytelling</div>
           </div>
         </div>
 
-        <div onclick="selectAppCategory('experimental')" id="cat-card-experimental" class="p-3 bg-slate-900/60 hover:bg-slate-800/80 border border-[var(--border)] rounded-xl cursor-pointer transition flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+        <div onclick="selectAppCategory('experimental')" id="cat-card-experimental" class="cat-card-item">
+          <div class="w-9 h-9 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center shrink-0">
             <i class="fa-solid fa-palette text-sm"></i>
           </div>
           <div>
-            <div class="font-bold text-white text-xs">Experimental art</div>
-            <div class="text-[11px] text-gray-400">Abstract VFX, motion &amp; music visuals</div>
+            <div class="cat-title font-bold text-xs text-[var(--text)]">Experimental art</div>
+            <div class="text-[11px] text-[var(--text-muted)]">Abstract VFX, motion &amp; music visuals</div>
           </div>
         </div>
       </div>

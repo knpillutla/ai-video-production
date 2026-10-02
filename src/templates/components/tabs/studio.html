@@ -3,46 +3,7 @@
   <!-- TOP CHANNEL CONTEXT STRIP -->
   {% include "components/tabs/studio_top_channel_bar.html" %}
 
-  <!-- ACTIVE EPISODE CONTEXT & STATUS STRIP (Always visible above 3 panels) -->
-  <div id="studio-active-episode-bar" class="shrink-0 px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-xl flex flex-wrap items-center justify-between gap-2.5 shadow-sm">
-    <div class="flex items-center gap-3 min-w-0 flex-1">
-      <!-- Clickable Episode ID Hyperlink / Badge -->
-      <button type="button" onclick="openActiveEpisodeModal()" title="Click to view full episode details & manifest" class="hover:underline hover:scale-105 cursor-pointer font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/90 dark:hover:bg-indigo-900 border border-indigo-300 dark:border-indigo-700 px-2 py-0.5 rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition shrink-0">
-        <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
-        <span id="top-ep-badge-id">NEW</span>
-      </button>
 
-      <span id="top-ep-badge-genre" class="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold border border-emerald-300 dark:border-emerald-800 shrink-0">New Production</span>
-
-      <!-- Episode Title & Topic Details -->
-      <div class="min-w-0 flex-1 flex flex-col justify-center">
-        <div class="flex items-center gap-1.5 min-w-0">
-          <span class="text-[9px] font-bold text-slate-400 dark:text-gray-400 uppercase tracking-wide shrink-0">Title:</span>
-          <span id="top-ep-title" class="font-black text-slate-900 dark:text-white text-xs truncate">Ready for Synthesis</span>
-          <span id="top-ep-job-id" class="font-mono text-[9px] text-slate-500 dark:text-gray-400 bg-slate-100 dark:bg-slate-900 px-1.5 py-0.2 rounded border border-slate-300 dark:border-slate-700 truncate hidden xl:inline">Pending</span>
-        </div>
-        <div class="flex items-center gap-1.5 min-w-0 mt-0.5">
-          <span class="text-[9px] font-bold text-slate-400 dark:text-gray-400 uppercase tracking-wide shrink-0">Topic:</span>
-          <span id="top-ep-story" class="text-[10px] text-slate-700 dark:text-gray-200 font-medium truncate">Select channel preset, configure parameters, and click Produce Video.</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Duration, Specs & Live Status -->
-    <div class="flex items-center gap-2 shrink-0">
-      <button type="button" onclick="reprocessActiveEpisodeId()" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold transition flex items-center gap-1.5 shadow-sm border border-emerald-500/50 active:scale-95" title="Approve and Rerender (--id) — Resumes active episode to completion">
-        <i class="fa-solid fa-play text-[9px]"></i>
-        <span>Approve and Rerender</span>
-      </button>
-      <div class="flex items-center gap-1 text-[10px] font-mono">
-        <span class="font-bold text-slate-400 uppercase tracking-wide">Duration:</span>
-        <span id="top-ep-duration" class="font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-800">10s (Draft)</span>
-      </div>
-      <span id="top-ep-status-badge" class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-slate-700 text-white shadow-sm flex items-center gap-1">
-        <span>Idle</span>
-      </span>
-    </div>
-  </div>
 
   <!-- STUDIO IN-LINE LIVE PRODUCTION NOTIFICATION BANNER -->
   <div id="studio-queued-banner" class="hidden shrink-0 p-2 bg-emerald-50 dark:bg-emerald-950/90 border border-emerald-300 dark:border-emerald-500/50 rounded-xl flex items-center justify-between gap-3 shadow-md transition-all">
@@ -68,8 +29,8 @@
     </div>
   </div>
 
-  <!-- 3-VERTICAL-PANEL RESPONSIVE SAAS GRID (20% Left | 20% Center | 60% Right) -->
-  <div class="flex-1 grid grid-cols-1 lg:grid-cols-[20%_20%_1fr] gap-2 min-h-0 overflow-hidden">
+  <!-- 3-VERTICAL-PANEL RESPONSIVE SAAS GRID (23% Left | 23% Center | 54% Right) -->
+  <div class="flex-1 grid grid-cols-1 lg:grid-cols-[23%_23%_1fr] gap-2.5 min-h-0 overflow-hidden">
     <!-- PANEL 1: STORY & CREATION HUB (Left: 20%) -->
     <div class="h-full min-h-0 overflow-hidden">
       {% include "components/tabs/studio_panel_creation.html" %}

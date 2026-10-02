@@ -71,9 +71,9 @@ function selectAppCategory(catKey) {
     const card = document.getElementById("cat-card-" + c);
     if (!card) return;
     if (c === catKey) {
-      card.className = "p-3 bg-indigo-600/20 border-2 border-indigo-500 rounded-xl cursor-pointer transition flex items-center gap-3";
+      card.classList.add("active");
     } else {
-      card.className = "p-3 bg-slate-900/60 hover:bg-slate-800/80 border border-[var(--border)] rounded-xl cursor-pointer transition flex items-center gap-3";
+      card.classList.remove("active");
     }
   });
   const titles = {
@@ -103,13 +103,13 @@ function renderAppsCatalog() {
   });
 
   if (items.length === 0) {
-    container.innerHTML = '<div class="col-span-3 text-center py-12 text-gray-500 text-xs">No apps found matching your query.</div>';
+    container.innerHTML = '<div class="col-span-3 text-center py-12 text-[var(--text-muted)] text-xs">No apps found matching your query.</div>';
     return;
   }
 
   container.innerHTML = items.map(app => `
-    <div onclick="launchApp('${app.id}')" class="group bg-slate-900/90 border border-[var(--border)] hover:border-indigo-500/80 rounded-2xl overflow-hidden cursor-pointer transition shadow-md hover:shadow-indigo-500/10 flex flex-col">
-      <div class="h-36 overflow-hidden relative bg-slate-950">
+    <div onclick="launchApp('${app.id}')" class="group bg-[var(--card)] border border-[var(--border)] hover:border-[var(--accent)] rounded-2xl overflow-hidden cursor-pointer transition shadow-sm hover:shadow-md flex flex-col">
+      <div class="h-36 overflow-hidden relative bg-[var(--card-subtle)]">
         <img src="${app.img}" alt="${app.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
         ${app.badge ? `<span class="absolute top-2.5 left-2.5 px-2 py-0.5 bg-blue-600 text-white font-bold text-[9px] rounded-md shadow">${app.badge}</span>` : ''}
         <div class="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-black/60 backdrop-blur flex items-center justify-center text-white text-xs">
@@ -118,13 +118,13 @@ function renderAppsCatalog() {
       </div>
       <div class="p-4 space-y-1.5 flex-1 flex flex-col justify-between">
         <div>
-          <div class="font-bold text-white text-xs group-hover:text-indigo-400 transition flex items-center justify-between">
+          <div class="font-bold text-[var(--text)] text-xs group-hover:text-[var(--accent)] transition flex items-center justify-between">
             <span>${app.title}</span>
             <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-0 group-hover:opacity-100 transition"></i>
           </div>
-          <p class="text-[11px] text-gray-400 leading-relaxed mt-1 line-clamp-2">${app.desc}</p>
+          <p class="text-[11px] text-[var(--text-secondary)] leading-relaxed mt-1 line-clamp-2">${app.desc}</p>
         </div>
-        <div class="pt-2 text-[10px] text-indigo-300 font-semibold flex items-center gap-1">
+        <div class="pt-2 text-[10px] text-[var(--accent)] font-semibold flex items-center gap-1">
           <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i>
           <span>Launch App</span>
         </div>

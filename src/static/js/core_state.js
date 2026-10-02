@@ -48,15 +48,9 @@ function switchTab(tabId) {
     if (el) el.classList.toggle("hidden", t !== tabId);
     if (btn) {
       if (t === tabId) {
-        btn.classList.add("text-white", "bg-indigo-600/20", "border-r-2", "border-indigo-500");
-        btn.classList.remove("text-gray-400", "text-emerald-400");
+        btn.classList.add("active");
       } else {
-        btn.classList.remove("text-white", "bg-indigo-600/20", "border-r-2", "border-indigo-500");
-        if (t === "studio-pro") {
-          btn.classList.add("text-emerald-400");
-        } else {
-          btn.classList.add("text-gray-400");
-        }
+        btn.classList.remove("active");
       }
     }
   });
