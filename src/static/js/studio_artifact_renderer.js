@@ -115,12 +115,15 @@ function renderMasterVideosList(vid) {
 
   // CASE 2: Not yet ready -> Waiting for Approval or Queued
   if (!isMasterReady || eds.length === 0) {
-    const hasStems = Boolean((vid?.audio_stems && vid.audio_stems.length > 0) || vid?.currentStage === 4);
+    const rawStems = (vid?.audio_stems && vid.audio_stems.length > 0) ? vid.audio_stems : (vid?.artifacts?.audio_stems || []);
+    const hasStems = Boolean(!isProc && rawStems.length > 0);
     if (hasStems) {
       c.innerHTML = `<div class="col-span-2 p-1.5 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border border-emerald-300 dark:border-emerald-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
         <div class="flex items-center gap-1.5"><i class="fa-solid fa-crown text-emerald-600 dark:text-emerald-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-emerald-950 dark:text-white">Stems &amp; Motion Ready</span><span class="text-[7px] text-emerald-700 dark:text-emerald-300">Ready for 4K Master render</span></div></div>
         <button type="button" onclick="advanceToMasterStage(currentActiveInspectorEpisode)" class="px-2 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95"><i class="fa-solid fa-circle-check text-[7px]"></i><span>Approve &amp; Render 4K Master ➔</span></button>
       </div>`;
+    } else if (isProc && stage <= 4) {
+      c.innerHTML = `<div class="col-span-2 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-amber-500 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 5 4K Master</span><span class="text-[7px] text-slate-400 font-mono">(Starts after Audio Stems approved)</span></div>`;
     } else {
       c.innerHTML = `<div class="col-span-2 h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-2 shadow-sm"><i class="fa-solid fa-crown text-slate-400 text-xs"></i><span class="text-[9px] font-bold text-slate-700 dark:text-slate-300">No Master Video Yet</span><span class="text-[7px] text-slate-500 font-mono">(Renders in Stage 5)</span></div>`;
     }
@@ -494,7 +497,8 @@ function renderAudioStemsList(vid) {
 
   // If not processing and no stems yet
   if (!isProc && rawStems.length === 0) {
-    const hasMot = Boolean((vid.motion_clips && vid.motion_clips.length > 0) || (vid.artifacts?.motion_clips && vid.artifacts.motion_clips.length > 0) || vid.currentStage === 3);
+    const rawMot = (vid.motion_clips && vid.motion_clips.length > 0) ? vid.motion_clips : (vid.artifacts?.motion_clips || []);
+    const hasMot = Boolean(rawMot.length > 0);
     if (hasMot) {
       c.innerHTML = `<div class="col-span-3 p-1.5 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/40 dark:to-blue-950/40 border border-cyan-300 dark:border-cyan-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
         <div class="flex items-center gap-1.5"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-cyan-950 dark:text-white">Stage 3 Motion Ready</span><span class="text-[7px] text-cyan-700 dark:text-cyan-300">Ready to compose Suno &amp; 3D Velvet audio</span></div></div>
@@ -507,8 +511,8 @@ function renderAudioStemsList(vid) {
   }
 
   // Find Suno stem and Velvet stem
-  const sunoStem = rawStems.find(s => s.filename === "raw_soundtrack.mp3" || (s.name && s.name.toLowerCase().includes("suno")));
-  const velvetStem = rawStems.find(s => s.filename === "velvet_binaural_master_48k.mp3" || (s.name && s.name.toLowerCase().includes("velvet")));
+  const sunoStem = rawStems.find(s => (s.filename && s.filename.includes("raw_soundtrack")) || (s.name && (s.name.toLowerCase().includes("suno") || s.name.toLowerCase().includes("soundtrack"))));
+  const velvetStem = rawStems.find(s => (s.filename && s.filename.includes("velvet")) || (s.name && (s.name.toLowerCase().includes("velvet") || s.name.toLowerCase().includes("binaural") || s.name.toLowerCase().includes("432hz"))));
 
   const items = [
     {
@@ -516,14 +520,14 @@ function renderAudioStemsList(vid) {
       stem: sunoStem,
       color: "cyan",
       model: "Suno v3.5",
-      isGenerating: isProc && stage >= 4 && !sunoStem,
+      isGenerating: Boolean(isProc && stage >= 4 && !sunoStem),
     },
     {
       name: "Velvet 432Hz Master",
       stem: velvetStem,
       color: "emerald",
       model: "Spatial DSP",
-      isGenerating: isProc && stage >= 4 && !velvetStem,
+      isGenerating: Boolean(isProc && stage >= 4 && !velvetStem),
     }
   ];
 

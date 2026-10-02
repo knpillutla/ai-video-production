@@ -118,30 +118,33 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     seamless_clips = [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
     n, x_dur = len(seamless_clips), 2.0
-    total_vid_dur = scene_hold_sec if n == 1 else (n * scene_hold_sec) - ((n - 1) * x_dur)
-
     target_audio = audio_path
     if not target_audio or not target_audio.is_file():
         has_clip_audio = all("Audio:" in subprocess.run([ffmpeg_bin, "-i", str(c)], capture_output=True, text=True, errors="ignore").stderr for c in seamless_clips)
         if not has_clip_audio:
             foley_wav = out_master.parent / "procedural_nature_foley.wav"
             if not foley_wav.is_file() or foley_wav.stat().st_size < 1000:
-                synthesize_foley_stem(weather_type="water stream alpine breeze", setting_type="nature", space="outdoor", duration_seconds=total_vid_dur + 5.0, output_path=foley_wav)
+                synthesize_foley_stem(weather_type="water stream alpine breeze", setting_type="nature", space="outdoor", duration_seconds=scene_hold_sec + 5.0, output_path=foley_wav)
             target_audio = foley_wav
+
+    a_dur = get_media_duration(target_audio) if (target_audio and target_audio.is_file()) else 0.0
+    eff_master_dur = max(scene_hold_sec, a_dur) if a_dur > 15.0 else scene_hold_sec
+    if target_audio and target_audio.is_file() and a_dur > 15.0:
+        from src.services.binaural_spatial_audio import build_seamless_audio_loop
+        target_audio = build_seamless_audio_loop(target_audio)
+        eff_master_dur = get_media_duration(target_audio) or eff_master_dur
 
     v_filter = "scale=3840:2160:force_original_aspect_ratio=decrease,pad=3840:2160:(ow-iw)/2:(oh-ih)/2,setsar=1"
 
     if n == 1:
         c_dur = get_media_duration(seamless_clips[0]) or 5.0
-        v_loops = max(1, int(scene_hold_sec / max(1.0, c_dur)) + 2)
+        v_loops = max(1, int(eff_master_dur / max(1.0, c_dur)) + 2)
         if target_audio and target_audio.is_file():
-            a_dur = get_media_duration(target_audio) or 5.0
-            a_loops = max(1, int(scene_hold_sec / max(1.0, a_dur)) + 2)
             cmd = [
                 ffmpeg_bin, "-y",
                 "-stream_loop", str(v_loops), "-i", str(seamless_clips[0]),
-                "-stream_loop", str(a_loops), "-i", str(target_audio),
-                "-map", "0:v:0", "-map", "1:a:0", "-t", str(scene_hold_sec),
+                "-i", str(target_audio),
+                "-map", "0:v:0", "-map", "1:a:0", "-t", f"{eff_master_dur:.2f}",
                 "-vf", v_filter,
                 "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
                 "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
@@ -151,32 +154,31 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
             cmd = [
                 ffmpeg_bin, "-y",
                 "-stream_loop", str(v_loops), "-i", str(seamless_clips[0]),
-                "-map", "0:v:0", "-map", "0:a:0", "-t", str(scene_hold_sec),
+                "-map", "0:v:0", "-t", f"{eff_master_dur:.2f}",
                 "-vf", v_filter,
                 "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
-                "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
                 "-movflags", "+faststart", str(out_master)
             ]
     else:
+        shot_hold = (eff_master_dur + ((n - 1) * x_dur)) / n
         inputs = []
         for c in seamless_clips:
-            v_loops = max(1, int(scene_hold_sec / max(1.0, get_media_duration(c) or 5.0)) + 2)
+            v_loops = max(1, int(shot_hold / max(1.0, get_media_duration(c) or 5.0)) + 2)
             inputs.extend(["-stream_loop", str(v_loops), "-i", str(c)])
 
         filter_parts = [f"[{i}:v]scale=3840:2160,setsar=1[s{i}]" for i in range(n)]
-        prev_tag, curr_offset = "s0", scene_hold_sec - x_dur
+        prev_tag, curr_offset = "s0", shot_hold - x_dur
         for i in range(1, n):
             out_tag = f"v{i}" if i < n - 1 else "v"
             filter_parts.append(f"[{prev_tag}][s{i}]xfade=transition=fade:duration={x_dur:.2f}:offset={curr_offset:.2f}[{out_tag}]")
-            prev_tag, curr_offset = out_tag, curr_offset + scene_hold_sec - x_dur
+            prev_tag, curr_offset = out_tag, curr_offset + shot_hold - x_dur
 
         if target_audio and target_audio.is_file():
-            a_loops = max(1, int(total_vid_dur / max(1.0, get_media_duration(target_audio) or 5.0)) + 2)
-            inputs.extend(["-stream_loop", str(a_loops), "-i", str(target_audio)])
-            cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-map", f"{n}:a", "-t", f"{total_vid_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
+            inputs.extend(["-i", str(target_audio)])
+            cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-map", f"{n}:a", "-t", f"{eff_master_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
         else:
             filter_a = [f"[{'0:a' if i == 1 else f'a{i-1}'}][{i}:a]acrossfade=d={x_dur:.2f}[{'a' if i == n - 1 else f'a{i}'}]" for i in range(1, n)]
-            cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", ";".join(filter_parts + filter_a), "-map", "[v]", "-map", "[a]", "-t", f"{total_vid_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
+            cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", ";".join(filter_parts + filter_a), "-map", "[v]", "-map", "[a]", "-t", f"{eff_master_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
 
     try:
         subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -187,12 +189,13 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
     return out_master
 
 
-def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], ep_dir: Path, crf: int = 22) -> Dict[str, Path]:
+def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], ep_dir: Path, crf: int = 22, force_rerun: bool = False, **kwargs) -> Dict[str, Path]:
     """Assemble 4K masters in CRF 22 format. Automatically rebuilds if forward cineloops are updated."""
     seamless_clips = [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
     master_music = ep_dir / "master_4k_ambient.mp4"
     needs_music_rebuild = (
-        not master_music.is_file()
+        force_rerun
+        or not master_music.is_file()
         or master_music.stat().st_size < 1000
         or any(sc.stat().st_mtime > master_music.stat().st_mtime for sc in seamless_clips)
     )
@@ -205,7 +208,7 @@ def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], e
         return {"music_master": master_music, "nature_master": None}
 
     master_nature = ep_dir / "master_4k_ambient_nature_only.mp4"
-    needs_nature_rebuild = not master_nature.is_file() or master_nature.stat().st_size < 1000 or any(sc.stat().st_mtime > master_nature.stat().st_mtime for sc in seamless_clips)
+    needs_nature_rebuild = force_rerun or not master_nature.is_file() or master_nature.stat().st_size < 1000 or any(sc.stat().st_mtime > master_nature.stat().st_mtime for sc in seamless_clips)
     if needs_nature_rebuild:
         assemble_4k_master(seamless_clips, None, master_nature, crf=crf)
     else:
@@ -214,43 +217,30 @@ def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], e
     return {"music_master": master_music, "nature_master": master_nature}
 
 
-def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], fade_hours: Optional[float]) -> Optional[Path]:
+def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], fade_hours: Optional[float], force_rerun: bool = False) -> Optional[Path]:
     """Export long-play multi-hour stream loop for all existing master versions (with BGM and pure nature), plus 30-min broadcast by default."""
     eff_hours = hours if (hours and hours > 0) else 3.0
     suffix = f"_{int(fade_hours)}h_black" if fade_hours else ""
     label = int(eff_hours) if eff_hours.is_integer() else eff_hours
     lp_path = ep_dir / f"master_4k_{label}hour{suffix}_broadcast.mp4"
-    legacy_lp = ep_dir / f"master_4k_{label}hour{suffix}_sleep.mp4"
-    if legacy_lp.is_file() and legacy_lp.stat().st_size > 1000 and (not lp_path.is_file() or lp_path.stat().st_size < 1000):
-        try:
-            legacy_lp.rename(lp_path)
-        except Exception:
-            pass
 
-    if master.is_file() and (not lp_path.is_file() or lp_path.stat().st_size < 1000):
+    if master.is_file() and (force_rerun or not lp_path.is_file() or lp_path.stat().st_size < 1000 or master.stat().st_mtime > lp_path.stat().st_mtime):
         export_long_play_broadcast(source_4k_video=master, output_long_play=lp_path, target_duration_seconds=eff_hours * 3600.0, fade_to_black_hours=fade_hours)
     
-    # Also generate default 30-Minute (0.5 hour) Broadcast Edition
     lp_30m = ep_dir / "master_4k_30min_broadcast.mp4"
-    if master.is_file() and (not lp_30m.is_file() or lp_30m.stat().st_size < 1000):
+    if master.is_file() and (force_rerun or not lp_30m.is_file() or lp_30m.stat().st_size < 1000 or master.stat().st_mtime > lp_30m.stat().st_mtime):
         export_long_play_broadcast(source_4k_video=master, output_long_play=lp_30m, target_duration_seconds=1800.0)
 
     nature_master = ep_dir / "master_4k_ambient_nature_only.mp4"
     if nature_master.is_file() and nature_master.resolve() != master.resolve():
-        lp_nature_path = ep_dir / f"master_4k_{label}hour_nature_only{suffix}_broadcast.mp4"
-        legacy_nature_lp = ep_dir / f"master_4k_{label}hour_nature_only{suffix}_sleep.mp4"
-        if legacy_nature_lp.is_file() and legacy_nature_lp.stat().st_size > 1000 and (not lp_nature_path.is_file() or lp_nature_path.stat().st_size < 1000):
-            try:
-                legacy_nature_lp.rename(lp_nature_path)
-            except Exception:
-                pass
-        if not lp_nature_path.is_file() or lp_nature_path.stat().st_size < 1000:
-            logger.info(f"stretching_dual_nature_master: {lp_nature_path.name}")
-            export_long_play_broadcast(source_4k_video=nature_master, output_long_play=lp_nature_path, target_duration_seconds=eff_hours * 3600.0, fade_to_black_hours=fade_hours)
+        lp_nature = ep_dir / f"master_4k_{label}hour_nature_only{suffix}_broadcast.mp4"
+        if force_rerun or not lp_nature.is_file() or lp_nature.stat().st_size < 1000 or nature_master.stat().st_mtime > lp_nature.stat().st_mtime:
+            export_long_play_broadcast(source_4k_video=nature_master, output_long_play=lp_nature, target_duration_seconds=eff_hours * 3600.0, fade_to_black_hours=fade_hours)
         
-        lp_30m_nature = ep_dir / "master_4k_30min_nature_only_broadcast.mp4"
-        if not lp_30m_nature.is_file() or lp_30m_nature.stat().st_size < 1000:
-            export_long_play_broadcast(source_4k_video=nature_master, output_long_play=lp_30m_nature, target_duration_seconds=1800.0)
+        lp_30m_nat = ep_dir / "master_4k_30min_nature_only_broadcast.mp4"
+        if force_rerun or not lp_30m_nat.is_file() or lp_30m_nat.stat().st_size < 1000 or nature_master.stat().st_mtime > lp_30m_nat.stat().st_mtime:
+            export_long_play_broadcast(source_4k_video=nature_master, output_long_play=lp_30m_nat, target_duration_seconds=1800.0)
+    return lp_path
     return lp_path
 
 

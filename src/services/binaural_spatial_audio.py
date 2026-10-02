@@ -82,3 +82,78 @@ def apply_binaural_spatial_mastering(
         shutil.copy2(inp, out)
 
     return out
+
+
+def build_seamless_audio_loop(
+    input_audio: Path | str,
+    output_audio: Optional[Path | str] = None,
+    xfade_dur: float = 3.0,
+    force_rerun: bool = False,
+) -> Path:
+    """Transform an ambient soundtrack into a 100% seamless cyclic audio loop with smooth crossfade between tail and head."""
+    inp = Path(input_audio).resolve()
+    if not inp.is_file():
+        raise FileNotFoundError(f"Audio file not found: {inp}")
+
+    if output_audio:
+        out = Path(output_audio).resolve()
+    else:
+        out = inp.parent / f"{inp.stem}_seamless_loop{inp.suffix}"
+
+    if not force_rerun and out.is_file() and out.stat().st_size > 1000:
+        return out
+
+    ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+    import re
+    res = subprocess.run([ffmpeg_bin, "-i", str(inp)], capture_output=True, text=True, errors="ignore")
+    m = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.\d+)", res.stderr)
+    if not m:
+        return inp
+    dur = float(m.group(1)) * 3600.0 + float(m.group(2)) * 60.0 + float(m.group(3))
+
+    if dur < (xfade_dur * 2.5):
+        return inp
+
+    tail_len = min(6.0, dur / 3.0)
+    cut_point = dur - tail_len
+    temp_tail = out.parent / f"temp_tail_{out.stem}.wav"
+    temp_body = out.parent / f"temp_body_{out.stem}.wav"
+
+    try:
+        subprocess.run([
+            ffmpeg_bin, "-y", "-ss", f"{cut_point:.2f}", "-t", f"{tail_len:.2f}", "-i", str(inp),
+            "-c:a", "pcm_s16le", "-ar", "48000", str(temp_tail)
+        ], capture_output=True, check=True)
+
+        subprocess.run([
+            ffmpeg_bin, "-y", "-ss", "0", "-t", f"{cut_point:.2f}", "-i", str(inp),
+            "-c:a", "pcm_s16le", "-ar", "48000", str(temp_body)
+        ], capture_output=True, check=True)
+
+        cmd = [
+            ffmpeg_bin, "-y",
+            "-i", str(temp_tail),
+            "-i", str(temp_body),
+            "-filter_complex", f"[0:a][1:a]acrossfade=d={xfade_dur:.2f}:c1=tri:c2=tri[a]",
+            "-map", "[a]",
+            "-c:a", "libmp3lame", "-b:a", "320k", "-ar", "48000",
+            str(out)
+        ]
+        subprocess.run(cmd, capture_output=True, check=True)
+        logger.info(f"seamless_audio_loop_created: {inp.name} -> {out.name}")
+        return out
+    except Exception as err:
+        logger.warning(f"seamless_audio_loop_fallback: {err}")
+        return inp
+    finally:
+        if temp_tail.is_file():
+            try:
+                temp_tail.unlink()
+            except Exception:
+                pass
+        if temp_body.is_file():
+            try:
+                temp_body.unlink()
+            except Exception:
+                pass
+

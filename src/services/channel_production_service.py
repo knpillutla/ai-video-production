@@ -389,10 +389,21 @@ async def produce_channel_video(
         motion_clips.append({"name": f"Motion {idx}: {scene_label}", "model": m_label, "duration": f"{duration_seconds:.0f}s", "url": url})
 
     audio_stems = []
+    if manifest_file and (manifest_file.parent / "raw_soundtrack.mp3").exists() and (manifest_file.parent / "raw_soundtrack.mp3").stat().st_size > 1000:
+        raw_suno_f = manifest_file.parent / "raw_soundtrack.mp3"
+        audio_stems.append({
+            "name": "Suno Soundtrack",
+            "filename": "raw_soundtrack.mp3",
+            "type": "suno_bgm",
+            "duration": f"{duration_seconds:.0f}s",
+            "url": _to_url(str(raw_suno_f)),
+            "status": "completed",
+            "color": "cyan",
+        })
     bgm_path = result.get("bgm_path")
     if not bgm_path and manifest_file and (manifest_file.parent / "velvet_binaural_master_48k.mp3").exists():
         bgm_path = str(manifest_file.parent / "velvet_binaural_master_48k.mp3")
-    if bgm_path and not photos_only and not motion_only:
+    if bgm_path and not photos_only and not motion_only and Path(bgm_path).exists() and Path(bgm_path).stat().st_size > 1000:
         audio_stems.append({
             "name": "432Hz Velvet Binaural BGM",
             "filename": "velvet_binaural_master_48k.mp3",
@@ -400,6 +411,7 @@ async def produce_channel_video(
             "duration": f"{duration_seconds:.0f}s",
             "url": _to_url(bgm_path),
             "status": "completed",
+            "color": "emerald",
         })
 
     master_nature_v = result.get("master_nature_video_path") or result.get("master_nature_video")
