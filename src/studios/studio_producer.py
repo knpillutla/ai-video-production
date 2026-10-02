@@ -108,10 +108,11 @@ class StudioProducer:
             )
             for idx, s in enumerate(sb.scenes, 1)
         ]
+        kf_force_rerun = force_rerun and photos_only
         image_results = await visual_batch_service.render_keyframes_batch(
             tasks=keyframe_tasks,
             aspect_ratio="16:9",
-            force_rerun=force_rerun,
+            force_rerun=kf_force_rerun,
             image_model=image_model,
         )
 

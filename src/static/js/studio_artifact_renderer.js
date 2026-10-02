@@ -337,7 +337,7 @@ function renderMotionClipsList(vid) {
       <div class="flex items-center justify-between flex-wrap gap-1">
         <span class="text-xs font-black text-red-700 dark:text-red-400 flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-red-600"></i> Video Motion Status / Timeout</span>
         <div class="flex items-center gap-1">
-          <button type="button" onclick="reprocessActiveEpisodeId('${vid.id || vid.episode_id}')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1 shadow-sm active:scale-95" title="Approve and Rerender (--id) — Resumes pipeline from where it stopped">⚡ Approve and Rerender</button>
+          <button type="button" onclick="reprocessActiveEpisodeId('${vid.id || vid.episode_id}')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1 shadow-sm active:scale-95" title="Re-Synthesize (--id) — Resumes pipeline from where it stopped">⚡ Re-Synthesize</button>
           <button type="button" onclick="retryEpisodeWithFallback('${vid.id || vid.episode_id}')" class="px-2 py-1 text-[9px] font-medium rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-gray-200 transition">Fallback</button>
         </div>
       </div>
@@ -365,9 +365,11 @@ function renderMotionClipsList(vid) {
     if (hasKfs) {
       c.innerHTML = `<div class="col-span-3 p-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/40 dark:to-indigo-950/40 border border-purple-300 dark:border-purple-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
         <div class="flex items-center gap-1.5"><i class="fa-solid fa-film text-purple-600 dark:text-purple-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-purple-950 dark:text-white">Stage 2 Photos Ready</span><span class="text-[7px] text-purple-700 dark:text-purple-300">Choose motion engine:</span></div></div>
-        <div class="flex items-center gap-1">
-          <button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'wan', true)" class="px-2 py-1 bg-white dark:bg-slate-900 hover:bg-slate-100 text-slate-800 dark:text-gray-200 rounded-lg text-[8px] font-bold border border-slate-300 dark:border-slate-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Test with Wan 2.1"><i class="fa-solid fa-vial text-amber-500 text-[7px]"></i><span>Test (Wan 2.1)</span></button>
-          <button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'kling_v3', true)" class="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Render with Kling v3 Pro 4K"><i class="fa-solid fa-wand-magic-sparkles text-[7px]"></i><span>Render with Kling (Prod) ➔</span></button>
+        <div class="flex items-center gap-1 flex-wrap">
+          <button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'wan', true)" class="px-1.5 py-1 bg-white dark:bg-slate-900 hover:bg-slate-100 text-slate-800 dark:text-gray-200 rounded-lg text-[8px] font-bold border border-slate-300 dark:border-slate-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Test with Wan 2.1 1080p ($0.40)"><i class="fa-solid fa-vial text-amber-500 text-[7px]"></i><span>Wan 2.1</span></button>
+          <button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'wan_4k', true)" class="px-1.5 py-1 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 text-amber-900 dark:text-amber-200 rounded-lg text-[8px] font-bold border border-amber-300 dark:border-amber-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Wan 2.1 + AI 4K Super-Resolution ($0.55)"><i class="fa-solid fa-wand-magic-sparkles text-amber-600 text-[7px]"></i><span>Wan 4K</span></button>
+          <button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'kling_pro', true)" class="px-1.5 py-1 bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 text-purple-900 dark:text-purple-200 rounded-lg text-[8px] font-bold border border-purple-300 dark:border-purple-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Render with Kling 1.6 Pro ($0.95)"><i class="fa-solid fa-gem text-purple-600 text-[7px]"></i><span>Kling Pro</span></button>
+          <button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'kling_v3', true)" class="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Render with Kling v3 4K Native ($1.40)"><i class="fa-solid fa-crown text-[7px]"></i><span>Kling v3 4K (Prod) ➔</span></button>
         </div>
       </div>`;
     } else {
@@ -393,7 +395,9 @@ function renderMotionClipsList(vid) {
     const name = (existing && typeof existing === "object" && existing.name) ? existing.name : `Motion ${i + 1}`;
     let model = (existing && typeof existing === "object" && existing.model) ? existing.model : defModel;
     if (vid.motionModel) {
-      if (vid.motionModel.includes("kling")) model = "Kling v3 Pro (4K)";
+      if (vid.motionModel === "kling_v3" || vid.motionModel === "kling_4k") model = "Kling v3 4K";
+      else if (vid.motionModel === "kling_pro" || vid.motionModel === "kling") model = "Kling Pro";
+      else if (vid.motionModel === "wan_4k") model = "Wan 2.1 + 4K AI";
       else if (vid.motionModel.includes("wan")) model = "Wan 2.1";
     }
     const isSel = vid.selectedMotionClipIds.includes(i);
@@ -403,7 +407,7 @@ function renderMotionClipsList(vid) {
     );
 
     if (isThisClipGenerating) {
-      const activeModelLabel = (vid.motionModel && vid.motionModel.includes("kling")) ? "Kling v3 4K" : ((vid.motionModel && vid.motionModel.includes("wan")) ? "Wan 2.1" : model);
+      const activeModelLabel = (vid.motionModel === "kling_v3" || vid.motionModel === "kling_4k") ? "Kling v3 4K" : ((vid.motionModel === "kling_pro" || vid.motionModel === "kling") ? "Kling Pro" : ((vid.motionModel === "wan_4k") ? "Wan 2.1 + 4K AI" : ((vid.motionModel && vid.motionModel.includes("wan")) ? "Wan 2.1" : model)));
       return `<div class="flex flex-col items-center gap-0.5 w-full"><div class="relative w-full h-11 rounded-lg bg-purple-50/80 dark:bg-slate-900 border-2 border-purple-500 shadow-sm flex flex-col justify-between p-1 ring-2 ring-purple-500/20"><div class="flex items-center justify-between w-full"><span class="text-[8px] font-mono font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[7px]"></i> ${activeModelLabel}</span><span class="text-[7px] font-mono text-purple-600 dark:text-purple-400 font-bold">${pVal}%</span></div><div class="w-full bg-purple-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-purple-600 to-pink-500 rounded-full animate-pulse" style="width: ${pVal}%"></div></div></div><span class="text-[8px] font-bold text-purple-600 dark:text-purple-400 truncate w-full text-center">${name}</span></div>`;
     }
 
@@ -421,7 +425,9 @@ function renderMotionClipsList(vid) {
           <div class="relative z-10 flex items-center justify-between">
             <span class="px-1 py-0.2 rounded bg-purple-900/90 text-[7px] font-mono text-purple-200 border border-purple-500/30">${model}</span>
             <div class="flex items-center gap-0.5">
-              <button type="button" onclick="event.stopPropagation(); advanceToMotionStage(currentActiveInspectorEpisode, 'kling_v3', true);" class="px-1 py-0.2 rounded bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Kling v3 Pro (4K Prod)">⚡ Kling</button>
+              <button type="button" onclick="event.stopPropagation(); advanceToMotionStage(currentActiveInspectorEpisode, 'wan_4k', true);" class="px-1 py-0.2 rounded bg-amber-600 hover:bg-amber-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Wan 2.1 + 4K AI ($0.55)">⚡ Wan4K</button>
+              <button type="button" onclick="event.stopPropagation(); advanceToMotionStage(currentActiveInspectorEpisode, 'kling_pro', true);" class="px-1 py-0.2 rounded bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Kling 1.6 Pro ($0.95)">⚡ Pro</button>
+              <button type="button" onclick="event.stopPropagation(); advanceToMotionStage(currentActiveInspectorEpisode, 'kling_v3', true);" class="px-1 py-0.2 rounded bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Kling v3 4K Native ($1.40)">⚡ 4K</button>
               <span class="px-1 py-0.2 rounded bg-black/70 text-[7px] font-mono text-purple-300">${dur}</span>
               <button type="button" onclick="event.stopPropagation(); promptDeleteArtifact('Motion', ${i}, '${name}', 'Motion Clip');" class="w-3.5 h-3.5 rounded bg-rose-600/90 hover:bg-rose-500 text-white flex items-center justify-center text-[7px] transition shadow font-bold" title="Delete Motion Clip">✕</button>
             </div>

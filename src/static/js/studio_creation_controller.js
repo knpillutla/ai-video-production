@@ -60,6 +60,8 @@ function onGenreChange(genreVal) {
   const subMap = (typeof STUDIO_SUBOPTIONS_MAP !== "undefined") ? STUDIO_SUBOPTIONS_MAP : {};
   const list = subMap[genreVal] || subMap["relax/nature"] || [];
   subSelector.innerHTML = list.map(item => `<option value="${item.val}">${item.label}</option>`).join("");
+  
+  updateArchetypeOptions(genreVal, subSelector.value);
   onSubGenreChange(subSelector.value);
 
   // Sync active channel BGM default
@@ -73,23 +75,34 @@ function onGenreChange(genreVal) {
   }
 }
 
+function updateArchetypeOptions(genreVal, subGenreVal) {
+  const archSelector = document.getElementById("studio-archetype-selector");
+  if (!archSelector) return;
+
+  const archMap = (typeof STUDIO_ARCHETYPES_MAP !== "undefined") ? STUDIO_ARCHETYPES_MAP : {};
+  const list = archMap[genreVal] || archMap["relax/nature"] || [];
+  
+  archSelector.innerHTML = list.map(item => `<option value="${item.val}">${item.label}</option>`).join("");
+  
+  if (subGenreVal && (subGenreVal.includes("bedroom") || subGenreVal.includes("cabin"))) {
+    const match = list.find(x => x.val.includes("bedroom") || x.val.includes("cabin"));
+    if (match) archSelector.value = match.val;
+  } else {
+    archSelector.value = list[0]?.val || "";
+  }
+  onArchetypeChange(archSelector.value);
+}
+
 function onSubGenreChange(val) {
   const promptInput = document.getElementById("youtube-prompt-input");
-  const archSelector = document.getElementById("studio-archetype-selector");
+  const gSelector = document.getElementById("studio-genre-selector");
+  const genreVal = gSelector ? gSelector.value : "relax/nature";
   const bgmToggle = document.getElementById("studio-toggle-bgm");
   
   const placeholders = (typeof STUDIO_SUBGENRE_PLACEHOLDERS !== "undefined") ? STUDIO_SUBGENRE_PLACEHOLDERS : {};
   if (promptInput && placeholders[val]) promptInput.placeholder = placeholders[val];
 
-  if (archSelector) {
-    if (["waterfall_gorge", "tiered_cascade"].includes(val)) archSelector.value = "waterfall_gorge";
-    else if (["alpine_nature", "alpine_village_walk"].includes(val)) archSelector.value = "alpine_mountains";
-    else if (["cozy_hearth", "stone_hearth"].includes(val)) archSelector.value = "coastal_ocean";
-    else if (["zen_garden", "bamboo_grove", "lotus_pond"].includes(val)) archSelector.value = "zen_garden";
-    else if (["global_healing", "himalayan_valley", "geothermal_springs", "redwood_cathedral"].includes(val)) archSelector.value = "sacred_sanctuary";
-    else if (["forest_rain", "veranda_rain", "biophilic_living", "rainy_patio"].includes(val)) archSelector.value = "temperate_forest";
-    else if (["glacial_fjord_lake", "droplet_ripples"].includes(val)) archSelector.value = "glacial_fjord_lake";
-  }
+  updateArchetypeOptions(genreVal, val);
 
   if (val === "cozy_hearth") {
     if (typeof selectStudioChannel === "function") selectStudioChannel("silent_hearth");

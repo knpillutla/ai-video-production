@@ -2,13 +2,13 @@
   "channel_id": "silent_hearth",
   "channel_name": "Silent Hearth",
   "handle": "@silent_hearth",
-  "tag": "🔥 Pure ASMR Sleep & Hearth",
-  "comments": "Nighttime sleep & insomnia aid, pure crackling embers and rain foley, strictly zero melodic intrusion.",
-  "niche_category": "Pure ASMR, Deep Sleep, Insomnia Relief & Cozy Solitude",
-  "target_audience": "Viewers seeking deep sleep, insomnia relief, nighttime reading ambiance, tinnitus masking, and peaceful cozy solitude.",
+  "tag": "🔥🌧️ Sleep, Hearth & Rain ASMR",
+  "comments": "Nighttime sleep & insomnia aid, rainy forest glass cabin bedrooms, crackling embers, rain on window foley, strictly zero melodic intrusion.",
+  "niche_category": "Rain on Window ASMR, Cozy Glass Cabin Bedrooms, Hearth Fireplace & Deep Sleep Aid",
+  "target_audience": "Viewers seeking deep sleep, insomnia relief, nighttime rain ambience, tinnitus masking, study focus, and peaceful cozy cabin solitude.",
   "allowed_genres": [
-    "relax/hearth",
     "relax/rain",
+    "relax/hearth",
     "relax/cozy"
   ],
   "audio_profile": {
@@ -16,26 +16,29 @@
     "style": "Pure natural ASMR foley & brown/pink noise (STRICTLY NO MELODIC INTRUSIONS)",
     "instruments": [],
     "foley_elements": [
+      "Steady raindrops and trickling rivulets streaming down glass windowpanes",
       "Crisp crackling firewood and glowing embers",
-      "Gentle rain pattering on cedar wood and glass",
+      "Gentle roof rainfall pitter-patter",
       "Rhythmic ocean shore wash on wet beach pebbles"
     ],
     "target_lufs": -16.0,
     "bgm_ducking_db": 0.0,
-    "suno_tag_template": "Pure crackling fireplace embers, gentle ocean rain, steady sleep soundscape, zero drums, zero vocals, zero flute"
+    "suno_tag_template": "Pure rain on window glass ASMR, steady rain on forest cabin roof, gentle crackling embers, deep sleep soundscape, zero drums, zero vocals, zero flute"
   },
   "visual_lighting_guardrails": {
-    "lighting_temperature": "Warm amber firelight glow (1800K-2400K), twilight blue hour, or rainy night ambiance",
-    "negative_visual_tokens": "bright harsh daylight, neon lighting, busy crowds, fast motion, bright sun",
-    "purity_rule": "Intimate cozy shelter or peaceful beach solitude, locked tripod cinemagraph composition, zero clutter"
+    "lighting_temperature": "Warm amber interior glow (2400K-3000K) vs. cool misty blue rainy forest exterior (5200K)",
+    "negative_visual_tokens": "bright harsh daylight, neon lighting, busy crowds, fast motion, bright sun, modern electronics, artifacts",
+    "purity_rule": "Cozy glass cabin bedroom, hearth fireplace shelter, or peaceful beach solitude, locked tripod cinemagraph composition, zero clutter, zero humans"
   },
   "youtube_seo_defaults": {
     "primary_tags": [
-      "Deep Sleep Fireplace",
-      "ASMR Crackling Fire",
+      "Rain on Window",
+      "Rainy Forest Bedroom",
+      "Deep Sleep Rain",
+      "Cozy Rain ASMR",
       "Insomnia Relief",
-      "Rain on Beach",
-      "Cozy Fireplace Ambiance",
+      "Rain Sounds for Sleep",
+      "Cozy Glass Cabin",
       "Sleep Aid 4K",
       "Silent Hearth"
     ],

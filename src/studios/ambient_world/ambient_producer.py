@@ -113,19 +113,8 @@ class AmbientWorldProducer:
             (_resolve_scene_image_prompt(scene), ep_dir / f"keyframe_p{scene.scene_index}.jpg", ep_dir / f"fal_req_p{scene.scene_index}.json", scene.scene_index)
             for scene in sb.scenes
         ]
-        keyframe_paths = await visual_batch_service.render_keyframes_batch(kf_tasks, force_rerun=force_rerun, image_model=image_model)
-
-        # Render SEO Thumbnails for both Long-Play (16:9) and Shorts (9:16)
-        long_thumb_prompt = f"Award-winning high-CTR YouTube thumbnail landscape photograph of {sb.title}. High contrast, stunning cinematic depth, crisp 35mm bokeh, cozy atmospheric light, 8k, zero text."
-        short_thumb_prompt = f"Award-winning high-CTR vertical YouTube Short thumbnail photograph of {sb.title}. Striking 9:16 vertical composition, intense visual depth, rich atmospheric mist, 8k, zero text."
-        thumbnail_paths = await visual_batch_service.render_thumbnails_batch(
-            tasks=[
-                (long_thumb_prompt, ep_dir / "thumbnail_music_4k.jpg", "16:9"),
-                (short_thumb_prompt, ep_dir / "thumbnail_9x16_short.jpg", "9:16"),
-            ],
-            force_rerun=force_rerun,
-            image_model=image_model,
-        )
+        kf_force_rerun = force_rerun and photos_only
+        keyframe_paths = await visual_batch_service.render_keyframes_batch(kf_tasks, force_rerun=kf_force_rerun, image_model=image_model)
 
         # Stage 2 Gate: If photos_only is requested, dispatch review notification and stop
         if photos_only:
@@ -139,7 +128,7 @@ class AmbientWorldProducer:
             return {
                 "episode_id": ep_dir.name, "title": sb.title, "status": "photos_ready_for_review",
                 "keyframes": [str(p) for p in keyframe_paths],
-                "thumbnails": [str(p) for p in thumbnail_paths],
+                "thumbnails": [],
                 "storage_path": str(ep_dir),
             }
 
@@ -200,6 +189,19 @@ class AmbientWorldProducer:
 
         long_play_path = handle_long_play_export(master_4k_path, ep_dir, long_play_hours, fade_to_black_hours)
         short_video_path = handle_short_export(master_4k_path, ep_dir, generate_short)
+
+        # Render high-CTR SEO Thumbnails in Stage 5 once master broadcast is locked
+        long_thumb_prompt = f"Award-winning high-CTR YouTube thumbnail landscape photograph of {sb.title}. High contrast, stunning cinematic depth, crisp 35mm bokeh, cozy atmospheric light, 8k, zero text."
+        short_thumb_prompt = f"Award-winning high-CTR vertical YouTube Short thumbnail photograph of {sb.title}. Striking 9:16 vertical composition, intense visual depth, rich atmospheric mist, 8k, zero text."
+        thumbnail_paths = await visual_batch_service.render_thumbnails_batch(
+            tasks=[
+                (long_thumb_prompt, ep_dir / "thumbnail_music_4k.jpg", "16:9"),
+                (short_thumb_prompt, ep_dir / "thumbnail_9x16_short.jpg", "9:16"),
+            ],
+            force_rerun=force_rerun,
+            image_model=image_model,
+        )
+
         yt_package, ab_thumbnails, localized = export_metadata_packages(sb, ep_dir, long_play_hours, fade_to_black_hours)
         await topic_memory.remember_topic(
             topic=sb.title,

@@ -74,8 +74,8 @@ async def dispatch_studio_director(
         )
 
     # 2. Rain Retreat & River ASMR Dispatch
-    if genre_lower in {"relax/rain", "rain_retreat"} or sub_lower in {"biophilic_retreat", "forest_rain", "river_rain"} or "rain" in arch_lower:
-        logger.info(f"dispatcher_route: target='RainRetreatStudio' genre='{genre}' sub_genre='{sub_genre}'")
+    if genre_lower in {"relax/rain", "rain_retreat"} or sub_lower in {"biophilic_retreat", "forest_rain", "river_rain", "rainy_bedroom"} or "rain" in arch_lower or "bedroom" in arch_lower:
+        logger.info(f"dispatcher_route: target='RainRetreatStudio' genre='{genre}' sub_genre='{sub_genre}' archetype='{primary_archetype}'")
         return await generate_rain_screenplay(
             custom_prompt=custom_prompt,
             duration_seconds=duration_seconds,
@@ -85,7 +85,8 @@ async def dispatch_studio_director(
             channel_id=channel_id,
             raw_output_path=raw_output_path,
             image_model=image_model,
-            sub_genre=sub_genre or "forest_rain",
+            sub_genre=sub_genre or "rainy_bedroom",
+            primary_archetype=primary_archetype,
         )
 
     # 3. Cozy Ambiance & Fireplace Dispatch

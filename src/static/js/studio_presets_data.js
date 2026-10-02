@@ -123,15 +123,15 @@ const DEFAULT_CHANNEL_GENRES = {
 
 const STUDIO_SUBOPTIONS_MAP = {
   "relax/nature": [{ val: "alpine_nature", label: "🏔️ Alpine Nature & Mountain Sanctuaries (Swiss Alps)" }, { val: "glacial_fjord_lake", label: "🛶 Glacial Mirror Lakes & Fjords" }, { val: "temperate_forest", label: "🌲 Temperate Mossy Rainforest & Streams" }],
-  "relax/rain": [{ val: "forest_rain", label: "🌧️ Forest River Rainfall & ASMR" }, { val: "veranda_rain", label: "🏡 Biophilic Glass Veranda Rain" }, { val: "droplet_ripples", label: "💧 Water Droplet Ripples & Lake Reflections" }],
+  "relax/rain": [{ val: "rainy_bedroom", label: "🛏️ Rainy Forest Bedroom & Glass Cabin (Cabin TrackSound)" }, { val: "forest_rain", label: "🌧️ Forest River Rainfall & ASMR" }, { val: "veranda_rain", label: "🏡 Biophilic Glass Veranda Rain" }, { val: "droplet_ripples", label: "💧 Water Droplet Ripples & Lake Reflections" }],
   "relax/waterfall": [{ val: "waterfall_gorge", label: "🌊 Monumental Plunge Cataracts (Niagara / Iguazu)" }, { val: "tiered_cascade", label: "🏞️ Multi-Tiered Glacial Cascades (Plitvice)" }],
-  "relax/hearth": [{ val: "cozy_hearth", label: "🔥 Open-Air Beach Campfire & Shoreline Hearth" }, { val: "stone_hearth", label: "🪵 Rustic Cabin Stone Fireplace" }],
-  "relax/cozy": [{ val: "biophilic_living", label: "🪵 Biophilic Living Space & Terraces" }, { val: "rainy_patio", label: "☕ Rainy Garden Patio & Warm Hearth" }],
+  "relax/hearth": [{ val: "cozy_hearth", label: "🔥 Open-Air Beach Campfire & Shoreline Hearth" }, { val: "stone_hearth", label: "🪵 Rustic Cabin Stone Fireplace" }, { val: "rainy_hearth_bedroom", label: "🛏️ Rainy Cabin Bedroom with Hearth Fireplace" }],
+  "relax/cozy": [{ val: "cabin_bedroom", label: "🛏️ Cozy Glass Cabin Bedroom & Rain on Window" }, { val: "biophilic_living", label: "🪵 Biophilic Living Space & Terraces" }, { val: "rainy_patio", label: "☕ Rainy Garden Patio & Warm Hearth" }],
   "relax/healing": [{ val: "global_healing", label: "✨ Global Sacred Sanctuaries & 528Hz Solfeggio" }, { val: "himalayan_valley", label: "🏔️ Himalayan Singing Bowl Valley & Mist" }, { val: "geothermal_springs", label: "♨️ Geothermal Hot Springs & Travertine Pools" }, { val: "redwood_cathedral", label: "🌲 Ancient Redwood Grove Sanctuary" }],
   "relax/zen": [{ val: "zen_garden", label: "🪷 Kyoto Zen Temple & Raked Rock Garden" }, { val: "bamboo_grove", label: "🎋 Sagano Bamboo Grove & Tsukubai Basin" }, { val: "lotus_pond", label: "🪷 Sacred Lotus Pond & Water Basin Flow" }],
   "relax/ambient": [{ val: "ambient_soundscape", label: "🌌 Velvet Ambient World (14 Ecosystems)" }, { val: "twilight_sanctuary", label: "✨ Twilight Aurora & Velvet Night Sky" }],
   "documentary": [{ val: "cinematic_doc", label: "🦅 BBC-Style 24fps Wildlife & Climate Expedition" }, { val: "volcano_arctic", label: "🌋 Volcanic Landscapes & Glacial Ice" }, { val: "ocean_depths", label: "🐋 Deep Marine Life & Coral Reefs" }],
-  "travel_walking": [{ val: "alpine_village_walk", label: "🏡 Swiss Alpine Countryside Walk (1.5 km/h)" }, { val: "city_walk_pov", label: "🏙️ 4K 60fps Historic City & Night Walk" }, { val: "coastal_promenade", label: "🏖️ Secluded Ocean Bluff Walk" }],
+  "travel_walking": [{ val: "alpine_village_walk", label: "🏡 Swiss Alpine Countryside Walk (1.5 km/h)" }, { val: "rain_walking_tour", label: "🌧️ 4K Rain Walking Tour (Puddles & Wet Street Reflections)" }, { val: "city_walk_pov", label: "🏙️ 4K 60fps Historic City & Night Walk" }, { val: "coastal_promenade", label: "🏖️ Secluded Ocean Bluff Walk" }],
   "dance/folk": [{ val: "mass_folk_dance", label: "💃 High-Energy Mass Folk Dance (30fps)" }, { val: "classical_dance", label: "🪘 Cultural Classical Choreography" }],
   "comedy/satire": [{ val: "satirical_short", label: "🎭 Modern Satire & Relatable Comedy Short" }]
 };
@@ -140,6 +140,9 @@ const STUDIO_SUBGENRE_PLACEHOLDERS = {
   alpine_nature: "e.g. Majestic Swiss Alps panoramic peaks, wildflower valley, and crystal glacial stream...",
   glacial_fjord_lake: "e.g. Glassy mirror-still turquoise glacial lake reflecting towering forested cliffs...",
   temperate_forest: "e.g. Ancient mossy rainforest and gentle babbling river over rounded stones...",
+  rainy_bedroom: "e.g. Cozy glass cabin bedroom in a misty pine forest during heavy rainfall, warm bedside lamp (2700K), rain on window...",
+  cabin_bedroom: "e.g. Warm biophilic timber glass cabin bedroom overlooking rainy forest, plush duvet, and steaming tea mug...",
+  rainy_hearth_bedroom: "e.g. Intimate timber bedroom with glowing stone hearth fireplace, soft bed, and steady rain on windowpanes...",
   forest_rain: "e.g. Gentle rain falling on mossy temperate rainforest river and floating leaf ripples...",
   veranda_rain: "e.g. Biophilic glass veranda overlooking misty mountain forest during gentle twilight rainfall...",
   droplet_ripples: "e.g. Ultra-macro 4K raindrops creating concentric ripples on mirror-still mountain pond...",
@@ -167,12 +170,88 @@ const STUDIO_SUBGENRE_PLACEHOLDERS = {
   satirical_short: "e.g. Relatable everyday comedy satire with sharp comedic timing and witty dialogue..."
 };
 
+const STUDIO_ARCHETYPES_MAP = {
+  "relax/rain": [
+    { val: "rainy_cabin_bedroom", label: "🛏️ Glass Cabin Bedroom (Rain on Panoramic Window)" },
+    { val: "misty_forest_stream", label: "🌲 Temperate Rainforest Glacial Stream & Rain Caustics" },
+    { val: "biophilic_veranda", label: "🏡 Biophilic Covered Timber Veranda & Hanging Lanterns" },
+    { val: "rainy_attic_loft", label: "🕯️ Rain on Skylight Attic Loft & Velvet Reading Nook" },
+    { val: "lake_reflection_rain", label: "💧 Mirror Mountain Pond & Concentric Water Ripples" }
+  ],
+  "relax/hearth": [
+    { val: "pebble_beach_shore", label: "🏖️ Pacific Pebble Shoreline Fire Ring & Ocean Surf" },
+    { val: "cliffside_stone_hearth", label: "🌊 Ocean Bluff Stone Hearth & Crashing Waves" },
+    { val: "driftwood_cove_fire", label: "🪵 Secluded Driftwood Cove Fire & Twilight Fog" },
+    { val: "rainy_hearth_bedroom", label: "🛏️ Cozy Cabin Hearth Bedroom & Rain on Glass" }
+  ],
+  "relax/cozy": [
+    { val: "glass_cabin_bedroom", label: "🛏️ Biophilic Timber Bedroom & Forest Rain Window" },
+    { val: "mountain_chalet_living", label: "🪵 Swiss Alpine Chalet Living Room & Stone Fireplace" },
+    { val: "rainy_patio_terrace", label: "☕ Covered Garden Patio, Fairy Lights & Warm Hearth" },
+    { val: "library_reading_nook", label: "📚 Velvet Reading Nook, Bookcase & Soft Rain Outside" }
+  ],
+  "relax/nature": [
+    { val: "alpine_peaks_meadow", label: "🏔️ Majestic Swiss Alps Peaks & Wildflower Valley" },
+    { val: "glacial_mirror_lake", label: "🛶 Glacial Mirror Lake & Emerald Pine Reflections" },
+    { val: "temperate_mossy_forest", label: "🌲 Ancient Mossy Rainforest & Crystal Boulder Stream" },
+    { val: "dolomites_panoramic", label: "⛰️ Rugged Dolomite Granite Spires & Green Meadows" }
+  ],
+  "relax/waterfall": [
+    { val: "monumental_plunge", label: "🌊 Roaring Cataract Plunge & Turquoise Deep Pool" },
+    { val: "tiered_mossy_cascade", label: "🏞️ Multi-Tiered Glacial Cascades & Fern Grotto" },
+    { val: "icelandic_canyon_fall", label: "🌋 Basalt Column Canyon Waterfall & Heavy Mist" }
+  ],
+  "relax/zen": [
+    { val: "karesansui_temple", label: "🪷 Kyoto Raked Stone Zen Garden & Weathered Engawa" },
+    { val: "sagano_bamboo_basin", label: "🎋 Sagano Bamboo Grove & Flowing Tsukubai Basin" },
+    { val: "sacred_lotus_pond", label: "🪷 Sacred Lotus Pond, Koi & Wooden Arch Bridge" }
+  ],
+  "relax/healing": [
+    { val: "himalayan_valley", label: "🏔️ Himalayan Sacred Valley, Singing Bowls & Morning Mist" },
+    { val: "geothermal_mineral_pool", label: "♨️ Geothermal Travertine Mineral Pools & Steam Vapors" },
+    { val: "redwood_cathedral", label: "🌲 Giant California Redwood Cathedral & Dawn Sunbeams" },
+    { val: "bali_sacred_water", label: "✨ Bali Sacred Water Temple & Lush Jungle Springs" }
+  ],
+  "relax/ambient": [
+    { val: "nordic_aurora_fjord", label: "🌌 Nordic Aurora Borealis & Glacial Fjord Reflection" },
+    { val: "twilight_alpine_valley", label: "✨ Velvet Twilight Sky & Glowing Mountain Cabin" },
+    { val: "desert_oasis_starlight", label: "🏜️ Desert Dunes Oasis & Milky Way Galaxy" },
+    { val: "biophilic_greenhouse", label: "🌿 Biophilic Glass Greenhouse & Velvet Night Rain" }
+  ],
+  "documentary": [
+    { val: "alpine_tundra_wildlife", label: "🦅 High Alpine Glacial Ridge & Golden Eagle Habitat" },
+    { val: "arctic_ice_shelf", label: "🧊 Arctic Sea Ice Shelf & Polar Marine Mammals" },
+    { val: "volcanic_geothermal", label: "🌋 Volcanic Black Sand Dunes & Steam Vents" },
+    { val: "deep_ocean_trench", label: "🐋 Deep Sea Coral Abyss & Bioluminescent Creatures" }
+  ],
+  "travel_walking": [
+    { val: "rain_city_walk", label: "🌧️ 4K Rain Walking Tour & Wet Street Reflections" },
+    { val: "swiss_village_walk", label: "🏡 Swiss Alpine Countryside Village Lane (1.5 km/h)" },
+    { val: "historic_old_town", label: "🏙️ Cobblestone Historic European Old Town Street" },
+    { val: "coastal_bluff_trail", label: "🏖️ Pacific Coastline Cliffside Walking Trail" },
+    { val: "bamboo_forest_path", label: "🎋 Kyoto Bamboo Grove Tranquil Walking Path" }
+  ],
+  "dance/folk": [
+    { val: "village_jathara_square", label: "🎪 Vibrant Village Fairground & Festive Banyan Stage" },
+    { val: "lush_paddy_fields", label: "🌾 Verdant Green Paddy Fields & Rural Village Vista" },
+    { val: "historic_fort_courtyard", label: "🏛️ Ancient Heritage Stone Fort & Festive Flags" },
+    { val: "modern_city_rooftop", label: "🌆 High-Energy Neon City Skyline Rooftop Stage" }
+  ],
+  "comedy/satire": [
+    { val: "it_wfh_apartment", label: "💻 Modern Apartment WFH Office with Dual Monitors" },
+    { val: "street_chai_stall", label: "☕ Bustling Street Corner Irani Chai & Samosa Stall" },
+    { val: "village_panchayat_tree", label: "🌳 Village Banyan Tree Chhavadi & Discussion Bench" },
+    { val: "corporate_meeting_room", label: "🏢 Corporate Glass Conference Room & Whiteboard" }
+  ]
+};
+
 const STUDIO_ARCHETYPE_HINTS = {
-  alpine_mountains: "e.g. Towering Swiss Alps snow-capped jagged peaks, lush wildflower meadows, and crystal mountain stream...",
-  waterfall_gorge: "e.g. Monumental roaring cataract plunging into turquoise pool with heavy rising mist...",
-  coastal_ocean: "e.g. Gentle rain falling on warm driftwood campfire burning on wet pebble shoreline by ocean surf...",
-  glacial_fjord_lake: "e.g. Mirror-still turquoise glacial lake reflecting towering pine-covered granite cliffs...",
-  temperate_forest: "e.g. Ancient mossy rainforest canopy with gentle stream and floating leaves...",
-  zen_garden: "e.g. Peaceful Kyoto dry raked stone garden, bamboo water fountain, and cedar veranda...",
-  sacred_sanctuary: "e.g. Sacred Himalayan valley with singing bowls, crystal dawn sunbeams, and restorative 528Hz serenity..."
+  rainy_cabin_bedroom: "e.g. Cozy glass cabin bedroom in a misty pine forest during heavy rainfall, warm bedside lamp (2700K), rain on window...",
+  misty_forest_stream: "e.g. Ancient mossy rainforest canopy with gentle stream and floating leaves...",
+  alpine_peaks_meadow: "e.g. Towering Swiss Alps snow-capped jagged peaks, lush wildflower meadows, and crystal mountain stream...",
+  monumental_plunge: "e.g. Monumental roaring cataract plunging into turquoise pool with heavy rising mist...",
+  pebble_beach_shore: "e.g. Gentle rain falling on warm driftwood campfire burning on wet pebble shoreline by ocean surf...",
+  glacial_mirror_lake: "e.g. Mirror-still turquoise glacial lake reflecting towering pine-covered granite cliffs...",
+  karesansui_temple: "e.g. Peaceful Kyoto dry raked stone garden, bamboo water fountain, and cedar veranda...",
+  himalayan_valley: "e.g. Sacred Himalayan valley with singing bowls, crystal dawn sunbeams, and restorative 528Hz serenity..."
 };

@@ -9,7 +9,7 @@
     <!-- Channel Dropdown Selector -->
     <select id="studio-channel-select" onchange="selectStudioChannel(this.value)" class="px-3 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs font-semibold text-[var(--text)] focus:outline-none focus:border-[var(--accent)] shadow-sm cursor-pointer min-w-[200px]">
       <option value="earth_serenade" selected>Earth Serenade (4K Nature)</option>
-      <option value="silent_hearth">Silent Hearth (Fire &amp; ASMR)</option>
+      <option value="silent_hearth">Silent Hearth (Sleep, Fire &amp; Rain ASMR)</option>
       <option value="cineai_docs">CineAI Docs (24fps BBC)</option>
       <option value="telugu_comedy">Comedy Satire (9:16 Shorts)</option>
     </select>
@@ -20,9 +20,9 @@
   </div>
 
   <div class="flex items-center gap-2 shrink-0">
-    <button type="button" onclick="reprocessActiveEpisodeId()" class="btn-runway-primary py-1 px-3 text-xs" title="Approve and Rerender (--id)">
-      <i class="fa-solid fa-play text-[9px]"></i>
-      <span>Approve &amp; Rerender</span>
+    <button type="button" onclick="reprocessActiveEpisodeId()" class="btn-runway-primary py-1 px-3 text-xs" title="Re-Synthesize and resume episode (--id)">
+      <i class="fa-solid fa-arrows-rotate text-[10px]"></i>
+      <span>Re-Synthesize</span>
       <span class="kbd-badge">CTRL ↵</span>
     </button>
     <button onclick="switchTab('ledger')" class="btn-runway-secondary py-1 px-3 text-xs" title="View Production Ledger">

@@ -173,46 +173,62 @@ class SunoMusicAdapter(MusicProviderProtocol):
                 wav_file.writeframes(b"\x00" * int(sample_rate * max(1.0, duration_seconds) * 4))
             return out
 
-        audio_url = await self.generate_track(
-            genre=genre,
-            mood=mood,
-            duration_seconds=int(duration_seconds),
-            lyrics=lyrics,
-            title=title,
-            vocal_gender=vocal_gender,
-        )
+        try:
+            audio_url = await self.generate_track(
+                genre=genre,
+                mood=mood,
+                duration_seconds=int(duration_seconds),
+                lyrics=lyrics,
+                title=title,
+                vocal_gender=vocal_gender,
+            )
 
-        if not audio_url:
-            raise RuntimeError("Suno v3.5 Pro failed: No audio URL received from MusicAPI endpoint.")
+            if not audio_url:
+                raise RuntimeError("Suno v3.5 Pro failed: No audio URL received from MusicAPI endpoint.")
 
-        client = HTTPClientPool.get_client()
-        resp = await client.get(audio_url, follow_redirects=True, timeout=60.0)
-        if resp.status_code != 200:
-            raise RuntimeError(f"Failed to download Suno soundtrack from {audio_url} (HTTP {resp.status_code})")
+            client = HTTPClientPool.get_client()
+            resp = await client.get(audio_url, follow_redirects=True, timeout=60.0)
+            if resp.status_code != 200:
+                raise RuntimeError(f"Failed to download Suno soundtrack from {audio_url} (HTTP {resp.status_code})")
 
-        temp_mp3 = out.with_suffix(".temp.mp3")
-        temp_mp3.write_bytes(resp.content)
+            temp_mp3 = out.with_suffix(".temp.mp3")
+            temp_mp3.write_bytes(resp.content)
 
-        from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary
-        ffmpeg_bin = get_ffmpeg_binary()
-        cmd = [
-            ffmpeg_bin, "-y", "-i", str(temp_mp3),
-            "-ar", str(sample_rate), "-ac", "2", str(out),
-        ]
-        proc = subprocess.run(cmd, capture_output=True)
-        if temp_mp3.exists():
-            temp_mp3.unlink()
+            from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary
+            ffmpeg_bin = get_ffmpeg_binary()
+            cmd = [
+                ffmpeg_bin, "-y", "-i", str(temp_mp3),
+                "-ar", str(sample_rate), "-ac", "2", str(out),
+            ]
+            proc = subprocess.run(cmd, capture_output=True)
+            if temp_mp3.exists():
+                temp_mp3.unlink()
 
-        if proc.returncode != 0 or not out.exists() or out.stat().st_size < 1000:
-            raise RuntimeError(f"FFmpeg audio transcoding to 48kHz WAV failed: {proc.stderr.decode(errors='ignore')}")
+            if proc.returncode != 0 or not out.exists() or out.stat().st_size < 1000:
+                raise RuntimeError(f"FFmpeg audio transcoding to 48kHz WAV failed: {proc.stderr.decode(errors='ignore')}")
 
-        logger.info(f"suno_live_audio_downloaded: {out.name} ({out.stat().st_size} bytes)")
-        from src.services.audio_vault import audio_vault
-        audio_vault.register_stem(
-            source_path=out, genre=genre, theme=mood, concept=title,
-            tags=lyrics, title=title or genre, vocal_gender=vocal_gender,
-        )
-        return out
+            logger.info(f"suno_live_audio_downloaded: {out.name} ({out.stat().st_size} bytes)")
+            from src.services.audio_vault import audio_vault
+            audio_vault.register_stem(
+                source_path=out, genre=genre, theme=mood, concept=title,
+                tags=lyrics, title=title or genre, vocal_gender=vocal_gender,
+            )
+            return out
+        except Exception as live_audio_err:
+            logger.warning(f"suno_live_audio_failed_using_procedural_dsp: {live_audio_err}")
+            from src.services.procedural_foley import synthesize_foley_stem
+            synthesize_foley_stem(
+                weather_type=genre,
+                setting_type=mood,
+                space="outdoor",
+                duration_seconds=max(5.0, duration_seconds),
+                output_path=out,
+                sample_rate=sample_rate,
+            )
+            if out.exists() and out.stat().st_size > 1000:
+                logger.info(f"procedural_dsp_stem_fallback_created: {out.name} ({out.stat().st_size} bytes)")
+                return out
+            raise RuntimeError(f"Audio synthesis failed: {live_audio_err}") from live_audio_err
 
 
 __all__ = ["SunoMusicAdapter"]

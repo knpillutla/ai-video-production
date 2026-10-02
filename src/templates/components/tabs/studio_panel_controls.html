@@ -148,8 +148,9 @@
       <button type="button" id="btn-studio-stop" onclick="stopStudioProduction(currentActiveInspectorEpisode ? (currentActiveInspectorEpisode.id || currentActiveInspectorEpisode.episode_id) : 'EP-001')" class="btn-runway-secondary text-rose-600 hover:text-rose-700 dark:text-rose-400" title="Stop Production">
         <i class="fa-solid fa-stop text-xs"></i>
       </button>
-      <button type="button" id="btn-studio-resume" onclick="resumeStudioProduction(currentActiveInspectorEpisode ? (currentActiveInspectorEpisode.id || currentActiveInspectorEpisode.episode_id) : 'EP-001')" class="btn-runway-secondary text-emerald-600 hover:text-emerald-700 dark:text-emerald-400" title="Resume Production (--id resumption)">
-        <i class="fa-solid fa-play text-xs"></i>
+      <button type="button" id="btn-studio-resume" onclick="reprocessActiveEpisodeId(currentActiveInspectorEpisode ? (currentActiveInspectorEpisode.id || currentActiveInspectorEpisode.episode_id) : null)" class="btn-runway-secondary" title="Re-Synthesize and resume episode (--id resumption)">
+        <i class="fa-solid fa-arrows-rotate text-xs"></i>
+        <span>Re-Synthesize</span>
       </button>
     </div>
   </div>

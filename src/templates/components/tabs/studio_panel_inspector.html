@@ -10,9 +10,9 @@
             <span id="panel-header-ep-id">NEW</span>
             <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
           </a>
-          <button type="button" onclick="reprocessActiveEpisodeId()" id="btn-header-reprocess-ep" class="btn-runway-secondary py-0.5 px-2 text-xs" title="Approve and Rerender (--id)">
-            <i class="fa-solid fa-play text-[8px]"></i>
-            <span>Approve &amp; Rerender</span>
+          <button type="button" onclick="reprocessActiveEpisodeId()" id="btn-header-reprocess-ep" class="btn-runway-secondary py-0.5 px-2 text-xs" title="Re-Synthesize and resume episode (--id)">
+            <i class="fa-solid fa-arrows-rotate text-[8px]"></i>
+            <span>Re-Synthesize</span>
           </button>
           <button type="button" onclick="deleteActiveInspectorEpisode()" class="btn-runway-secondary py-0.5 px-1.5 text-xs text-rose-500 hover:text-rose-600" title="Delete Episode">
             <i class="fa-solid fa-trash-can text-xs"></i>
@@ -35,56 +35,63 @@
 
   <!-- VIEW A: MEDIA STEMS INSPECTION -->
   <div id="inspector-view-stems" class="space-y-2 flex-1 flex flex-col">
-    <!-- MANUAL STAGE GATE TOP ACTION DOCK (Shown ONLY in manual mode) -->
-    <div id="studio-stage-controls-dock" class="hidden p-2 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5 shadow-sm">
-      <div class="flex items-center justify-between">
-        <span id="dock-stage-title" class="text-xs font-bold text-[var(--text)] flex items-center gap-1.5">
-          <i class="fa-solid fa-sliders text-[var(--text-muted)]"></i>
-          <span>Stage 1: Keyframe Review &amp; Selection</span>
-        </span>
-        <span id="dock-stage-counter" class="text-xs font-mono px-2 py-0.5 rounded-full bg-[var(--card)] text-[var(--text)] font-bold border border-[var(--border)]">0/0 Selected</span>
-      </div>
-      <div class="flex items-center gap-1.5 flex-wrap">
-        <button type="button" id="btn-dock-reroll" onclick="stageGateRerollCurrent()" class="btn-runway-secondary px-2.5 py-1 text-xs">
-          <i class="fa-solid fa-arrows-rotate text-xs"></i>
-          <span id="btn-dock-reroll-text">Add Shot Variant</span>
-        </button>
-        <button type="button" id="btn-dock-advance" onclick="stageGateAdvanceNext()" class="btn-runway-primary flex-1 py-1.5 text-xs">
-          <span id="btn-dock-advance-text">➡️ Next Stage: Video Motion ➔</span>
-          <span class="kbd-badge">CTRL ↵</span>
-        </button>
-      </div>
-    </div>
 
-    <!-- HERO MASTER 4K CINEMA PLAYER -->
-    <div class="space-y-1">
+    <!-- HERO MASTER 4K CINEMA PLAYER & FAL.AI-STYLE RESULT CARD -->
+    <div class="space-y-1.5">
       <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
-        <span class="stage-header-title"><i class="fa-solid fa-crown text-xs text-[var(--text-muted)]"></i> 4K Master Cinema Player</span>
-        <span id="panel-video-res-badge" class="px-2 py-0.5 rounded bg-[var(--card-subtle)] text-[var(--text-muted)] border border-[var(--border)] text-xs font-mono font-bold">4K Master</span>
-      </div>
-      <div class="relative bg-black rounded-xl overflow-hidden aspect-video max-h-[135px] border border-[var(--border)] shadow-inner group">
-        <video id="studio-panel-video" controls playsinline preload="none" class="w-full h-full object-contain block"></video>
-        <button type="button" onclick="openActiveMasterVideoInPopup()" class="btn-runway-secondary absolute top-1.5 right-1.5 py-0.5 px-1.5 text-[10px] opacity-0 group-hover:opacity-100 z-20 shadow-md" title="Open Master Video in Popup">
-          <i class="fa-solid fa-expand text-[9px]"></i>
-          <span>Popup</span>
-        </button>
-        <div id="studio-panel-empty-overlay" class="absolute inset-0 bg-[var(--card)] border border-[var(--border)] flex flex-col items-center justify-center p-3 text-center space-y-1">
-          <i class="fa-solid fa-film text-lg text-[var(--text-muted)] mb-0.5"></i>
-          <div class="font-bold text-[var(--text)] text-xs">No Master Video Yet</div>
-          <div class="text-xs text-[var(--text-muted)]">Configure parameters &amp; click Produce Video</div>
+        <div class="flex items-center gap-2">
+          <span class="stage-header-title"><i class="fa-solid fa-crown text-xs text-[var(--text-muted)]"></i> Result</span>
+          <span id="panel-player-status-badge" class="px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-[var(--card-subtle)] text-[var(--text-muted)] border border-[var(--border)]">Idle</span>
         </div>
-        <div id="studio-panel-processing-overlay" class="hidden absolute inset-0 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--border)] flex flex-col items-center justify-center p-3 text-center space-y-1.5 shadow-sm">
-          <div class="w-7 h-7 rounded-full border-2 border-[var(--border)] border-t-[var(--accent)] animate-spin flex items-center justify-center">
-            <i class="fa-solid fa-wand-magic-sparkles text-[var(--accent)] text-xs"></i>
+        <div class="flex items-center gap-1">
+          <button type="button" onclick="openActiveMasterVideoInPopup()" class="btn-runway-secondary py-0.5 px-2 text-xs" title="Open Preview Player">
+            <i class="fa-solid fa-image text-[10px]"></i>
+            <span>Preview</span>
+          </button>
+          <button type="button" onclick="openActiveEpisodeModal()" class="btn-runway-secondary py-0.5 px-2 text-xs" title="View Episode JSON Manifest">
+            <i class="fa-solid fa-code text-[10px]"></i>
+            <span>JSON</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="relative bg-[var(--card)] rounded-xl overflow-hidden aspect-video min-h-[175px] max-h-[220px] border border-[var(--border)] shadow-sm group flex items-center justify-center">
+        <video id="studio-panel-video" controls playsinline preload="none" class="w-full h-full object-contain block bg-black"></video>
+
+        <!-- Empty Idle State -->
+        <div id="studio-panel-empty-overlay" class="absolute inset-0 bg-[var(--card)] flex flex-col items-center justify-center p-4 text-center space-y-2">
+          <div class="w-10 h-10 rounded-full bg-[var(--card-subtle)] border border-[var(--border)] flex items-center justify-center text-[var(--text-muted)]">
+            <i class="fa-solid fa-film text-base"></i>
           </div>
           <div>
-            <div id="studio-panel-processing-title" class="font-bold text-[var(--text)] text-xs">AI Studio Pipeline Active</div>
-            <div id="studio-panel-processing-subtitle" class="text-xs text-[var(--text-muted)] font-medium">Synthesizing 4K Master...</div>
+            <div class="font-bold text-[var(--text)] text-xs">No Master Video Yet</div>
+            <div class="text-xs text-[var(--text-muted)] mt-0.5">Click Run (Ctrl+Enter) to begin autonomous generation</div>
           </div>
-          <button type="button" onclick="reprocessActiveEpisodeId()" class="btn-runway-secondary mt-1 px-3 py-1 text-xs">
-            <i class="fa-solid fa-play text-[9px]"></i>
-            <span>Approve &amp; Rerender</span>
-          </button>
+        </div>
+
+        <!-- Fal.ai-Grade Active Progress Overlay -->
+        <div id="studio-panel-processing-overlay" class="hidden absolute inset-0 bg-[var(--card)] flex flex-col items-center justify-center p-4 text-center space-y-3 z-20">
+          <div class="fal-spinner">
+            <div class="fal-spinner-ring"></div>
+            <div class="fal-spinner-core">
+              <i class="fa-solid fa-sparkles text-[10px]"></i>
+            </div>
+          </div>
+
+          <div class="space-y-1 w-full max-w-[280px]">
+            <div id="studio-panel-processing-title" class="font-bold text-[var(--text)] text-sm tracking-tight">AI Pipeline Active</div>
+            <div id="studio-panel-processing-subtitle" class="text-xs text-[var(--text-muted)] font-medium leading-tight">Synthesizing 4K Master...</div>
+          </div>
+
+          <!-- Sleek Progress Bar Track -->
+          <div class="fal-progress-track">
+            <div id="studio-panel-progress-bar" class="fal-progress-fill" style="width: 40%;"></div>
+          </div>
+
+          <div class="flex items-center justify-between w-full max-w-[260px] text-[10px] font-mono text-[var(--text-muted)]">
+            <span id="studio-panel-stage-step">Stage 2 of 5</span>
+            <span id="studio-panel-stage-pct">40%</span>
+          </div>
         </div>
       </div>
     </div>
@@ -136,9 +143,9 @@
             <span class="text-xs font-bold text-[var(--text)]">No Motion Clips Yet</span>
             <span class="text-xs text-[var(--text-muted)] font-mono">(Kling v3 / Wan 2.1)</span>
           </div>
-          <button type="button" onclick="reprocessActiveEpisodeId()" class="btn-runway-secondary px-2.5 py-1 text-xs" title="Approve &amp; Rerender">
-            <i class="fa-solid fa-play text-[8px]"></i>
-            <span>Approve &amp; Rerender</span>
+          <button type="button" onclick="reprocessActiveEpisodeId()" class="btn-runway-secondary px-2.5 py-1 text-xs" title="Re-Synthesize (--id)">
+            <i class="fa-solid fa-arrows-rotate text-[8px]"></i>
+            <span>Re-Synthesize</span>
           </button>
         </div>
       </div>

@@ -211,3 +211,33 @@ body {
   overflow-y: auto !important; padding: 2rem !important;
 }
 [data-theme="light"] .panel-fullscreen { background-color: rgba(248, 249, 250, 0.98) !important; color: var(--text) !important; }
+
+/* Fal.ai Modern Geometric Spinner & Progress Bar */
+.fal-spinner-container {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;
+}
+.fal-spinner {
+  width: 46px; height: 46px; position: relative; display: flex; align-items: center; justify-content: center;
+}
+.fal-spinner-ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 3px solid var(--border); border-top-color: #7C3AED !important;
+  animation: fal-spin 0.85s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+.fal-spinner-core {
+  width: 20px; height: 20px; border-radius: 5px;
+  background: rgba(124, 58, 237, 0.15); border: 1.5px solid #7C3AED;
+  display: flex; align-items: center; justify-content: center;
+  color: #7C3AED; font-size: 10px; animation: fal-core-pulse 1.8s ease-in-out infinite;
+}
+@keyframes fal-spin { to { transform: rotate(360deg); } }
+@keyframes fal-core-pulse { 0%, 100% { transform: scale(0.9); opacity: 0.7; } 50% { transform: scale(1.1); opacity: 1; } }
+
+.fal-progress-track {
+  width: 100%; max-width: 260px; height: 6px; background-color: var(--card);
+  border: 1px solid var(--border); border-radius: 9999px; overflow: hidden;
+}
+.fal-progress-fill {
+  height: 100%; background: linear-gradient(90deg, #7C3AED, #A855F7);
+  border-radius: 9999px; transition: width 0.35s ease;
+}

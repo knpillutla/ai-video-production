@@ -134,7 +134,8 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
      * "wan_2_1": Model "fal-ai/wan-i2v". Continuous fluid kinetic phrasing.
 
 6. MANDATORY NEGATIVE PROMPT:
-   - Always provide "motion_negative_prompt" and model-specific negative prompts containing: "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings".
+   - For Pure Wilderness: Always include: "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings".
+   - For Cozy Living / Bedrooms / Cabins / Walking Tours: Prohibit structural drift, flickering, and artifacts, but DO NOT ban architectural structures: "camera movement, camera pan, panning, tilt, zoom, morphing architecture, changing furniture, structural drift, flickering, temporal jump, changing lighting, gelatinous water, melting foam, rubbery water, static vertical streaks, falling wire artifacts, artifacts, humans, tourist, clutter, plastic junk, modern electronics".
 
 {specific_rules}
 

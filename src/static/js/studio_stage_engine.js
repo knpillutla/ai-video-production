@@ -187,7 +187,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           if (!isManual && data.motion_clips.length >= reqShots && vid.currentStage < 3) vid.currentStage = 3;
           changed = true;
         }
-        if (data.audio_stems && data.audio_stems.length > 0 && (!vid.audio_stems || vid.audio_stems.length !== data.audio_stems.length)) {
+        if (data.audio_stems && JSON.stringify(vid.audio_stems || []) !== JSON.stringify(data.audio_stems)) {
           vid.audio_stems = data.audio_stems;
           changed = true;
         }

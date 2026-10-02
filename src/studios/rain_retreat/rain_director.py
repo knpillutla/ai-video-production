@@ -15,7 +15,12 @@ from src.core.config import settings
 from src.core.telemetry import logger
 from src.services.topic_memory import topic_memory
 from src.studios.ambient_world.relax_models import RelaxScreenplay
-from src.studios.rain_retreat.rain_prompt import RAIN_LANDMARK_POOL, build_rain_prompt
+from src.studios.rain_retreat.rain_prompt import (
+    RAIN_BEDROOM_LANDMARK_POOL,
+    RAIN_FOREST_LANDMARK_POOL,
+    RAIN_LANDMARK_POOL,
+    build_rain_prompt,
+)
 
 
 async def generate_rain_screenplay(
@@ -27,17 +32,23 @@ async def generate_rain_screenplay(
     channel_id: Optional[str] = None,
     raw_output_path: Optional[os.PathLike | str] = None,
     image_model: str = "flux_1_1_pro_ultra",
-    sub_genre: str = "forest_rain",
+    sub_genre: str = "rainy_bedroom",
+    primary_archetype: Optional[str] = None,
 ) -> RelaxScreenplay:
     """Synthesize dedicated rain retreat directorial screenplay via Gemini."""
     recent_topics = topic_memory.get_recent_topics(user_id=user_id, channel_id=channel_id, limit=20)
+    is_bedroom = ("bedroom" in (sub_genre or "").lower() or "cabin" in (sub_genre or "").lower() or "bedroom" in (primary_archetype or "").lower())
+    pool = RAIN_BEDROOM_LANDMARK_POOL if is_bedroom else RAIN_FOREST_LANDMARK_POOL
 
     if custom_prompt and custom_prompt.strip():
         eff_prompt = custom_prompt.strip()
     else:
-        unseen = [lm for lm in RAIN_LANDMARK_POOL if not any(lm.split(',')[0].lower() in t.lower() for t in recent_topics)]
-        chosen = random.choice(unseen if unseen else RAIN_LANDMARK_POOL)
-        eff_prompt = f"Lush forest river during steady gentle rain at {chosen}"
+        unseen = [lm for lm in pool if not any(lm.split(',')[0].lower() in t.lower() for t in recent_topics)]
+        chosen = random.choice(unseen if unseen else pool)
+        if is_bedroom:
+            eff_prompt = f"Cozy luxury glass cabin bedroom with warm amber lamp and rain streaming on floor-to-ceiling panoramic window overlooking misty fir forest at {chosen}"
+        else:
+            eff_prompt = f"Lush temperate forest river during steady gentle rain at {chosen}"
 
     num_shots = max(1, int(num_shots))
     prompt = build_rain_prompt(
@@ -48,6 +59,8 @@ async def generate_rain_screenplay(
         excluded_topics=recent_topics,
         image_model=image_model,
         sub_genre=sub_genre,
+        primary_archetype=primary_archetype,
+        channel_id=channel_id,
     )
 
     try:

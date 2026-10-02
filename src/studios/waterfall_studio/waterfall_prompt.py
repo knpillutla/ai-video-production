@@ -10,36 +10,35 @@ from typing import Optional
 from src.studios.base_directorial_prompt import build_base_directorial_prompt
 
 WATERFALL_LANDMARK_POOL = [
-    "Niagara Falls, Horseshoe Falls & American Falls",
-    "Victoria Falls (Mosi-oa-Tunya), Zambia & Zimbabwe",
-    "Iguazu Falls (Devil's Throat), Argentina & Brazil",
-    "Angel Falls (Salto Angel), Canaima Venezuela",
-    "Plitvice Lakes Great Waterfall & Cascades, Croatia",
-    "Gullfoss Golden Falls, Iceland",
-    "Skogafoss Glacial Waterfall, Iceland",
-    "Multnomah Falls, Columbia River Gorge Oregon",
-    "Snoqualmie Falls, Washington Cascades",
-    "Dettifoss Roaring Chasm, Iceland",
+    "Staubbach Falls & Lauterbrunnen Valley Vertical Cliffs, Swiss Alps",
+    "Giessbach Falls & Lake Brienz Turquoise Waters, Switzerland",
+    "Plitvice Lakes Great Waterfall & Emerald Cascades, Croatia",
+    "Skogafoss Glacial Waterfall & Green Cliffs, Iceland",
+    "Multnomah Falls & Mossy Basalt Gorge, Oregon",
+    "Niagara Falls Horseshoe Cataract & Turquoise Basin",
+    "Victoria Falls (Mosi-oa-Tunya) Zambezi Gorge, Zimbabwe",
+    "Iguazu Falls Devil's Throat, Argentina & Brazil",
+    "Angel Falls (Salto Angel) Auyan-Tepui, Venezuela",
+    "Gullfoss Golden Glacial Falls, Iceland",
 ]
 
 WATERFALL_SPECIFIC_RULES = """
 ======================================================================
 WATERFALL DIRECTORIAL RULES & FRAMING:
 ======================================================================
-1. EYE-LEVEL WALL-TO-WALL CASCADE FRAMING:
-   - Frame the waterfall confronting the plunging water wall directly.
+1. MONUMENTAL CASCADE & ALPINE CLIFFSIDE FRAMING:
    - Symmetrical 16:9 cinematic landscape framing, shot on a locked tripod.
-   - The falling cataract water curtain spans wall-to-wall across 100% of the horizontal screen into a churning turquoise or emerald basin.
-   - Billowing vapor mist rises steadily from the plunge basin under moody overcast skies.
-   - Strictly zero humans, zero tourists, zero boats, zero railings, zero bridges, zero buildings.
+   - For Monumental Plunge / Cataracts: The falling cataract water curtain spans wall-to-wall into a churning turquoise or emerald basin with rising spray mist plumes.
+   - For Alpine Cliffside Waterfalls (e.g. Lauterbrunnen / Staubbach Falls): Towering 300-meter vertical limestone cliff walls with a graceful cascading water veil plunging into a lush emerald green alpine meadow and crystal-clear glacial stream, with distant snow-capped peaks under crisp natural 5400K daylight.
+   - Strictly zero humans, zero tourists, zero boats, zero railings, zero bridges, zero modern structures.
 
 2. ACOUSTIC SOUNDSCAPE & NARRATION DIRECTIVE:
-   - Audio tags: "432Hz ambient soundscape, deep brown noise waterfall roar, immersive rushing water foley, velvety low-frequency resonance, binaural relaxation, -14 LUFS".
-   - Spoken narration: Poetic, educational voiceover exploring the geological power, river hydrology, and timeless force of the roaring cascade.
+   - Audio tags: "432Hz ambient soundscape, peaceful cascading water foley, Celtic harp and acoustic cello, gentle alpine stream murmur, deep relaxation, -14 LUFS".
+   - Spoken narration: Poetic, educational commentary exploring the geological hydrology, ancient glacial valleys, and tranquil majesty of the cascading waters.
 
 3. CINEMAGRAPH KINETICS (Wan 2.1 & Kling v1.6 Pro):
-   - Flanking canyon rock walls and horizon remain 100% frozen, rigid, and static.
-   - Animate ONLY the plunging water curtain and rising spray mist plumes.
+   - Flanking canyon rock walls, mountains, and alpine meadows remain 100% frozen, rigid, and static.
+   - Animate ONLY the plunging cascading water curtain and gentle rising spray mist plumes.
    - Domain: "water_fluid".
 """
 

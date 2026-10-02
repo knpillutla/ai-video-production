@@ -129,6 +129,8 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
                 synthesize_foley_stem(weather_type="water stream alpine breeze", setting_type="nature", space="outdoor", duration_seconds=total_vid_dur + 5.0, output_path=foley_wav)
             target_audio = foley_wav
 
+    v_filter = "scale=3840:2160:force_original_aspect_ratio=decrease,pad=3840:2160:(ow-iw)/2:(oh-ih)/2,setsar=1"
+
     if n == 1:
         c_dur = get_media_duration(seamless_clips[0]) or 5.0
         v_loops = max(1, int(scene_hold_sec / max(1.0, c_dur)) + 2)
@@ -140,7 +142,8 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
                 "-stream_loop", str(v_loops), "-i", str(seamless_clips[0]),
                 "-stream_loop", str(a_loops), "-i", str(target_audio),
                 "-map", "0:v:0", "-map", "1:a:0", "-t", str(scene_hold_sec),
-                "-c:v", "copy" if _is_clip_4k(seamless_clips[0]) else "libx264",
+                "-vf", v_filter,
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
                 "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
                 "-movflags", "+faststart", str(out_master)
             ]
@@ -149,7 +152,8 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
                 ffmpeg_bin, "-y",
                 "-stream_loop", str(v_loops), "-i", str(seamless_clips[0]),
                 "-map", "0:v:0", "-map", "0:a:0", "-t", str(scene_hold_sec),
-                "-c:v", "copy" if _is_clip_4k(seamless_clips[0]) else "libx264",
+                "-vf", v_filter,
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
                 "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
                 "-movflags", "+faststart", str(out_master)
             ]

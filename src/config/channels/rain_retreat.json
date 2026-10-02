@@ -1,0 +1,46 @@
+{
+  "channel_id": "rain_retreat",
+  "channel_name": "Rain Retreat",
+  "handle": "@RainRetreatASMR",
+  "tag": "🌧️ Forest Rain & Window ASMR",
+  "comments": "Tranquil rain on windowpanes, cozy glass cabin bedrooms, forest rain river ASMR, deep sleep soundscapes.",
+  "niche_category": "Rain ASMR, Cozy Cabin Bedrooms, Forest Rain & Deep Sleep Aid",
+  "target_audience": "Viewers seeking deep rest, sleep aid, study focus, nighttime relaxation, and biophilic rain soundscapes.",
+  "allowed_genres": [
+    "relax/rain",
+    "relax/cozy",
+    "relax/nature"
+  ],
+  "audio_profile": {
+    "bgm_enabled_by_default": false,
+    "style": "Pure natural rain ASMR foley, windowpane droplets & 3D binaural spatial depth (STRICTLY NO HARSH HIGHS)",
+    "instruments": [],
+    "foley_elements": [
+      "Steady raindrops streaming down glass windowpanes",
+      "Gentle roof rainfall pitter-patter",
+      "Distant low sub-bass thunder rumbles",
+      "Soft forest pine canopy rainfall drip"
+    ],
+    "target_lufs": -14.0,
+    "bgm_ducking_db": 0.0,
+    "suno_tag_template": "432Hz binaural rain ASMR, steady rain on window glass, soft roof rainfall, deep sleep soundscape, anti-fatigue, zero drums, zero vocals"
+  },
+  "visual_lighting_guardrails": {
+    "lighting_temperature": "Warm cozy interior glow (2700K-3200K) vs. cool misty rain forest exterior (5200K)",
+    "negative_visual_tokens": "bright harsh sunshine, dry weather, neon lighting, busy crowds, modern electronics, artifacts",
+    "purity_rule": "Cozy glass cabin bedroom or forest rain sanctuary, locked tripod cinemagraph composition, zero humans"
+  },
+  "youtube_seo_defaults": {
+    "primary_tags": [
+      "Rain on Window",
+      "Rainy Forest Bedroom",
+      "Cozy Rain ASMR",
+      "Sleep Rain Sounds",
+      "Rain for Sleep",
+      "Rain Retreat",
+      "Glass Cabin Rain",
+      "Deep Sleep ASMR"
+    ],
+    "category_id": "10"
+  }
+}

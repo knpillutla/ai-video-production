@@ -81,31 +81,54 @@ function renderInspectorFromVideo(vid) {
   const reprocessBtn = document.getElementById("btn-header-reprocess-ep");
   if (reprocessBtn) {
     if (vid.status === "processing") {
-      reprocessBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-[8px]"></i><span>Re-rendering (--id)...</span>';
+      reprocessBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-[8px]"></i><span>Re-Synthesizing (--id)...</span>';
       reprocessBtn.classList.add("opacity-80", "pointer-events-none");
     } else {
-      reprocessBtn.innerHTML = '<i class="fa-solid fa-play text-[8px]"></i><span>Approve and Rerender</span>';
+      reprocessBtn.innerHTML = '<i class="fa-solid fa-arrows-rotate text-[8px]"></i><span>Re-Synthesize</span>';
       reprocessBtn.classList.remove("opacity-80", "pointer-events-none");
     }
   }
 
   const video = document.getElementById("studio-panel-video"), overlay = document.getElementById("studio-panel-processing-overlay");
+  const playerBadge = document.getElementById("panel-player-status-badge");
   document.getElementById("studio-panel-empty-overlay")?.classList.add("hidden");
+  
   if (video) {
     const cleanMaster = (vid.videoUrl && !vid.videoUrl.includes("preview_master")) ? vid.videoUrl : (vid.video_url && !vid.video_url.includes("preview_master") ? vid.video_url : null);
     if (vid.status === "completed" && vid.currentStage >= 5 && cleanMaster) {
       overlay?.classList.add("hidden");
+      if (playerBadge) {
+        playerBadge.textContent = "Ready";
+        playerBadge.className = "px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30";
+      }
       if (!video.src.endsWith(cleanMaster)) video.src = cleanMaster;
     } else {
       overlay?.classList.remove("hidden");
-      const subTitle = document.getElementById("studio-panel-processing-subtitle");
-      if (subTitle) {
-        if (vid.currentStage === 1) subTitle.textContent = "Script & Storyboard Ready (Stage 1)...";
-        else if (vid.currentStage === 2) subTitle.textContent = "Keyframe Photos Ready (Synthesizing Stage 3 Motion)...";
-        else if (vid.currentStage === 3) subTitle.textContent = "Synthesizing Video Motion (Wan 2.1 / Kling)...";
-        else if (vid.currentStage === 4) subTitle.textContent = "Mastering Audio & Soundscape (Suno / 432Hz DSP)...";
-        else subTitle.textContent = "Assembling 4K Broadcast Master & 3-Hour Long Play...";
+      if (playerBadge) {
+        playerBadge.textContent = "Processing";
+        playerBadge.className = "px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/30 animate-pulse";
       }
+      const titleEl = document.getElementById("studio-panel-processing-title");
+      const subTitle = document.getElementById("studio-panel-processing-subtitle");
+      const barEl = document.getElementById("studio-panel-progress-bar");
+      const stepEl = document.getElementById("studio-panel-stage-step");
+      const pctEl = document.getElementById("studio-panel-stage-pct");
+      
+      const stage = vid.currentStage || 1;
+      const stageData = {
+        1: { title: "Generating Screenplay & Storyboard", subtitle: "Gemini 2.5 Flash • Context & beat formulation", pct: "20%", step: "Stage 1 of 5" },
+        2: { title: "Synthesizing 4K Keyframe Photos", subtitle: "FLUX 1.1 Pro Ultra • Hasselblad 8K cinematography", pct: "40%", step: "Stage 2 of 5" },
+        3: { title: "Rendering Diffusion Video Motion", subtitle: "Wan 2.1 / Kling v3 • Living wallpaper cinemagraph", pct: "65%", step: "Stage 3 of 5" },
+        4: { title: "Mastering Spatial Binaural Audio", subtitle: "Suno v3.5 & Velvet DSP • 48kHz -14 LUFS soundscape", pct: "85%", step: "Stage 4 of 5" },
+        5: { title: "Assembling 4K Master Deliverables", subtitle: "Single-pass FFmpeg • Dual-aspect broadcast stretch", pct: "95%", step: "Stage 5 of 5" }
+      };
+
+      const cur = stageData[stage] || stageData[1];
+      if (titleEl) titleEl.textContent = cur.title;
+      if (subTitle) subTitle.textContent = cur.subtitle;
+      if (barEl) barEl.style.width = cur.pct;
+      if (stepEl) stepEl.textContent = cur.step;
+      if (pctEl) pctEl.textContent = cur.pct;
     }
   }
 

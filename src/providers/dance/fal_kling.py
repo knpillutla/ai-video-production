@@ -83,9 +83,9 @@ class FalKlingAdapter:
         kling_dur = "10" if duration >= 8 else "5"
         eff_mode = "standard" if mode.lower() in ("standard", "fast", "low_cost") else "pro"
         if eff_mode == "standard":
-            endpoint = "https://queue.fal.run/fal-ai/kling-video/v1/standard/image-to-video"
+            endpoint = self.endpoint or "https://queue.fal.run/fal-ai/kling-video/v1/standard/image-to-video"
         else:
-            endpoint = "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video"
+            endpoint = self.endpoint or "https://queue.fal.run/fal-ai/kling-video/v1.6/pro/image-to-video"
 
         try:
             actual_url = image_url

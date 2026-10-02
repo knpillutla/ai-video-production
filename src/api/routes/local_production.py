@@ -267,9 +267,9 @@ async def poll_production_artifacts(channel_id: str, episode_id: str, user_id: s
 
     stems = []
     if "raw_soundtrack.mp3" in files and files["raw_soundtrack.mp3"].stat().st_size > 1000:
-        stems.append({"name": "Suno Soundtrack", "url": _file_url(files["raw_soundtrack.mp3"]), "color": "cyan"})
+        stems.append({"name": "Suno Soundtrack", "filename": "raw_soundtrack.mp3", "url": _file_url(files["raw_soundtrack.mp3"]), "color": "cyan"})
     if "velvet_binaural_master_48k.mp3" in files and files["velvet_binaural_master_48k.mp3"].stat().st_size > 1000:
-        stems.append({"name": "432Hz Velvet Binaural ASMR", "url": _file_url(files["velvet_binaural_master_48k.mp3"]), "color": "emerald"})
+        stems.append({"name": "432Hz Velvet Binaural ASMR", "filename": "velvet_binaural_master_48k.mp3", "url": _file_url(files["velvet_binaural_master_48k.mp3"]), "color": "emerald"})
 
     master_url = _file_url(files["master_4k_ambient.mp4"]) if ("master_4k_ambient.mp4" in files and files["master_4k_ambient.mp4"].stat().st_size > 1000) else None
     nature_master_url = _file_url(files["master_4k_ambient_nature_only.mp4"]) if ("master_4k_ambient_nature_only.mp4" in files and files["master_4k_ambient_nature_only.mp4"].stat().st_size > 1000) else None
@@ -305,7 +305,7 @@ async def poll_production_artifacts(channel_id: str, episode_id: str, user_id: s
     pipeline_state_data = json.loads(pipeline_state_file.read_text("utf-8")) if pipeline_state_file.exists() else None
 
     is_approved_val = bool(pipeline_state_data.get("is_approved") if pipeline_state_data else m_data.get("is_approved", False))
-    eff_stage = pipeline_state_data.get("current_stage") if pipeline_state_data else stage
+    eff_stage = pipeline_state_data.get("current_stage") if pipeline_state_data else (m_data.get("current_stage", 1) if m_data else 1)
 
     return {
         "keyframes": kfs, "motion_clips": vids, "audio_stems": stems,
