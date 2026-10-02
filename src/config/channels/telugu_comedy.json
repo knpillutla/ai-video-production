@@ -1,0 +1,45 @@
+{
+  "channel_id": "telugu_comedy",
+  "channel_name": "Telugu Comedy & Satire",
+  "handle": "@telugu_comedy",
+  "tag": "🎭 Telugu Satire & Shorts",
+  "comments": "Relatable digital comedy, sharp punchlines, energetic comedic timing.",
+  "niche_category": "Telugu Satire, Everyday Humor & Fast-Paced Shorts",
+  "target_audience": "Telugu-speaking digital youth and family audiences looking for sharp comedic timing, punchlines, and relatable satire.",
+  "allowed_genres": [
+    "comedy/satire",
+    "dance/folk"
+  ],
+  "audio_profile": {
+    "bgm_enabled_by_default": true,
+    "style": "Upbeat comedic timing BGM and punchy sound effects",
+    "instruments": [
+      "Quirky acoustic bass",
+      "Mridangam and Dholak accents",
+      "Playful flute"
+    ],
+    "foley_elements": [
+      "Comedic whoosh",
+      "Punchy rimshots",
+      "Subtle laughter beats"
+    ],
+    "target_lufs": -14.0,
+    "bgm_ducking_db": -20.0,
+    "suno_tag_template": "Upbeat Telugu folk comedy rhythm, energetic dholak, playful comedic timing"
+  },
+  "visual_lighting_guardrails": {
+    "lighting_temperature": "Vibrant, sharp modern 30fps lighting, high visual contrast",
+    "negative_visual_tokens": "gloomy dark tones, scary atmosphere, washed out faces",
+    "purity_rule": "Expressive facial timing, clean framing, and advertiser-safe family comedy"
+  },
+  "youtube_seo_defaults": {
+    "primary_tags": [
+      "Telugu Comedy",
+      "Telugu Comedy Shorts",
+      "Telugu Satire",
+      "Trending Telugu Shorts",
+      "Telugu Humor"
+    ],
+    "category_id": "23"
+  }
+}

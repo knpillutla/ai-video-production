@@ -51,10 +51,11 @@ def build_waterfall_prompt(
     camera_motion: str = "locked_tripod",
     excluded_topics: Optional[list[str]] = None,
     image_model: str = "flux_1_1_pro_ultra",
+    channel_id: Optional[str] = None,
 ) -> str:
     """Build dedicated waterfall directorial prompt conforming to global RelaxScreenplay schema."""
     return build_base_directorial_prompt(
-        genre="relax/nature",
+        genre="relax/waterfall",
         sub_genre="monumental_waterfall",
         archetype="waterfall",
         cluster="Global Monumental Waterfalls",
@@ -66,4 +67,5 @@ def build_waterfall_prompt(
         specific_rules=WATERFALL_SPECIFIC_RULES,
         curation_landmarks=WATERFALL_LANDMARK_POOL,
         color_temp_kelvin=5400,
+        channel_id=channel_id or "earth_serenade",
     )

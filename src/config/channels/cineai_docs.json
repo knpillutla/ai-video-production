@@ -1,0 +1,45 @@
+{
+  "channel_id": "cineai_docs",
+  "channel_name": "CineAI Documentaries",
+  "handle": "@cineai_docs",
+  "tag": "🦅 24fps BBC Wildlife Docs",
+  "comments": "Blue-chip educational wildlife and extreme climate survival expeditions with authoritative narration.",
+  "niche_category": "BBC-Style 24fps Wildlife & Extreme Climate Expeditions",
+  "target_audience": "Documentary lovers, nature enthusiasts, educational viewers, and high-production cinematic storytelling audiences.",
+  "allowed_genres": [
+    "documentary"
+  ],
+  "audio_profile": {
+    "bgm_enabled_by_default": true,
+    "style": "Sweeping cinematic orchestral documentary score",
+    "instruments": [
+      "French horns",
+      "Swelling orchestral strings",
+      "Timpani",
+      "Atmospheric mountain wind foley"
+    ],
+    "foley_elements": [
+      "Mountain wind howl",
+      "Glacial cracking",
+      "Wildlife calls"
+    ],
+    "target_lufs": -14.0,
+    "bgm_ducking_db": -18.0,
+    "suno_tag_template": "BBC blue-chip nature documentary orchestral score, dramatic strings, grand horn fanfare, 24fps cinematic pacing"
+  },
+  "visual_lighting_guardrails": {
+    "lighting_temperature": "Cinematic 24.0fps film cadence, dynamic volumetric mountain lighting, authentic weather realism",
+    "negative_visual_tokens": "soap opera high fps motion, cartoonish saturation, blurry optics, modern clutter",
+    "purity_rule": "Authoritative educational documentary standard with measured voiceover narration"
+  },
+  "youtube_seo_defaults": {
+    "primary_tags": [
+      "Nature Documentary 4K",
+      "BBC Style Wildlife",
+      "Alpine Expedition",
+      "Cinematic Nature Film",
+      "CineAI Docs"
+    ],
+    "category_id": "28"
+  }
+}

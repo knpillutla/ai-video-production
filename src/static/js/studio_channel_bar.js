@@ -16,6 +16,8 @@ function updateStudioChannelMetas(channelsList) {
         icon: ch.icon || "fa-clapperboard",
         color: ch.color || "indigo",
         category: ch.category || "General",
+        tag: ch.tag || ch.raw?.tag || "",
+        comments: ch.comments || ch.raw?.comments || "",
         raw: ch
       };
     });
@@ -55,11 +57,12 @@ function renderStudioChannelChips() {
   const studioHtml = slugs.map(slug => {
     const meta = studioChannelMetas[slug];
     const isSelected = slug === selectedStudioChannel;
+    const tagBadge = meta.tag ? `<span class="text-[9px] px-1.5 py-0.2 rounded bg-black/40 text-emerald-300 border border-emerald-500/30 font-bold font-mono tracking-tight ml-1">${meta.tag}</span>` : `<span class="text-[9px] font-mono opacity-80">${meta.category}</span>`;
     return `
       <button type="button" onclick="selectStudioChannel('${slug}')" id="studio-ch-${slug}" class="${isSelected ? activeCls : inactiveCls}">
         <i class="fa-solid ${meta.icon} text-[11px] text-${meta.color}-500"></i>
         <span>${meta.name}</span>
-        <span class="text-[9px] font-mono opacity-80">${meta.category}</span>
+        ${tagBadge}
       </button>
     `;
   }).join("");
@@ -77,11 +80,12 @@ function renderStudioChannelChips() {
     const ledgerChips = slugs.map(slug => {
       const meta = studioChannelMetas[slug];
       const isSelected = slug === selectedStudioChannel;
+      const tagBadge = meta.tag ? `<span class="text-[9px] px-1.5 py-0.2 rounded bg-black/40 text-emerald-300 border border-emerald-500/30 font-bold font-mono tracking-tight ml-1">${meta.tag}</span>` : `<span class="text-[9px] font-mono opacity-80">${meta.category}</span>`;
       return `
         <button type="button" onclick="selectStudioChannel('${slug}')" id="ledger-ch-${slug}" class="${isSelected ? activeCls : inactiveCls}">
           <i class="fa-solid ${meta.icon} text-[11px] text-${meta.color}-500"></i>
           <span>${meta.name}</span>
-          <span class="text-[9px] font-mono opacity-80">${meta.category}</span>
+          ${tagBadge}
         </button>
       `;
     }).join("");
@@ -117,6 +121,10 @@ function selectStudioChannel(channelId) {
   if (allBtn) allBtn.className = (channelId === "all") ? activeCls : inactiveCls;
 
   updateStudioChannelBadge();
+
+  if (typeof syncGenreDropdownForChannel === "function") {
+    syncGenreDropdownForChannel(channelId);
+  }
 
   if (typeof renderStudioVideoHistory === "function") {
     renderStudioVideoHistory();

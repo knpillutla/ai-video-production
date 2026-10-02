@@ -17,6 +17,7 @@ from src.studios.waterfall_studio.waterfall_director import generate_waterfall_s
 from src.studios.silent_hearth.hearth_director import generate_hearth_screenplay
 from src.studios.ambient_world.relax_director import generate_relax_screenplay_gemini
 from src.studios.zen_studio.zen_director import generate_zen_screenplay_gemini
+from src.studios.healing_relaxation.healing_director import generate_healing_screenplay
 from src.studios.rain_retreat.rain_director import generate_rain_screenplay
 from src.studios.cozy_ambiance.cozy_director import generate_cozy_screenplay
 
@@ -41,12 +42,12 @@ async def dispatch_studio_director(
     sub_lower = (sub_genre or "").lower()
     arch_lower = (primary_archetype or "").lower()
 
-    # 1. Zen Studio Dispatch
-    if genre_lower in {"relax/healing", "relax/zen"} or sub_lower in {"zen_healing", "lotus_pond"} or arch_lower == "zen_garden":
-        logger.info(f"dispatcher_route: target='ZenStudio' genre='{genre}' sub_genre='{sub_genre}' archetype='{primary_archetype}'")
+    # 1. Japanese Zen Studio Dispatch (Kyoto Zen, Bamboo Groves, Raked Rock Gardens, Tsukubai)
+    if genre_lower in {"relax/zen", "zen"} or sub_lower in {"zen_garden", "bamboo_grove", "lotus_pond"} or arch_lower in {"zen_garden", "bamboo_grove"}:
+        logger.info(f"dispatcher_route: target='ZenStudio' genre='{genre}' sub_genre='{sub_genre}' archetype='{primary_archetype}' channel='{channel_id}'")
         return await generate_zen_screenplay_gemini(
             genre=genre,
-            sub_genre=sub_genre or "zen_healing",
+            sub_genre=sub_genre or "zen_garden",
             primary_archetype=primary_archetype or "zen_garden",
             custom_prompt=custom_prompt or "",
             duration_seconds=duration_seconds,
@@ -54,6 +55,22 @@ async def dispatch_studio_director(
             num_shots=num_shots,
             raw_output_path=raw_output_path,
             image_model=image_model,
+            channel_id=channel_id or "earth_serenade",
+        )
+
+    # 2. Global Healing Sanctuaries & Solfeggio Dispatch (Himalayas, Bali, Geothermal, Redwoods)
+    if genre_lower in {"relax/healing", "healing_relaxation", "healing"} or sub_lower in {"global_healing", "himalayan_valley", "geothermal_springs", "redwood_cathedral", "solfeggio_sanctuary", "crystal_spring"} or arch_lower in {"sacred_sanctuary", "healing_sanctuary", "geothermal_springs"}:
+        logger.info(f"dispatcher_route: target='HealingRelaxationStudio' genre='{genre}' sub_genre='{sub_genre}'")
+        return await generate_healing_screenplay(
+            custom_prompt=custom_prompt,
+            duration_seconds=duration_seconds,
+            num_shots=num_shots,
+            camera_motion=camera_motion,
+            user_id=user_id,
+            channel_id=channel_id,
+            raw_output_path=raw_output_path,
+            image_model=image_model,
+            sub_genre=sub_genre or "global_healing",
         )
 
     # 2. Rain Retreat & River ASMR Dispatch

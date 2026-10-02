@@ -10,6 +10,7 @@ Authoritative single source of truth for:
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+from src.config.channel_registry import get_channel_profile
 
 
 def build_default_image_model_configs(prompt: str, landmark_name: str = "Landmark") -> Dict[str, Any]:
@@ -81,6 +82,7 @@ def build_base_directorial_prompt(
     specific_rules: str = "",
     curation_landmarks: Optional[List[str]] = None,
     color_temp_kelvin: int = 5500,
+    channel_id: Optional[str] = None,
 ) -> str:
     """Compose the authoritative directorial system prompt for Gemini storyboarding."""
     per_shot_dur = round(duration_seconds / max(1, num_shots), 1)
@@ -91,9 +93,16 @@ def build_base_directorial_prompt(
 
     landmarks_list = "\n".join(f"      {idx}. {lm}" for idx, lm in enumerate(curation_landmarks or [], 1)) if curation_landmarks else ""
 
+    channel_block = ""
+    if channel_id:
+        profile = get_channel_profile(channel_id)
+        if profile:
+            channel_block = "\n" + profile.format_directorial_guardrails_block() + "\n"
+
     return f"""You are the Master Visual Director and Senior Cinematic Storyboard Artist for CineAI Studio.
 Your role is to author a complete, production-ready, broadcast-grade Screenplay for the "{genre}" channel genre.
 
+{channel_block}
 ======================================================================
 UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
 ======================================================================

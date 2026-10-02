@@ -27,6 +27,37 @@ def _slugify(text: str) -> str:
 @router.get("", response_model=list[Channel])
 async def list_channels(current_user: User = Depends(get_current_user)):
     """List all distribution channels configured by current user."""
+    channels = repo.list_channels(current_user.id)
+    from src.config.channel_registry import load_channel_profiles
+    profiles = load_channel_profiles()
+    existing_slugs = {c.channel_slug.lower() for c in channels if c.channel_slug}
+    
+    # Sync profiles from src/config/channels/*.json into user repo
+    for p in profiles.values():
+        p_slug = p.channel_id.lower().strip()
+        if p_slug not in existing_slugs:
+            chan = Channel(
+                user_id=current_user.id,
+                channel_name=p.channel_name,
+                channel_slug=p_slug,
+                channel_handle=p.handle,
+                category=p.niche_category,
+                primary_genre=p.allowed_genres[0] if p.allowed_genres else "relax/nature",
+                description=p.target_audience,
+                tag=p.tag,
+                comments=p.comments,
+                default_tags=p.youtube_seo_defaults.primary_tags if p.youtube_seo_defaults else [],
+                icon="fa-mountain-sun" if "earth" in p_slug else ("fa-fire" if "hearth" in p_slug else ("fa-film" if "cineai" in p_slug else "fa-masks-theater")),
+                color="emerald" if "earth" in p_slug else ("amber" if "hearth" in p_slug else ("blue" if "cineai" in p_slug else "pink"))
+            )
+            repo.save_channel(chan)
+        else:
+            # Sync tag and comments to existing channel object if not set
+            existing_ch = next((c for c in channels if c.channel_slug and c.channel_slug.lower() == p_slug), None)
+            if existing_ch and (not existing_ch.tag or not existing_ch.comments):
+                if p.tag and not existing_ch.tag: existing_ch.tag = p.tag
+                if p.comments and not existing_ch.comments: existing_ch.comments = p.comments
+                repo.save_channel(existing_ch)
     return repo.list_channels(current_user.id)
 
 
@@ -200,3 +231,37 @@ async def list_publications(
     """List historical publication audit ledger entries for user."""
     cid = UUID(channel_id) if channel_id and len(channel_id) == 36 else None
     return repo.list_publications(current_user.id, channel_id=cid)
+
+
+@router.get("/profiles")
+async def get_all_channel_profiles():
+    """Retrieve global channel profiles, audience definitions, and guardrails."""
+    from src.config.channel_registry import load_channel_profiles
+    profiles = load_channel_profiles()
+    return {"status": "ok", "profiles": {k: v.model_dump() for k, v in profiles.items()}}
+
+
+@router.post("/ai-enrich-profile")
+async def ai_enrich_channel_profile(
+    req_data: dict,
+    current_user: User = Depends(get_current_user),
+):
+    """Call Gemini to autonomously synthesize enriched channel profile guardrails."""
+    from src.services.channel_profile_enricher import ChannelEnrichRequest, enrich_channel_profile_with_gemini
+    req = ChannelEnrichRequest(**req_data)
+    profile = await enrich_channel_profile_with_gemini(req)
+    return {"status": "ok", "profile": profile.model_dump()}
+
+
+@router.post("/save-profile")
+async def save_profile(
+    profile_data: dict,
+    current_user: User = Depends(get_current_user),
+):
+    """Persist an individual channel profile JSON file into src/config/channels/<slug>.json."""
+    from src.config.channel_registry import ChannelProfile, save_channel_profile
+    profile = ChannelProfile(**profile_data)
+    saved_path = save_channel_profile(profile)
+    return {"status": "ok", "saved_file": str(saved_path), "channel_id": profile.channel_id}
+
+

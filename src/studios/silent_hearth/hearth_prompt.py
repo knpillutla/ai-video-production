@@ -47,10 +47,11 @@ def build_hearth_prompt(
     camera_motion: str = "locked_tripod",
     excluded_topics: Optional[list[str]] = None,
     image_model: str = "flux_1_1_pro_ultra",
+    channel_id: Optional[str] = None,
 ) -> str:
     """Build dedicated silent hearth & beach campfire directorial prompt conforming to global RelaxScreenplay schema."""
     return build_base_directorial_prompt(
-        genre="relax/nature",
+        genre="relax/hearth",
         sub_genre="beach_campfire",
         archetype="campfire",
         cluster="Global Pacific & Atlantic Coastlines",
@@ -62,4 +63,5 @@ def build_hearth_prompt(
         specific_rules=HEARTH_SPECIFIC_RULES,
         curation_landmarks=HEARTH_LANDMARK_POOL,
         color_temp_kelvin=3200,
+        channel_id=channel_id or "silent_hearth",
     )

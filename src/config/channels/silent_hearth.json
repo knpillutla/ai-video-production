@@ -1,0 +1,44 @@
+{
+  "channel_id": "silent_hearth",
+  "channel_name": "Silent Hearth",
+  "handle": "@silent_hearth",
+  "tag": "🔥 Pure ASMR Sleep & Hearth",
+  "comments": "Nighttime sleep & insomnia aid, pure crackling embers and rain foley, strictly zero melodic intrusion.",
+  "niche_category": "Pure ASMR, Deep Sleep, Insomnia Relief & Cozy Solitude",
+  "target_audience": "Viewers seeking deep sleep, insomnia relief, nighttime reading ambiance, tinnitus masking, and peaceful cozy solitude.",
+  "allowed_genres": [
+    "relax/hearth",
+    "relax/rain",
+    "relax/cozy"
+  ],
+  "audio_profile": {
+    "bgm_enabled_by_default": false,
+    "style": "Pure natural ASMR foley & brown/pink noise (STRICTLY NO MELODIC INTRUSIONS)",
+    "instruments": [],
+    "foley_elements": [
+      "Crisp crackling firewood and glowing embers",
+      "Gentle rain pattering on cedar wood and glass",
+      "Rhythmic ocean shore wash on wet beach pebbles"
+    ],
+    "target_lufs": -16.0,
+    "bgm_ducking_db": 0.0,
+    "suno_tag_template": "Pure crackling fireplace embers, gentle ocean rain, steady sleep soundscape, zero drums, zero vocals, zero flute"
+  },
+  "visual_lighting_guardrails": {
+    "lighting_temperature": "Warm amber firelight glow (1800K-2400K), twilight blue hour, or rainy night ambiance",
+    "negative_visual_tokens": "bright harsh daylight, neon lighting, busy crowds, fast motion, bright sun",
+    "purity_rule": "Intimate cozy shelter or peaceful beach solitude, locked tripod cinemagraph composition, zero clutter"
+  },
+  "youtube_seo_defaults": {
+    "primary_tags": [
+      "Deep Sleep Fireplace",
+      "ASMR Crackling Fire",
+      "Insomnia Relief",
+      "Rain on Beach",
+      "Cozy Fireplace Ambiance",
+      "Sleep Aid 4K",
+      "Silent Hearth"
+    ],
+    "category_id": "10"
+  }
+}

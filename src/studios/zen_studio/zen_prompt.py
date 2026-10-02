@@ -53,6 +53,7 @@ def build_zen_prompt(
     excluded_topics: Optional[list[str]] = None,
     image_model: str = "flux_1_1_pro_ultra",
     sub_genre: str = "zen_healing",
+    channel_id: Optional[str] = None,
 ) -> str:
     """Build dedicated Zen studio directorial prompt conforming to global RelaxScreenplay schema."""
     return build_base_directorial_prompt(
@@ -68,4 +69,5 @@ def build_zen_prompt(
         specific_rules=ZEN_SPECIFIC_RULES,
         curation_landmarks=ZEN_LANDMARK_POOL,
         color_temp_kelvin=5400,
+        channel_id=channel_id or "earth_serenade",
     )

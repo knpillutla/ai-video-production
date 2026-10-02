@@ -50,6 +50,7 @@ def build_rain_prompt(
     excluded_topics: Optional[list[str]] = None,
     image_model: str = "flux_1_1_pro_ultra",
     sub_genre: str = "forest_rain",
+    channel_id: Optional[str] = None,
 ) -> str:
     """Build dedicated rain retreat directorial prompt conforming to global RelaxScreenplay schema."""
     return build_base_directorial_prompt(
@@ -65,4 +66,5 @@ def build_rain_prompt(
         specific_rules=RAIN_SPECIFIC_RULES,
         curation_landmarks=RAIN_LANDMARK_POOL,
         color_temp_kelvin=5500,
+        channel_id=channel_id or "silent_hearth",
     )

@@ -18,6 +18,8 @@ class ChannelBase(BaseModel):
     icon: str = "fa-clapperboard"
     color: str = "indigo"
     description: str = ""
+    tag: str = ""
+    comments: str = ""
     avatar_url: str | None = None
     default_tags: list[str] = Field(default_factory=list)
 
@@ -43,6 +45,8 @@ class ChannelUpdate(BaseModel):
     icon: str | None = None
     color: str | None = None
     description: str | None = None
+    tag: str | None = None
+    comments: str | None = None
     default_tags: list[str] | None = None
     is_active: bool | None = None
 

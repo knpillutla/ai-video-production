@@ -35,56 +35,36 @@
     <!-- Rendered dynamically by channel_hub_controller.js -->
   </div>
 
-  <!-- Multi-Dimensional Filters Bar -->
+  <!-- Channel Filter Bar -->
   <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-[11px]">
     <div class="relative flex-1 min-w-[200px]">
       <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-gray-400 text-[10px]"></i>
-      <input type="text" id="channel-hub-search" onkeyup="filterChannelHubVideos()" placeholder="Search title, ID, topic, model..." class="w-full pl-7 pr-2.5 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-[11px] focus:ring-1 focus:ring-indigo-500 outline-none">
+      <input type="text" id="channel-table-search" onkeyup="filterChannelManagementTable()" placeholder="Search channels by name, tag, category, genre, comments..." class="w-full pl-7 pr-2.5 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-[11px] focus:ring-1 focus:ring-indigo-500 outline-none">
     </div>
-    <div class="flex items-center gap-1.5 flex-wrap">
-      <select id="channel-hub-filter-status" onchange="filterChannelHubVideos()" class="bg-slate-900 border border-[var(--border)] text-gray-300 rounded-lg px-2.5 py-1.5 text-[11px] font-medium outline-none">
-        <option value="all">All Statuses (In Progress, Published, Ready)</option>
-        <option value="published">Published (8h/3h Broadcasts)</option>
-        <option value="pending_review">Pending Review (Masters Ready)</option>
-        <option value="processing">In Progress / Processing</option>
-        <option value="completed">Completed Masters</option>
-      </select>
-      <select id="channel-hub-filter-audio" onchange="filterChannelHubVideos()" class="bg-slate-900 border border-[var(--border)] text-gray-300 rounded-lg px-2.5 py-1.5 text-[11px] font-medium outline-none">
-        <option value="all">All Audio Modes</option>
-        <option value="music">With Music (BGM Track)</option>
-        <option value="nature">Pure Nature / ASMR Sounds</option>
-      </select>
-      <select id="channel-hub-filter-format" onchange="filterChannelHubVideos()" class="bg-slate-900 border border-[var(--border)] text-gray-300 rounded-lg px-2.5 py-1.5 text-[11px] font-medium outline-none">
-        <option value="all">All Formats</option>
-        <option value="long">16:9 Long-Play (3h / 8h / Master)</option>
-        <option value="short">9:16 Short Teaser (20s)</option>
-      </select>
+    <div class="flex items-center gap-2">
+      <span class="text-[10px] text-gray-400 font-mono" id="channel-table-count">4 channels configured</span>
     </div>
   </div>
 
-  <!-- Comprehensive Channel Videos Table -->
+  <!-- Dedicated Channel Strategy & Metadata Table -->
   <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
     <div class="overflow-x-auto">
       <table class="w-full text-left text-[11px]">
         <thead class="bg-slate-900/90 text-gray-400 font-bold border-b border-[var(--border)] text-[10px] uppercase">
           <tr>
-            <th class="px-2.5 py-1.5">Channel</th>
-            <th class="px-2.5 py-1.5">Episode ID</th>
-            <th class="px-2.5 py-1.5">Video Edition</th>
-            <th class="px-2.5 py-1.5">Title</th>
-            <th class="px-2.5 py-1.5">Story Topic (Click Script)</th>
-            <th class="px-2 py-1.5 text-center">Status</th>
-            <th class="px-2 py-1.5 text-center">Audio Mode</th>
-            <th class="px-2 py-1.5 text-center">Duration</th>
-            <th class="px-2 py-1.5 text-right font-mono">Cost</th>
-            <th class="px-2 py-1.5 text-center">Stages Built</th>
-            <th class="px-2 py-1.5 text-center">Models Used</th>
-            <th class="px-2 py-1.5 text-center">Timestamps</th>
-            <th class="px-2 py-1.5 text-center">Actions</th>
+            <th class="px-3 py-2">Channel &amp; Handle</th>
+            <th class="px-3 py-2">Display Tag Badge</th>
+            <th class="px-3 py-2">Niche &amp; Audience</th>
+            <th class="px-3 py-2">Allowed Genres</th>
+            <th class="px-3 py-2">Acoustic &amp; BGM Policy</th>
+            <th class="px-3 py-2">Lighting &amp; Purity</th>
+            <th class="px-3 py-2">Strategy Comments</th>
+            <th class="px-2.5 py-2 text-center">Episodes</th>
+            <th class="px-3 py-2 text-center">Actions</th>
           </tr>
         </thead>
         <tbody id="channel-hub-tbody" class="divide-y divide-[var(--border)] text-[11px]">
-          <!-- Populated dynamically via JavaScript -->
+          <!-- Populated dynamically via channel_hub_table_renderer.js -->
         </tbody>
       </table>
     </div>
@@ -148,6 +128,105 @@
         </div>
       </div>
 
+      <!-- Genre Multi-Selection Chips -->
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-[11px] font-semibold text-gray-300 flex items-center gap-1">
+            <i class="fa-solid fa-shapes text-purple-400"></i>
+            <span>Allowed Genres &amp; Formats *</span>
+          </label>
+          <span class="text-[9px] text-purple-400 font-medium">Select all that apply</span>
+        </div>
+        <div id="crud-genres-container" class="grid grid-cols-3 gap-1.5 text-[10px]">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
+            <input type="checkbox" name="crud_genre" value="relax/nature" class="accent-purple-500 rounded">
+            <span>🏔️ Alpine Nature</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
+            <input type="checkbox" name="crud_genre" value="relax/healing" class="accent-purple-500 rounded">
+            <span>✨ 528Hz Healing</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
+            <input type="checkbox" name="crud_genre" value="relax/zen" class="accent-purple-500 rounded">
+            <span>🪷 Kyoto Zen</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
+            <input type="checkbox" name="crud_genre" value="relax/waterfall" class="accent-purple-500 rounded">
+            <span>🌊 Waterfalls</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
+            <input type="checkbox" name="crud_genre" value="relax/hearth" class="accent-purple-500 rounded">
+            <span>🔥 Beach Hearth</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
+            <input type="checkbox" name="crud_genre" value="relax/rain" class="accent-purple-500 rounded">
+            <span>🌧️ Rain ASMR</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
+            <input type="checkbox" name="crud_genre" value="relax/cozy" class="accent-purple-500 rounded">
+            <span>🪵 Cozy Living</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
+            <input type="checkbox" name="crud_genre" value="relax/ambient" class="accent-purple-500 rounded">
+            <span>🌌 Velvet Ambient</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
+            <input type="checkbox" name="crud_genre" value="documentary" class="accent-purple-500 rounded">
+            <span>🦅 BBC Wildlife</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
+            <input type="checkbox" name="crud_genre" value="travel_walking" class="accent-purple-500 rounded">
+            <span>🚶 Walking Tours</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
+            <input type="checkbox" name="crud_genre" value="dance/folk" class="accent-purple-500 rounded">
+            <span>💃 Folk Dance</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-slate-900/80 cursor-pointer hover:border-purple-500 transition">
+            <input type="checkbox" name="crud_genre" value="comedy/satire" class="accent-purple-500 rounded">
+            <span>🎭 Comedy Satire</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- User Intent & Target Audience Prompt -->
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="text-[11px] font-semibold text-gray-300 flex items-center gap-1">
+            <i class="fa-solid fa-bullseye text-indigo-400"></i>
+            <span>Channel Vision, User Intent &amp; Audience Vibe</span>
+          </label>
+          <button type="button" onclick="triggerGeminiChannelEnrichment()" id="btn-ai-enrich-channel" class="px-2.5 py-0.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-md text-[10px] font-bold shadow flex items-center gap-1 transition">
+            <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i>
+            <span>✨ Auto-Enrich with Gemini</span>
+          </button>
+        </div>
+        <textarea id="crud-channel-intent" rows="2" placeholder="e.g. 4K nature relaxation with 432Hz soundscapes for daytime meditation, yoga, and TV living wallpaper..." class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-xs outline-none focus:border-indigo-500 resize-none"></textarea>
+      </div>
+
+      <!-- AI Enriched Directorial Guardrails Preview Accordion -->
+      <div id="crud-enriched-preview" class="p-3 bg-indigo-950/30 border border-indigo-500/30 rounded-xl space-y-2 hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold text-indigo-300 flex items-center gap-1">
+            <i class="fa-solid fa-sparkles text-amber-400 text-[9px]"></i>
+            <span>Gemini Synthesized Directorial Guardrails:</span>
+          </span>
+          <span id="crud-enriched-badge" class="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[9px] font-mono">✅ Profile Ready</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[10px] text-gray-300">
+          <div class="space-y-1">
+            <div class="font-semibold text-purple-300">🎵 Audio Policy:</div>
+            <div id="preview-audio-style" class="text-gray-400 text-[9px]"></div>
+            <div id="preview-suno-tags" class="text-[9px] font-mono text-indigo-300 truncate"></div>
+          </div>
+          <div class="space-y-1">
+            <div class="font-semibold text-emerald-300">💡 Lighting &amp; Purity:</div>
+            <div id="preview-lighting" class="text-gray-400 text-[9px]"></div>
+            <div id="preview-purity" class="text-gray-400 text-[9px] truncate"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="grid grid-cols-3 gap-3">
         <div>
           <label class="block text-[11px] font-semibold text-gray-300 mb-1">Audio Language</label>
@@ -185,13 +264,30 @@
         </div>
       </div>
 
-      <div>
-        <label class="block text-[11px] font-semibold text-gray-300 mb-1">Description / Strategy</label>
-        <input type="text" id="crud-channel-desc" placeholder="e.g. 4K Nature Soundscapes & Ambient Rain Retreats" class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-xs outline-none focus:border-indigo-500">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[11px] font-semibold text-gray-300 mb-1 flex items-center gap-1">
+            <i class="fa-solid fa-tag text-amber-400 text-xs"></i>
+            <span>Display Tag Badge (e.g. 🌿 432Hz Nature) *</span>
+          </label>
+          <input type="text" id="crud-channel-tag" placeholder="e.g. 🌿 432Hz Nature & Meditation" class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-xs outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-gray-300 mb-1">Description / Headline</label>
+          <input type="text" id="crud-channel-desc" placeholder="e.g. 4K Nature Soundscapes & Ambient Rain Retreats" class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-xs outline-none focus:border-indigo-500">
+        </div>
       </div>
 
       <div>
-        <label class="block text-[11px] font-semibold text-gray-300 mb-1">Default Tags (comma-separated)</label>
+        <label class="block text-[11px] font-semibold text-gray-300 mb-1 flex items-center gap-1">
+          <i class="fa-solid fa-comment-dots text-sky-400 text-xs"></i>
+          <span>Internal Comments &amp; Strategy Guidelines</span>
+        </label>
+        <textarea id="crud-channel-comments" rows="2" placeholder="e.g. Daytime relaxation channel, avoid dark lighting, strictly keep Suno at 432Hz..." class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white text-xs outline-none focus:border-indigo-500 resize-none"></textarea>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-semibold text-gray-300 mb-1">Default SEO Tags (comma-separated)</label>
         <input type="text" id="crud-channel-tags" placeholder="e.g. 4K, Nature, ASMR, Sleep, Relaxing" class="w-full px-3 py-1.5 bg-slate-900 border border-[var(--border)] rounded-lg text-white font-mono text-xs outline-none focus:border-indigo-500">
       </div>
 

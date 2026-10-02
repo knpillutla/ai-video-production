@@ -49,6 +49,7 @@ def build_cozy_prompt(
     excluded_topics: Optional[list[str]] = None,
     image_model: str = "flux_1_1_pro_ultra",
     sub_genre: str = "cozy_shelter",
+    channel_id: Optional[str] = None,
 ) -> str:
     """Build dedicated cozy ambiance directorial prompt conforming to global RelaxScreenplay schema."""
     return build_base_directorial_prompt(
@@ -64,4 +65,5 @@ def build_cozy_prompt(
         specific_rules=COZY_SPECIFIC_RULES,
         curation_landmarks=COZY_LANDMARK_POOL,
         color_temp_kelvin=3200,
+        channel_id=channel_id or "silent_hearth",
     )

@@ -59,9 +59,10 @@ async def generate_zen_screenplay_gemini(
     num_shots: int = 1,
     raw_output_path: Optional[str | Path] = None,
     image_model: str = "flux_1_1_pro_ultra",
+    channel_id: Optional[str] = None,
 ) -> RelaxScreenplay:
     """Dynamically generate 432Hz healing meditation screenplay via Gemini LLM."""
-    logger.info(f"generating_zen_screenplay: prompt='{custom_prompt}' genre='{genre}' shots={num_shots}")
+    logger.info(f"generating_zen_screenplay: prompt='{custom_prompt}' genre='{genre}' shots={num_shots} channel={channel_id}")
     num_shots = max(1, int(num_shots))
 
     prompt = build_zen_prompt(
@@ -70,6 +71,7 @@ async def generate_zen_screenplay_gemini(
         num_shots=num_shots,
         image_model=image_model,
         sub_genre=sub_genre,
+        channel_id=channel_id,
     )
 
     try:
