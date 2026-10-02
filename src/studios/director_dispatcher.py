@@ -17,6 +17,8 @@ from src.studios.waterfall_studio.waterfall_director import generate_waterfall_s
 from src.studios.silent_hearth.hearth_director import generate_hearth_screenplay
 from src.studios.ambient_world.relax_director import generate_relax_screenplay_gemini
 from src.studios.zen_studio.zen_director import generate_zen_screenplay_gemini
+from src.studios.rain_retreat.rain_director import generate_rain_screenplay
+from src.studios.cozy_ambiance.cozy_director import generate_cozy_screenplay
 
 
 async def dispatch_studio_director(
@@ -39,6 +41,7 @@ async def dispatch_studio_director(
     sub_lower = (sub_genre or "").lower()
     arch_lower = (primary_archetype or "").lower()
 
+    # 1. Zen Studio Dispatch
     if genre_lower in {"relax/healing", "relax/zen"} or sub_lower in {"zen_healing", "lotus_pond"} or arch_lower == "zen_garden":
         logger.info(f"dispatcher_route: target='ZenStudio' genre='{genre}' sub_genre='{sub_genre}' archetype='{primary_archetype}'")
         return await generate_zen_screenplay_gemini(
@@ -50,9 +53,40 @@ async def dispatch_studio_director(
             user_id=user_id or "user_krishna_01",
             num_shots=num_shots,
             raw_output_path=raw_output_path,
+            image_model=image_model,
         )
 
-    # 1. Waterfall Studio Dispatch
+    # 2. Rain Retreat & River ASMR Dispatch
+    if genre_lower in {"relax/rain", "rain_retreat"} or sub_lower in {"biophilic_retreat", "forest_rain", "river_rain"} or "rain" in arch_lower:
+        logger.info(f"dispatcher_route: target='RainRetreatStudio' genre='{genre}' sub_genre='{sub_genre}'")
+        return await generate_rain_screenplay(
+            custom_prompt=custom_prompt,
+            duration_seconds=duration_seconds,
+            num_shots=num_shots,
+            camera_motion=camera_motion,
+            user_id=user_id,
+            channel_id=channel_id,
+            raw_output_path=raw_output_path,
+            image_model=image_model,
+            sub_genre=sub_genre or "forest_rain",
+        )
+
+    # 3. Cozy Ambiance & Fireplace Dispatch
+    if genre_lower in {"relax/cozy", "cozy_ambiance"} or sub_lower in {"cozy_living", "cozy_shelter", "fireplace"}:
+        logger.info(f"dispatcher_route: target='CozyAmbianceStudio' genre='{genre}' sub_genre='{sub_genre}'")
+        return await generate_cozy_screenplay(
+            custom_prompt=custom_prompt,
+            duration_seconds=duration_seconds,
+            num_shots=num_shots,
+            camera_motion=camera_motion,
+            user_id=user_id,
+            channel_id=channel_id,
+            raw_output_path=raw_output_path,
+            image_model=image_model,
+            sub_genre=sub_genre or "cozy_shelter",
+        )
+
+    # 4. Waterfall Studio Dispatch
     if (
         "waterfall" in genre_lower
         or "waterfall" in sub_lower
@@ -71,7 +105,7 @@ async def dispatch_studio_director(
             image_model=image_model,
         )
 
-    # 2. Silent Hearth & Beach Campfire Studio Dispatch
+    # 5. Silent Hearth & Beach Campfire Studio Dispatch
     if (
         "hearth" in ch_lower
         or "campfire" in ch_lower
@@ -92,7 +126,7 @@ async def dispatch_studio_director(
             image_model=image_model,
         )
 
-    # 3. Alpine Nature Studio Dispatch (Swiss Alps, Dolomites, Mountains, Meadows)
+    # 6. Alpine Nature Studio Dispatch (Swiss Alps, Dolomites, Mountains, Meadows)
     if (
         "alpine" in genre_lower
         or "nature" in genre_lower
@@ -113,7 +147,7 @@ async def dispatch_studio_director(
             image_model=image_model,
         )
 
-    # 4. Default Ambient World Studio (Rain, Zen, Cozy Living Spaces, Fusion)
+    # 7. Default Ambient World Studio (Fusion & 14 Archetypes)
     logger.info(f"dispatcher_route: target='AmbientWorldStudio' genre='{genre}' prompt='{custom_prompt}'")
     return await generate_relax_screenplay_gemini(
         primary=primary_archetype or sub_genre or "",
