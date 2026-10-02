@@ -119,7 +119,8 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
 
 3. SMOOTH HYPNOTIC KINETICS & ANTI-DRIFT CINEMAGRAPH STANDARD:
    - Zero Environmental Warping: Mountains, rock cliffs, forest trees, and the horizon line MUST remain 100% frozen, rigid, and static.
-   - Fluid & Atmospheric Animation Only: Animate ONLY the natural dynamic elements (flowing stream water, rolling ocean surf, flickering hearth embers, or gentle rising mist/clouds).
+   - Fluid & Atmospheric Animation Only: Animate ONLY the natural dynamic elements (flowing stream water, rolling ocean surf, flickering hearth embers, or gentle rising vapor mist).
+   - Anti-Motion-Fatigue Clear Sky Standard: In all relaxation/nature scenes (except explicit rain themes), skies MUST be crystal-clear, cloudless azure skies ("crystal-clear cloudless blue sky, zero clouds, completely clear atmosphere"). STRICTLY PROHIBIT clouds, overcast skies, or drifting clouds, as sky/cloud motion causes visual fatigue in living wallpapers.
    - Domain Specification: Set "water_fluid" for water/rain/falls, "landscape_solid" for mountain/forest vistas, or "cozy_hearth" for campfires.
 
 4. MULTI-MODEL IMAGE PROMPTS ("image_model_configs"):
@@ -134,8 +135,8 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
      * "wan_2_1": Model "fal-ai/wan-i2v". Continuous fluid kinetic phrasing.
 
 6. MANDATORY NEGATIVE PROMPT:
-   - For Pure Wilderness: Always include: "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings".
-   - For Cozy Living / Bedrooms / Cabins / Walking Tours: Prohibit structural drift, flickering, and artifacts, but DO NOT ban architectural structures: "camera movement, camera pan, panning, tilt, zoom, morphing architecture, changing furniture, structural drift, flickering, temporal jump, changing lighting, gelatinous water, melting foam, rubbery water, static vertical streaks, falling wire artifacts, artifacts, humans, tourist, clutter, plastic junk, modern electronics".
+   - For Pure Wilderness: Always include: "clouds, cloudy, overcast sky, cumulus, stratus, cirrus, storm clouds, dark clouds, moving clouds, timelapse clouds, rapid clouds, rolling clouds, cloud morphing, rapid cloud shadows, camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings".
+   - For Cozy Living / Bedrooms / Cabins / Walking Tours: Prohibit structural drift, flickering, and artifacts, but DO NOT ban architectural structures: "clouds, cloudy, overcast sky, cumulus, storm clouds, moving clouds, timelapse, camera movement, camera pan, panning, tilt, zoom, morphing architecture, changing furniture, structural drift, flickering, temporal jump, changing lighting, gelatinous water, melting foam, rubbery water, static vertical streaks, falling wire artifacts, artifacts, humans, tourist, clutter, plastic junk, modern electronics".
 
 {specific_rules}
 

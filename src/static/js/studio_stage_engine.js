@@ -498,12 +498,13 @@ function advanceToAudioStage(vid) {
   startStudioLiveStageProgress(target, "manual", "audio");
 }
 
-function advanceToMasterStage(vid) {
+function advanceToMasterStage(vid, forceRerun = false) {
   let target = vid || currentActiveInspectorEpisode;
   if (!target) return;
   target.currentStage = 5;
   target.status = "processing";
   target.progress = 90;
+  target.force_rerun = Boolean(forceRerun);
   currentActiveInspectorEpisode = target;
   renderInspectorFromVideo(target);
   if (typeof filterChannelArchive === "function") filterChannelArchive();

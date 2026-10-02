@@ -24,8 +24,8 @@ CORE_ALPINE_AQUATIC_ARCHETYPES: Dict[str, AtmosphericArchetype] = {
             "delicate wild edelweiss and blue gentian flowers growing on the riverbank, distant snow-capped peaks, creamy natural bokeh, zero humans, zero buildings."
         ),
         wide_motion_prompt=(
-            "Ultra-subtle, extremely slow and serene ambient living wallpaper motion. Distant clouds are almost stationary in the sky with calm stillness, "
-            "very gentle breeze swaying wildflower tips, crystal water flowing smoothly, rock-steady tripod camera, zero timelapse, zero fast clouds, zero morphing."
+            "Ultra-subtle, extremely slow and serene ambient living wallpaper motion. Crystal-clear static cloudless azure sky with absolute calm stillness, "
+            "very gentle breeze swaying wildflower tips, crystal water flowing smoothly, rock-steady tripod camera, zero clouds, zero morphing."
         ),
         intimate_motion_prompt=(
             "Ultra-slow crystal clear mountain water flowing smoothly over river stones with gentle ripples, "

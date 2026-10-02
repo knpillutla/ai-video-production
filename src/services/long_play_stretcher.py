@@ -44,69 +44,7 @@ def export_long_play_broadcast(
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     logger.info(f"stretching_long_play_video: {src.name} -> {out.name} ({target_duration_seconds}s, crf={crf}, fade_to_black={fade_to_black_hours}h)")
 
-    parent = src.parent
-    seamless_clips = sorted(parent.glob("motion_p*_fwd_seamless.mp4"))
-    if not seamless_clips:
-        seamless_clips = sorted(parent.glob("motion_p*.mp4"))
-
-    # Direct seamless loop assembly if single seamless clip and audio stems exist in episode dir
-    if seamless_clips and len(seamless_clips) == 1:
-        s_vid = seamless_clips[0]
-        c_dur = _probe_clip_duration(s_vid) or 5.0
-        v_loops = max(1, int(target_duration_seconds / max(1.0, c_dur)) + 2)
-
-        is_nature_only = "nature" in src.name.lower() or "nature" in out.name.lower()
-        if is_nature_only:
-            audio_candidates = [parent / "procedural_nature_foley.wav", parent / "velvet_binaural_master_48k.mp3"]
-        else:
-            audio_candidates = [parent / "velvet_binaural_master_48k.mp3", parent / "raw_soundtrack.mp3", parent / "procedural_nature_foley.wav"]
-        target_audio = next((a for a in audio_candidates if a.is_file() and a.stat().st_size > 1000), None)
-
-        if target_audio:
-            a_dur = _probe_clip_duration(target_audio) or 5.0
-            a_loops = max(1, int(target_duration_seconds / max(1.0, a_dur)) + 2)
-            if fade_to_black_hours and (fade_to_black_hours * 3600.0) < target_duration_seconds:
-                fade_start_sec = fade_to_black_hours * 3600.0
-                vf_filter = (
-                    f"[0:v]fade=t=out:st={int(fade_start_sec)}:d=30:color=black,"
-                    f"drawbox=y=0:color=black@1.0:t=fill:enable='gte(t,{int(fade_start_sec + 30)})'[v]"
-                )
-                cmd = [
-                    ffmpeg_bin, "-y",
-                    "-stream_loop", str(v_loops), "-i", str(s_vid),
-                    "-stream_loop", str(a_loops), "-i", str(target_audio),
-                    "-filter_complex", vf_filter,
-                    "-map", "[v]", "-map", "1:a:0",
-                    "-t", str(target_duration_seconds),
-                    "-c:v", "libx264", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
-                    "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-                    "-movflags", "+faststart",
-                    str(out)
-                ]
-            else:
-                cmd = [
-                    ffmpeg_bin, "-y",
-                    "-stream_loop", str(v_loops), "-i", str(s_vid),
-                    "-stream_loop", str(a_loops), "-i", str(target_audio),
-                    "-map", "0:v:0", "-map", "1:a:0",
-                    "-t", str(target_duration_seconds),
-                    "-c:v", "copy",
-                    "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-                    "-movflags", "+faststart",
-                    str(out)
-                ]
-        else:
-            cmd = [
-                ffmpeg_bin, "-y",
-                "-stream_loop", str(v_loops), "-i", str(s_vid),
-                "-map", "0:v:0", "-map", "0:a?",
-                "-t", str(target_duration_seconds),
-                "-c:v", "copy",
-                "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-                "-movflags", "+faststart",
-                str(out)
-            ]
-    elif fade_to_black_hours and (fade_to_black_hours * 3600.0) < target_duration_seconds:
+    if fade_to_black_hours and (fade_to_black_hours * 3600.0) < target_duration_seconds:
         fade_start_sec = fade_to_black_hours * 3600.0
         vf_filter = (
             f"[0:v]fade=t=out:st={int(fade_start_sec)}:d=30:color=black,"
@@ -114,23 +52,27 @@ def export_long_play_broadcast(
         )
         cmd = [
             ffmpeg_bin, "-y",
-            "-stream_loop", "-1", "-i", str(src),
+            "-stream_loop", "-1",
+            "-avoid_negative_ts", "make_zero",
+            "-fflags", "+genpts",
+            "-i", str(src),
             "-filter_complex", vf_filter,
-            "-map", "[v]", "-map", "0:a",
+            "-map", "[v]", "-map", "0:a?",
             "-t", str(target_duration_seconds),
             "-c:v", "libx264", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
-            "-c:a", "aac", "-b:a", "320k",
+            "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
             "-movflags", "+faststart",
             str(out)
         ]
     else:
-        # Fallback stream copy with continuous timestamp normalization
+        # Lossless fast stream copy of master MP4 container (loops 4K video & 48kHz audio in lockstep for entire duration)
         cmd = [
             ffmpeg_bin, "-y",
             "-stream_loop", "-1",
             "-avoid_negative_ts", "make_zero",
             "-fflags", "+genpts",
             "-i", str(src),
+            "-map", "0:v:0", "-map", "0:a?",
             "-t", str(target_duration_seconds),
             "-c", "copy",
             "-movflags", "+faststart",

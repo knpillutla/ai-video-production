@@ -120,7 +120,8 @@ STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
 
 3. SMOOTH HYPNOTIC KINETICS & ANTI-DRIFT CINEMAGRAPH STANDARD:
    - Zero Environmental Warping: Mountains, rock cliffs, forest trees, and the horizon line MUST remain 100% frozen, rigid, and static.
-   - Fluid & Atmospheric Animation Only: Animate ONLY the natural dynamic elements (flowing stream water, rolling ocean surf, flickering hearth embers, or gentle rising mist/clouds).
+   - Fluid & Atmospheric Animation Only: Animate ONLY the natural dynamic elements (flowing stream water, rolling ocean surf, flickering hearth embers, or gentle rising vapor mist).
+   - Anti-Motion-Fatigue Clear Sky Standard: In all relaxation/nature vistas (alpine mountains, valleys, meadows, fjords, lakes, waterfalls, hearths), the sky MUST be a crystal-clear, cloudless azure sky ("crystal-clear cloudless blue sky, zero clouds, completely clear atmosphere"). STRICTLY PROHIBIT clouds, cumulus formations, overcast skies, and drifting clouds, as sky/cloud motion causes visual fatigue in living wallpapers.
    - Domain Specification: Set "water_fluid" for water/rain/falls, "landscape_solid" for mountain/forest vistas, or "cozy_hearth" for campfires.
 
 4. MODEL-SPECIFIC IMAGE PROMPTS ("image_model_configs"):
@@ -134,7 +135,7 @@ STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
      * "wan_2_1": Model "fal-ai/wan-i2v". Continuous fluid kinetic phrasing: "Living wallpaper cinemagraph, completely stationary static frame. Rock cliffs and landscape structure remain 100% frozen and unmoving. Smooth continuous laminar water cascades flowing steadily downwards into the basin, tranquil rising vapor mist. Stable uniform illumination, seamless loop compatible." Settings: {{ "guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9" }}
 
 8. DIRECTORIAL CAMERA RIG & MANDATORY NEGATIVE PROMPT (Rule 20):
-   - Always provide "motion_negative_prompt" and model-specific negative prompts containing: "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings"
+   - Always provide "motion_negative_prompt" and model-specific negative prompts containing: "clouds, cloudy, overcast sky, cumulus, stratus, cirrus, storm clouds, dark clouds, moving clouds, timelapse clouds, rapid clouds, rolling clouds, cloud morphing, rapid cloud shadows, camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings"
 
 9. AUTONOMOUS LANDMARK DISCOVERY (WHEN NO PROMPT IS PROVIDED):
   - Use the supplied genre and archetype to choose a real, geographically accurate destination; do not substitute a generic or unrelated default location.

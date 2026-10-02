@@ -63,13 +63,34 @@ function renderMasterVideosList(vid) {
   let eds = (vid?.editions && vid.editions.length > 0) ? [...vid.editions] : [];
   eds = eds.filter(e => !e.format?.includes("Long-Play") && !e.edition_id?.includes("h_") && !e.name?.includes("Hour") && cleanUrl(e.url));
 
+  const isProc = vid?.status === "processing";
+  const stage = vid?.currentStage || 1;
+  const isMasterGenerating = Boolean(isProc && stage >= 5);
+
   const isMasterReady = Boolean(
     vid &&
+    !isMasterGenerating &&
     vid.status !== "failed" &&
-    vid.status !== "processing" &&
     (vid.currentStage >= 5 || (vid.status === "completed" && (masterUrl || eds.length > 0))) &&
     (masterUrl || eds.length > 0)
   );
+
+  // CASE 1: Actively Rendering 4K Master -> Glowing Progress Bar
+  if (isMasterGenerating) {
+    const pVal = Math.min(95, vid.progress || 90);
+    c.innerHTML = `<div class="col-span-2 p-2 bg-emerald-50/80 dark:bg-slate-900 border-2 border-emerald-500 rounded-xl flex flex-col justify-between shadow-sm gap-1.5 ring-2 ring-emerald-500/20">
+      <div class="flex items-center justify-between">
+        <span class="text-[9px] font-mono font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+          <i class="fa-solid fa-spinner fa-spin text-[8px]"></i> Assembling Single-Pass 4K Master...
+        </span>
+        <span class="text-[8px] font-mono font-bold text-emerald-600 dark:text-emerald-400">${pVal}%</span>
+      </div>
+      <div class="w-full bg-emerald-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+        <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full animate-pulse" style="width: ${pVal}%"></div>
+      </div>
+    </div>`;
+    return;
+  }
 
   if (eds.length === 0 && masterUrl && isMasterReady) {
     eds.push({
@@ -92,6 +113,7 @@ function renderMasterVideosList(vid) {
     }
   }
 
+  // CASE 2: Not yet ready -> Waiting for Approval or Queued
   if (!isMasterReady || eds.length === 0) {
     const hasStems = Boolean((vid?.audio_stems && vid.audio_stems.length > 0) || vid?.currentStage === 4);
     if (hasStems) {
@@ -105,6 +127,7 @@ function renderMasterVideosList(vid) {
     return;
   }
 
+  // CASE 3: Master Videos Ready -> Show with Re-render and Play controls
   const posterUrl = vid.thumbnailUrl || vid.thumbnail_url || (vid.keyframes?.[0]?.url) || (vid.artifacts?.keyframes?.[0]?.url) || "";
   const bgStyle = posterUrl ? `background-image: url('${posterUrl}'); background-size: cover; background-position: center;` : "";
   const activeVideoEl = document.getElementById("studio-panel-video");
@@ -121,7 +144,11 @@ function renderMasterVideosList(vid) {
         ${posterUrl ? '<div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition pointer-events-none"></div>' : ''}
         <div class="relative z-10 flex items-center justify-between">
           <span class="px-1 py-0.2 rounded bg-emerald-900/90 text-[7px] font-mono font-bold text-emerald-200">${ed.format || '4K Master'}</span>
-          <span class="text-[7px] font-mono text-emerald-300 font-bold">${ed.duration || dur}</span>
+          <div class="flex items-center gap-0.5">
+            <button type="button" onclick="event.stopPropagation(); advanceToMasterStage(currentActiveInspectorEpisode, true);" class="px-1 py-0.2 rounded bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render 4K Master Assembly">⚡ Re-render</button>
+            <span class="px-1 py-0.2 rounded bg-black/70 text-[7px] font-mono text-emerald-300">${ed.duration || dur}</span>
+            <button type="button" onclick="event.stopPropagation(); promptDeleteArtifact('Master', ${i}, '${ed.name}', 'Master Edition');" class="w-3.5 h-3.5 rounded bg-rose-600/90 hover:bg-rose-500 text-white flex items-center justify-center text-[7px] transition shadow font-bold" title="Delete Master Edition">✕</button>
+          </div>
         </div>
         <div class="relative z-10 flex items-center justify-between">
           <span class="text-[7px] font-mono font-bold text-white bg-black/70 px-1 py-0.2 rounded truncate max-w-[85px]">${modeBadge}</span>

@@ -119,9 +119,9 @@ def _build_deterministic_alpine_screenplay(prompt: str, duration_seconds: float,
                 visual_prompt=(
                     f"A photorealistic, wide panoramic landscape view of {prompt}. Symmetrical 16:9 cinematic framing, "
                     "shot on a locked tripod. In the majestic background, towering snow-dusted jagged mountain peaks rise into "
-                    "a crisp clear sky; in the foreground, lush green rolling alpine meadows dotted with wildflowers frame a tranquil "
+                    "a crystal-clear cloudless azure sky; in the foreground, lush green rolling alpine meadows dotted with wildflowers frame a tranquil "
                     "crystal-clear glacial stream gently flowing over river stones. Crisp balanced daylight, pristine natural wilderness, "
-                    "strictly zero buildings, zero tourists, zero vehicles, zero modern structures, zero waterfall plunge curtains."
+                    "strictly zero clouds, zero buildings, zero tourists, zero vehicles, zero modern structures, zero waterfall plunge curtains."
                 ),
                 image_model_configs={
                     "flux_1_1_pro_ultra": {
@@ -129,8 +129,8 @@ def _build_deterministic_alpine_screenplay(prompt: str, duration_seconds: float,
                         "prompt": (
                             f"A photorealistic, wide panoramic landscape view of {prompt}. Symmetrical 16:9 cinematic framing, "
                             "shot on a locked tripod. In the majestic background, towering snow-dusted jagged mountain peaks rise into "
-                            "a crisp clear sky; in the foreground, lush green rolling alpine meadows dotted with wildflowers frame a tranquil "
-                            "crystal-clear glacial stream. Crisp balanced daylight, pristine natural wilderness, strictly zero buildings, zero tourists."
+                            "a crystal-clear cloudless azure sky; in the foreground, lush green rolling alpine meadows dotted with wildflowers frame a tranquil "
+                            "crystal-clear glacial stream. Crisp balanced daylight, pure blue sky, pristine natural wilderness, zero clouds, strictly zero buildings, zero tourists."
                         ),
                         "aspect_ratio": "16:9",
                         "raw": True,
@@ -139,15 +139,15 @@ def _build_deterministic_alpine_screenplay(prompt: str, duration_seconds: float,
                 motion_prompt=(
                     "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement. "
                     "Mountain peaks, cliffs, meadows, and horizon line remain 100% frozen and static. Only the crystal glacial stream "
-                    "water gently flows over stones with subtle soft clouds drifting in the distant sky."
+                    "water gently flows over stones with subtle flower tip movement. The sky is crystal-clear, static, and cloudless."
                 ),
-                motion_negative_prompt="camera movement, pan, tilt, zoom, moving mountains, morphing landscape, humans, vehicles, buildings",
+                motion_negative_prompt="clouds, cloudy, overcast sky, moving clouds, cloud timelapse, camera movement, pan, tilt, zoom, moving mountains, morphing landscape, humans, vehicles, buildings",
                 model_configs={
                     "wan_2_1": RelaxModelConfigDirective(
                         model="fal-ai/wan-i2v",
                         prompts=RelaxModelPromptsSpec(
-                            positive_prompt="Living wallpaper cinemagraph, static camera. Mountain peaks and meadows remain frozen, gentle stream water flows smoothly, zero humans.",
-                            negative_prompt="camera movement, morphing, humans",
+                            positive_prompt="Living wallpaper cinemagraph, static camera. Mountain peaks and meadows remain frozen, gentle stream water flows smoothly, crystal-clear cloudless sky, zero clouds, zero humans.",
+                            negative_prompt="clouds, cloudy, overcast, moving clouds, camera movement, morphing, humans",
                         ),
                         settings={"guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9"},
                     )

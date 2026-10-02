@@ -28,10 +28,10 @@ ALPINE NATURE DIRECTORIAL RULES & FRAMING:
 ======================================================================
 1. WIDE PANORAMIC ALPINE LANDSCAPE FRAMING:
    - Frame majestic wide 16:9 panoramic landscape vistas shot on a locked tripod.
-   - In the background: Towering snow-capped jagged alpine mountain peaks rising into a crisp clear or gentle alpine morning sky.
+   - In the background: Towering snow-capped jagged alpine mountain peaks rising into a crystal-clear cloudless azure sky.
    - In the foreground/midground: Lush green rolling alpine meadows dotted with colorful wildflowers, framed by a tranquil crystal-clear glacial mountain stream gently flowing over rounded river pebbles.
-   - Crisp, balanced natural daylight illumination (5500K-6000K) with soft alpine glow.
-   - STRICTLY PROHIBIT: Close-up waterfall plunge walls, dark desaturated rainy clouds, gray mist walls, buildings, tourists, vehicles, ski lifts, roads, and human structures.
+   - Crisp, balanced natural daylight illumination (5500K-6000K) with pure blue sky.
+   - STRICTLY PROHIBIT: Clouds, overcast skies, close-up waterfall plunge walls, dark desaturated rainy clouds, gray mist walls, buildings, tourists, vehicles, ski lifts, roads, and human structures.
 
 2. ACOUSTIC SOUNDSCAPE & NARRATION DIRECTIVE:
    - Audio tags: "432Hz ambient soundscape, gentle mountain breeze, distant acoustic folk strings, crystal glacial stream murmur, deep relaxation, -14 LUFS".
@@ -39,7 +39,7 @@ ALPINE NATURE DIRECTORIAL RULES & FRAMING:
 
 3. CINEMAGRAPH KINETICS (Wan 2.1 & Kling v1.6 Pro):
    - Snow peaks, granite cliffs, mountain ridgelines, and meadows remain 100% frozen, rigid, and static.
-   - Animate ONLY the gentle crystal stream water and subtle drifting clouds in the distant sky.
+   - Animate ONLY the gentle crystal stream water and subtle flower tip sway. The sky remains completely static and cloudless.
    - Domain: "landscape_solid" or "water_fluid" for stream.
 """
 

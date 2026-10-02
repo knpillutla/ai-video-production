@@ -1,17 +1,5 @@
-"""Relaxation & Nature Genre Directorial Engine for CineAI Studio.
-
-Enforces 100% Genre-Specific Directorial Prompts for Relax/Nature:
-- Dedicated RelaxScreenplay Contract
-- Living Wallpaper Framing ("wide_panoramic_picturesque")
-- Ultra-Slow Gentle Kinetics for Water, Clouds, Plants, Grass, Flowers
-- Multi-Model Directives (Wan 2.1 & Kling v1.6 Pro) with Custom API Settings
-- Zero Humans (cast: [])
-- Strict 5500K Balanced Natural Daylight Uniformity Across All Scenes
-- Fresh Live Synthesis on Every Production Run (No Screenplay Cache)
-"""
-
+"""Relaxation & Nature Genre Directorial Engine for CineAI Studio."""
 from __future__ import annotations
-
 import json
 import os
 from typing import Any, Dict, Optional
@@ -20,14 +8,9 @@ from src.core.telemetry import logger
 from src.studios.ambient_world.ambient_directorial_prompt import build_ambient_directorial_prompt
 from src.studios.ambient_world.ambient_storyboard import AmbientScenePrompt, AmbientStoryboard
 from src.studios.ambient_world.relax_models import (
-    LoopStrategySpec,
-    RelaxAudioMasterSpec,
-    RelaxGlobalCultureSpec,
-    RelaxModelConfigDirective,
-    RelaxModelPromptsSpec,
-    RelaxSceneDirective,
-    RelaxScreenplay,
-    RelaxTravelTourismSpec,
+    LoopStrategySpec, RelaxAudioMasterSpec, RelaxGlobalCultureSpec,
+    RelaxModelConfigDirective, RelaxModelPromptsSpec, RelaxSceneDirective,
+    RelaxScreenplay, RelaxTravelTourismSpec,
 )
 from src.services.topic_memory import topic_memory
 
@@ -209,7 +192,7 @@ def _build_deterministic_relax_screenplay(
                     "Soft, slow-moving vapor mist steadily rises up from the bottom center chasm without shifting the landscape."
                 ),
                 motion_negative_prompt=(
-                    "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, "
+                    "clouds, cloudy, overcast sky, moving clouds, timelapse clouds, camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, "
                     "hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, "
                     "structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, "
                     "changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, "

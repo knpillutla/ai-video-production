@@ -34,10 +34,13 @@ def _resolve_scene_negative_prompt(scene: Any, default_camera: str = "locked_tri
     if cam == "locked_tripod":
         extra_tokens.append("camera movement, camera pan, panning, tilt, zoom, zoom in, zoom out, forward camera movement, camera flythrough, walking tour, walking cadence, dolly, tracking shot, handheld camera, camera shake, jitter, violent wind, rapid shaking, fast motion, sudden lighting shift, flickering light, jumping foliage, jumping branches, discontinuous water flow, abrupt mist displacement, temporal jump, loop seam, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, sunny sky, rainbow, sunlight shifts, altering colors")
     p_text = f"{getattr(scene, 'visual_prompt', '')} {getattr(scene, 'motion_prompt', '')}".lower()
-    if "rain" in p_text:
+    if "rain" in p_text or "monsoon" in p_text:
         extra_tokens.append("dry weather, bright sunshine, clear blue sky, cloudless, arid, parched")
+    else:
+        extra_tokens.append("clouds, cloudy, overcast sky, overcast, cumulus, stratus, cirrus, storm clouds, dark clouds, moving clouds, timelapse clouds, rapid clouds, rolling clouds, cloud morphing, rapid cloud shadows, sky flickering")
     if "waterfall" in p_text or "cascade" in p_text:
         extra_tokens.append("frozen ice, motionless water, stagnant pond, reverse water flow")
+    extra_tokens.append("fast moving clouds, timelapse, time-lapse, rapid clouds, rolling storm clouds, accelerated sky, swirling clouds, cloud morphing, rapid cloud shadows, high-speed wind, storm winds, flickering sky")
     extra_tokens.append("gelatinous water, melting foam, static frozen water, boiling water artifacts, rubbery water, unnatural foam blobs, zero static vertical streaks, artifacts")
     
     parts = [p for p in [base_neg, ", ".join(extra_tokens)] if p]

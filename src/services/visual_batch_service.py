@@ -1,17 +1,11 @@
-"""Unified Visual Media Batch Rendering Service.
-
-Encapsulates 100% of Keyframe Image and AI Video Diffusion batching, universal disk caching,
-dynamic model routing, concurrent Fal.ai queue execution, and single-pass 4K Lanczos scaling.
-"""
-
+"""Unified Visual Media Batch Rendering Service."""
 from __future__ import annotations
-
 import asyncio
 from dataclasses import dataclass
 import os
 from pathlib import Path
 import subprocess
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import imageio_ffmpeg
 from src.core.telemetry import logger
@@ -205,6 +199,15 @@ class VisualBatchService:
                             eff_neg = p_neg.strip()
                     if settings and isinstance(settings, dict):
                         eff_settings = settings
+
+            # Anti-Motion-Fatigue Clear Sky Standard & Realistic Fluid Physics Guard
+            p_lower = f"{eff_prompt} {task.visual_prompt}".lower()
+            if any(k in p_lower for k in ("sky", "mountain", "valley", "alpine", "nature", "meadow", "landscape", "fjord", "lake", "forest")):
+                if "rain" not in p_lower and "monsoon" not in p_lower and "storm" not in p_lower:
+                    if "cloudless" not in eff_prompt.lower():
+                        eff_prompt = f"{eff_prompt}, crystal-clear static cloudless azure sky, zero clouds, tranquil motionless atmosphere"
+                    cloud_negs = "clouds, cloudy, overcast sky, overcast, cumulus, stratus, cirrus, storm clouds, dark clouds, moving clouds, timelapse clouds, rapid clouds, rolling clouds, cloud morphing, rapid cloud shadows, sky flickering"
+                    eff_neg = f"{eff_neg}, {cloud_negs}" if eff_neg else cloud_negs
 
             if chosen_model in ("hunyuan", "wan", "wan_4k", "kling", "kling_pro", "kling_v3", "kling_4k") and self.fal_key and task.image_path.is_file() and task.image_path.stat().st_size > 1000:
                 try:

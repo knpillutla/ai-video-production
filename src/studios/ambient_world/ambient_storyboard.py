@@ -54,35 +54,9 @@ def resolve_archetype(key_or_name: str) -> AtmosphericArchetype:
 
 def resolve_contextual_defaults(cluster: str, user_duration: Optional[float], user_shots: Optional[int]) -> Tuple[float, int, str]:
     """Autonomously determine optimal master duration and shot count with explicit directorial rationale."""
-    if user_duration is None:
-        if cluster in ("alpine", "aquatic", "forest_seasonal"):
-            dur, default_shots = 30.0, 1
-            rationale = "Scenic Nature & Mountain Retreat: 30s master in one panoramic perspective; request more shots for additional views."
-        elif cluster in ("deep_sleep", "cozy_hearth"):
-            dur, default_shots = 30.0, 1
-            rationale = "Deep Sleep & Insomnia Sanctuary: 30s master in one steady hypnotic perspective; request more shots for additional views."
-        else:
-            dur, default_shots = 30.0, 1
-            rationale = "Study Focus & Cozy Cafe: 30s master in one calm focal zone; request more shots for additional views."
-    else:
-        dur = user_duration
-        if cluster in ("deep_sleep", "cozy_hearth"):
-            default_shots = 1
-            rationale = f"Custom Duration {dur}s in Deep Sleep: Using one long, hypnotic shot ({dur:.1f}s) to protect delta-wave entrainment."
-        elif dur <= 60.0:
-            default_shots = 1
-            rationale = f"Custom Duration {dur}s: Using one balanced perspective for compact loop cadence."
-        elif cluster in ("alpine", "aquatic", "forest_seasonal"):
-            default_shots = 1
-            rationale = f"Custom Duration {dur}s in Nature Retreat: Using one progressive angle ({dur:.1f}s) by default."
-        else:
-            default_shots = 1
-            rationale = f"Custom Duration {dur}s in Focus Setting: Using one balanced focal angle ({dur:.1f}s) by default."
-
-    shots = user_shots if (user_shots and user_shots in (1, 2, 3, 4)) else default_shots
-    if shots == 1 and user_duration is None:
-        dur = 30.0
-        rationale = "Single Shot Minimalist Master: 1 steady hypnotic living wallpaper perspective (30s loop) for uninterrupted tranquility."
+    dur = user_duration or 30.0
+    shots = user_shots if (user_shots and user_shots in (1, 2, 3, 4)) else 1
+    rationale = f"Master duration {dur:.1f}s with {shots} perspective(s) for living wallpaper loop cadence."
     return dur, shots, rationale
 
 
@@ -98,19 +72,10 @@ def generate_ambient_storyboard(
     """Generate adaptive directorial storyboard tailored to duration, shots count, and camera motion style."""
     arch1 = resolve_archetype(primary)
     arch2 = resolve_archetype(secondary) if secondary else None
-    
     total_dur, shots_count, rationale = resolve_contextual_defaults(arch1.cluster, duration_seconds, num_shots)
     shot_dur = round(total_dur / shots_count, 1)
 
-    logger.info(f"directorial_decision: archetype='{arch1.key}' cluster='{arch1.cluster}' duration={total_dur}s shots={shots_count} shot_dur={shot_dur}s camera_motion='{camera_motion}' custom_prompt={bool(custom_prompt)}")
-    print(f"\n[AGENT DIRECTORIAL DECISION]")
-    print(f"   * Theme / Cluster:     {arch1.display_name} ({arch1.cluster.upper()})")
-    print(f"   * Master Set Duration: {int(total_dur)}s ({shots_count} Shot{'s' if shots_count > 1 else ''} @ {shot_dur}s each)")
-    print(f"   * Camera Style:        {camera_motion or 'locked_tripod'}")
-    if custom_prompt:
-        print(f"   * Custom Mood Prompt:  \"{custom_prompt.strip()}\"")
-    print(f"   * Strategic Rationale: {rationale}\n")
-
+    logger.info(f"directorial_decision: archetype='{arch1.key}' duration={total_dur}s shots={shots_count} camera='{camera_motion}'")
     title = custom_title or (f"{arch1.display_name} with {arch2.display_name}" if (arch2 and arch2.key != arch1.key) else arch1.display_name)
     audio_tags = f"{arch1.acoustic_tags}" + (f", layered with {arch2.display_name.lower()} velvet foley" if arch2 else "")
 
@@ -251,9 +216,9 @@ async def generate_ambient_storyboard_gemini(
             "You are an award-winning cinematic director and acoustic sound designer for NatGeo and BBC 8K Nature Documentaries and Living Wallpapers. "
             "Generate a comprehensive, detailed multi-scene 8K UHD storyboard based on the user's theme. "
             "CRITICAL ANTI-FATIGUE & SEAMLESS 3-HOUR LONG-PLAY DIRECTIVES:\n"
-            "1. NATURAL GENTLE MICRO-KINEMATICS: Motion MUST be tranquil, ultra-subtle, smooth, and organic for all environmental elements:\n"
+            "1. NATURAL GENTLE MICRO-KINEMATICS & ANTI-MOTION-FATIGUE CLEAR SKY STANDARD:\n"
+            "   - Skies & Atmosphere: In all outdoor/nature scenes (unless explicit rain is requested), the sky MUST be a static, crystal-clear cloudless azure sky ('crystal-clear cloudless blue sky, zero clouds'). STRICTLY PROHIBIT clouds, overcast skies, and moving/drifting clouds to prevent visual motion fatigue in stable shot videos.\n"
             "   - Water Fluid: Gentle continuous ripples, slow tranquil stream currents, soft circular droplet ripples (zero violent splashes, zero boiling waves).\n"
-            "   - Clouds & Mist: Dreamy, slow continuous drifting clouds and soft mountain mist (zero fast storm rushes or jarring time-lapses).\n"
             "   - Flowers & Foliage: Delicate rhythmic swaying of wildflowers and pine boughs in a faint, soothing mountain breeze.\n"
             "   - Grass & Lawns: Subtle, gentle undulating wave motion across alpine meadows matching a light breeze.\n"
             "2. SEAMLESS 3-HOUR STRETCHING & FORWARD LOOPING COMPATIBILITY:\n"
@@ -263,9 +228,9 @@ async def generate_ambient_storyboard_gemini(
             "3. ANTI-FATIGUE ACOUSTIC MASTERING: Audio/music MUST feature warm, soft acoustic textures, smooth harmonic pads, gentle low-pass rolloff, and -14.0 LUFS velvet mastering. Strictly prohibit harsh high frequencies (>8 kHz sharp hiss), jarring percussion, repetitive sharp loops, sudden volume spikes, or discordant sounds that cause ear fatigue.\n"
             "4. MANDATORY PURE NATURE PURITY GUARD (ZERO VEHICLES, ZERO HUMANS, ZERO ANIMALS BY DEFAULT):\n"
             "   - In all relaxation/nature themes, unless explicitly requested in the user's prompt, mandate pure untouched nature with: 'zero humans, zero people, zero persons, zero characters, zero crowds, zero cars, zero vehicles, zero vans, zero trucks, zero modern traffic, zero asphalt roads, zero modern clutter, zero animals, zero wildlife, zero birds, zero pets, zero livestock, pristine untouched natural landscape'.\n"
-            "For visual prompts: Mandate Arri/Hasselblad 35mm cinematographic specifications, 8K UHD master resolution, exact focal lengths, f-stops (f/1.4, f/2.8, f/8.0), lighting color temperature (5400K natural daylight), "
+            "For visual prompts: Mandate Arri/Hasselblad 35mm cinematographic specifications, 8K UHD master resolution, exact focal lengths, f-stops (f/1.4, f/2.8, f/8.0), lighting color temperature (5400K natural daylight), crystal-clear cloudless sky, "
             "tactile micro-textures (wet stone shingles, dewdrops, moss, rain ripples), and the mandatory pure nature purity guard. "
-            "For motion prompts: Mandate exact smooth fluid displacement (fine rain streaks, gentle water ripples, slow drifting clouds/mist, subtle grass and wildflower sway) and steady camera rules. "
+            "For motion prompts: Mandate exact smooth fluid displacement (gentle water ripples, crystal-clear motionless sky, subtle grass and wildflower sway) and steady camera rules. "
             "Return valid JSON only matching the schema."
         )
 
@@ -273,7 +238,8 @@ async def generate_ambient_storyboard_gemini(
             f"Generate a {shots_count}-shot 8K UHD anti-fatigue ambient video storyboard for theme: '{theme_seed}'.\n"
             f"Cluster: {arch1.cluster}. Camera Motion Style: {camera_motion or 'locked_tripod'}.\n"
             f"Duration per shot: {shot_dur} seconds. Total Duration: {total_dur} seconds.\n"
-            f"Purity Guard: Pure untouched nature (zero vehicles, zero humans, zero animals unless specified in theme).\n\n"
+            f"Purity Guard: Pure untouched nature (zero vehicles, zero humans, zero animals unless specified in theme).\n"
+            f"Sky Standard: Crystal-clear cloudless azure sky (strictly zero clouds, zero cloud movement).\n\n"
             f"Output JSON with fields:\n"
             f"- 'title': High-CTR evocative YouTube title\n"
             f"- 'story_topic': Poetic environmental lore and tranquil scene context\n"
@@ -282,7 +248,7 @@ async def generate_ambient_storyboard_gemini(
             f"    - 'scene_index': int (1..{shots_count})\n"
             f"    - 'perspective_type': string ('wide_atmospheric', 'intimate_macro', 'mid_environmental', 'twilight_haven')\n"
             f"    - 'visual_prompt': detailed 8K photoreal prompt for Fal FLUX 1.1 Pro\n"
-            f"    - 'motion_prompt': smooth anti-fatigue video motion prompt for Wan 2.1 / Kling (gentle water ripples, slow clouds, subtle grass/flower sway, locked framing for seamless 3h looping)\n"
+            f"    - 'motion_prompt': smooth anti-fatigue video motion prompt for Wan 2.1 / Kling (crystal-clear cloudless sky, gentle water ripples, subtle grass/flower sway, locked framing for seamless 3h looping)\n"
             f"    - 'duration_seconds': {shot_dur}\n"
             f"    - 'domain': 'water_fluid' if scene has rain/water else 'landscape_solid'\n"
         )
