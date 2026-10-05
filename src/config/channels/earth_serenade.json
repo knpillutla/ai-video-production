@@ -8,7 +8,13 @@
   "target_audience": "Daytime meditators, yoga and spa practitioners, wellness seekers, and 4K OLED living room wall art viewers seeking scenic stress relief.",
   "allowed_genres": [
     "relax/ocean",
+    "relax/beach_lounge",
     "relax/desert",
+    "relax/mountain",
+    "relax/valley",
+    "relax/blizzard",
+    "relax/rain",
+    "relax/forest",
     "relax/nature",
     "relax/healing",
     "relax/zen",

@@ -29,7 +29,7 @@ async def list_channels(current_user: User = Depends(get_current_user)):
     """List all distribution channels configured by current user."""
     channels = repo.list_channels(current_user.id)
     from src.config.channel_registry import load_channel_profiles
-    profiles = load_channel_profiles()
+    profiles = load_channel_profiles(force_reload=True)
     existing_slugs = {c.channel_slug.lower() for c in channels if c.channel_slug}
     
     # Sync profiles from src/config/channels/*.json into user repo
@@ -237,7 +237,7 @@ async def list_publications(
 async def get_all_channel_profiles():
     """Retrieve global channel profiles, audience definitions, and guardrails."""
     from src.config.channel_registry import load_channel_profiles
-    profiles = load_channel_profiles()
+    profiles = load_channel_profiles(force_reload=True)
     return {"status": "ok", "profiles": {k: v.model_dump() for k, v in profiles.items()}}
 
 

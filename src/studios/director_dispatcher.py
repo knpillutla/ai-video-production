@@ -42,53 +42,46 @@ async def dispatch_studio_director(
     sub_lower = (sub_genre or "").lower()
     arch_lower = (primary_archetype or "").lower()
 
-    # 0. Dedicated Ocean Studio Dispatch (All 6 Diurnal Timings under genre 'relax/ocean')
-    if (
-        genre_lower in {"relax/ocean", "ocean"}
-        or "ocean" in arch_lower
-        or "ocean" in sub_lower
-        or "bioluminescent" in arch_lower
-        or any(w in p_lower for w in ["ocean retreat", "ocean villa", "overwater villa", "turquoise lagoon", "bioluminescent wave"])
-    ):
-        logger.info(f"dispatcher_route: target='OceanStudio' archetype='{primary_archetype}' prompt='{custom_prompt}'")
-        from src.studios.ocean_studio.ocean_director import generate_ocean_screenplay_gemini
-        return await generate_ocean_screenplay_gemini(
-            genre="relax/ocean",
-            sub_genre=sub_genre or primary_archetype or "ocean_daytime_shore",
-            primary_archetype=primary_archetype or "ocean_daytime_shore",
-            custom_prompt=custom_prompt,
-            duration_seconds=duration_seconds,
-            user_id=user_id,
-            num_shots=num_shots,
-            camera_motion=camera_motion,
-            raw_output_path=raw_output_path,
-            image_model=image_model,
-            channel_id=channel_id or "earth_serenade",
-        )
+    kwargs = dict(
+        custom_prompt=custom_prompt, duration_seconds=duration_seconds, num_shots=num_shots,
+        camera_motion=camera_motion, user_id=user_id, raw_output_path=raw_output_path,
+        image_model=image_model, channel_id=channel_id or "earth_serenade",
+    )
 
-    # 0.1 Dedicated Desert Studio Dispatch (All 6 Diurnal Timings & Cultural Audio)
-    if (
-        "desert" in arch_lower
-        or "desert" in sub_lower
-        or "desert" in genre_lower
-        or "dune" in arch_lower
-        or any(w in p_lower for w in ["desert", "sand dune", "dunes", "bedouin", "sahara", "namib"])
-    ):
-        logger.info(f"dispatcher_route: target='DesertStudio' archetype='{primary_archetype}' prompt='{custom_prompt}'")
+    # 0. Dedicated Ocean Studio Dispatch (All 6 Diurnal Timings under genre 'relax/ocean')
+    if genre_lower in {"relax/ocean", "ocean"} or "ocean" in arch_lower or "ocean" in sub_lower or "bioluminescent" in arch_lower or any(w in p_lower for w in ["ocean retreat", "ocean villa", "overwater villa", "turquoise lagoon"]):
+        from src.studios.ocean_studio.ocean_director import generate_ocean_screenplay_gemini
+        return await generate_ocean_screenplay_gemini(genre="relax/ocean", sub_genre=sub_genre or primary_archetype or "ocean_daytime_shore", primary_archetype=primary_archetype or "ocean_daytime_shore", **kwargs)
+
+    # 0.1 Dedicated Desert Studio Dispatch (genre 'relax/desert')
+    if "desert" in arch_lower or "desert" in sub_lower or "desert" in genre_lower or "dune" in arch_lower or any(w in p_lower for w in ["desert", "sand dune", "dunes", "bedouin"]):
         from src.studios.desert_studio.desert_director import generate_desert_screenplay_gemini
-        return await generate_desert_screenplay_gemini(
-            genre=genre or "relax/desert",
-            sub_genre=sub_genre or primary_archetype or "desert_daytime_tent",
-            primary_archetype=primary_archetype or "desert_daytime_tent",
-            custom_prompt=custom_prompt,
-            duration_seconds=duration_seconds,
-            user_id=user_id,
-            num_shots=num_shots,
-            camera_motion=camera_motion,
-            raw_output_path=raw_output_path,
-            image_model=image_model,
-            channel_id=channel_id or "earth_serenade",
-        )
+        return await generate_desert_screenplay_gemini(genre=genre or "relax/desert", sub_genre=sub_genre or primary_archetype or "desert_daytime_tent", primary_archetype=primary_archetype or "desert_daytime_tent", **kwargs)
+
+    # 0.2 Dedicated Beach Lounge Studio Dispatch (genre 'relax/beach_lounge')
+    if genre_lower in {"relax/beach_lounge", "beach_lounge"} or "beach_luxury" in arch_lower or "beach_sunset" in arch_lower or "beach_twilight" in arch_lower or "beach_starlit" in arch_lower or any(w in p_lower for w in ["beach cabana", "beach lounge", "beach daybed", "beach pergola"]):
+        from src.studios.beach_lounge_studio.beach_lounge_director import generate_beach_lounge_screenplay_gemini
+        return await generate_beach_lounge_screenplay_gemini(genre="relax/beach_lounge", sub_genre=sub_genre or primary_archetype or "beach_luxury_cabana_day", primary_archetype=primary_archetype or "beach_luxury_cabana_day", **kwargs)
+
+    # 0.3 Dedicated Mountain Studio Dispatch (genre 'relax/mountain')
+    if genre_lower in {"relax/mountain", "mountain"} or "mountain_summit" in arch_lower or "mountain_daytime" in arch_lower or "mountain_sunset" in arch_lower or "mountain_starlit" in arch_lower:
+        from src.studios.mountain_studio.mountain_director import generate_mountain_screenplay_gemini
+        return await generate_mountain_screenplay_gemini(genre="relax/mountain", sub_genre=sub_genre or primary_archetype or "mountain_daytime_vista", primary_archetype=primary_archetype or "mountain_daytime_vista", **kwargs)
+
+    # 0.4 Dedicated Valley Studio Dispatch (genre 'relax/valley')
+    if genre_lower in {"relax/valley", "valley"} or "valley_wildflower" in arch_lower or "valley_morning" in arch_lower or "valley_glacial" in arch_lower or "valley_sunset" in arch_lower:
+        from src.studios.valley_studio.valley_director import generate_valley_screenplay_gemini
+        return await generate_valley_screenplay_gemini(genre="relax/valley", sub_genre=sub_genre or primary_archetype or "valley_wildflower_meadow", primary_archetype=primary_archetype or "valley_wildflower_meadow", **kwargs)
+
+    # 0.5 Dedicated Blizzard Studio Dispatch (genre 'relax/blizzard')
+    if genre_lower in {"relax/blizzard", "blizzard"} or "blizzard" in arch_lower or "blizzard" in sub_lower or any(w in p_lower for w in ["blizzard", "snowstorm", "howling blizzard", "snowfall asmr"]):
+        from src.studios.blizzard_studio.blizzard_director import generate_blizzard_screenplay_gemini
+        return await generate_blizzard_screenplay_gemini(genre="relax/blizzard", sub_genre=sub_genre or primary_archetype or "blizzard_cozy_cabin_window", primary_archetype=primary_archetype or "blizzard_cozy_cabin_window", **kwargs)
+
+    # 0.6 Dedicated Forest Studio Dispatch (genre 'relax/forest')
+    if genre_lower in {"relax/forest", "forest"} or "forest_mossy" in arch_lower or "forest_babbling" in arch_lower or "forest_morning" in arch_lower or "forest_twilight" in arch_lower or ("forest" in arch_lower and "rain" not in arch_lower):
+        from src.studios.forest_studio.forest_director import generate_forest_screenplay_gemini
+        return await generate_forest_screenplay_gemini(genre="relax/forest", sub_genre=sub_genre or primary_archetype or "forest_mossy_canopy_day", primary_archetype=primary_archetype or "forest_mossy_canopy_day", **kwargs)
 
     # 1. Japanese Zen Studio Dispatch (Kyoto Zen, Bamboo Groves, Raked Rock Gardens, Tsukubai)
     if genre_lower in {"relax/zen", "zen"} or sub_lower in {"zen_garden", "bamboo_grove", "lotus_pond"} or arch_lower in {"zen_garden", "bamboo_grove"}:
