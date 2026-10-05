@@ -68,65 +68,44 @@ async def generate_valley_screenplay_gemini(
     )
 
     try:
-        from src.services.llm_service import call_gemini_pro
-        raw_response = await call_gemini_pro(
-            prompt="Generate the Valley Studio Master Screenplay JSON now.",
-            system_instruction=sys_prompt,
-            response_schema=RelaxScreenplay,
-            temperature=0.7,
-        )
-        data = json.loads(raw_response) if isinstance(raw_response, str) else raw_response
-        data = normalize_audio_tags(data)
-        screenplay = RelaxScreenplay.model_validate(data)
+        from src.core.config import settings
+        from src.providers.base import HTTPClientPool
+        api_key = settings.llm.google_api_key or settings.llm.gemini_api_key
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
+        payload = {
+            "contents": [{"parts": [{"text": sys_prompt}]}],
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "temperature": 0.7,
+            },
+        }
+        client = HTTPClientPool.get_client()
+        logger.info(f"gemini_valley_director_request: archetype='{eff_arch}'")
+        resp = await client.post(url, json=payload, timeout=45.0)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Gemini API error (HTTP {resp.status_code}): {resp.text[:500]}")
+        data = resp.json()
+        candidates = data.get("candidates", [])
+        if not candidates:
+            raise RuntimeError("Gemini returned no candidates")
+        raw_json = candidates[0]["content"]["parts"][0]["text"].strip()
+
+        # Save raw Gemini response JSON for permanent reference
+        if raw_output_path:
+            try:
+                raw_p = Path(raw_output_path)
+                raw_p.parent.mkdir(parents=True, exist_ok=True)
+                raw_p.write_text(raw_json, encoding="utf-8")
+                logger.info(f"raw_gemini_screenplay_saved: {raw_p}")
+            except Exception as raw_save_err:
+                logger.warning(f"failed_to_save_raw_gemini_json: {raw_save_err}")
+
+        parsed = json.loads(raw_json)
+        screenplay = RelaxScreenplay.model_validate(parsed)
         screenplay.genre = "relax/valley"
         screenplay.cluster = "valley"
         screenplay.primary_archetype = eff_arch
-
-        if raw_output_path:
-            p = Path(raw_output_path)
-            p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text(screenplay.model_dump_json(indent=2), encoding="utf-8")
         return screenplay
     except Exception as exc:
-        logger.error(f"valley_director_gemini_fallback: {exc}")
-        arch = VALLEY_ARCHETYPES.get(eff_arch, VALLEY_ARCHETYPES["valley_wildflower_meadow"])
-        from src.studios.screenplay_models import RelaxAudioMasterSpec, RelaxSceneDirective, RelaxPublishingPackage
-        fallback = RelaxScreenplay(
-            production_id=f"VAL-{os.urandom(3).hex().upper()}",
-            title=arch["title"],
-            story_topic=custom_prompt or arch["visual_prompt"],
-            genre="relax/valley",
-            sub_genre=eff_arch,
-            primary_archetype=eff_arch,
-            cluster="valley",
-            recommended_fps=24,
-            total_duration_seconds=duration_seconds,
-            audio_master=RelaxAudioMasterSpec(
-                audio_mode="ambient_nature",
-                suno_musical_tags=arch["audio_tags"],
-                target_lufs=-21.0,
-                ducking_db=-18.0,
-            ),
-            scenes=[
-                RelaxSceneDirective(
-                    scene_index=1,
-                    location_hub=arch["title"],
-                    shot_type="wide_panoramic_picturesque",
-                    camera_rig=camera_motion,
-                    visual_prompt=custom_prompt or arch["visual_prompt"],
-                    motion_prompt=arch["motion_prompt"],
-                    domain=arch.get("domain", "landscape_solid"),
-                    duration_seconds=duration_seconds,
-                )
-            ],
-            publishing=RelaxPublishingPackage(
-                ctr_titles=[f"4K {arch['title']}", "Pastoral Valley Living Wallpaper 4K"],
-                description_with_timestamps=f"Tranquil 4K Valley Relaxation: {arch['title']}",
-                seo_tags=["valley", "4k", "wildflowers", "relaxation", "meadow"],
-            ),
-        )
-        if raw_output_path:
-            p = Path(raw_output_path)
-            p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text(fallback.model_dump_json(indent=2), encoding="utf-8")
-        return fallback
+        logger.error(f"gemini_valley_director_failed: {exc}")
+        raise RuntimeError(f"Gemini valley director screenplay generation failed: {exc}") from exc

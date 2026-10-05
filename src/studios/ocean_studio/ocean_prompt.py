@@ -8,16 +8,7 @@ Specialized prompt builder enforcing:
 """
 
 from typing import List, Optional
-from src.studios.ocean_studio.ocean_catalog import OCEAN_ARCHETYPES
-
-OCEAN_DIURNAL_LIGHTING = {
-    "daytime": "Balanced 5500K natural tropical daylight, bright sun illuminating vibrant turquoise lagoon, cerulean blue sky, zero yellow haze.",
-    "sunrise": "Soft 3800K pastel dawn radiance, delicate blush-pink and pale lavender horizon, warm golden sun-shafts reflecting across glassy ocean swells.",
-    "sunset": "Rich 3000K golden hour terracotta and vermilion sunset, glowing molten gold reflections across rhythmic wave crests, peaceful evening calm.",
-    "night_bioluminescent": "Deep 2200K dark indigo midnight canopy, brilliant Milky Way galaxy arch, rhythmic rolling waves glowing with natural electric-blue bioluminescent phytoplankton, strictly zero campfire, zero smoke.",
-    "campfire": "Warm 2000K crackling driftwood campfire in rustic beach stone pit on dark sand, glowing orange wood embers, dark rhythmic ocean surf in background under starlit sky.",
-    "rain": "Overcast 4500K soft diffuse silver-gray light, soothing tropical rain falling across calm turquoise sea, concentric micro-ripples, sheltered wooden veranda view.",
-}
+from src.studios.base_directorial_prompt import build_base_directorial_prompt
 
 OCEAN_LANDMARKS = [
     "Bora Bora Turquoise Lagoon & Mount Otemanu, French Polynesia",
@@ -30,6 +21,26 @@ OCEAN_LANDMARKS = [
     "Turks and Caicos Grace Bay Pristine White Sand & Azure Sea",
 ]
 
+OCEAN_SPECIFIC_RULES = """
+======================================================================
+OCEAN RETREAT STUDIO DIRECTORIAL RULES & CINEMATOGRAPHY:
+======================================================================
+1. ARCHITECTURAL LIVING WALLPAPER FRAMING:
+   - Symmetrical, balanced 16:9 composition shot looking outward from a luxurious coastal vantage point (shaded overwater villa deck, Mediterranean stone veranda, cliffside terrace, or beach shelter).
+   - Crisp architectural foreground (weathered teak columns, sheer white/ivory linen drapes, stone ledges, artisanal beverage on table).
+   - Breathtaking natural ocean background (rolling turquoise wave swells, crystal clear reef lagoon, sea spray caustics, endless horizon).
+2. RULE 20 NATURAL WATER DYNAMICS (MANDATORY):
+   - Align camera motion or view parallel or perpendicular-facing to incoming laminar swells.
+   - Mandate smooth glassy laminar wave swells, rhythmic shoreline breakers, and specular water caustics.
+   - Negative constraints: "gelatinous water, melting foam, static frozen water, boiling water artifacts, rubbery water, unnatural foam blobs, zero static vertical streaks, zero falling wire artifacts".
+3. STATIONARY LOCKED-TRIPOD CINEMAGRAPH CADENCE:
+   - Camera motion must be strictly locked tripod. 
+   - Animate ONLY natural fluid elements: continuous rhythmic ocean wave swells rolling ashore, sheer linen drapes fluttering in the sea breeze, and subtle water caustics.
+   - Structural architecture, daybeds, furniture, and skies remain 100% rigid, frozen, and temporally stable.
+4. PURITY & SOLITUDE MANDATE:
+   - Strictly ZERO humans, zero tourists, zero boats, zero plastic trash, zero modern clutter.
+"""
+
 
 def build_ocean_prompt(
     custom_prompt: str = "",
@@ -40,50 +51,46 @@ def build_ocean_prompt(
     excluded_topics: Optional[List[str]] = None,
     channel_id: Optional[str] = None,
 ) -> str:
-    """Builds authoritative system instruction for Gemini Pro generating 4K Ocean Living Wallpapers."""
-    arch_data = OCEAN_ARCHETYPES.get(archetype, OCEAN_ARCHETYPES["ocean_daytime_shore"])
-    from src.studios.ocean_studio.ocean_cultural_audio import detect_diurnal_timing
-    diurnal_key = detect_diurnal_timing(custom_prompt, archetype=archetype)
-    lighting_rule = OCEAN_DIURNAL_LIGHTING.get(diurnal_key, OCEAN_DIURNAL_LIGHTING["daytime"])
+    """Builds authoritative system instruction for Gemini generating 4K Ocean Living Wallpapers."""
+    arch_lower = archetype.lower()
 
-    excluded_str = ""
-    if excluded_topics:
-        excluded_str = (
-            f"\nTOPIC DEDUPLICATION MANDATE:\n"
-            f"The following ocean topics were recently produced for this channel: {excluded_topics}.\n"
-            f"You MUST select a completely unique geographic coastline, perspective, or seasonal timing.\n"
-        )
+    if any(w in arch_lower for w in ["sunrise", "dawn"]):
+        color_temp = 3800
+        cluster = "Mediterranean Pastel Dawn"
+        default_topic = "Luxury coastal veranda dawn looking out at pastel sea horizon"
+    elif any(w in arch_lower for w in ["sunset", "golden_hour"]):
+        color_temp = 3000
+        cluster = "Pacific Cliffside Sunset"
+        default_topic = "Cliffside sanctuary golden hour sunset overlooking fiery ocean horizon"
+    elif any(w in arch_lower for w in ["bioluminescent", "night"]):
+        color_temp = 2200
+        cluster = "Bioluminescent Lagoon"
+        default_topic = "Starlit beachfront pavilion looking out at electric-blue bioluminescent waves"
+    elif any(w in arch_lower for w in ["campfire", "hearth"]):
+        color_temp = 2000
+        cluster = "Beach Campfire Surf"
+        default_topic = "Driftwood campfire in beach stone pit with rhythmic dark ocean surf"
+    elif any(w in arch_lower for w in ["rain", "storm"]):
+        color_temp = 4500
+        cluster = "Tropical Balcony Rain"
+        default_topic = "Sheltered teak balcony looking out at gentle tropical ocean rain"
+    else:
+        color_temp = 5500
+        cluster = "Maldives Overwater Lagoon"
+        default_topic = "Shaded overwater villa deck looking out at vast turquoise lagoon and rolling waves"
 
-    return f"""You are the Master Architectural Director & Blue-Chip Cinematographer for 'Ocean Retreat Studio'.
-You specialize in 4K Living Wallpapers of pristine coastal sanctuaries, overwater bungalows, cliffside terraces, and rhythmic ocean surf under genre 'relax/ocean'.
-
-TARGET ARCHETYPE: {arch_data.display_name} (Key: {arch_data.key})
-DIURNAL LIGHTING STANDARD: {lighting_rule}
-
-CORE DIRECTORIAL DIRECTIVES:
-1. Architectural Living Wallpaper Framing:
-   - Symmetrical, balanced 16:9 composition shot looking outward from a luxurious coastal vantage point (shaded overwater villa deck, Mediterranean stone veranda, cliffside terrace, or beach shelter).
-   - Crisp architectural foreground (weathered teak columns, sheer white/ivory linen drapes, stone ledges, artisanal beverage on table).
-   - Breathtaking natural ocean background (rolling turquoise wave swells, crystal clear reef lagoon, sea spray caustics, endless horizon).
-
-2. Rule 20 Natural Water Dynamics (Mandatory):
-   - Align camera motion or view parallel or perpendicular-facing to incoming laminar swells.
-   - Mandate smooth glassy laminar wave swells, rhythmic shoreline breakers, and specular water caustics.
-   - Negative constraints: "gelatinous water, melting foam, static frozen water, boiling water artifacts, rubbery water, unnatural foam blobs, zero static vertical streaks, zero falling wire artifacts".
-
-3. Stationary Locked-Tripod Cinemagraph Cadence:
-   - Camera motion must be strictly locked tripod. 
-   - Animate ONLY natural fluid elements: continuous rhythmic ocean wave swells rolling ashore, sheer linen drapes fluttering in the sea breeze, and subtle water caustics.
-   - Structural architecture, daybeds, furniture, and skies remain 100% rigid, frozen, and temporally stable.
-
-4. 100% Monetization-Safe & Solitude Mandate:
-   - Strictly ZERO humans, zero tourists, zero boats, zero plastic trash, zero modern clutter.
-   - Audio tags must enforce 432Hz/528Hz Solfeggio anti-anxiety soundbath, culturally matched instruments, and rhythmic ocean surf foley.
-
-5. Shot Count & Duration:
-   - Number of shots: {num_shots} (Master 60s seamless loop).
-   - Target duration: {duration_seconds} seconds.
-{excluded_str}
-OUTPUT SCHEMA:
-Generate a valid RelaxScreenplay JSON adhering exactly to the provided schema. Set genre='relax/ocean', primary_archetype='{arch_data.key}'.
-"""
+    return build_base_directorial_prompt(
+        genre="relax/ocean",
+        sub_genre=archetype,
+        archetype=archetype,
+        cluster=cluster,
+        custom_prompt=custom_prompt or default_topic,
+        duration_seconds=duration_seconds,
+        num_shots=num_shots,
+        camera_motion=camera_motion,
+        excluded_topics=excluded_topics,
+        specific_rules=OCEAN_SPECIFIC_RULES,
+        curation_landmarks=OCEAN_LANDMARKS,
+        color_temp_kelvin=color_temp,
+        channel_id=channel_id or "earth_serenade",
+    )

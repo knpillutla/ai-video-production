@@ -112,16 +112,40 @@ async def generate_ocean_screenplay_gemini(
     )
 
     try:
-        from src.services.llm_service import call_gemini_pro
-        raw_response = await call_gemini_pro(
-            prompt="Generate the Ocean Studio Master Screenplay JSON now.",
-            system_instruction=sys_prompt,
-            response_schema=RelaxScreenplay,
-            temperature=0.7,
-        )
-        data = json.loads(raw_response) if isinstance(raw_response, str) else raw_response
-        data = normalize_audio_tags(data)
-        screenplay = RelaxScreenplay.model_validate(data)
+        from src.core.config import settings
+        from src.providers.base import HTTPClientPool
+        api_key = settings.llm.google_api_key or settings.llm.gemini_api_key
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
+        payload = {
+            "contents": [{"parts": [{"text": sys_prompt}]}],
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "temperature": 0.7,
+            },
+        }
+        client = HTTPClientPool.get_client()
+        logger.info(f"gemini_ocean_director_request: archetype='{eff_arch}'")
+        resp = await client.post(url, json=payload, timeout=45.0)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Gemini API error (HTTP {resp.status_code}): {resp.text[:500]}")
+        data = resp.json()
+        candidates = data.get("candidates", [])
+        if not candidates:
+            raise RuntimeError("Gemini returned no candidates")
+        raw_json = candidates[0]["content"]["parts"][0]["text"].strip()
+
+        # Save raw Gemini response JSON for permanent reference
+        if raw_output_path:
+            try:
+                raw_p = Path(raw_output_path)
+                raw_p.parent.mkdir(parents=True, exist_ok=True)
+                raw_p.write_text(raw_json, encoding="utf-8")
+                logger.info(f"raw_gemini_screenplay_saved: {raw_p}")
+            except Exception as raw_save_err:
+                logger.warning(f"failed_to_save_raw_gemini_json: {raw_save_err}")
+
+        parsed = json.loads(raw_json)
+        screenplay = RelaxScreenplay.model_validate(parsed)
         screenplay.genre = "relax/ocean"
 
         # Culturally aligned & diurnal-permuted 432Hz audio master
@@ -138,11 +162,6 @@ async def generate_ocean_screenplay_gemini(
             screenplay.audio_master.target_lufs = -21.0
             screenplay.audio_master.singing_lyrics_spec = arr_prompt
 
-        if raw_output_path:
-            p = Path(raw_output_path)
-            p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text(json.dumps(screenplay.model_dump(), indent=2), encoding="utf-8")
-
         try:
             await topic_memory.remember_topic(
                 channel=eff_channel,
@@ -158,8 +177,8 @@ async def generate_ocean_screenplay_gemini(
         return screenplay
 
     except Exception as e:
-        logger.warning(f"gemini_ocean_director_failed_using_catalog: {e}")
-        return _fallback_catalog_screenplay(eff_arch, custom_prompt, duration_seconds)
+        logger.error(f"gemini_ocean_director_failed: {e}")
+        raise RuntimeError(f"Gemini ocean director screenplay generation failed: {e}") from e
 
 
 def _fallback_catalog_screenplay(archetype: str, prompt: Optional[str], duration: float) -> RelaxScreenplay:
