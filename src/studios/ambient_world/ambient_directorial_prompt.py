@@ -13,7 +13,27 @@ def get_relaxation_pipeline_constraints(archetype: str = "") -> str:
     """Returns dynamic architectural guardrails for the relaxation/nature video pipeline.
     Adapts lighting and atmospheric constraints to the ecosystem archetype.
     """
-    if "alpine" in archetype.lower() or "mountain" in archetype.lower():
+    arch_l = archetype.lower()
+    if any(w in arch_l for w in ["tent", "glamping", "daytime"]):
+        return (
+            "\n======================================================================\n"
+            "[LUXURY DESERT TENT & DAYTIME DUNES GUARDRAILS - MANDATORY]\n"
+            "======================================================================\n"
+            "1. DAYTIME DESERT MANDATE: View from INSIDE an ultra-luxury glamping tent looking out at vast golden sand dunes in natural DAYTIME sunlight (5500K) under clear blue sky. Strictly NO night, NO midnight, NO campfire, NO stars, NO darkness.\n"
+            "2. INSIDE-OUT TENT FRAMING: Shaded pavilion interior framing the view, sheer cream linen curtains fluttering in breeze, low carved table with Moroccan brass teapot and mint tea glasses, rich Berber kilims.\n"
+            "3. DAYTIME CRISP ILLUMINATION: 5500K natural daylight, sun caustics on sand ripples, zero harsh glare, zero 2200K amber nighttime wash.\n"
+            "4. AUDIO MASTER: 432Hz joyful meditative daytime soundbath, handpan, singing bowls, nay flute, gentle desert breeze through linen, zero night foley, zero campfire crackle, zero solo guitar, -21 LUFS.\n"
+        )
+    if "desert" in arch_l or "dune" in arch_l:
+        return (
+            "\n======================================================================\n"
+            "[DESERT & STARLIT HEARTH PIPELINE GUARDRAILS - MANDATORY]\n"
+            "======================================================================\n"
+            "1. DESERT MANDATE: Environment MUST strictly be vast rolling golden sand dunes under an open starlit midnight sky with Milky Way galaxy. Strictly prohibit waterfalls, rivers, lakes, snow, mountains, or green forests.\n"
+            "2. WARM CAMPFIRE & LANTERN HEARTH: Open-air luxury Bedouin pavilion on a dune ridge, Persian tribal rugs, glowing pierced Moroccan brass lanterns, and a circular stone hearth campfire with golden embers.\n"
+            "3. HYPNOTIC SERENITY: Warm lantern glow (2200K) against deep velvet indigo starry cosmos, rock-steady locked tripod.\n"
+        )
+    if "alpine" in arch_l or "mountain" in arch_l:
         return (
             "\n======================================================================\n"
             "[ALPINE MOUNTAIN & NATURE PIPELINE GUARDRAILS]\n"
@@ -48,17 +68,23 @@ def build_ambient_directorial_prompt(
     """Build dynamic nature & relaxation directorial system instructions for Gemini."""
     per_shot_dur = round(duration_seconds / max(1, num_shots), 1)
     landmark_research_directive = (
-      "Use Google Search grounding alongside built-in geographic knowledge to verify current facts and destination interest. "
-      "Do not claim a place is trending unless the search evidence supports it."
-      if google_search_enabled else
-      "Use built-in geographic and cultural knowledge to choose an established notable destination. "
-      "Do not claim current trends or real-time popularity; no web search is enabled for this request."
+        "Use Google Search grounding alongside built-in geographic knowledge to verify current facts and destination interest. "
+        "Do not claim a place is trending unless the search evidence supports it."
+        if google_search_enabled else
+        "Use built-in geographic and cultural knowledge to choose an established notable destination. "
+        "Do not claim current trends or real-time popularity; no web search is enabled for this request."
     )
-    concept_anchor = custom_prompt or (
-      "No user prompt supplied; select a notable destination matching the genre and archetype using grounded search."
-      if google_search_enabled else
-      "No user prompt supplied; select a notable destination matching the genre and archetype using built-in knowledge."
-    )
+    arch_l = archetype.lower()
+    if any(w in arch_l for w in ["tent", "glamping", "daytime"]):
+        concept_anchor = custom_prompt or "Luxury Desert Glamping Tent Daytime View: Masterpiece 4K view looking outward from inside an ultra-luxury desert tent onto vast golden sand dunes in natural 5500K daytime sunlight, sheer cream linen curtains billowing, low brass tea table, clear blue sky, zero night, zero campfire"
+    elif "desert" in arch_l or "dune" in arch_l:
+        concept_anchor = custom_prompt or "Desert Starlit Campfire & Bedouin Pavilion: Open-air luxury Bedouin pavilion on high sand dunes at midnight, Persian rugs, glowing brass Moroccan lanterns, crackling campfire embers, starlit Milky Way sky"
+    else:
+        concept_anchor = custom_prompt or (
+          "No user prompt supplied; select a notable destination matching the genre and archetype using grounded search."
+          if google_search_enabled else
+          "No user prompt supplied; select a notable destination matching the genre and archetype using built-in knowledge."
+        )
 
     relaxation_guardrails = get_relaxation_pipeline_constraints(archetype) if "relax" in genre.lower() or "nature" in genre.lower() else ""
 
@@ -87,6 +113,9 @@ For all natural landmarks, you MUST explicitly name the landmark in the primary 
 
 1. DYNAMIC ECOSYSTEM & LANDMARK PROMPT FORMULATION:
    When creating visual prompts for world landmarks and nature sanctuaries, format the prompt dynamically based on the ecosystem archetype:
+   - **Desert Sanctuaries, Dunes & Luxury Glamping Tents (e.g., Sahara, Namib, Arabian Desert):**
+     * Daytime Luxury Tent: "A photorealistic, wide panoramic view looking outward through the open entrance of an ultra-luxury desert glamping pavilion onto vast majestic golden sand dunes in natural daytime sunlight. Symmetrical 16:9 framing on a locked tripod. Sheer cream linen draperies billow gently at the frame edges. Inside the shaded pavilion, rich hand-woven Berber kilim rugs, plush floor cushions, and a low carved wooden table with an ornate Moroccan brass tea set. Outside, sculptured undulating golden sand dunes with delicate wind ripples stretch endlessly under a crystal-clear cerulean blue sky in balanced 5500K natural daylight. Strictly zero tourists, zero footprints, zero modern clutter, zero vehicles."
+     * Starlit Campfire Pavilion: "A photorealistic, wide panoramic landscape view of a luxury open-air Bedouin desert pavilion on a high sand dune ridge under a starry midnight sky. Symmetrical 16:9 cinematic framing, shot on a locked tripod. Rich hand-woven Persian tribal carpets, embroidered floor cushions, glowing pierced Moroccan brass lanterns, and a circular stone hearth campfire overlooking golden sand dunes under the Milky Way galaxy. Strictly zero vehicles, zero plastic, zero tourists."
    - **Alpine Mountains & Valleys (e.g., Swiss Alps, Dolomites, Canadian Rockies, Mount Fuji):**
      "A photorealistic, wide panoramic landscape view of [Landmark Name]. Symmetrical 16:9 cinematic framing, shot on a locked tripod. In the majestic background, towering snow-dusted jagged mountain peaks rise into a crisp clear sky; in the foreground and midground, lush green rolling alpine meadows dotted with wildflowers frame a tranquil crystal-clear glacial mountain stream. Pristine natural wilderness, strictly zero buildings, zero tourists, zero vehicles, and zero modern structures."
    - **Alpine Lakes & Fjords (e.g., Lake Louise, Lake Bled, Geirangerfjord, Milford Sound):**
@@ -188,8 +217,8 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
     "audio_mode": "ambient_nature",
     "spoken_narration_script": "Optional one-sentence poetic environmental lore",
     "singing_lyrics_spec": "",
-    "suno_musical_tags": "432Hz ambient, authentic foley matching the terrain, soft acoustic drone, -14 LUFS",
-    "vocal_gender": "female",
+    "suno_musical_tags": "432Hz meditative soundbath, joyful uplifting handpan, singing bowls, warm velvet synth pads, celtic harp, deep stress relief, peaceful sleep drone, zero solo guitar, -21 LUFS",
+    "vocal_gender": "none",
     "tempo_bpm": 64,
     "target_lufs": -14.0,
     "ducking_db": -18.0

@@ -13,7 +13,7 @@ class FalLivePortraitAdapter:
 
     def __init__(self, api_key: str | None = None):
         self.api_key = api_key or getattr(settings.video, "fal_key", None) or getattr(settings.video, "fal_api_key", None) or None
-        self.endpoint = "https://queue.fal.run/fal-ai/live-portrait"
+        self.endpoint = "https://queue.fal.run/fal-ai/sync-lipsync/v3/image-to-video"
 
 
     async def animate_avatar(
@@ -38,7 +38,6 @@ class FalLivePortraitAdapter:
             return await self._synthesize_local_avatar_clip(img, audio, out, duration_seconds)
 
         client = HTTPClientPool.get_client()
-
         headers = {
             "Authorization": f"Key {self.api_key or ''}",
             "Content-Type": "application/json",
@@ -46,25 +45,59 @@ class FalLivePortraitAdapter:
 
         if self.api_key:
             try:
-                # Real Fal.ai LivePortrait API call
+                from src.providers.fal_storage import upload_to_fal
+                import json
+                img_url = str(img) if str(img).startswith("http") else await upload_to_fal(img, self.api_key)
+                aud_url = str(audio) if str(audio).startswith("http") else await upload_to_fal(audio, self.api_key)
+
                 payload = {
-                    "face_image_url": str(img),
-                    "audio_url": str(audio),
-                    "driving_multiplier": 1.0,
+                    "image_url": img_url,
+                    "audio_url": aud_url,
+                    "sync_mode": "cut_off",
                 }
-                resp = await client.post(self.endpoint, headers=headers, json=payload, timeout=40.0)
-                if resp.status_code in (200, 201):
+
+                job_sidecar = out.with_suffix(out.suffix + ".fal_job.json")
+                status_url, response_url = None, None
+                if job_sidecar.exists():
+                    try:
+                        jdata = json.loads(job_sidecar.read_text(encoding="utf-8"))
+                        status_url, response_url = jdata.get("status_url"), jdata.get("response_url")
+                        if status_url and response_url:
+                            logger.info(f"lipsync_resume: found in-flight job for {out.name}, resuming polling...")
+                    except Exception:
+                        status_url, response_url = None, None
+
+                if not status_url or not response_url:
+                    resp = await client.post(self.endpoint, headers=headers, json=payload, timeout=60.0)
+                    if resp.status_code not in (200, 201):
+                        raise RuntimeError(f"Fal lipsync submit failed ({resp.status_code}): {resp.text[:200]}")
                     data = resp.json()
-                    video_url = data.get("video", {}).get("url")
-                    if video_url:
-                        vid_resp = await client.get(video_url, timeout=30.0)
-                        if vid_resp.status_code == 200:
-                            out.write_bytes(vid_resp.content)
-                            logger.info(f"fal_liveportrait_success: {out.name}")
-                            return out
+                    status_url = data.get("status_url")
+                    response_url = data.get("response_url")
+                    job_sidecar.write_text(json.dumps({"status_url": status_url, "response_url": response_url}), encoding="utf-8")
+
+                for attempt in range(200):
+                    await asyncio.sleep(3.0)
+                    if attempt % 10 == 0:
+                        logger.info(f"sync_lipsync_polling: {out.name} ({attempt * 3}s)")
+                    st = (await client.get(status_url, headers=headers)).json()
+                    if st.get("status") == "COMPLETED":
+                        res = (await client.get(response_url, headers=headers)).json()
+                        video_url = res.get("video", {}).get("url") or res.get("video_url")
+                        if video_url:
+                            vid_resp = await client.get(video_url, timeout=60.0)
+                            if vid_resp.status_code == 200:
+                                out.write_bytes(vid_resp.content)
+                                if job_sidecar.exists():
+                                    job_sidecar.unlink(missing_ok=True)
+                                logger.info(f"fal_lipsync_success: {out.name}")
+                                return out
+                    if st.get("status") in ("FAILED", "CANCELLED"):
+                        if job_sidecar.exists():
+                            job_sidecar.unlink(missing_ok=True)
+                        raise RuntimeError(f"Fal lipsync failed: {st}")
             except Exception as ex:
-                logger.error(f"fal_liveportrait_failed: {ex}")
-                raise RuntimeError(f"Fal LivePortrait Lipsync failed: {ex}") from ex
+                logger.warning(f"fal_lipsync_failed: {ex} — falling back to local animator")
 
         # Local Deterministic Avatar Animator (FFmpeg loop with mouth pulse simulation)
         return await self._synthesize_local_avatar_clip(img, audio, out, duration_seconds)

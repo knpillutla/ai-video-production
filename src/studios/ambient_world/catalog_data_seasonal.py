@@ -23,7 +23,7 @@ SEASONAL_HEARTH_ARCHETYPES: Dict[str, AtmosphericArchetype] = {
             "Slow hypnotic flicker of campfire embers, subtle micro-sparks rising, warm comforting stationary view."
         ),
         acoustic_tags=(
-            "[velvet acoustic ambient], deep soothing wood fireplace crackle, soft warm acoustic guitar, anti-fatigue sleep master, -21 LUFS"
+            "[soothing & joyful meditation], deep soothing wood fireplace crackle, resonant handpan and warm singing bowl vibration, velvet sleep master, -21 LUFS"
         ),
         default_domain="landscape_solid",
         tags=["fireplace", "fire", "hearth", "cozy", "asmr"],
@@ -118,10 +118,118 @@ SEASONAL_HEARTH_ARCHETYPES: Dict[str, AtmosphericArchetype] = {
             "Delicate water ripple parting around fallen autumn leaf, golden sunlight sparkle on clear stream, peaceful motion."
         ),
         acoustic_tags=(
-            "[velvet acoustic ambient], gentle autumn breeze rustling dry leaves, soft flowing brook, acoustic guitar and Celtic harp, "
-            "warm biophilic grounding, -21 LUFS sleep master"
+            "[soothing & joyful meditation], gentle autumn breeze rustling dry leaves, soft flowing brook, uplifting Celtic harp and celestial chimes, "
+            "warm biophilic grounding, -21 LUFS sleep master, zero guitar"
         ),
         default_domain="water_fluid",
         tags=["autumn", "leaves", "river", "golden", "nature"],
     ),
+    "desert": AtmosphericArchetype(
+        key="desert",
+        display_name="Desert Starlit Campfire & Bedouin Pavilion",
+        cluster="desert",
+        wide_visual_prompt=(
+            "Masterpiece 4K photograph of a luxury open-air Bedouin desert pavilion on a high sand dune ridge at starlit midnight. "
+            "Rich hand-woven Persian tribal carpets, embroidered floor cushions, intricately pierced Moroccan brass lanterns casting warm geometric shadows. "
+            "Outside, a gentle circular stone hearth campfire with glowing golden embers. In the background, majestic curved golden sand dunes under a crystal-clear deep velvet indigo sky filled with the glittering Milky Way galaxy and shooting stars, 35mm Arri cinematography, 8k resolution, zero humans."
+        ),
+        intimate_visual_prompt=(
+            "Close-up 50mm portrait perspective of an ornate pierced brass Moroccan lantern glowing with warm golden candlelight resting on an antique wooden chest atop a rich crimson Persian rug. "
+            "In the background, soft crackling campfire embers and sweeping starlit desert sand dunes in creamy optical bokeh (f/1.4), hypnotic cozy warmth, zero humans."
+        ),
+        wide_motion_prompt=(
+            "Ultra-subtle, hypnotic ambient living wallpaper motion. Perfectly steady tripod perspective. "
+            "Gentle slow pulse of warm lantern glow, soft ember micro-sparks rising from stone hearth, fine silk sand wisps skimming dune crests in distant desert breeze, slow twinkling stars in deep night sky, zero morphing, rock-solid stability."
+        ),
+        intimate_motion_prompt=(
+            "Soft, rhythmic warm breathing flicker of lantern flame casting dancing amber light patterns, gentle drift of smoke wisps from campfire embers into cool night air, serene stationary camera."
+        ),
+        acoustic_tags=(
+            "[soothing & joyful meditation], deep soothing desert night breeze, soft crackling campfire embers, uplifting resonant handpan, airy wooden nay flute, 432Hz warm velvet pads, deep stress relief, peaceful sleep drone, zero guitar, zero harshness, -21 LUFS"
+        ),
+        default_domain="landscape_solid",
+        tags=["desert", "sand_dunes", "bedouin", "campfire", "lanterns", "stars", "sleep", "432hz", "asmr"],
+    ),
+    "desert_pavilion": AtmosphericArchetype(
+        key="desert_pavilion",
+        display_name="Desert Starlit Campfire & Bedouin Pavilion",
+        cluster="desert",
+        wide_visual_prompt=(
+            "Masterpiece 4K photograph of a luxury open-air Bedouin desert pavilion on a high sand dune ridge at starlit midnight. "
+            "Rich hand-woven Persian tribal carpets, embroidered floor cushions, intricately pierced Moroccan brass lanterns casting warm geometric shadows. "
+            "Outside, a gentle circular stone hearth campfire with glowing golden embers. In the background, majestic curved golden sand dunes under a crystal-clear deep velvet indigo sky filled with the glittering Milky Way galaxy and shooting stars, 35mm Arri cinematography, 8k resolution, zero humans."
+        ),
+        intimate_visual_prompt=(
+            "Close-up 50mm portrait perspective of an ornate pierced brass Moroccan lantern glowing with warm golden candlelight resting on an antique wooden chest atop a rich crimson Persian rug. "
+            "In the background, soft crackling campfire embers and sweeping starlit desert sand dunes in creamy optical bokeh (f/1.4), hypnotic cozy warmth, zero humans."
+        ),
+        wide_motion_prompt=(
+            "Ultra-subtle, hypnotic ambient living wallpaper motion. Perfectly steady tripod perspective. "
+            "Gentle slow pulse of warm lantern glow, soft ember micro-sparks rising from stone hearth, fine silk sand wisps skimming dune crests in distant desert breeze, slow twinkling stars in deep night sky, zero morphing, rock-solid stability."
+        ),
+        intimate_motion_prompt=(
+            "Soft, rhythmic warm breathing flicker of lantern flame casting dancing amber light patterns, gentle drift of smoke wisps from campfire embers into cool night air, serene stationary camera."
+        ),
+        acoustic_tags=(
+            "[soothing & joyful meditation], deep soothing desert night breeze, soft crackling campfire embers, uplifting resonant handpan, airy wooden nay flute, 432Hz warm velvet pads, deep stress relief, peaceful sleep drone, zero guitar, zero harshness, -21 LUFS"
+        ),
+        default_domain="landscape_solid",
+        tags=["desert", "sand_dunes", "bedouin", "campfire", "lanterns", "stars", "sleep", "432hz", "asmr"],
+    ),
+    "desert_luxury_tent": AtmosphericArchetype(
+        key="desert_luxury_tent",
+        display_name="Luxury Desert Tent & Daytime Dunes",
+        cluster="desert",
+        wide_visual_prompt=(
+            "Masterpiece 4K photograph looking outward through the open entrance of an ultra-luxury desert glamping pavilion onto vast majestic golden sand dunes in natural daytime sunlight. "
+            "Sheer cream linen draperies billow gently at the frame edges. Inside the shaded pavilion, rich hand-woven Berber kilim rugs, plush geometric floor cushions, and a low carved wooden table with an ornate Moroccan brass tea set. "
+            "Outside, sculptured undulating golden sand dunes with delicate wind-carved ripples stretch endlessly under a crystal-clear cerulean blue sky in balanced 5500K natural daylight. Symmetrical 16:9 cinematic framing, shot on a locked tripod, 35mm Arri cinematography, zero tourists, zero footprints, zero modern clutter, zero vehicles."
+        ),
+        intimate_visual_prompt=(
+            "Close-up 50mm portrait perspective of an ornate engraved Moroccan brass teapot and mint tea glasses on a low carved wooden table inside a shaded luxury desert tent. "
+            "In the background through the open cream linen drapery, sunlit golden sand dunes and pristine ripple patterns glow under bright daytime sky in creamy optical bokeh (f/1.4), serene luxurious tranquility, zero humans."
+        ),
+        wide_motion_prompt=(
+            "Ultra-subtle living wallpaper cinemagraph motion. Completely stationary locked tripod framing. "
+            "Sheer cream linen curtains gently flutter and sway in the cool desert breeze. Subtle micro-wisps of golden sand skimming distant dune crests. "
+            "The majestic sand dunes, furniture, and clear sky remain 100% rigid, frozen, and temporally stable, zero camera movement, zero panning, zero morphing."
+        ),
+        intimate_motion_prompt=(
+            "Gentle, slow rhythmic flutter of sheer cream curtains in desert breeze, soft subtle glint of daylight on polished brass teapot, stationary tripod shot, peaceful living wallpaper cadence."
+        ),
+        acoustic_tags=(
+            "[soothing & joyful meditation], gentle whispering desert breeze through linen, uplifting resonant handpan in major pentatonic mode, crystalline singing bowls, airy wooden nay flute, warm 432Hz velvet pads, deep stress relief, peaceful restful focus, zero guitar, -21 LUFS"
+        ),
+        default_domain="landscape_solid",
+        tags=["desert", "sand_dunes", "luxury_tent", "glamping", "daytime", "bedouin", "sheer_curtains", "432hz", "asmr"],
+    ),
+    "desert_tent": AtmosphericArchetype(
+        key="desert_tent",
+        display_name="Luxury Desert Tent & Daytime Dunes",
+        cluster="desert",
+        wide_visual_prompt=(
+            "Masterpiece 4K photograph looking outward through the open entrance of an ultra-luxury desert glamping pavilion onto vast majestic golden sand dunes in natural daytime sunlight. "
+            "Sheer cream linen draperies billow gently at the frame edges. Inside the shaded pavilion, rich hand-woven Berber kilim rugs, plush geometric floor cushions, and a low carved wooden table with an ornate Moroccan brass tea set. "
+            "Outside, sculptured undulating golden sand dunes with delicate wind-carved ripples stretch endlessly under a crystal-clear cerulean blue sky in balanced 5500K natural daylight. Symmetrical 16:9 cinematic framing, shot on a locked tripod, 35mm Arri cinematography, zero tourists, zero footprints, zero modern clutter, zero vehicles."
+        ),
+        intimate_visual_prompt=(
+            "Close-up 50mm portrait perspective of an ornate engraved Moroccan brass teapot and mint tea glasses on a low carved wooden table inside a shaded luxury desert tent. "
+            "In the background through the open cream linen drapery, sunlit golden sand dunes and pristine ripple patterns glow under bright daytime sky in creamy optical bokeh (f/1.4), serene luxurious tranquility, zero humans."
+        ),
+        wide_motion_prompt=(
+            "Ultra-subtle living wallpaper cinemagraph motion. Completely stationary locked tripod framing. "
+            "Sheer cream linen curtains gently flutter and sway in the cool desert breeze. Subtle micro-wisps of golden sand skimming distant dune crests. "
+            "The majestic sand dunes, furniture, and clear sky remain 100% rigid, frozen, and temporally stable, zero camera movement, zero panning, zero morphing."
+        ),
+        intimate_motion_prompt=(
+            "Gentle, slow rhythmic flutter of sheer cream curtains in desert breeze, soft subtle glint of daylight on polished brass teapot, stationary tripod shot, peaceful living wallpaper cadence."
+        ),
+        acoustic_tags=(
+            "[soothing & joyful meditation], gentle whispering desert breeze through linen, uplifting resonant handpan in major pentatonic mode, crystalline singing bowls, airy wooden nay flute, warm 432Hz velvet pads, deep stress relief, peaceful restful focus, zero guitar, -21 LUFS"
+        ),
+        default_domain="landscape_solid",
+        tags=["desert", "sand_dunes", "luxury_tent", "glamping", "daytime", "bedouin", "sheer_curtains", "432hz", "asmr"],
+    ),
 }
+
+

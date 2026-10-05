@@ -48,11 +48,26 @@ class SoundtrackService:
         logger.info(f"decision_audio_invoke_suno: Synthesizing fresh anti-fatigue soundscape via Suno v3.5 Pro...")
         print(f"[DECISION - SUNO SYNTHESIS] Synthesizing broadcast-grade anti-fatigue soundscape via Suno v3.5 Pro...")
         adapter = SunoMusicAdapter()
+        meditative_prompt = (
+            "[Instrumental Ambient Meditation]\n"
+            "[432Hz Solfeggio Velvet Resonance]\n"
+            "[Joyful Uplifting Handpan & Singing Bowls]\n"
+            "[Warm Velvet Ambient Pads & Celtic Harp]\n"
+            "[Airy Nay Flute & Serene Soundbath]\n"
+            "[Deep De-stressing & Restful Sleep Drone]\n"
+            "[Outro: Infinite Peaceful Fade]"
+        )
+        ambient_tags = (
+            f"432hz meditation, joyful handpan, singing bowls, velvet synth pads, "
+            f"celtic harp, {tags}, deep stress relief, sleep drone, zero solo guitar, -21 LUFS"
+        )
         await adapter.generate_to_file(
             output_path=out_path,
-            genre=f"{genre}, 432hz velvet acoustic tuning, anti-fatigue warm ambient pads, zero harsh frequencies, binaural foley",
-            mood=f"{tags}, smooth anti-fatigue relaxation, tranquil warm resonance",
+            genre=f"{genre}, 432hz harmonic resonance, soothing joyful velvet pads, zero solo guitar, zero harshness",
+            mood=ambient_tags[:120],
             duration_seconds=total_duration,
+            lyrics=meditative_prompt,
+            vocal_gender="none",
             title=title,
             force_live=True,
         )

@@ -42,6 +42,54 @@ async def dispatch_studio_director(
     sub_lower = (sub_genre or "").lower()
     arch_lower = (primary_archetype or "").lower()
 
+    # 0. Dedicated Ocean Studio Dispatch (All 6 Diurnal Timings under genre 'relax/ocean')
+    if (
+        genre_lower in {"relax/ocean", "ocean"}
+        or "ocean" in arch_lower
+        or "ocean" in sub_lower
+        or "bioluminescent" in arch_lower
+        or any(w in p_lower for w in ["ocean retreat", "ocean villa", "overwater villa", "turquoise lagoon", "bioluminescent wave"])
+    ):
+        logger.info(f"dispatcher_route: target='OceanStudio' archetype='{primary_archetype}' prompt='{custom_prompt}'")
+        from src.studios.ocean_studio.ocean_director import generate_ocean_screenplay_gemini
+        return await generate_ocean_screenplay_gemini(
+            genre="relax/ocean",
+            sub_genre=sub_genre or primary_archetype or "ocean_daytime_shore",
+            primary_archetype=primary_archetype or "ocean_daytime_shore",
+            custom_prompt=custom_prompt,
+            duration_seconds=duration_seconds,
+            user_id=user_id,
+            num_shots=num_shots,
+            camera_motion=camera_motion,
+            raw_output_path=raw_output_path,
+            image_model=image_model,
+            channel_id=channel_id or "earth_serenade",
+        )
+
+    # 0.1 Dedicated Desert Studio Dispatch (All 6 Diurnal Timings & Cultural Audio)
+    if (
+        "desert" in arch_lower
+        or "desert" in sub_lower
+        or "desert" in genre_lower
+        or "dune" in arch_lower
+        or any(w in p_lower for w in ["desert", "sand dune", "dunes", "bedouin", "sahara", "namib"])
+    ):
+        logger.info(f"dispatcher_route: target='DesertStudio' archetype='{primary_archetype}' prompt='{custom_prompt}'")
+        from src.studios.desert_studio.desert_director import generate_desert_screenplay_gemini
+        return await generate_desert_screenplay_gemini(
+            genre=genre or "relax/desert",
+            sub_genre=sub_genre or primary_archetype or "desert_daytime_tent",
+            primary_archetype=primary_archetype or "desert_daytime_tent",
+            custom_prompt=custom_prompt,
+            duration_seconds=duration_seconds,
+            user_id=user_id,
+            num_shots=num_shots,
+            camera_motion=camera_motion,
+            raw_output_path=raw_output_path,
+            image_model=image_model,
+            channel_id=channel_id or "earth_serenade",
+        )
+
     # 1. Japanese Zen Studio Dispatch (Kyoto Zen, Bamboo Groves, Raked Rock Gardens, Tsukubai)
     if genre_lower in {"relax/zen", "zen"} or sub_lower in {"zen_garden", "bamboo_grove", "lotus_pond"} or arch_lower in {"zen_garden", "bamboo_grove"}:
         logger.info(f"dispatcher_route: target='ZenStudio' genre='{genre}' sub_genre='{sub_genre}' archetype='{primary_archetype}' channel='{channel_id}'")
@@ -146,12 +194,10 @@ async def dispatch_studio_director(
 
     # 6. Alpine Nature Studio Dispatch (Swiss Alps, Dolomites, Mountains, Meadows)
     if (
-        "alpine" in genre_lower
-        or "nature" in genre_lower
-        or "alpine" in sub_lower
-        or "alpine" in arch_lower
-        or "mountain" in arch_lower
-        or any(w in p_lower for w in ["alps", "swiss", "mountain", "dolomites", "peaks", "matterhorn", "meadow", "glacial stream"])
+        ("alpine" in genre_lower or "nature" in genre_lower or "alpine" in sub_lower or "alpine" in arch_lower or "mountain" in arch_lower
+         or any(w in p_lower for w in ["alps", "swiss", "mountain", "dolomites", "peaks", "matterhorn", "meadow", "glacial stream"]))
+        and not any(w in arch_lower for w in ["desert", "dune", "pavilion", "oasis"])
+        and not any(w in sub_lower for w in ["desert", "dune", "pavilion", "oasis"])
     ):
         logger.info(f"dispatcher_route: target='AlpineStudio' prompt='{custom_prompt}'")
         return await generate_alpine_screenplay(

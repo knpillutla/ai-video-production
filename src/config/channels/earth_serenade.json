@@ -7,6 +7,8 @@
   "niche_category": "Scenic Nature Living Wallpaper & Mindful 432Hz Meditation",
   "target_audience": "Daytime meditators, yoga and spa practitioners, wellness seekers, and 4K OLED living room wall art viewers seeking scenic stress relief.",
   "allowed_genres": [
+    "relax/ocean",
+    "relax/desert",
     "relax/nature",
     "relax/healing",
     "relax/zen",
@@ -15,22 +17,22 @@
   ],
   "audio_profile": {
     "bgm_enabled_by_default": true,
-    "style": "Harmonic acoustic & Solfeggio soundscapes (432Hz / 528Hz)",
+    "style": "Soothing, Joyful & Meditative 432Hz Soundbath (Deep Stress Relief & Restful Sleep)",
     "instruments": [
-      "Tibetan singing bowls",
-      "Celtic harp",
-      "Classical acoustic guitar",
-      "Shakuhachi bamboo flute",
-      "Velvet 432Hz/528Hz binaural pads"
+      "Resonant Handpan (uplifting major pentatonic)",
+      "Tibetan & crystal singing bowls",
+      "Celtic harp & celestial chimes",
+      "Airy wooden bansuri & nay flute",
+      "Warm velvet 432Hz/528Hz binaural ambient pads"
     ],
     "foley_elements": [
-      "Gentle babbling glacial stream",
-      "Mountain breeze through pines",
-      "Soft birdsong"
+      "Gentle babbling stream or desert breeze",
+      "Soft crackling hearth embers",
+      "Gentle forest whispers"
     ],
     "target_lufs": -14.0,
     "bgm_ducking_db": -18.0,
-    "suno_tag_template": "432Hz Solfeggio healing resonance, warm acoustic instruments, peaceful meditation pad, anti-fatigue -14 LUFS"
+    "suno_tag_template": "432Hz meditative soundbath, joyful uplifting handpan, soothing singing bowls, warm velvet synth pads, celtic harp, deep stress relief, peaceful sleep, zero solo guitar, zero harsh plucks, -21 LUFS"
   },
   "visual_lighting_guardrails": {
     "lighting_temperature": "Natural daylight (5400K-5600K) or soft golden dawn caustics on crystal water",

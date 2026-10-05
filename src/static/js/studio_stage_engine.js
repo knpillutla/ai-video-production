@@ -434,11 +434,11 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
 
 function detectFailedStage(errMsg, currentStage) {
   const msg = String(errMsg || "").toLowerCase();
-  if (msg.includes("gemini") || msg.includes("storyboard") || msg.includes("script")) return 1;
-  if (msg.includes("keyframe") || msg.includes("flux") || msg.includes("photo") || msg.includes("image")) return 2;
+  if (msg.includes("ffmpeg") || msg.includes("master") || msg.includes("assembly") || msg.includes("concat") || msg.includes("broadcast")) return 5;
+  if (msg.includes("suno") || msg.includes("soundtrack") || msg.includes("binaural") || msg.includes("foley") || msg.includes("audio") || msg.includes("speech") || msg.includes("tts")) return 4;
   if (msg.includes("diffusion") || msg.includes("kling") || msg.includes("wan") || msg.includes("motion") || msg.includes("video clip") || msg.includes("render_motion")) return 3;
-  if (msg.includes("suno") || msg.includes("soundtrack") || msg.includes("binaural") || msg.includes("audio") || msg.includes("speech") || msg.includes("tts")) return 4;
-  if (msg.includes("ffmpeg") || msg.includes("master") || msg.includes("assembly") || msg.includes("concat")) return 5;
+  if (msg.includes("keyframe") || msg.includes("flux") || msg.includes("photo") || (msg.includes("image") && !msg.includes("imageio"))) return 2;
+  if (msg.includes("gemini") || msg.includes("storyboard") || msg.includes("script") || msg.includes("director")) return 1;
   return currentStage || 1;
 }
 

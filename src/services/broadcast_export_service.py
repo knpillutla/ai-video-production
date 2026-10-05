@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional, TYPE_CHECKING
 import imageio_ffmpeg
 
 from src.core.telemetry import logger
+from src.services.ambient_export_service import build_adaptive_resolution_filter
 from src.services.ambient_metadata_packager import generate_youtube_ambient_package
 from src.services.ambient_shorts_extractor import generate_ambient_short
 from src.services.ambient_translator import localize_metadata_for_languages
@@ -120,7 +121,7 @@ def assemble_4k_master(
         raise ValueError("Cannot assemble 4K master: zero valid seamless clips provided.")
 
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-    v_filter = "scale=3840:2160:force_original_aspect_ratio=decrease,pad=3840:2160:(ow-iw)/2:(oh-ih)/2,setsar=1"
+    v_filter = build_adaptive_resolution_filter(seamless_clips[0], 3840, 2160)
 
     if n == 1:
         c_dur = get_media_duration(seamless_clips[0]) or 5.0
@@ -155,7 +156,7 @@ def assemble_4k_master(
             v_loops = max(1, int(scene_hold_sec / max(1.0, get_media_duration(c) or 5.0)) + 2)
             inputs.extend(["-stream_loop", str(v_loops), "-i", str(c)])
 
-        filter_parts = [f"[{i}:v]scale=3840:2160:force_original_aspect_ratio=decrease,pad=3840:2160:(ow-iw)/2:(oh-ih)/2,setsar=1[s{i}]" for i in range(n)]
+        filter_parts = [f"[{i}:v]{build_adaptive_resolution_filter(c, 3840, 2160)}[s{i}]" for i, c in enumerate(seamless_clips)]
         prev_tag, curr_offset = "s0", scene_hold_sec - x_dur
         for i in range(1, n):
             out_tag = f"v{i}" if i < n - 1 else "v"

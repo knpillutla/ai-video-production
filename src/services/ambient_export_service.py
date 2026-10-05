@@ -1,9 +1,7 @@
-"""Ambient World Packaging and Export Utilities (long-play stretching, shorts, localized metadata)."""
-
 from __future__ import annotations
 import json, subprocess
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Dict, Optional, Tuple, TYPE_CHECKING
 import imageio_ffmpeg
 
 from src.core.telemetry import logger
@@ -12,18 +10,17 @@ from src.services.ambient_shorts_extractor import generate_ambient_short
 from src.services.ambient_translator import LocalizedMetadata, localize_metadata_for_languages
 from src.services.long_play_stretcher import export_long_play_broadcast
 from src.services.thumbnail_ab_packager import ThumbnailABPackage, generate_thumbnail_ab_variants
-from src.services.topic_memory import topic_memory
 
 if TYPE_CHECKING:
     from src.studios.ambient_world.ambient_storyboard import AmbientStoryboard
 
 
-def _probe_clip_duration(clip_path: Path) -> float:
+def get_media_duration(media_path: Path) -> float:
     """Probe the exact duration of a media file in seconds."""
     try:
         import re
         ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-        res = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], capture_output=True, text=True, errors="ignore")
+        res = subprocess.run([ffmpeg_bin, "-i", str(media_path)], capture_output=True, text=True, errors="ignore")
         m = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.\d+)", res.stderr)
         if m:
             return float(m.group(1)) * 3600.0 + float(m.group(2)) * 60.0 + float(m.group(3))
@@ -32,16 +29,33 @@ def _probe_clip_duration(clip_path: Path) -> float:
     return 5.0
 
 
-def get_media_duration(media_path: Path) -> float:
-    return _probe_clip_duration(media_path)
+_probe_clip_duration = get_media_duration
 
 
-def _is_clip_4k(clip_path: Path) -> bool:
+def probe_clip_geometry(clip_path: Path) -> Tuple[int, int]:
+    """Probe the exact width and height of an input clip."""
     try:
-        res = subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-i", str(clip_path)], capture_output=True, text=True, errors="ignore")
-        return "3840x2160" in res.stderr or "2160x3840" in res.stderr
+        import re
+        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+        res = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], capture_output=True, text=True, errors="ignore")
+        m = re.search(r",\s*(\d{3,4})x(\d{3,4})", res.stderr)
+        if m:
+            return int(m.group(1)), int(m.group(2))
     except Exception:
-        return False
+        pass
+    return 1920, 1080
+
+
+def build_adaptive_resolution_filter(clip_path: Path, target_w: int = 3840, target_h: int = 2160) -> str:
+    """Build a resolution-aware video filter: no-op for native 4K, direct Lanczos for 16:9, safe pad for non-standard."""
+    w, h = probe_clip_geometry(clip_path)
+    if w == target_w and h == target_h:
+        return "setsar=1"
+    target_aspect = target_w / target_h
+    clip_aspect = (w / h) if h > 0 else target_aspect
+    if abs(clip_aspect - target_aspect) < 0.01:
+        return f"scale={target_w}:{target_h}:flags=lanczos,setsar=1"
+    return f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease:flags=lanczos,pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2,setsar=1"
 
 
 def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf: int = 22) -> Path:
@@ -134,14 +148,13 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
         target_audio = build_seamless_audio_loop(target_audio)
         eff_master_dur = get_media_duration(target_audio) or eff_master_dur
 
-    v_filter = "scale=3840:2160:force_original_aspect_ratio=decrease,pad=3840:2160:(ow-iw)/2:(oh-ih)/2,setsar=1"
-
+    v_filter = build_adaptive_resolution_filter(seamless_clips[0], 3840, 2160)
     if n == 1:
         c_dur = get_media_duration(seamless_clips[0]) or 5.0
         v_loops = max(1, int(eff_master_dur / max(1.0, c_dur)) + 2)
         if target_audio and target_audio.is_file():
             cmd = [
-                ffmpeg_bin, "-y",
+                ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
                 "-stream_loop", str(v_loops), "-i", str(seamless_clips[0]),
                 "-i", str(target_audio),
                 "-map", "0:v:0", "-map", "1:a:0", "-t", f"{eff_master_dur:.2f}",
@@ -152,7 +165,7 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
             ]
         else:
             cmd = [
-                ffmpeg_bin, "-y",
+                ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
                 "-stream_loop", str(v_loops), "-i", str(seamless_clips[0]),
                 "-map", "0:v:0", "-t", f"{eff_master_dur:.2f}",
                 "-vf", v_filter,
@@ -166,7 +179,7 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
             v_loops = max(1, int(shot_hold / max(1.0, get_media_duration(c) or 5.0)) + 2)
             inputs.extend(["-stream_loop", str(v_loops), "-i", str(c)])
 
-        filter_parts = [f"[{i}:v]scale=3840:2160,setsar=1[s{i}]" for i in range(n)]
+        filter_parts = [f"[{i}:v]{build_adaptive_resolution_filter(c, 3840, 2160)}[s{i}]" for i, c in enumerate(seamless_clips)]
         prev_tag, curr_offset = "s0", shot_hold - x_dur
         for i in range(1, n):
             out_tag = f"v{i}" if i < n - 1 else "v"
@@ -175,10 +188,10 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
 
         if target_audio and target_audio.is_file():
             inputs.extend(["-i", str(target_audio)])
-            cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-map", f"{n}:a", "-t", f"{eff_master_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
+            cmd = [ffmpeg_bin, "-y", "-nostats", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-map", f"{n}:a", "-t", f"{eff_master_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
         else:
             filter_a = [f"[{'0:a' if i == 1 else f'a{i-1}'}][{i}:a]acrossfade=d={x_dur:.2f}[{'a' if i == n - 1 else f'a{i}'}]" for i in range(1, n)]
-            cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", ";".join(filter_parts + filter_a), "-map", "[v]", "-map", "[a]", "-t", f"{eff_master_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
+            cmd = [ffmpeg_bin, "-y", "-nostats", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filter_parts + filter_a), "-map", "[v]", "-map", "[a]", "-t", f"{eff_master_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
 
     try:
         subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -219,37 +232,33 @@ def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], e
 
 def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], fade_hours: Optional[float], force_rerun: bool = False) -> Optional[Path]:
     """Export long-play multi-hour stream loop for all existing master versions (with BGM and pure nature), plus 30-min broadcast by default."""
-    eff_hours = hours if (hours and hours > 0) else 3.0
-    suffix = f"_{int(fade_hours)}h_black" if fade_hours else ""
-    label = int(eff_hours) if eff_hours.is_integer() else eff_hours
-    lp_path = ep_dir / f"master_4k_{label}hour{suffix}_broadcast.mp4"
-
+    eff_h = hours if (hours and hours > 0) else 3.0
+    sfx = f"_{int(fade_hours)}h_black" if fade_hours else ""
+    lbl = int(eff_h) if eff_h.is_integer() else eff_h
+    lp_path = ep_dir / f"master_4k_{lbl}hour{sfx}_broadcast.mp4"
     if master.is_file() and (force_rerun or not lp_path.is_file() or lp_path.stat().st_size < 1000 or master.stat().st_mtime > lp_path.stat().st_mtime):
-        export_long_play_broadcast(source_4k_video=master, output_long_play=lp_path, target_duration_seconds=eff_hours * 3600.0, fade_to_black_hours=fade_hours)
-    
+        export_long_play_broadcast(source_4k_video=master, output_long_play=lp_path, target_duration_seconds=eff_h * 3600.0, fade_to_black_hours=fade_hours)
+
     lp_30m = ep_dir / "master_4k_30min_broadcast.mp4"
     if master.is_file() and (force_rerun or not lp_30m.is_file() or lp_30m.stat().st_size < 1000 or master.stat().st_mtime > lp_30m.stat().st_mtime):
         export_long_play_broadcast(source_4k_video=master, output_long_play=lp_30m, target_duration_seconds=1800.0)
 
-    nature_master = ep_dir / "master_4k_ambient_nature_only.mp4"
-    if nature_master.is_file() and nature_master.resolve() != master.resolve():
-        lp_nature = ep_dir / f"master_4k_{label}hour_nature_only{suffix}_broadcast.mp4"
-        if force_rerun or not lp_nature.is_file() or lp_nature.stat().st_size < 1000 or nature_master.stat().st_mtime > lp_nature.stat().st_mtime:
-            export_long_play_broadcast(source_4k_video=nature_master, output_long_play=lp_nature, target_duration_seconds=eff_hours * 3600.0, fade_to_black_hours=fade_hours)
-        
+    nat_m = ep_dir / "master_4k_ambient_nature_only.mp4"
+    if nat_m.is_file() and nat_m.resolve() != master.resolve():
+        lp_nat = ep_dir / f"master_4k_{lbl}hour_nature_only{sfx}_broadcast.mp4"
+        if force_rerun or not lp_nat.is_file() or lp_nat.stat().st_size < 1000 or nat_m.stat().st_mtime > lp_nat.stat().st_mtime:
+            export_long_play_broadcast(source_4k_video=nat_m, output_long_play=lp_nat, target_duration_seconds=eff_h * 3600.0, fade_to_black_hours=fade_hours)
         lp_30m_nat = ep_dir / "master_4k_30min_nature_only_broadcast.mp4"
-        if force_rerun or not lp_30m_nat.is_file() or lp_30m_nat.stat().st_size < 1000 or nature_master.stat().st_mtime > lp_30m_nat.stat().st_mtime:
-            export_long_play_broadcast(source_4k_video=nature_master, output_long_play=lp_30m_nat, target_duration_seconds=1800.0)
-    return lp_path
+        if force_rerun or not lp_30m_nat.is_file() or lp_30m_nat.stat().st_size < 1000 or nat_m.stat().st_mtime > lp_30m_nat.stat().st_mtime:
+            export_long_play_broadcast(source_4k_video=nat_m, output_long_play=lp_30m_nat, target_duration_seconds=1800.0)
     return lp_path
 
 
 def handle_short_export(master: Path, ep_dir: Path, gen: bool = True) -> Optional[Path]:
     """Generate 9:16 vertical teaser short from 4K master."""
     s_path = ep_dir / "short_9x16_teaser.mp4"
-    if master.is_file() and master.stat().st_size > 1000:
-        if not s_path.is_file() or s_path.stat().st_size < 1000:
-            generate_ambient_short(source_4k_video=master, output_short_path=s_path)
+    if master.is_file() and master.stat().st_size > 1000 and (not s_path.is_file() or s_path.stat().st_size < 1000):
+        generate_ambient_short(source_4k_video=master, output_short_path=s_path)
     return s_path if s_path.is_file() else None
 
 
@@ -260,26 +269,25 @@ def export_metadata_packages(
     eff_h = hours or 3.0
     pkg_music = generate_youtube_ambient_package(sb.primary_archetype, eff_h, sb.secondary_archetype, fade_h)
     (ep_dir / "youtube_packaging.json").write_text(json.dumps(pkg_music.model_dump(), indent=2), encoding="utf-8")
-    
+
     pkg_nature = generate_youtube_ambient_package(sb.primary_archetype, eff_h, sb.secondary_archetype, fade_h)
     pkg_nature.title = f"{pkg_nature.title} | Pure Nature Sounds (NO MUSIC) [4K ASMR]"
     pkg_nature.description = f"100% pure natural ambient soundscape without background music.\n\n{pkg_nature.description}"
     (ep_dir / "youtube_packaging_nature_only.json").write_text(json.dumps(pkg_nature.model_dump(), indent=2), encoding="utf-8")
 
-    # 30-Minute Broadcast Editions
     pkg_30m_m = generate_youtube_ambient_package(sb.primary_archetype, 0.5, sb.secondary_archetype)
     (ep_dir / "youtube_packaging_30min.json").write_text(json.dumps(pkg_30m_m.model_dump(), indent=2), encoding="utf-8")
-
     pkg_30m_n = generate_youtube_ambient_package(sb.primary_archetype, 0.5, sb.secondary_archetype)
-    pkg_30m_n.title = f"{pkg_30m_n.title} | Pure Nature Sounds (NO MUSIC) [4K ASMR]"
+    pkg_30m_n.title += " | Pure Nature Sounds (NO MUSIC) [4K ASMR]"
     pkg_30m_n.description = f"100% pure natural ambient soundscape without background music.\n\n{pkg_30m_n.description}"
     (ep_dir / "youtube_packaging_30min_nature_only.json").write_text(json.dumps(pkg_30m_n.model_dump(), indent=2), encoding="utf-8")
 
+    st = sb.title.split('~')[0].strip()
     pkg_short = {
-        "title": f"Experience {sb.title.split('~')[0].strip()} in 4K 🌊✨ #shorts",
-        "description": f"Stand directly in front of {sb.title.split('~')[0].strip()} in crisp 4K.\n\n🎧 Watch the full 30-Minute & 3-Hour Velvet Broadcasts on our channel!\n\n#shorts #nature #asmr #satisfying #4k",
+        "title": f"Experience {st} in 4K 🌊✨ #shorts",
+        "description": f"Stand directly in front of {st} in crisp 4K.\n\n🎧 Watch full editions on our channel!\n\n#shorts #nature #asmr #satisfying #4k",
         "tags": [sb.primary_archetype, "shorts", "nature_asmr", "satisfying", "4k_nature"],
-        "pinned_comment": "🌊 Would you visit here? Watch the full 30-Minute & 3-Hour editions with 432Hz sleep audio on our channel! 🌙💤",
+        "pinned_comment": "🌊 Would you visit here? Watch the full editions with 432Hz sleep audio on our channel! 🌙💤",
     }
     (ep_dir / "youtube_packaging_short.json").write_text(json.dumps(pkg_short, indent=2), encoding="utf-8")
     ab = generate_thumbnail_ab_variants(sb.primary_archetype)

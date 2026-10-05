@@ -100,6 +100,8 @@ const MODE_STARTERS = {
 };
 
 const ALL_STUDIO_GENRES = {
+  "relax/ocean": "🏖️ Ocean Retreat & Coastal Sanctuaries (relax/ocean)",
+  "relax/desert": "🏜️ Luxury Desert Glamping & Dunes (relax/desert)",
   "relax/nature": "🏔️ Nature & Alpine Sanctuaries (relax/nature)",
   "relax/healing": "✨ Global Healing Sanctuaries & 528Hz (relax/healing)",
   "relax/zen": "🪷 Japanese Zen Gardens & Engawa (relax/zen)",
@@ -115,13 +117,15 @@ const ALL_STUDIO_GENRES = {
 };
 
 const DEFAULT_CHANNEL_GENRES = {
-  "earth_serenade": ["relax/nature", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient"],
+  "earth_serenade": ["relax/ocean", "relax/desert", "relax/nature", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient"],
   "silent_hearth": ["relax/hearth", "relax/rain", "relax/cozy"],
   "cineai_docs": ["documentary"],
   "telugu_comedy": ["comedy/satire", "dance/folk"]
 };
 
 const STUDIO_SUBOPTIONS_MAP = {
+  "relax/ocean": [{ val: "ocean_daytime_shore", label: "☀️ Overwater Villa & Daytime Lagoon" }, { val: "ocean_sunrise_coast", label: "🌅 Coastal Veranda & Pastel Dawn" }, { val: "ocean_sunset_horizon", label: "🌇 Cliffside Sanctuary & Golden Hour Sunset" }, { val: "ocean_night_bioluminescent", label: "🌌 Starlit Beach Pavilion & Bioluminescent Waves" }, { val: "ocean_campfire_hearth", label: "🔥 Open-Air Beach Campfire & Surf" }, { val: "ocean_tropical_rain", label: "🌧️ Sheltered Balcony & Tropical Ocean Rain" }],
+  "relax/desert": [{ val: "desert_daytime_tent", label: "☀️ Luxury Desert Tent & Daytime Dunes" }, { val: "desert_sunrise_tent", label: "🌅 Luxury Desert Tent & Sunrise Dawn" }, { val: "desert_sunset_tent", label: "🌇 Luxury Desert Tent & Golden Sunset" }, { val: "desert_night_tent", label: "🌌 Luxury Desert Tent & Starlit Milky Way" }, { val: "desert_campfire_hearth", label: "🔥 Desert Campfire & Bedouin Hearth" }, { val: "desert_rain_sanctuary", label: "🌧️ Luxury Desert Tent & Rain ASMR" }],
   "relax/nature": [{ val: "alpine_nature", label: "🏔️ Alpine Nature & Mountain Sanctuaries (Swiss Alps)" }, { val: "glacial_fjord_lake", label: "🛶 Glacial Mirror Lakes & Fjords" }, { val: "temperate_forest", label: "🌲 Temperate Mossy Rainforest & Streams" }],
   "relax/rain": [{ val: "rainy_bedroom", label: "🛏️ Rainy Forest Bedroom & Glass Cabin (Cabin TrackSound)" }, { val: "forest_rain", label: "🌧️ Forest River Rainfall & ASMR" }, { val: "veranda_rain", label: "🏡 Biophilic Glass Veranda Rain" }, { val: "droplet_ripples", label: "💧 Water Droplet Ripples & Lake Reflections" }],
   "relax/waterfall": [{ val: "waterfall_gorge", label: "🌊 Monumental Plunge Cataracts (Niagara / Iguazu)" }, { val: "tiered_cascade", label: "🏞️ Multi-Tiered Glacial Cascades (Plitvice)" }],
@@ -171,6 +175,14 @@ const STUDIO_SUBGENRE_PLACEHOLDERS = {
 };
 
 const STUDIO_ARCHETYPES_MAP = {
+  "relax/ocean": [
+    { val: "ocean_daytime_shore", label: "☀️ Overwater Villa (Daytime Turquoise Lagoon)" },
+    { val: "ocean_sunrise_coast", label: "🌅 Coastal Veranda (Pastel Dawn Sunrise)" },
+    { val: "ocean_sunset_horizon", label: "🌇 Cliffside Sanctuary (Sunset Golden Hour)" },
+    { val: "ocean_night_bioluminescent", label: "🌌 Starlit Beach Pavilion (Bioluminescent Waves)" },
+    { val: "ocean_campfire_hearth", label: "🔥 Open-Air Beach Campfire & Night Surf" },
+    { val: "ocean_tropical_rain", label: "🌧️ Sheltered Balcony (Tropical Ocean Rain ASMR)" }
+  ],
   "relax/rain": [
     { val: "rainy_cabin_bedroom", label: "🛏️ Glass Cabin Bedroom (Rain on Panoramic Window)" },
     { val: "misty_forest_stream", label: "🌲 Temperate Rainforest Glacial Stream & Rain Caustics" },
@@ -212,6 +224,14 @@ const STUDIO_ARCHETYPES_MAP = {
     { val: "redwood_cathedral", label: "🌲 Giant California Redwood Cathedral & Dawn Sunbeams" },
     { val: "bali_sacred_water", label: "✨ Bali Sacred Water Temple & Lush Jungle Springs" }
   ],
+  "relax/desert": [
+    { val: "desert_daytime_tent", label: "☀️ Luxury Desert Tent (Daytime Dunes View)" },
+    { val: "desert_sunrise_tent", label: "🌅 Luxury Desert Tent (Sunrise Dawn & Steaming Tea)" },
+    { val: "desert_sunset_tent", label: "🌇 Luxury Desert Tent (Sunset Golden Hour)" },
+    { val: "desert_night_tent", label: "🌌 Luxury Desert Tent (Starlit Night Sky & Milky Way)" },
+    { val: "desert_campfire_hearth", label: "🔥 Desert Campfire & Bedouin Starlit Hearth" },
+    { val: "desert_rain_sanctuary", label: "🌧️ Luxury Desert Tent (Rare Rain on Canvas ASMR)" }
+  ],
   "relax/ambient": [
     { val: "nordic_aurora_fjord", label: "🌌 Nordic Aurora Borealis & Glacial Fjord Reflection" },
     { val: "twilight_alpine_valley", label: "✨ Velvet Twilight Sky & Glowing Mountain Cabin" },
@@ -246,6 +266,18 @@ const STUDIO_ARCHETYPES_MAP = {
 };
 
 const STUDIO_ARCHETYPE_HINTS = {
+  ocean_daytime_shore: "e.g. Shaded deck of luxury overwater villa looking out at vast turquoise lagoon and rolling waves in bright 5500K daylight, sheer curtains...",
+  ocean_sunrise_coast: "e.g. Dawn view from Mediterranean coastal veranda, sun rising over ocean horizon, steaming coffee on stone ledge, pastel morning sea mist...",
+  ocean_sunset_horizon: "e.g. Sunset golden hour from stone cliffside terrace, fiery molten gold horizon reflecting across rolling Pacific swells, evening breeze...",
+  ocean_night_bioluminescent: "e.g. Midnight open-air beachfront cabana looking out at gentle dark ocean waves glowing with electric-blue bioluminescence, starlit sky, zero fire...",
+  ocean_campfire_hearth: "e.g. Cozy driftwood campfire burning in beach stone pit at dark twilight, rhythmic dark ocean surf in immediate background...",
+  ocean_tropical_rain: "e.g. Sheltered teak balcony during warm tropical rain, gentle raindrops creating ripples across calm turquoise ocean, rain ASMR...",
+  desert_daytime_tent: "e.g. View from inside luxury glamping tent looking out at vast golden dunes in bright 5500K daylight, sheer cream curtains, brass teapot...",
+  desert_sunrise_tent: "e.g. Dawn view from luxury desert tent, first morning sun rays cresting dunes, delicate steam from Moroccan mint tea glass...",
+  desert_sunset_tent: "e.g. Golden hour sunset over fiery terracotta dunes from inside Bedouin tent, long purple shadows, warm glowing brass lantern...",
+  desert_night_tent: "e.g. View looking out from dark cozy tent into deep indigo sky with glittering Milky Way galaxy, soft candle lantern, zero fire...",
+  desert_campfire_hearth: "e.g. Open-air Bedouin desert pavilion on sand dunes at midnight, Persian rugs, glowing brass lanterns, crackling stone hearth campfire...",
+  desert_rain_sanctuary: "e.g. Rare desert rain shower, gentle raindrops falling on canvas tent roof, damp ripples in golden sand, cozy warm shelter...",
   rainy_cabin_bedroom: "e.g. Cozy glass cabin bedroom in a misty pine forest during heavy rainfall, warm bedside lamp (2700K), rain on window...",
   misty_forest_stream: "e.g. Ancient mossy rainforest canopy with gentle stream and floating leaves...",
   alpine_peaks_meadow: "e.g. Towering Swiss Alps snow-capped jagged peaks, lush wildflower meadows, and crystal mountain stream...",

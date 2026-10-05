@@ -32,7 +32,7 @@ CORE_ALPINE_AQUATIC_ARCHETYPES: Dict[str, AtmosphericArchetype] = {
             "soft micro-breeze touching riverbank flowers, perfectly steady camera on tripod, tranquil living wallpaper cadence."
         ),
         acoustic_tags=(
-            "[velvet acoustic ambient], gentle Swiss mountain breeze, distant soft alpine cowbells, peaceful acoustic guitar and flute, "
+            "[velvet acoustic ambient], gentle Swiss mountain breeze, distant soft alpine cowbells, joyful resonant handpan and airy wooden flute, "
             "soothing 432Hz sleep tuning, -21 LUFS anti-fatigue master, zero harsh hiss"
         ),
         default_domain="landscape_solid",
@@ -159,7 +159,7 @@ CORE_ALPINE_AQUATIC_ARCHETYPES: Dict[str, AtmosphericArchetype] = {
             "Gentle rhythmic rise and fall of calm water against dock, soft golden morning light glints, soothing stationary shot."
         ),
         acoustic_tags=(
-            "[velvet acoustic ambient], gentle lap of water against dock, soft distant loon call, acoustic guitar and warm Rhodes piano, "
+            "[velvet acoustic ambient], gentle lap of water against dock, soft distant loon call, meditative Celtic harp and warm Rhodes piano, "
             "calm 432Hz tuning, anti-fatigue sleep master"
         ),
         default_domain="landscape_solid",
@@ -207,7 +207,7 @@ CORE_ALPINE_AQUATIC_ARCHETYPES: Dict[str, AtmosphericArchetype] = {
             "Hypnotic pulsing glow of warm embers, soft lick of fire flame, cozy soothing stationary perspective."
         ),
         acoustic_tags=(
-            "[velvet acoustic ambient], gentle de-popped campfire crackle, soft night crickets, warm acoustic guitar picking, "
+            "[velvet acoustic ambient], gentle de-popped campfire crackle, soft night crickets, joyful soothing handpan and singing bowl overtones, "
             "comforting sleep foley, -21 LUFS master, zero loud pop spikes"
         ),
         default_domain="landscape_solid",
@@ -255,7 +255,7 @@ CORE_ALPINE_AQUATIC_ARCHETYPES: Dict[str, AtmosphericArchetype] = {
             "Graceful flowing movement of sheer curtains in sea air, warm golden sunset light glinting on teak wood, calm shot."
         ),
         acoustic_tags=(
-            "[velvet acoustic ambient], distant muted ocean surf, gentle breeze through window, soft Rhodes piano and acoustic guitar, "
+            "[velvet acoustic ambient], distant muted ocean surf, gentle breeze through window, soft Rhodes piano and celestial harp chimes, "
             "cozy seaside sleep master, -21 LUFS"
         ),
         default_domain="landscape_solid",

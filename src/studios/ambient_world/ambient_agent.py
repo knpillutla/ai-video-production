@@ -25,6 +25,7 @@ async def main():
     parser.add_argument("--long-play-hours", type=float, default=None, help="Optional Long-Play stretch duration in hours (e.g. 1.0, 3.0, 8.0)")
     parser.add_argument("--fade-to-black-hours", type=float, default=None, help="Hours after which video fades to pure black OLED screen (e.g. 2.0)")
     parser.add_argument("--generate-short", action="store_true", help="Auto-generate 9:16 vertical Short/TikTok teaser")
+    parser.add_argument("--photos-only", action="store_true", help="Render only keyframe images for visual review")
     parser.add_argument("--title", type=str, default=None, help="Custom title")
     args = parser.parse_args()
 
@@ -38,6 +39,8 @@ async def main():
         print(f"Circadian Dimming:   Fades to Black Screen after {args.fade_to_black_hours} Hours")
     if args.generate_short:
         print("Shorts Teaser:       Auto-generating 9:16 vertical crop")
+    if args.photos_only:
+        print("Review Mode:         Photos Only (Keyframe Images)")
     print("=======================================================\n")
 
     sb = generate_ambient_storyboard(
@@ -52,6 +55,7 @@ async def main():
         long_play_hours=args.long_play_hours,
         fade_to_black_hours=args.fade_to_black_hours,
         generate_short=args.generate_short,
+        photos_only=args.photos_only,
     )
 
     print("\n=======================================================")

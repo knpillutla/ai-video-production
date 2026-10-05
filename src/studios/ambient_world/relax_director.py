@@ -253,7 +253,7 @@ def _build_deterministic_relax_screenplay(
         cast=[],  # Zero humans mandate for relaxation
         audio_master=RelaxAudioMasterSpec(
             audio_mode="ambient_nature",
-            suno_musical_tags=f"432Hz ambient, natural foley, {prompt}, tranquil water and wind, -14 LUFS",
+            suno_musical_tags=f"432Hz meditation, joyful handpan, singing bowls, velvet synth pads, {prompt}, deep stress relief, sleep drone, zero guitar, -21 LUFS",
             tempo_bpm=60,
             target_lufs=-14.0,
         ),

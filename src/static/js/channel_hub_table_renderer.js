@@ -28,6 +28,8 @@ function filterChannelManagementTable() {
 }
 
 const GENRE_LABELS = {
+  "relax/ocean": "🏖️ Ocean",
+  "relax/desert": "🏜️ Desert",
   "relax/nature": "🏔️ Nature",
   "relax/healing": "✨ 528Hz",
   "relax/zen": "🪷 Zen",
