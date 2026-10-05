@@ -57,7 +57,7 @@ def apply_binaural_spatial_mastering(
     filter_complex = (
         f"{binaural_bed};"
         f"[0:a]{velvet_eq}[center_music];"
-        f"[center_music][binaural_bed]amix=inputs=2:weights=1.0 0.15:normalize=0,"
+        f"[center_music][binaural_bed]amix=inputs=2:weights=1.0 0.15:normalize=0:duration=first,"
         f"loudnorm=I={target_lufs}:TP=-2.0:LRA=7.0[aout]"
     )
 
