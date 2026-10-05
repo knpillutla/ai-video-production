@@ -63,7 +63,7 @@ def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf
     base_stem = clip_path.stem.replace("_fwd_seamless", "")
     out_seamless = clip_path.parent / f"{base_stem}_fwd_seamless.mp4"
 
-    duration = _probe_clip_duration(clip_path)
+    duration = get_media_duration(clip_path)
     if duration <= xfade_dur + 0.5:
         return clip_path
 

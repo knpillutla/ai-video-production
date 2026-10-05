@@ -22,7 +22,7 @@ def get_relaxation_pipeline_constraints(archetype: str = "") -> str:
             "1. DAYTIME DESERT MANDATE: View from INSIDE an ultra-luxury glamping tent looking out at vast golden sand dunes in natural DAYTIME sunlight (5500K) under clear blue sky. Strictly NO night, NO midnight, NO campfire, NO stars, NO darkness.\n"
             "2. INSIDE-OUT TENT FRAMING: Shaded pavilion interior framing the view, sheer cream linen curtains fluttering in breeze, low carved table with Moroccan brass teapot and mint tea glasses, rich Berber kilims.\n"
             "3. DAYTIME CRISP ILLUMINATION: 5500K natural daylight, sun caustics on sand ripples, zero harsh glare, zero 2200K amber nighttime wash.\n"
-            "4. AUDIO MASTER: 432Hz joyful meditative daytime soundbath, handpan, singing bowls, nay flute, gentle desert breeze through linen, zero night foley, zero campfire crackle, zero solo guitar, -21 LUFS.\n"
+            "4. AUDIO MASTER: 432Hz ultra-slow (50 BPM) meditative desert soundbath, airy wooden ney flute, qanun, soft daf heartbeat pulse, gentle desert breeze through linen, zero campfire crackle, -21 LUFS.\n"
         )
     if "desert" in arch_l or "dune" in arch_l:
         return (
@@ -81,9 +81,8 @@ def build_ambient_directorial_prompt(
         concept_anchor = custom_prompt or "Desert Starlit Campfire & Bedouin Pavilion: Open-air luxury Bedouin pavilion on high sand dunes at midnight, Persian rugs, glowing brass Moroccan lanterns, crackling campfire embers, starlit Milky Way sky"
     else:
         concept_anchor = custom_prompt or (
-          "No user prompt supplied; select a notable destination matching the genre and archetype using grounded search."
-          if google_search_enabled else
-          "No user prompt supplied; select a notable destination matching the genre and archetype using built-in knowledge."
+            "No user prompt supplied; select a notable destination matching the genre and archetype using grounded search."
+            if google_search_enabled else "No user prompt supplied; select a notable destination matching the genre and archetype using built-in knowledge."
         )
 
     relaxation_guardrails = get_relaxation_pipeline_constraints(archetype) if "relax" in genre.lower() or "nature" in genre.lower() else ""
@@ -92,15 +91,13 @@ def build_ambient_directorial_prompt(
     if excluded_topics:
         cleaned_excl = "\n".join(f"- {t}" for t in excluded_topics if t)
         if cleaned_excl:
-            exclusion_block = f"""
-======================================================================
-PREVIOUSLY PRODUCED TOPICS (STRICT DO-NOT-REPEAT EXCLUSION LIST - Rule 10):
-======================================================================
-The following topics/destinations have ALREADY been produced in this channel. You MUST NOT duplicate these concepts:
-{cleaned_excl}
-If the user provided a broad topic, select a fresh, novel, completely DIFFERENT world sanctuary that is not on this list.
-If the user provided the same landmark, autonomously pivot to a distinct sub-vantage point, season, or atmospheric condition.
-"""
+            exclusion_block = (
+                "\n======================================================================\n"
+                "PREVIOUSLY PRODUCED TOPICS (STRICT DO-NOT-REPEAT EXCLUSION LIST - Rule 10):\n"
+                "======================================================================\n"
+                f"You MUST NOT duplicate these concepts:\n{cleaned_excl}\n"
+                "Autonomously pivot to a fresh, distinct destination, season, or perspective.\n"
+            )
 
     return f"""You are the Lead Nature Cinematographer & Velvet Acoustic Soundscape Director for CineAI Studio.
 Your mission is to synthesize an 8K broadcast-grade master directorial screenplay for a PURE NATURE / AMBIENT SOUNDSCAPE production conforming strictly to the RelaxScreenplay JSON schema.
@@ -167,10 +164,17 @@ STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
    - Always provide "motion_negative_prompt" and model-specific negative prompts containing: "clouds, cloudy, overcast sky, cumulus, stratus, cirrus, storm clouds, dark clouds, moving clouds, timelapse clouds, rapid clouds, rolling clouds, cloud morphing, rapid cloud shadows, camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings"
 
 9. AUTONOMOUS LANDMARK DISCOVERY (WHEN NO PROMPT IS PROVIDED):
-  - Use the supplied genre and archetype to choose a real, geographically accurate destination; do not substitute a generic or unrelated default location.
-  - {landmark_research_directive}
-  - Select one destination and derive a fresh title and story around its authentic landscape, while excluding previously produced topics listed above.
-  - If the user supplied a prompt, treat it as the creative anchor and do not replace it with an unrelated destination.
+   - Use the supplied genre and archetype to choose a real, geographically accurate destination; do not substitute a generic or unrelated default location.
+   - {landmark_research_directive}
+   - Select one destination and derive a fresh title and story around its authentic landscape, while excluding previously produced topics listed above.
+   - If the user supplied a prompt, treat it as the creative anchor and do not replace it with an unrelated destination.
+
+10. BESPOKE HUMMABLE SLOW MOTIF AUDIO DIRECTIVE (MANDATORY NOVELTY FOR EVERY CREATION):
+   - You MUST synthesize a bespoke "suno_prompt" and "suno_musical_tags" tailored to the exact destination, landscape, and time-of-day. Every creation must sound fresh and distinct.
+   - Compose a hummable slow motif rhythm at 48-52 BPM (resting heartbeat entrainment) with gentle breathing pauses.
+   - Choose authentic solo instruments (Ney flute for Middle East/Arabian desert; Alpine flute/Zither for Alps; Shakuhachi/Koto for Japan; Bansuri for Himalayas; Handpan/Kalimba for coastal; Cedar flute for American woodlands; Felted piano/Cello for cozy hearths).
+   - Solfeggio 432Hz/528Hz velvet bed; joyful, enlightened, lovely, soothing anxiety, and inducing restorative sleep.
+   - STRICT ZERO: zero fast arpeggios, zero guitars, zero upbeat percussion, zero generic synth washes.
 {exclusion_block}
 ======================================================================
 PRODUCTION SPECIFICATIONS:
@@ -217,10 +221,11 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
     "audio_mode": "ambient_nature",
     "spoken_narration_script": "Optional one-sentence poetic environmental lore",
     "singing_lyrics_spec": "",
-    "suno_musical_tags": "432Hz meditative soundbath, joyful uplifting handpan, singing bowls, warm velvet synth pads, celtic harp, deep stress relief, peaceful sleep drone, zero solo guitar, -21 LUFS",
+    "suno_musical_tags": "Autonomously author fresh tags: 432Hz Solfeggio, authentic solo cultural instrument (e.g. airy wooden ney flute, bansuri, handpan), warm velvet pads, 50 BPM slow heartbeat rhythm, deep stress relief, sleep drone, -21 LUFS",
+    "suno_prompt": "Autonomously compose bespoke hummable motif prompt: e.g. [Instrumental Meditative Landscape]\\n[Tempo: 50 BPM - Slow Resting Heartbeat Rhythm]\\n[Tuning: 432Hz Solfeggio Velvet Bed]\\n[Lead Motif: Gentle hummable 5-note melodic motif on <Solo Cultural Instrument> with soft breathing pauses]\\n[Accompaniment: Plucked <Secondary Texture> & resonant drone]\\n[Atmosphere: Warm velvet ambient pads, tranquil, zero guitars, zero fast arpeggios]\\n[Emotion: Joyful, enlightened, lovely, deep stress and anxiety reduction, peaceful sleep]\\n[Outro: Infinite peaceful dissolve]",
     "vocal_gender": "none",
-    "tempo_bpm": 64,
-    "target_lufs": -14.0,
+    "tempo_bpm": 50,
+    "target_lufs": -21.0,
     "ducking_db": -18.0
   }},
   "scenes": [

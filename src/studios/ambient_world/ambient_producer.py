@@ -205,6 +205,7 @@ class AmbientWorldProducer:
                         episode_id=ep_dir.name,
                         archetype=eff_archetype,
                         force_rerun=force_rerun and audio_only,
+                        prompt=getattr(sb, "audio_prompt", None),
                     )
                     await asyncio.to_thread(apply_binaural_spatial_mastering, input_audio=raw_bgm_path, output_audio=master_bgm_path, target_lufs=-21.0)
                 else:

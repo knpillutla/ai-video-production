@@ -275,6 +275,7 @@ def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> AmbientStoryboard:
         total_duration=sp.total_duration_seconds,
         recommended_fps=sp.recommended_fps,
         audio_tags=sp.audio_master.suno_musical_tags if sp.audio_master else "",
+        audio_prompt=getattr(sp.audio_master, "suno_prompt", "") if sp.audio_master else "",
         scenes=[
             AmbientScenePrompt(
                 scene_index=s.scene_index,

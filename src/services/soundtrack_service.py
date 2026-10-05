@@ -30,6 +30,7 @@ class SoundtrackService:
         min_cooldown: int = 10,
         archetype: Optional[str] = None,
         force_rerun: bool = False,
+        prompt: Optional[str] = None,
     ) -> Path:
         """Fetch matching acoustic stem from AudioVault (respecting cultural keys & 10-video cooldown) or synthesize via Suno."""
         out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,13 +46,16 @@ class SoundtrackService:
             tags=tags,
         )
 
+        eff_prompt = prompt.strip() if prompt and prompt.strip() else profile.suno_prompt
+        clean_tags = tags.strip() if tags and tags.strip() and "guitar" not in tags.lower() else profile.suno_tags
+
         # Rule 3 Tier 1 & 3: AudioVault Local Stem Cache Check with Cultural Key Isolation ($0.00 spend)
         if not force_rerun:
             cached = audio_vault.find_matching_stem(
                 genre=f"{genre} {profile.culture_key}",
                 theme=title,
                 concept=profile.lead_instrument,
-                tags=f"{tags} {profile.culture_key}",
+                tags=f"{clean_tags} {profile.culture_key}",
                 min_similarity=0.70,
                 current_episode_id=episode_id,
                 min_cooldown=min_cooldown,
@@ -69,13 +73,13 @@ class SoundtrackService:
         await adapter.generate_to_file(
             output_path=out_path,
             genre=f"{genre}, {profile.culture_key}, {profile.scale_and_tuning}, {profile.lead_instrument}",
-            mood=profile.suno_tags[:120],
+            mood=clean_tags[:120],
             duration_seconds=total_duration,
-            lyrics=profile.suno_prompt,
+            lyrics=eff_prompt,
             vocal_gender="none",
             title=title,
             episode_id=episode_id,
-            force_live=False,
+            force_live=force_rerun,
         )
 
         if out_path.is_file() and out_path.stat().st_size > 1000:

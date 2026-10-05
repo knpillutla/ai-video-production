@@ -181,7 +181,7 @@ class SunoMusicAdapter(MusicProviderProtocol):
         out.parent.mkdir(parents=True, exist_ok=True)
 
         # Rule 3 Tier 1: Local Disk Check
-        if out.exists() and out.stat().st_size > 1000:
+        if not force_live and out.exists() and out.stat().st_size > 1000:
             logger.info(f"suno_track_cache_hit: reusing existing soundtrack {out.name} ({out.stat().st_size} bytes)")
             return out
 
@@ -190,7 +190,7 @@ class SunoMusicAdapter(MusicProviderProtocol):
         audio_url = None
 
         # Rule 3 Tier 1.5: Persistent .suno_url Sidecar Re-download ($0.00 spend)
-        if url_sidecar.is_file() and url_sidecar.stat().st_size > 10:
+        if not force_live and url_sidecar.is_file() and url_sidecar.stat().st_size > 10:
             cached_url = url_sidecar.read_text(encoding="utf-8").strip()
             if cached_url.startswith("http"):
                 logger.info(f"suno_url_sidecar_hit: re-downloading existing audio from {cached_url} ($0.00 spend)")

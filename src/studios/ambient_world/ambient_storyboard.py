@@ -33,12 +33,12 @@ class AmbientStoryboard(BaseModel):
     total_duration: float = 60.0
     recommended_fps: int = 24
     audio_tags: str = ""
+    audio_prompt: Optional[str] = ""
     scenes: List[AmbientScenePrompt] = Field(default_factory=list)
 
     @field_validator("audio_tags", mode="before")
     @classmethod
-    def normalize_audio_tags(cls, v):
-        return normalize_audio_tags(v)
+    def normalize_audio_tags(cls, v): return normalize_audio_tags(v)
 
 
 def resolve_archetype(key_or_name: str) -> AtmosphericArchetype:

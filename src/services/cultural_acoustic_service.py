@@ -188,6 +188,50 @@ CULTURAL_PROFILES: dict[str, dict[str, str]] = {
 }
 
 
+MOTIF_VARIATIONS: dict[str, list[str]] = {
+    "desert": [
+        "Gentle ascending 5-note Maqam Bayati motif with lingering breath pauses",
+        "Tranquil descending Hijaz phrase resolving into warm desert drone",
+        "Slow meditative call-and-response between airy Ney flute and plucked acoustic Qanun",
+    ],
+    "swiss_alps": [
+        "Luminous 4-note major pentatonic pastoral motif echoing across green meadows",
+        "Gentle 6-note alpine lullaby phrasing pacing every 6 seconds",
+        "Warm melodic duet between wooden alpine flute and plucked acoustic zither",
+    ],
+    "zen": [
+        "In-sen pentatonic Shakuhachi phrase opening into transcendent lotus stillness",
+        "Subtle 3-note bamboo breath motif accompanied by soft bronze temple bell",
+        "Gentle Koto harmonic motif floating above tranquil water droplet ripples",
+    ],
+    "himalayas": [
+        "Mesmerizing 5-note Bansuri phrase echoing over deep Tibetan singing bowls",
+        "Ascending meditative flute melody with gentle handpan heartbeat cadence",
+        "Peaceful morning raga motif dissolving into sacred mountain mist",
+    ],
+    "ocean": [
+        "5-note handpan circular motif rolling with gentle shoreline waves",
+        "Plucked kalimba melodic lullaby intertwined with warm rhodes electric piano",
+        "Slow hypnotic 4-bar handpan melody dissolving into sun-kissed surf foley",
+    ],
+    "forest": [
+        "Serene 4-note cedar flute melody floating on morning canopy breeze",
+        "Gentle harp arpeggios embracing a slow, hummable woodland flute theme",
+        "Peaceful forest stream melody with soft crystalline glass chimes",
+    ],
+    "hearth": [
+        "Intimate 4-bar felted piano lullaby theme with warm cello responses",
+        "Gentle descending piano motif accompanied by crackling hearth embers",
+        "Soothing evening melody dissolving into warm velvet wool blanket pads",
+    ],
+    "rain": [
+        "Hypnotic 5-note singing crystal handpan phrase over windowpane rain ASMR",
+        "Calming bamboo chime motif with lingering cello harmonic sighs",
+        "Slow steady rain lullaby melody pacing with rhythmic droplet ripples",
+    ],
+}
+
+
 def resolve_cultural_acoustic_profile(
     archetype: str = "",
     sub_genre: str = "",
@@ -214,10 +258,21 @@ def resolve_cultural_acoustic_profile(
     elif any(k in combo for k in ["forest", "woodland", "trees", "komorebi", "river glade", "redwood"]):
         key = "forest"
     else:
-        # Default for universal nature and relaxation: harmonious handpan & flute
         key = "ocean" if "water" in combo else "swiss_alps"
 
     raw = CULTURAL_PROFILES[key]
+    import hashlib
+    h = int(hashlib.md5(combo.encode()).hexdigest(), 16)
+    motifs = MOTIF_VARIATIONS.get(key, [])
+    selected_motif = motifs[h % len(motifs)] if motifs else ""
+
+    suno_prompt = raw["suno_prompt"]
+    if selected_motif and "[Lead Melody: " in suno_prompt:
+        suno_prompt = suno_prompt.replace(
+            "[Lead Melody: ",
+            f"[Lead Motif: {selected_motif}]\n[Lead Melody: "
+        )
+
     return CulturalAcousticProfile(
         culture_key=raw["culture_key"],
         lead_instrument=raw["lead_instrument"],
@@ -226,5 +281,5 @@ def resolve_cultural_acoustic_profile(
         rhythm_and_tempo=raw["rhythm_and_tempo"],
         emotional_purpose=raw["emotional_purpose"],
         suno_tags=raw["suno_tags"],
-        suno_prompt=raw["suno_prompt"],
+        suno_prompt=suno_prompt,
     )

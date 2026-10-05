@@ -58,8 +58,9 @@ class RelaxAudioMasterSpec(BaseModel):
     spoken_narration_script: Optional[str] = ""
     singing_lyrics_spec: Optional[str] = ""
     suno_musical_tags: str = "432Hz ambient, natural foley, soft acoustic drone, stereo spatial acoustics, -14 LUFS"
+    suno_prompt: Optional[str] = ""
     vocal_gender: str = "female"
-    tempo_bpm: int = 64
+    tempo_bpm: int = 52
     speech_cadence_wpm: int = 125
     traditional_instruments: List[str] = Field(default_factory=list)
     target_lufs: float = -14.0
