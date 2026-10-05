@@ -164,13 +164,13 @@ async def generate_desert_screenplay_gemini(
 
         try:
             await topic_memory.remember_topic(
-                channel_id=eff_channel,
                 topic=screenplay.story_topic or screenplay.title,
-                metadata={
-                    "genre": screenplay.genre,
-                    "archetype": screenplay.primary_archetype,
-                    "title": screenplay.title,
-                },
+                genre=screenplay.genre or "relax/desert",
+                tags=[screenplay.primary_archetype or "desert"],
+                story_synopsis=screenplay.story_topic or screenplay.title,
+                episode_id="",
+                user_id=user_id,
+                channel_id=eff_channel,
             )
         except Exception as mem_ex:
             logger.warning(f"desert_topic_memory_record_failed: {mem_ex}")

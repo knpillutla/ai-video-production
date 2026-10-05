@@ -150,6 +150,7 @@ async def produce_channel_video(
         except Exception:
             pass
 
+    is_downstream_stage = bool(photos_only or motion_only or audio_only or master_only)
     inputs_match = (
         saved_inputs.get("input_schema_version") == 1
         and saved_inputs.get("screenplay_generation_status") == "completed"
@@ -158,26 +159,27 @@ async def produce_channel_video(
         and saved_inputs.get("num_shots") == num_shots
     )
     existing_sp = None
-    if not force_rerun and inputs_match and screenplay_file and screenplay_file.is_file() and screenplay_file.stat().st_size > 50:
-        try:
-            sp_data = json.loads(screenplay_file.read_text("utf-8"))
-            is_legacy_fallback = (
-                str(sp_data.get("title", "")).startswith("8K Living Wallpaper:")
-                and str(sp_data.get("story_topic", "")).startswith(
-                    "Ultra-tranquil living wallpaper soundscape capturing "
+    if not force_rerun and screenplay_file and screenplay_file.is_file() and screenplay_file.stat().st_size > 50:
+        if inputs_match or is_downstream_stage:
+            try:
+                sp_data = json.loads(screenplay_file.read_text("utf-8"))
+                is_legacy_fallback = (
+                    str(sp_data.get("title", "")).startswith("8K Living Wallpaper:")
+                    and str(sp_data.get("story_topic", "")).startswith(
+                        "Ultra-tranquil living wallpaper soundscape capturing "
+                    )
                 )
-            )
-            if is_legacy_fallback:
-                logger.warning(f"ignoring_legacy_fallback_screenplay: episode='{episode_id}'")
-            else:
-                existing_sp = RelaxScreenplay(**sp_data)
-                if num_shots and len(existing_sp.scenes) != num_shots:
-                    logger.info(f"screenplay_cache_shot_count_mismatch: episode='{episode_id}' requested={num_shots} cached={len(existing_sp.scenes)}; regenerating")
-                    existing_sp = None
+                if is_legacy_fallback:
+                    logger.warning(f"ignoring_legacy_fallback_screenplay: episode='{episode_id}'")
                 else:
-                    logger.info(f"reusing_existing_screenplay: episode='{episode_id}' title='{existing_sp.title}'")
-        except Exception as ex:
-            logger.warning(f"screenplay_read_error: {ex}")
+                    existing_sp = RelaxScreenplay(**sp_data)
+                    if num_shots and len(existing_sp.scenes) != num_shots and not is_downstream_stage:
+                        logger.info(f"screenplay_cache_shot_count_mismatch: episode='{episode_id}' requested={num_shots} cached={len(existing_sp.scenes)}; regenerating")
+                        existing_sp = None
+                    else:
+                        logger.info(f"reusing_existing_screenplay: episode='{episode_id}' title='{existing_sp.title}'")
+            except Exception as ex:
+                logger.warning(f"screenplay_read_error: {ex}")
 
     if existing_sp and existing_sp.scenes:
         effective_shots = len(existing_sp.scenes)
@@ -186,15 +188,20 @@ async def produce_channel_video(
     else:
         effective_shots = 1
 
+    eff_genre_final = getattr(existing_sp, "genre", None) or eff_genre
+    sub_genre_final = getattr(existing_sp, "sub_genre", None) or (sub_genre or "")
+    primary_archetype_final = getattr(existing_sp, "primary_archetype", None) or (primary_archetype or "")
+    prompt_final = (getattr(existing_sp, "story_topic", None) or prompt or "") if is_downstream_stage else (prompt or "")
+
     user_inputs_payload = {
         "input_schema_version": 1,
-        "prompt": prompt or "",
+        "prompt": prompt_final,
         "channel_id": channel_id,
-        "genre": eff_genre,
-        "sub_genre": sub_genre or "",
-        "primary_archetype": primary_archetype or "",
-        "selected_options": selected_options,
-        "screenplay_generation_status": "pending",
+        "genre": eff_genre_final,
+        "sub_genre": sub_genre_final,
+        "primary_archetype": primary_archetype_final,
+        "selected_options": selected_options if not is_downstream_stage else saved_inputs.get("selected_options", selected_options),
+        "screenplay_generation_status": "completed" if existing_sp else "pending",
         "episode_id": episode_id or "EP-001",
         "user_id": effective_user,
         "duration_seconds": duration_seconds,
@@ -209,7 +216,7 @@ async def produce_channel_video(
     if user_inputs_file:
         try:
             from datetime import datetime, timezone
-            user_inputs_payload["created_at"] = datetime.now(timezone.utc).isoformat()
+            user_inputs_payload["created_at"] = saved_inputs.get("created_at") or datetime.now(timezone.utc).isoformat()
             user_inputs_file.parent.mkdir(parents=True, exist_ok=True)
             user_inputs_file.write_text(json.dumps(user_inputs_payload, indent=2, ensure_ascii=False), encoding="utf-8")
             logger.info(f"user_inputs_saved: {user_inputs_file.name}")
@@ -235,7 +242,7 @@ async def produce_channel_video(
 
     if episode_id:
         universal_sp.production_id = episode_id
-    if screenplay_file:
+    if screenplay_file and not existing_sp:
         try:
             screenplay_file.parent.mkdir(parents=True, exist_ok=True)
             screenplay_file.write_text(json.dumps(universal_sp.model_dump(), indent=2), encoding="utf-8")

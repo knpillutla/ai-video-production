@@ -250,12 +250,12 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           ? parseFloat(document.getElementById("studio-stretch-hours")?.value || "3.0")
           : (typeof activeBroadcastHours !== "undefined" ? activeBroadcastHours : (vid.longPlayHours || 0)),
         camera_motion: document.getElementById("studio-camera-motion")?.value || "locked_tripod",
-        genre: document.getElementById("studio-genre-selector")?.value || vid.genre || "relax/nature",
-        genre_label: document.getElementById("studio-genre-selector")?.selectedOptions?.[0]?.textContent?.trim() || "",
-        sub_genre: document.getElementById("studio-subgenre-selector")?.value || vid.sub_genre || null,
-        sub_genre_label: document.getElementById("studio-subgenre-selector")?.selectedOptions?.[0]?.textContent?.trim() || "",
-        primary_archetype: document.getElementById("studio-archetype-selector")?.value || vid.primary_archetype || null,
-        primary_archetype_label: document.getElementById("studio-archetype-selector")?.selectedOptions?.[0]?.textContent?.trim() || "",
+        genre: vid.genre || document.getElementById("studio-genre-selector")?.value || "relax/nature",
+        genre_label: vid.genreLabel || document.getElementById("studio-genre-selector")?.selectedOptions?.[0]?.textContent?.trim() || "",
+        sub_genre: vid.sub_genre || vid.subGenre || document.getElementById("studio-subgenre-selector")?.value || null,
+        sub_genre_label: vid.subGenreLabel || document.getElementById("studio-subgenre-selector")?.selectedOptions?.[0]?.textContent?.trim() || "",
+        primary_archetype: vid.primary_archetype || vid.primaryArchetype || document.getElementById("studio-archetype-selector")?.value || null,
+        primary_archetype_label: vid.primaryArchetypeLabel || document.getElementById("studio-archetype-selector")?.selectedOptions?.[0]?.textContent?.trim() || "",
         force_rerun: Boolean(vid.force_rerun)
       })
     });

@@ -164,13 +164,13 @@ async def generate_ocean_screenplay_gemini(
 
         try:
             await topic_memory.remember_topic(
-                channel=eff_channel,
                 topic=screenplay.story_topic or screenplay.title,
-                metadata={
-                    "genre": "relax/ocean",
-                    "archetype": screenplay.primary_archetype,
-                    "title": screenplay.title,
-                },
+                genre="relax/ocean",
+                tags=[screenplay.primary_archetype or "ocean"],
+                story_synopsis=screenplay.story_topic or screenplay.title,
+                episode_id="",
+                user_id=user_id,
+                channel_id=eff_channel,
             )
         except Exception as mem_ex:
             logger.warning(f"ocean_topic_memory_record_failed: {mem_ex}")

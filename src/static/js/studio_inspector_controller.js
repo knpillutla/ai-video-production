@@ -64,6 +64,22 @@ function renderInspectorFromVideo(vid) {
   setT("panel-header-meta", `${vid.format || vid.formatType || "4K UHD"} • ${vid.fps || "24 FPS"}${cost}`);
   setT("panel-header-title", vid.title || "4K Master Inspector"); setT("panel-header-story", `Story: ${vid.story_topic || vid.concept || vid.theme || "Master Artifacts"}`);
 
+  if (vid.genre) {
+    const gSel = document.getElementById("studio-genre-selector");
+    if (gSel && gSel.value !== vid.genre) {
+      gSel.value = vid.genre;
+      if (typeof onGenreChange === "function") onGenreChange(vid.genre);
+    }
+    if (vid.sub_genre) {
+      const subSel = document.getElementById("studio-subgenre-selector");
+      if (subSel) subSel.value = vid.sub_genre;
+    }
+    if (vid.primary_archetype) {
+      const archSel = document.getElementById("studio-archetype-selector");
+      if (archSel) archSel.value = vid.primary_archetype;
+    }
+  }
+
   const statusBadge = document.getElementById("top-ep-status-badge");
   if (statusBadge) {
     if (vid.status === "failed") {

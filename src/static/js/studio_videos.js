@@ -90,6 +90,9 @@ async function syncChannelEpisodesFromBackend() {
         return {
           id: ep.episode_id, jobId: `job_${ep.episode_id}`, title: ep.title || ep.story_topic,
           concept: ep.story_topic || ep.title, videoType: ep.category === "Music" ? "Relaxation & ASMR" : "Nature Soundscape",
+          genre: ep.genre || ep.screenplay?.genre || ep.user_inputs?.genre || ep.manifest?.genre || "relax/nature",
+          sub_genre: ep.sub_genre || ep.screenplay?.sub_genre || ep.user_inputs?.sub_genre || ep.manifest?.sub_genre || null,
+          primary_archetype: ep.primary_archetype || ep.screenplay?.primary_archetype || ep.user_inputs?.primary_archetype || ep.manifest?.primary_archetype || null,
           formatType: "Long (16:9)", styleType: "Cinematic 4K", productionType: "Theme",
           channelId: ep.channel_id,
           numShots: sceneCount, num_shots: sceneCount,
