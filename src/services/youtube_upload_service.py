@@ -112,6 +112,7 @@ def upload_single_video(
     media = MediaFileUpload(str(video_path), chunksize=1024 * 1024 * 8, resumable=True)
     request = youtube_client.videos().insert(part="snippet,status,contentDetails", body=body, media_body=media)
 
+    progress_cb = kwargs.get("progress_callback")
     print(f"\n[UPLOADING] {video_path.name} ({video_path.stat().st_size / (1024*1024):.1f} MB)...")
     response = None
     while response is None:
@@ -119,6 +120,8 @@ def upload_single_video(
         if status:
             pct = int(status.progress() * 100)
             print(f"   ... Upload progress: {pct}%")
+            if progress_cb:
+                progress_cb(pct)
 
     video_id = response.get("id")
     video_url = f"https://youtu.be/{video_id}"
@@ -127,8 +130,9 @@ def upload_single_video(
     # Set Custom Thumbnail if available
     if thumbnail_path and thumbnail_path.is_file():
         try:
-            thumb_media = MediaFileUpload(str(thumbnail_path))
+            thumb_media = MediaFileUpload(str(thumbnail_path), mimetype="image/jpeg", resumable=True)
             youtube_client.thumbnails().set(videoId=video_id, media_body=thumb_media).execute()
+            logger.info(f"thumbnail_applied_successfully: video_id={video_id} file={thumbnail_path.name}")
             print(f"   [THUMBNAIL SET] Applied: {thumbnail_path.name}")
         except Exception as e:
             logger.warning(f"thumbnail_upload_failed: {e}")

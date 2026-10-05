@@ -174,7 +174,7 @@ STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
    - Compose a hummable slow motif rhythm at 48-52 BPM (resting heartbeat entrainment) with gentle breathing pauses.
    - Choose authentic solo instruments (Ney flute for Middle East/Arabian desert; Alpine flute/Zither for Alps; Shakuhachi/Koto for Japan; Bansuri for Himalayas; Handpan/Kalimba for coastal; Cedar flute for American woodlands; Felted piano/Cello for cozy hearths).
    - Solfeggio 432Hz/528Hz velvet bed; joyful, enlightened, lovely, soothing anxiety, and inducing restorative sleep.
-   - STRICT ZERO: zero fast arpeggios, zero guitars, zero upbeat percussion, zero generic synth washes.
+   - STRICT ZERO: zero fast arpeggios, zero guitars, zero upbeat percussion, zero generic synth washes, zero simulated wind noise (demand pristine crystal-clear studio recording, zero background hiss).
 {exclusion_block}
 ======================================================================
 PRODUCTION SPECIFICATIONS:
@@ -286,7 +286,7 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
     }}
   ],
   "publishing": {{
-    "ctr_titles": ["Title Option 1", "Title Option 2"],
+    "ctr_titles": ["3 HOURS of Deep Serenity in [Scene] ⋄ 432Hz Soundbath - 4K UHD", "Sleep Under [Scene] ✦ 432Hz Miracle Tone for Deep Rest - 4K", "[Scene] Living Wallpaper ⋄ 4K 60FPS Ambient Serenity"],
     "description_with_timestamps": "SEO YouTube description with timestamps...",
     "seo_tags": ["nature soundscape", "relaxing waterfall", "8k living wallpaper"],
     "has_synthetic_media": true,

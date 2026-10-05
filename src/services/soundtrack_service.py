@@ -83,6 +83,23 @@ class SoundtrackService:
         )
 
         if out_path.is_file() and out_path.stat().st_size > 1000:
+            try:
+                from src.services.audio_denoise_service import separate_and_denoise_soundtrack
+                noise_stem = out_path.parent / "noise_stem.wav"
+                cleaned_tmp = out_path.parent / f"{out_path.stem}_cleaned{out_path.suffix}"
+                separate_and_denoise_soundtrack(
+                    input_audio=out_path,
+                    clean_output=cleaned_tmp,
+                    noise_stem_output=noise_stem,
+                    force_rerun=force_rerun,
+                )
+                if cleaned_tmp.is_file() and cleaned_tmp.stat().st_size > 1000:
+                    shutil.copy2(cleaned_tmp, out_path)
+                    cleaned_tmp.unlink(missing_ok=True)
+                    logger.info(f"soundtrack_cleaned_and_noise_stem_separated: {out_path.name}, noise_stem='{noise_stem.name}'")
+            except Exception as err:
+                logger.warning(f"audio_denoise_postprocess_warning: {err}")
+
             audio_vault.register_stem(
                 source_path=out_path,
                 genre=f"{genre} {profile.culture_key}",

@@ -253,20 +253,16 @@ function onLedgerRowClick(event, id, channelId) {
 }
 
 function publishVideoToYouTube(jobId) {
-  const vid = studioVideos.find(v => v.jobId === jobId);
+  const vid = studioVideos.find(v => v.jobId === jobId || v.id === jobId);
   if (!vid) return;
-  vid.youtubeStatus = "published";
-  vid.publishedAt = Date.now();
-  vid.youtubeUrl = "https://youtube.com/watch?v=mock_" + Math.floor(Math.random() * 89999 + 10000);
-  vid.youtubeChannel = "@telugucomedyhub";
-  saveVideosState();
-  renderStudioVideoHistory();
-  showStudioModal({
-    title: "Video Syndicated to YouTube",
-    message: `"${vid.title}" published to ${vid.youtubeChannel} on ${formatTimestamp(vid.publishedAt)}.`,
-    nextStep: "Published timestamp recorded and saved permanently."
-  });
+  const epId = vid.episode_id || vid.id || "EP-001";
+  const chSlug = vid.channelId || vid.channel_id || (typeof selectedStudioChannel !== "undefined" ? selectedStudioChannel : "earth_serenade");
+  const title = vid.title || "4K Master Experience";
+  if (typeof openPublishModal === "function") {
+    openPublishModal(epId, chSlug, title);
+  }
 }
+
 
 function refreshStudioLedger() {
   const icon = document.getElementById("ledger-refresh-icon");

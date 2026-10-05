@@ -259,9 +259,9 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
   ],
   "publishing": {{
     "ctr_titles": [
-      "Authentic High-CTR Title 1 | 4K Living Wallpaper",
-      "Authentic High-CTR Title 2 | Deep Nature Relaxation",
-      "Authentic High-CTR Title 3 | Pure Soundscape 60 FPS"
+      "3 HOURS of Deep Serenity in [Landmark] ⋄ 432Hz Healing Soundbath to Calm Your Mind - 4K UHD",
+      "Sleep Under [Landmark Sky/Nature] ✦ 432Hz Miracle Tone for Instant Anxiety Relief & Rest - 4K",
+      "[Landmark] Living Wallpaper ⋄ 4K 60FPS Ambient Living Room & Soothing Resonance"
     ],
     "description_with_timestamps": "Immerse yourself in the majestic beauty of [Landmark Name]. Filmed with broadcast 4K clarity, authentic spatial acoustics, and tranquil soundscapes.\\n\\n⏱️ Chapters:\\n0:00 - Sanctuary Vista\\n\\n🌿 Sanctuary Details:\\n- Location: [Landmark Name], [Country]\\n- Audio: 432Hz Natural Spatial Soundscape\\n- Mastered for deep sleep, meditation, and focus.",
     "seo_tags": ["nature relaxation", "living wallpaper", "4k nature", "meditation soundscape", "sleep aid", "ambient nature"],

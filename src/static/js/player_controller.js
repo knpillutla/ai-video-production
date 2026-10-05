@@ -92,8 +92,12 @@ function closeVideoPlayerModal() {
 }
 
 function publishCurrentPlayingVideo() {
-  if (currentlyPlayingVideo && typeof publishVideoToYouTube === "function") {
-    publishVideoToYouTube(currentlyPlayingVideo.jobId);
-    playStudioVideo(currentlyPlayingVideo.id, currentlyPlayingVideo.channelId || currentlyPlayingVideo.channel_id);
+  if (!currentlyPlayingVideo) return;
+  const epId = currentlyPlayingVideo.episode_id || currentlyPlayingVideo.id || "EP-001";
+  const chSlug = currentlyPlayingVideo.channel_id || currentlyPlayingVideo.channelId || (typeof selectedStudioChannel !== "undefined" ? selectedStudioChannel : "earth_serenade");
+  const title = currentlyPlayingVideo.title || "4K Master Experience";
+  if (typeof openPublishModal === "function") {
+    openPublishModal(epId, chSlug, title);
   }
 }
+

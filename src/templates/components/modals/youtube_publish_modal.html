@@ -1,0 +1,125 @@
+<!-- MODAL: IDEMPOTENT YOUTUBE PUBLISHING DIALOG -->
+<div id="youtube-publish-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4 text-xs">
+    
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-red-600/20 text-red-500 flex items-center justify-center text-sm border border-red-500/30">
+          <i class="fa-brands fa-youtube"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-[var(--text)]">Publish Episode to YouTube</h2>
+          <p class="text-[10px] text-[var(--text-muted)]">Idempotent distribution of 9:16 Short &amp; 4K Broadcast Music Edition.</p>
+        </div>
+      </div>
+      <button onclick="closeModal('youtube-publish-modal')" class="text-[var(--text-muted)] hover:text-[var(--text)] text-base">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Target Channel & Episode Summary -->
+    <div class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold">Target YouTube Channel</span>
+        <span id="yt-pub-auth-badge" class="px-2 py-0.5 rounded-full text-[9px] font-bold border flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span id="yt-pub-auth-text">Authorized</span>
+        </span>
+      </div>
+      <div class="flex items-center justify-between">
+        <div class="font-bold text-[var(--text)] text-xs" id="yt-pub-channel-title">Earth Serenade</div>
+        <div class="text-[10px] font-mono text-[var(--accent)]" id="yt-pub-channel-slug">earth_serenade</div>
+      </div>
+      <div class="pt-1 border-t border-[var(--border)] text-[11px] text-[var(--text-muted)]">
+        Episode: <strong class="text-[var(--text)] font-mono" id="yt-pub-episode-id">EP-001</strong> • <span id="yt-pub-episode-title">Rub' al Khali Oasis</span>
+      </div>
+    </div>
+
+    <!-- Idempotency & Scope Checklist -->
+    <div class="space-y-2 border border-[var(--border)] rounded-xl p-3 bg-[var(--card-subtle)]">
+      <div class="flex items-center justify-between">
+        <span class="font-bold text-[var(--text)] text-[11px] flex items-center gap-1.5">
+          <i class="fa-solid fa-shield-check text-emerald-500 text-xs"></i>
+          <span>Assets Included for Publication:</span>
+        </span>
+        <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold">Idempotent Safe</span>
+      </div>
+      
+      <div class="space-y-1.5 text-[11px]">
+        <label class="flex items-center justify-between p-2 rounded-lg bg-[var(--card)] border border-[var(--border)] cursor-pointer hover:border-indigo-400 transition select-none">
+          <div class="flex items-center gap-2.5">
+            <input type="checkbox" id="yt-pub-check-short" checked class="accent-indigo-500 rounded w-4 h-4 cursor-pointer">
+            <i class="fa-solid fa-mobile-screen text-indigo-500"></i>
+            <div>
+              <div class="font-bold text-[var(--text)]">1. YouTube Short (9:16 Vertical)</div>
+              <div class="text-[9px] text-[var(--text-muted)]">short_9x16_ambient.mp4 • #Shorts format</div>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono text-emerald-500 font-bold">READY</span>
+        </label>
+
+        <label class="flex items-center justify-between p-2 rounded-lg bg-[var(--card)] border border-[var(--border)] cursor-pointer hover:border-purple-400 transition select-none">
+          <div class="flex items-center gap-2.5">
+            <input type="checkbox" id="yt-pub-check-broadcast" checked class="accent-purple-500 rounded w-4 h-4 cursor-pointer">
+            <i class="fa-solid fa-music text-purple-500"></i>
+            <div>
+              <div class="font-bold text-[var(--text)]">2. 4K Broadcast Master (Music Edition)</div>
+              <div class="text-[9px] text-[var(--text-muted)]">Full soundtrack, chapters, timestamps &amp; A/B thumbnail</div>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono text-emerald-500 font-bold">READY</span>
+        </label>
+
+        <div class="flex items-center justify-between p-1.5 rounded-lg bg-slate-900/30 border border-dashed border-[var(--border)] text-[10px] text-[var(--text-muted)]">
+          <span class="flex items-center gap-1">
+            <i class="fa-solid fa-ban text-amber-500"></i>
+            <span>Pure Nature Version (No Music):</span>
+          </span>
+          <span class="font-mono text-amber-500 font-semibold">Strictly Excluded</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Privacy Status Selection -->
+    <div class="space-y-1.5">
+      <label class="block text-[11px] font-semibold text-[var(--text-muted)]">Visibility / Privacy Status</label>
+      <div class="grid grid-cols-3 gap-2">
+        <label class="flex items-center justify-center gap-1.5 p-2 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition text-xs font-semibold">
+          <input type="radio" name="yt_privacy" value="public" checked class="accent-red-600">
+          <span>Public</span>
+        </label>
+        <label class="flex items-center justify-center gap-1.5 p-2 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition text-xs font-semibold">
+          <input type="radio" name="yt_privacy" value="unlisted" class="accent-red-600">
+          <span>Unlisted</span>
+        </label>
+        <label class="flex items-center justify-center gap-1.5 p-2 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition text-xs font-semibold">
+          <input type="radio" name="yt_privacy" value="private" class="accent-red-600">
+          <span>Private</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Live Status / Result Container -->
+    <div id="yt-pub-result-box" class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl hidden space-y-2">
+      <!-- Injected by youtube_publisher_controller.js -->
+    </div>
+
+    <!-- Modal Actions -->
+    <div class="flex items-center justify-between pt-2 border-t border-[var(--border)]">
+      <div class="flex items-center gap-1.5">
+        <input type="checkbox" id="yt-pub-force-reupload" class="accent-red-600 rounded">
+        <label for="yt-pub-force-reupload" class="text-[10px] text-[var(--text-muted)] cursor-pointer">Force re-upload if already published</label>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="closeModal('youtube-publish-modal')" class="px-3.5 py-1.5 bg-[var(--card-subtle)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] rounded-lg text-xs font-semibold">
+          Cancel
+        </button>
+        <button type="button" id="yt-pub-submit-btn" onclick="executeYouTubePublication()" class="px-4 py-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold rounded-xl shadow flex items-center gap-1.5 transition text-xs">
+          <i class="fa-brands fa-youtube"></i>
+          <span>Upload &amp; Publish</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

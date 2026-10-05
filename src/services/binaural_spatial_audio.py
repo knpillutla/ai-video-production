@@ -43,35 +43,25 @@ def apply_binaural_spatial_mastering(
     target_lufs: float = -21.0,
     duration_seconds: Optional[float] = None,
 ) -> Path:
-    """Master audio with 3D binaural soundstage and 432Hz sleep entrainment."""
+    """Master audio with clean acoustic soundstage, natural dynamics, and EBU R128 loudness."""
     inp = Path(input_audio).resolve()
     out = Path(output_audio).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
 
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-    binaural_bed = build_binaural_delta_filter(base_freq_hz=432.0, delta_beat_hz=2.0, gain_db=-26.0)
 
-    # Velvet frequency shaping + Suno adaptive FFT spectral de-noising & subsonic rumble filter
+    # Clean acoustic velvet EQ: removes subsonic rumble, tames digital harshness, and enhances warmth
     velvet_eq = (
-        "highpass=f=30,"
-        "afftdn=nr=10:nf=-35:tn=1,"
-        "lowpass=f=6500,"
-        "equalizer=f=3800:t=q:w=2.0:g=-2.5,"
-        "equalizer=f=180:t=q:w=1.2:g=1.8,"
-        "alimiter=limit=0.18:attack=5:release=60"
-    )
-
-    filter_complex = (
-        f"{binaural_bed};"
-        f"[0:a]{velvet_eq}[center_music];"
-        f"[center_music][binaural_bed]amix=inputs=2:weights=1.0 0.15:normalize=0:duration=first,"
-        f"loudnorm=I={target_lufs}:TP=-2.0:LRA=7.0[aout]"
+        "highpass=f=35,"
+        "lowpass=f=12000,"
+        "equalizer=f=3800:t=q:w=2.0:g=-1.5,"
+        "equalizer=f=180:t=q:w=1.2:g=1.2,"
+        f"loudnorm=I={target_lufs}:TP=-1.5:LRA=9.0"
     )
 
     cmd = [
         ffmpeg_bin, "-y", "-i", str(inp),
-        "-filter_complex", filter_complex,
-        "-map", "[aout]",
+        "-af", velvet_eq,
         "-c:a", "libmp3lame", "-b:a", "320k", "-ar", "48000",
     ]
 

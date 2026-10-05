@@ -13,6 +13,7 @@ function switchInspectorView(tabKey) {
   document.getElementById("inspector-view-console")?.classList.toggle("hidden", tabKey !== "console");
   document.getElementById("inspector-view-distribution")?.classList.toggle("hidden", tabKey !== "distribution");
   if (tabKey === "console" && typeof scrollConsoleToBottom === "function") scrollConsoleToBottom();
+  if (tabKey === "distribution" && typeof renderDistributionPackaging === "function") renderDistributionPackaging(currentActiveInspectorEpisode);
 }
 
 function selectMasterVideoRender(url, label, cardEl) {
@@ -85,6 +86,9 @@ function renderInspectorFromVideo(vid) {
     if (vid.status === "failed") {
       statusBadge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-600 text-white shadow-sm flex items-center gap-1";
       statusBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-[8px]"></i><span>Failed at Stage ${vid.failedStage || vid.currentStage || 1}</span>`;
+    } else if (vid.is_published || vid.published || vid.youtube_published?.published) {
+      statusBadge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-600 text-white shadow-sm flex items-center gap-1";
+      statusBadge.innerHTML = '<i class="fa-brands fa-youtube text-[10px]"></i><span>Published</span>';
     } else if (vid.status === "completed" || !vid.status) {
       statusBadge.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-600 text-white shadow-sm flex items-center gap-1";
       statusBadge.innerHTML = '<i class="fa-solid fa-circle-check text-[8px]"></i><span>Ready</span>';
@@ -156,9 +160,7 @@ function renderInspectorFromVideo(vid) {
   if (typeof renderAudioStemsList === "function") renderAudioStemsList(vid);
   updateStageGateDock(vid);
 
-  const ytTitle = document.getElementById("dist-yt-title"), ytDesc = document.getElementById("dist-yt-desc");
-  if (ytTitle) ytTitle.value = `${vid.title || 'Master Video'} - 4K UHD`;
-  if (ytDesc) ytDesc.value = `Story: ${vid.story_topic || vid.concept || vid.title}\nChannel: ${vid.channel_id || 'CineAI'}\n\n#4K #CineAI`;
+  if (typeof renderDistributionPackaging === "function") renderDistributionPackaging(vid);
 
   const appContainer = document.getElementById("studio-approval-container");
   if (appContainer) {

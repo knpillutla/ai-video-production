@@ -77,3 +77,30 @@ def test_cultural_acoustic_engine_archetypes():
     assert ocean_prof.culture_key == "ocean"
     assert "Handpan" in ocean_prof.lead_instrument
     assert "Kalimba" in ocean_prof.secondary_textures
+
+
+def test_audio_denoise_and_stem_separation(tmp_path):
+    from src.services.audio_denoise_service import separate_and_denoise_soundtrack
+
+    # Create synthetic test wav file
+    test_wav = tmp_path / "test_synth.wav"
+    clean_wav = tmp_path / "test_clean.mp3"
+    noise_wav = tmp_path / "test_noise_stem.wav"
+
+    import imageio_ffmpeg, subprocess
+    ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+    subprocess.run([
+        ffmpeg_bin, "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
+        "-c:a", "pcm_s16le", str(test_wav)
+    ], capture_output=True, check=True)
+
+    out_clean, out_noise = separate_and_denoise_soundtrack(
+        input_audio=test_wav,
+        clean_output=clean_wav,
+        noise_stem_output=noise_wav,
+    )
+    assert out_clean.is_file()
+    assert out_clean.stat().st_size > 500
+    assert out_noise.is_file()
+    assert out_noise.stat().st_size > 500
+

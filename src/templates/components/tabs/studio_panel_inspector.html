@@ -210,21 +210,8 @@
     </div>
   </div>
 
-  <!-- VIEW B: YOUTUBE DISTRIBUTION & PACKAGING HUB -->
-  <div id="inspector-view-distribution" class="space-y-2 flex-1 hidden text-xs">
-    <div class="space-y-0.5">
-      <label class="text-xs font-bold text-[var(--text)]">YouTube SEO Title:</label>
-      <input type="text" id="dist-yt-title" readonly class="w-full px-2.5 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold">
-    </div>
-    <div class="space-y-0.5">
-      <label class="text-xs font-bold text-[var(--text)]">Description &amp; Timestamps:</label>
-      <textarea id="dist-yt-desc" rows="3" readonly class="w-full p-2 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-mono resize-none"></textarea>
-    </div>
-    <div class="flex items-center gap-1.5 pt-0.5">
-      <button onclick="downloadActiveSubtitle()" class="btn-runway-secondary flex-1 py-1.5 text-xs"><i class="fa-solid fa-download"></i> <span>Captions</span></button>
-      <button onclick="copyActiveScript()" class="btn-runway-secondary flex-1 py-1.5 text-xs"><i class="fa-solid fa-copy"></i> <span>Copy Script</span></button>
-    </div>
-  </div>
+  <!-- VIEW B: YOUTUBE DISTRIBUTION & PACKAGING HUB (16:9 BROADCAST + 9:16 SHORT) -->
+  {% include 'components/tabs/inspector_distribution_hub.html' %}
 
   <!-- VIEW C: REAL-TIME PRODUCTION LOG CONSOLE -->
   <div id="inspector-view-console" class="space-y-2 flex-1 hidden flex flex-col font-mono text-xs">

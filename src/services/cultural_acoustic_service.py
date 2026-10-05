@@ -28,11 +28,11 @@ CULTURAL_PROFILES: dict[str, dict[str, str]] = {
     "desert": {
         "culture_key": "desert",
         "lead_instrument": "Airy Wooden Ney Flute in D-Minor",
-        "secondary_textures": "Resonant acoustic Qanun, warm Oud harmonics, soft framed Daf heartbeat pulse, desert wind whisper",
+        "secondary_textures": "Resonant acoustic Qanun, warm Oud harmonics, soft framed Daf heartbeat pulse, serene silence",
         "scale_and_tuning": "432Hz Solfeggio tuning, Maqam Bayati / Hijaz modal resonance",
         "rhythm_and_tempo": "54 BPM gentle hypnotic pulse (resting heart rate entrainment)",
         "emotional_purpose": "Mystical serenity, vast tranquility, deep stress relief, mind-calming meditation",
-        "suno_tags": "432hz, airy wooden ney flute, qanun, warm oud harmonics, soft daf pulse, velvet pads, desert ambient, hummable melody, deep stress relief, -21 LUFS",
+        "suno_tags": "432hz, airy wooden ney flute, qanun, warm oud harmonics, soft daf pulse, velvet pads, desert acoustic, hummable melody, studio master, zero hiss, zero noise, -21 LUFS",
         "suno_prompt": (
             "[Instrumental Ambient Meditation]\n"
             "[Tempo: 54 BPM - Hypnotic Heartbeat Pulse]\n"
@@ -40,7 +40,7 @@ CULTURAL_PROFILES: dict[str, dict[str, str]] = {
             "[Lead Melody: Mesmerizing Hummable Airy Wooden Ney Flute]\n"
             "[Accompaniment: Plucked Acoustic Qanun & Soft Oud Harmonics]\n"
             "[Rhythm: Gentle Framed Daf Drum Soft Heartbeat Tap]\n"
-            "[Atmosphere: Warm Velvet Ambient Desert Wind Pads & Singing Bowls]\n"
+            "[Atmosphere: Warm Velvet Ambient Pads & Singing Bowls, Studio Master, Zero Hiss, Zero Wind Noise]\n"
             "[Emotion: Enchanting, Joyful, Anxiety-Reducing, Restful Sleep Drone]\n"
             "[Outro: Infinite Peaceful Desert Night Fade]"
         ),

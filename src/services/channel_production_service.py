@@ -371,7 +371,7 @@ async def produce_channel_video(
         audio_only=audio_only,
         master_only=master_only,
         no_bgm=no_bgm,
-        generate_short=False,
+        generate_short=True,
         allow_fallback=allow_fallback,
         long_play_hours=long_play_hours,
         force_rerun=force_rerun,

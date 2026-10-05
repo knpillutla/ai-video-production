@@ -119,7 +119,10 @@ function renderChannelHubTable(channels = userChannels) {
         <td class="px-3 py-2.5 align-middle">${commentsText}</td>
         <td class="px-2.5 py-2.5 align-middle text-center font-mono font-bold text-[var(--text)] text-xs">${epCount}</td>
         <td class="px-3 py-2.5 align-middle text-center">
-          <div class="flex items-center gap-1 justify-center">
+            <button onclick="openYouTubeCredentialsModal('${slug}', '${ch.channel_name}')" class="px-2 py-1 bg-red-600/10 hover:bg-red-600/20 text-red-500 rounded-lg text-[10px] font-bold flex items-center gap-1 transition shadow-sm border border-red-500/20" title="YouTube Credentials & OAuth">
+              <i class="fa-brands fa-youtube text-[9px]"></i>
+              <span>OAuth</span>
+            </button>
             <button onclick="openEditChannelModal('${ch.id}')" class="px-2 py-1 bg-[var(--card-subtle)] hover:bg-[var(--card-hover)] text-[var(--text)] rounded-lg text-[10px] font-semibold flex items-center gap-1 transition shadow-sm border border-[var(--border)]" title="Channel Strategy & Guardrails">
               <i class="fa-solid fa-sliders text-[9px]"></i>
               <span>Details</span>

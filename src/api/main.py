@@ -11,6 +11,7 @@ from src.api.routes import (
     auth,
     billing,
     channel_analytics,
+    channel_youtube,
     channels,
     dashboard,
     local_production,
@@ -82,6 +83,7 @@ def create_app() -> FastAPI:
     app.include_router(production.router)
     app.include_router(trending.router)
     app.include_router(channels.router)
+    app.include_router(channel_youtube.router)
     app.include_router(channel_analytics.router)
     app.include_router(schedules.router)
     app.include_router(analytics.router)

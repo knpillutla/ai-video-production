@@ -1,0 +1,173 @@
+<!-- VIEW B: YOUTUBE DISTRIBUTION & PACKAGING HUB (16:9 BROADCAST + 9:16 SHORT) -->
+<div id="inspector-view-distribution" class="space-y-3 flex-1 hidden text-xs overflow-y-auto max-h-[calc(100vh-270px)] pr-1 custom-scrollbar">
+
+  <!-- ================================================================= -->
+  <!-- 1. BROADCAST SECTION WITH MUSIC (16:9 4K)                        -->
+  <!-- ================================================================= -->
+  <div class="p-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-2.5 shadow-sm">
+    <div class="flex items-center justify-between pb-1 border-b border-[var(--border)]">
+      <label class="flex items-center gap-2 cursor-pointer font-bold text-[var(--text)] text-xs select-none">
+        <input type="checkbox" id="dist-check-broadcast" checked class="w-4 h-4 rounded text-indigo-600 border-[var(--border)] bg-[var(--card-subtle)] focus:ring-0 cursor-pointer accent-indigo-600" onchange="syncDistributionCheckboxes()">
+        <i class="fa-solid fa-film text-indigo-500"></i>
+        <span>Broadcast Section with Music (16:9 4K UHD)</span>
+      </label>
+      <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">4K Master • Music</span>
+    </div>
+
+    <!-- 16:9 Thumbnail Preview + Trending Titles -->
+    <div class="grid grid-cols-12 gap-2">
+      <!-- 16:9 Thumbnail Card -->
+      <div class="col-span-4 flex flex-col gap-1">
+        <label class="text-[10px] font-bold text-[var(--text-muted)] flex items-center justify-between">
+          <span>Thumbnail (16:9)</span>
+          <a id="dist-broadcast-thumb-link" href="#" target="_blank" class="text-indigo-500 hover:underline text-[9px] hidden" title="View Full Resolution"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        </label>
+        <div class="relative aspect-video rounded-lg overflow-hidden border border-[var(--border)] bg-black/40 group shadow-sm flex items-center justify-center">
+          <img id="dist-broadcast-thumb-img" src="" alt="Broadcast Thumbnail" class="w-full h-full object-cover hidden">
+          <div id="dist-broadcast-thumb-placeholder" class="text-center p-2 text-slate-500 text-[10px]">
+            <i class="fa-regular fa-image text-lg block mb-0.5"></i>
+            <span>16:9 Master</span>
+          </div>
+          <span class="absolute bottom-1 right-1 px-1 py-0.2 rounded bg-black/70 text-white font-mono text-[8px] font-bold">16:9 4K</span>
+        </div>
+      </div>
+
+      <!-- Trending High-CTR Title & Quick Selectors -->
+      <div class="col-span-8 flex flex-col justify-between space-y-1">
+        <div>
+          <div class="flex items-center justify-between mb-0.5">
+            <span class="text-[10px] font-bold text-[var(--text)] flex items-center gap-1">
+              <i class="fa-solid fa-arrow-trend-up text-amber-500 text-[10px]"></i> Trending High-CTR Title
+            </span>
+            <span id="dist-broadcast-title-chars" class="font-mono text-[9px] text-[var(--text-muted)]">0/100</span>
+          </div>
+          <input type="text" id="dist-yt-title" class="w-full px-2 py-1 bg-[var(--card-subtle)] border border-[var(--border)] rounded-md text-[var(--text)] text-xs font-semibold focus:border-indigo-500 outline-none transition" placeholder="High-CTR YouTube Title...">
+        </div>
+
+        <!-- Quick Trending Title Variant Pills -->
+        <div class="space-y-0.5">
+          <span class="text-[9px] text-[var(--text-muted)] font-medium">Quick Trending Variants:</span>
+          <div id="dist-broadcast-title-variants" class="flex flex-col gap-1 max-h-[58px] overflow-y-auto custom-scrollbar">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Description & Timestamps -->
+    <div class="space-y-0.5">
+      <div class="flex items-center justify-between">
+        <label class="text-[10px] font-bold text-[var(--text)]">Description &amp; Chapters:</label>
+        <button type="button" onclick="copyBroadcastDescription()" class="text-indigo-500 hover:text-indigo-400 text-[9px] font-mono flex items-center gap-1"><i class="fa-regular fa-copy"></i> Copy</button>
+      </div>
+      <textarea id="dist-yt-desc" rows="3" class="w-full p-2 bg-[var(--card-subtle)] border border-[var(--border)] rounded-md text-[var(--text)] text-[11px] font-mono resize-none focus:border-indigo-500 outline-none leading-relaxed"></textarea>
+    </div>
+
+    <!-- SEO Tags & Keywords -->
+    <div class="space-y-1">
+      <div class="flex items-center justify-between">
+        <label class="text-[10px] font-bold text-[var(--text)] flex items-center gap-1">
+          <i class="fa-solid fa-tags text-indigo-400 text-[10px]"></i>
+          <span>YouTube SEO Tags</span>
+          <span id="dist-broadcast-tags-count" class="text-[9px] font-mono text-[var(--text-muted)]">(0)</span>
+        </label>
+        <button type="button" onclick="copyBroadcastTags()" class="text-indigo-500 hover:text-indigo-400 text-[9px] font-mono flex items-center gap-1"><i class="fa-regular fa-copy"></i> Copy All</button>
+      </div>
+      <div id="dist-broadcast-tags-container" class="flex flex-wrap gap-1 p-1.5 rounded-lg bg-[var(--card-subtle)] border border-[var(--border)] min-h-[30px] max-h-[58px] overflow-y-auto custom-scrollbar">
+        <!-- Tags rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- 2. SHORT SECTION (9:16 VERTICAL)                                 -->
+  <!-- ================================================================= -->
+  <div class="p-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-2.5 shadow-sm">
+    <div class="flex items-center justify-between pb-1 border-b border-[var(--border)]">
+      <label class="flex items-center gap-2 cursor-pointer font-bold text-[var(--text)] text-xs select-none">
+        <input type="checkbox" id="dist-check-short" checked class="w-4 h-4 rounded text-rose-600 border-[var(--border)] bg-[var(--card-subtle)] focus:ring-0 cursor-pointer accent-rose-600" onchange="syncDistributionCheckboxes()">
+        <i class="fa-solid fa-mobile-screen text-rose-500"></i>
+        <span>Short Section (9:16 Vertical)</span>
+      </label>
+      <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">9:16 • Mobile</span>
+    </div>
+
+    <!-- 9:16 Thumbnail Preview + Short Title -->
+    <div class="grid grid-cols-12 gap-2">
+      <!-- 9:16 Thumbnail Card -->
+      <div class="col-span-3 flex flex-col gap-1">
+        <label class="text-[10px] font-bold text-[var(--text-muted)] flex items-center justify-between">
+          <span>Short (9:16)</span>
+          <a id="dist-short-thumb-link" href="#" target="_blank" class="text-rose-500 hover:underline text-[9px] hidden" title="View Short Image"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        </label>
+        <div class="relative aspect-[9/16] max-h-[105px] rounded-lg overflow-hidden border border-[var(--border)] bg-black/40 group shadow-sm flex items-center justify-center mx-auto w-full">
+          <img id="dist-short-thumb-img" src="" alt="Short Thumbnail" class="w-full h-full object-cover hidden">
+          <div id="dist-short-thumb-placeholder" class="text-center p-1 text-slate-500 text-[9px]">
+            <i class="fa-solid fa-mobile-screen text-sm block mb-0.5"></i>
+            <span>9:16</span>
+          </div>
+          <span class="absolute bottom-1 right-1 px-1 py-0.2 rounded bg-black/70 text-white font-mono text-[8px] font-bold">#Shorts</span>
+        </div>
+      </div>
+
+      <!-- Viral Short Title & Quick Variants -->
+      <div class="col-span-9 flex flex-col justify-between space-y-1">
+        <div>
+          <div class="flex items-center justify-between mb-0.5">
+            <span class="text-[10px] font-bold text-[var(--text)] flex items-center gap-1">
+              <i class="fa-brands fa-youtube text-rose-500 text-[10px]"></i> Viral Short Title (<60 chars)
+            </span>
+            <span id="dist-short-title-chars" class="font-mono text-[9px] text-[var(--text-muted)]">0/60</span>
+          </div>
+          <input type="text" id="dist-short-title" class="w-full px-2 py-1 bg-[var(--card-subtle)] border border-[var(--border)] rounded-md text-[var(--text)] text-xs font-semibold focus:border-rose-500 outline-none transition" placeholder="Viral #Shorts title...">
+        </div>
+
+        <!-- Short Title Variants -->
+        <div class="space-y-0.5">
+          <span class="text-[9px] text-[var(--text-muted)] font-medium">Trending Shorts Hooks:</span>
+          <div id="dist-short-title-variants" class="flex flex-col gap-1 max-h-[50px] overflow-y-auto custom-scrollbar">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Short Description & Hashtags -->
+    <div class="space-y-0.5">
+      <div class="flex items-center justify-between">
+        <label class="text-[10px] font-bold text-[var(--text)]">Short Description &amp; Hashtags:</label>
+        <button type="button" onclick="copyShortDescription()" class="text-rose-500 hover:text-rose-400 text-[9px] font-mono flex items-center gap-1"><i class="fa-regular fa-copy"></i> Copy</button>
+      </div>
+      <textarea id="dist-short-desc" rows="2" class="w-full p-2 bg-[var(--card-subtle)] border border-[var(--border)] rounded-md text-[var(--text)] text-[11px] font-mono resize-none focus:border-rose-500 outline-none leading-relaxed"></textarea>
+    </div>
+
+    <!-- Shorts Tags -->
+    <div class="space-y-1">
+      <div class="flex items-center justify-between">
+        <label class="text-[10px] font-bold text-[var(--text)] flex items-center gap-1">
+          <i class="fa-solid fa-hashtag text-rose-400 text-[10px]"></i>
+          <span>Shorts Viral Tags</span>
+          <span id="dist-short-tags-count" class="text-[9px] font-mono text-[var(--text-muted)]">(0)</span>
+        </label>
+        <button type="button" onclick="copyShortTags()" class="text-rose-500 hover:text-rose-400 text-[9px] font-mono flex items-center gap-1"><i class="fa-regular fa-copy"></i> Copy All</button>
+      </div>
+      <div id="dist-short-tags-container" class="flex flex-wrap gap-1 p-1.5 rounded-lg bg-[var(--card-subtle)] border border-[var(--border)] min-h-[28px] max-h-[50px] overflow-y-auto custom-scrollbar">
+        <!-- Shorts tags rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Master Actions Bar -->
+  <div class="flex items-center gap-1.5 pt-0.5">
+    <button type="button" id="dist-publish-btn" onclick="triggerInspectorYouTubePublish()" class="btn-runway-primary flex-1 py-1.5 text-xs font-bold shadow-md flex items-center justify-center gap-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white transition disabled:opacity-50 disabled:cursor-not-allowed">
+      <i class="fa-brands fa-youtube"></i>
+      <span id="dist-publish-btn-text">Publish Both to YouTube</span>
+    </button>
+    <button type="button" onclick="downloadActiveSubtitle()" class="btn-runway-secondary py-1.5 px-3 text-xs" title="Download Subtitles">
+      <i class="fa-solid fa-download"></i> <span>Captions</span>
+    </button>
+    <button type="button" onclick="copyActiveScript()" class="btn-runway-secondary py-1.5 px-3 text-xs" title="Copy Script">
+      <i class="fa-solid fa-copy"></i> <span>Script</span>
+    </button>
+  </div>
+</div>
