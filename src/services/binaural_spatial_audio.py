@@ -51,8 +51,15 @@ def apply_binaural_spatial_mastering(
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     binaural_bed = build_binaural_delta_filter(base_freq_hz=432.0, delta_beat_hz=2.0, gain_db=-26.0)
 
-    # Velvet frequency shaping
-    velvet_eq = "lowpass=f=6500,equalizer=f=3800:t=q:w=2.0:g=-2.5,equalizer=f=180:t=q:w=1.2:g=1.8,alimiter=limit=0.18:attack=5:release=60"
+    # Velvet frequency shaping + Suno adaptive FFT spectral de-noising & subsonic rumble filter
+    velvet_eq = (
+        "highpass=f=30,"
+        "afftdn=nr=10:nf=-35:tn=1,"
+        "lowpass=f=6500,"
+        "equalizer=f=3800:t=q:w=2.0:g=-2.5,"
+        "equalizer=f=180:t=q:w=1.2:g=1.8,"
+        "alimiter=limit=0.18:attack=5:release=60"
+    )
 
     filter_complex = (
         f"{binaural_bed};"

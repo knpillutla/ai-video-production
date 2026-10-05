@@ -68,6 +68,16 @@ class AudioVaultService:
         best_match: dict[str, Any] | None = None
         best_score = 0.0
 
+        # Tier 0: Direct Same-Episode Stem Lookup ($0.00 spend)
+        if current_episode_id:
+            for entry in stems:
+                if entry.get("episode_id") == current_episode_id:
+                    stem_path = self.vault_dir / entry.get("filename", "")
+                    if stem_path.is_file() and stem_path.stat().st_size > 1000:
+                        logger.info(f"audio_vault_episode_match: found stem '{entry.get('title')}' registered for episode '{current_episode_id}'")
+                        print(f"[DECISION - AUDIO VAULT EPISODE HIT] Reusing episode '{current_episode_id}' registered stem '{entry.get('title')}' ($0.00 spend).")
+                        return stem_path
+
         for entry in stems:
             stem_path = self.vault_dir / entry.get("filename", "")
             if not (stem_path.is_file() and stem_path.stat().st_size > 1000):
@@ -78,15 +88,20 @@ class AudioVaultService:
             if req_gender in ("male", "female") and entry_gender != req_gender:
                 continue
 
-            # Anti-Repetition 10-Video Cooldown Guard
+            # Anti-Repetition 10-Video Cooldown Guard (exempts same-episode resumptions)
             filename = entry.get("filename", "")
-            last_used_indices = [idx for idx, h in enumerate(history) if h.get("filename") == filename]
-            if last_used_indices:
-                last_used_offset = len(history) - 1 - last_used_indices[-1]
-                if last_used_offset < min_cooldown:
-                    logger.info(f"audio_vault_cooldown_active: Stem '{entry.get('title')}' was used {last_used_offset} videos ago (< {min_cooldown}). Skipping to ensure musical variety.")
-                    print(f"[DECISION - AUDIO COOLDOWN] Stem '{entry.get('title')}' used in the last {last_used_offset} videos (< {min_cooldown} video limit). Generating fresh music.")
-                    continue
+            is_same_episode = bool(current_episode_id and (
+                entry.get("episode_id") == current_episode_id or
+                any(h.get("filename") == filename and h.get("episode_id") == current_episode_id for h in history)
+            ))
+            if not is_same_episode:
+                last_used_indices = [idx for idx, h in enumerate(history) if h.get("filename") == filename]
+                if last_used_indices:
+                    last_used_offset = len(history) - 1 - last_used_indices[-1]
+                    if last_used_offset < min_cooldown:
+                        logger.info(f"audio_vault_cooldown_active: Stem '{entry.get('title')}' was used {last_used_offset} videos ago (< {min_cooldown}). Skipping to ensure musical variety.")
+                        print(f"[DECISION - AUDIO COOLDOWN] Stem '{entry.get('title')}' used in the last {last_used_offset} videos (< {min_cooldown} video limit). Generating fresh music.")
+                        continue
 
             entry_tokens = _tokenize(f"{entry.get('genre', '')} {entry.get('theme', '')} {entry.get('concept', '')} {entry.get('tags', '')}")
             if not entry_tokens:
@@ -147,7 +162,8 @@ class AudioVaultService:
 
         data = self._load_data()
         stems = data.setdefault("stems", [])
-        if not any(s.get("filename") == filename for s in stems):
+        matched_entry = next((s for s in stems if s.get("filename") == filename), None)
+        if not matched_entry:
             stems.append({
                 "filename": filename,
                 "title": title or genre,
@@ -157,9 +173,12 @@ class AudioVaultService:
                 "tags": tags,
                 "vocal_gender": vocal_gender or "none",
                 "file_size": dest.stat().st_size,
+                "episode_id": episode_id,
             })
-            self._save_data(data)
             logger.info(f"audio_vault_stem_registered: {filename} in vault index ({len(stems)} total stems)")
+        elif episode_id and not matched_entry.get("episode_id"):
+            matched_entry["episode_id"] = episode_id
+        self._save_data(data)
 
         self.record_usage(filename, episode_id or f"ep_{int(time.time())}")
         return dest

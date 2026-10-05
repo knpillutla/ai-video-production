@@ -35,6 +35,7 @@ class SoundtrackService:
             print(f"[DECISION - SOUNDTRACK CACHE HIT] Soundscape exists on disk ({out_path.name}). Reusing asset ($0.00 spend).")
             return out_path
 
+        # Rule 3 Tier 1 & 3: AudioVault Local Stem Cache Check ($0.00 spend)
         cached = audio_vault.find_matching_stem(
             genre=genre, theme=title, concept=title, tags=tags, min_similarity=0.70,
             current_episode_id=episode_id, min_cooldown=min_cooldown,
@@ -42,7 +43,7 @@ class SoundtrackService:
         if cached and cached.is_file() and cached.stat().st_size > 1000:
             shutil.copy2(cached, out_path)
             logger.info(f"decision_audiovault_cache_hit: Matched stem '{cached.name}' ($0.00 spend)")
-            print(f"[DECISION - AUDIOVAULT CACHE HIT] Matched existing stem '{cached.name}' ($0.00 spend).")
+            print(f"[DECISION - AUDIOVAULT CACHE HIT] Reusing existing vault stem '{cached.name}' ($0.00 spend).")
             return out_path
 
         logger.info(f"decision_audio_invoke_suno: Synthesizing fresh anti-fatigue soundscape via Suno v3.5 Pro...")
@@ -69,7 +70,8 @@ class SoundtrackService:
             lyrics=meditative_prompt,
             vocal_gender="none",
             title=title,
-            force_live=True,
+            episode_id=episode_id,
+            force_live=False,
         )
 
         if out_path.is_file() and out_path.stat().st_size > 1000:

@@ -23,13 +23,7 @@ class SunoMusicAdapter(MusicProviderProtocol):
     """Commercially cleared soundtrack generator powered by Suno v3.5 / sonic-v5 via MusicAPI.ai."""
 
     def __init__(self, api_key: Optional[str] = None, endpoint: Optional[str] = None):
-        self.api_key = (
-            api_key
-            or settings.media.suno_api_key
-            or os.getenv("SUNO_API_KEY", "")
-            or os.getenv("MUSICAPI_KEY", "")
-            or os.getenv("MUSICAPI_API_KEY", "")
-        )
+        self.api_key = api_key or settings.media.suno_api_key or os.getenv("SUNO_API_KEY", "") or os.getenv("MUSICAPI_KEY", "") or os.getenv("MUSICAPI_API_KEY", "")
         self.endpoint = endpoint or "https://api.musicapi.ai/api/v1/sonic/create"
 
     async def _poll_task(self, client: Any, headers: Dict[str, str], task_id: str, poll_url: str) -> str:
@@ -105,36 +99,20 @@ class SunoMusicAdapter(MusicProviderProtocol):
                 task_sidecar.unlink(missing_ok=True)
 
         if lyrics:
-            tags_str = f"{genre}, {mood}"
-            if vocal_gender and vocal_gender.lower() in ("female", "male", "duet"):
-                tags_str = f"{tags_str}, {vocal_gender.lower()} vocals"
-            elif vocal_gender and "chorus" in vocal_gender.lower():
-                tags_str = f"{tags_str}, chorus vocals"
-
+            v_tag = f", {vocal_gender.lower()} vocals" if vocal_gender and vocal_gender.lower() in ("female", "male", "duet", "chorus") else ""
+            tags_str = f"{genre}, {mood}{v_tag}"
             body = {
-                "custom_mode": True,
-                "prompt": lyrics,
-                "tags": tags_str[:120],
-                "title": (title or f"{genre[:50]} track")[:75],
-                "mv": "sonic-v5",
+                "custom_mode": True, "prompt": lyrics, "tags": tags_str[:120],
+                "title": (title or f"{genre[:50]} track")[:75], "mv": "sonic-v5",
             }
         else:
             is_ambient = any(w in (genre + " " + mood).lower() for w in ["ambient", "relax", "meditat", "sleep", "soundscape", "zen", "nature"])
             if is_ambient:
                 body = {
                     "custom_mode": True,
-                    "prompt": (
-                        "[Instrumental Ambient Meditation]\n"
-                        "[432Hz Solfeggio Harmonic Resonance]\n"
-                        "[Joyful Uplifting Handpan & Singing Bowls]\n"
-                        "[Warm Velvet Ambient Pads & Celtic Harp]\n"
-                        "[Airy Nay Flute & Serene Soundbath]\n"
-                        "[Deep De-stressing & Restful Sleep Drone]\n"
-                        "[Outro: Infinite Peaceful Fade]"
-                    ),
+                    "prompt": "[Instrumental Ambient Meditation]\n[432Hz Solfeggio Harmonic Resonance]\n[Joyful Uplifting Handpan & Singing Bowls]\n[Warm Velvet Ambient Pads & Celtic Harp]\n[Airy Nay Flute & Serene Soundbath]\n[Deep De-stressing & Restful Sleep Drone]\n[Outro: Infinite Peaceful Fade]",
                     "tags": f"{genre}, {mood}, zero solo guitar"[:120],
-                    "title": (title or f"{genre[:50]} track")[:75],
-                    "mv": "sonic-v5",
+                    "title": (title or f"{genre[:50]} track")[:75], "mv": "sonic-v5",
                 }
             else:
                 body = {
@@ -193,6 +171,7 @@ class SunoMusicAdapter(MusicProviderProtocol):
         lyrics: str = "",
         vocal_gender: str = "female",
         title: str = "",
+        episode_id: Optional[str] = None,
         force_live: bool = False,
     ) -> Path:
         """Generate and save background music with Rule 3 multi-tier idempotency."""
@@ -204,12 +183,24 @@ class SunoMusicAdapter(MusicProviderProtocol):
             logger.info(f"suno_track_cache_hit: reusing existing soundtrack {out.name} ({out.stat().st_size} bytes)")
             return out
 
-        # Rule 3 Tier 3: AudioVault Stem Cache Check
-        if not force_live:
+        url_sidecar = out.with_suffix(out.suffix + ".suno_url")
+        task_sidecar = out.with_suffix(out.suffix + ".suno_task.json")
+        audio_url = None
+
+        # Rule 3 Tier 1.5: Persistent .suno_url Sidecar Re-download ($0.00 spend)
+        if url_sidecar.is_file() and url_sidecar.stat().st_size > 10:
+            cached_url = url_sidecar.read_text(encoding="utf-8").strip()
+            if cached_url.startswith("http"):
+                logger.info(f"suno_url_sidecar_hit: re-downloading existing audio from {cached_url} ($0.00 spend)")
+                print(f"[DECISION - SUNO URL CACHE HIT] Re-downloading existing audio from {cached_url} ($0.00 spend)...")
+                audio_url = cached_url
+
+        # Rule 3 Tier 3: AudioVault Stem Cache Check (if no specific .suno_url exists for this episode)
+        if not audio_url and not force_live:
             from src.services.audio_vault import audio_vault
             cached_stem = audio_vault.find_matching_stem(
                 genre=genre, theme=mood, concept=title, tags=lyrics,
-                vocal_gender=vocal_gender, min_similarity=0.70,
+                vocal_gender=vocal_gender, min_similarity=0.70, current_episode_id=episode_id,
             )
             if cached_stem and cached_stem.is_file():
                 import shutil
@@ -226,36 +217,43 @@ class SunoMusicAdapter(MusicProviderProtocol):
                 wav_file.writeframes(b"\x00" * int(sample_rate * max(1.0, duration_seconds) * 4))
             return out
 
-        task_sidecar = out.with_suffix(out.suffix + ".suno_task.json")
-
         try:
-            audio_url = await self.generate_track(
-                genre=genre,
-                mood=mood,
-                duration_seconds=int(duration_seconds),
-                lyrics=lyrics,
-                title=title,
-                vocal_gender=vocal_gender,
-                task_sidecar=task_sidecar,
-            )
+            if not audio_url:
+                audio_url = await self.generate_track(
+                    genre=genre, mood=mood, duration_seconds=int(duration_seconds),
+                    lyrics=lyrics, title=title, vocal_gender=vocal_gender, task_sidecar=task_sidecar,
+                )
 
             if not audio_url:
                 raise RuntimeError("Suno v3.5 Pro failed: No audio URL received from MusicAPI endpoint.")
 
+            try:
+                url_sidecar.write_text(audio_url.strip(), encoding="utf-8")
+                logger.info(f"suno_url_sidecar_saved: {url_sidecar.name}")
+            except Exception as save_err:
+                logger.warning(f"failed_to_save_suno_url_sidecar: {save_err}")
+
             client = HTTPClientPool.get_client()
             resp = await client.get(audio_url, follow_redirects=True, timeout=60.0)
-            if resp.status_code != 200:
-                raise RuntimeError(f"Failed to download Suno soundtrack from {audio_url} (HTTP {resp.status_code})")
+            if resp.status_code != 200 or len(resp.content) < 1000:
+                logger.warning(f"suno_url_download_empty_or_failed: status={resp.status_code} bytes={len(resp.content)}")
+                from src.services.audio_vault import audio_vault
+                vault_stem = audio_vault.find_matching_stem(
+                    genre=genre, theme=mood, concept=title, tags=lyrics,
+                    vocal_gender=vocal_gender, min_similarity=0.70, current_episode_id=episode_id,
+                )
+                if vault_stem and vault_stem.is_file():
+                    import shutil
+                    shutil.copy2(vault_stem, out)
+                    logger.info(f"audio_vault_fallback_after_failed_download: {vault_stem.name} -> {out.name}")
+                    return out
+                raise RuntimeError(f"Failed to download Suno soundtrack from {audio_url} (HTTP {resp.status_code}, {len(resp.content)} bytes)")
 
             temp_mp3 = out.with_suffix(".temp.mp3")
             temp_mp3.write_bytes(resp.content)
 
             from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary
-            ffmpeg_bin = get_ffmpeg_binary()
-            cmd = [
-                ffmpeg_bin, "-y", "-i", str(temp_mp3),
-                "-ar", str(sample_rate), "-ac", "2", str(out),
-            ]
+            cmd = [get_ffmpeg_binary(), "-y", "-i", str(temp_mp3), "-ar", str(sample_rate), "-ac", "2", str(out)]
             proc = subprocess.run(cmd, capture_output=True)
             if temp_mp3.exists():
                 temp_mp3.unlink()
@@ -263,7 +261,6 @@ class SunoMusicAdapter(MusicProviderProtocol):
             if proc.returncode != 0 or not out.exists() or out.stat().st_size < 1000:
                 raise RuntimeError(f"FFmpeg audio transcoding to 48kHz WAV failed: {proc.stderr.decode(errors='ignore')}")
 
-            # Once safely transcoded and verified, remove in-flight sidecar
             if task_sidecar.exists():
                 task_sidecar.unlink(missing_ok=True)
                 logger.info(f"suno_task_token_cleared: {task_sidecar.name}")
@@ -273,18 +270,15 @@ class SunoMusicAdapter(MusicProviderProtocol):
             audio_vault.register_stem(
                 source_path=out, genre=genre, theme=mood, concept=title,
                 tags=lyrics, title=title or genre, vocal_gender=vocal_gender,
+                episode_id=episode_id,
             )
             return out
         except Exception as live_audio_err:
             logger.warning(f"suno_live_audio_failed_using_procedural_dsp: {live_audio_err}")
             from src.services.procedural_foley import synthesize_foley_stem
             synthesize_foley_stem(
-                weather_type=genre,
-                setting_type=mood,
-                space="outdoor",
-                duration_seconds=max(5.0, duration_seconds),
-                output_path=out,
-                sample_rate=sample_rate,
+                weather_type=genre, setting_type=mood, space="outdoor",
+                duration_seconds=max(5.0, duration_seconds), output_path=out, sample_rate=sample_rate,
             )
             if out.exists() and out.stat().st_size > 1000:
                 logger.info(f"procedural_dsp_stem_fallback_created: {out.name} ({out.stat().st_size} bytes)")
