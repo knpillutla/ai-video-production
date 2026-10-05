@@ -6,6 +6,7 @@ Velvet Anti-Fatigue Acoustic Mastering, AI Video Diffusion (Wan/Kling/Hunyuan), 
 
 from __future__ import annotations
 
+import asyncio
 import os
 from pathlib import Path
 import time
@@ -112,12 +113,23 @@ class AmbientWorldProducer:
                     raw_prompt = "Dead-center symmetrical frontal vantage point, eye-level head-on straight perspective, centered bilateral composition with zero side-angle, zero three-quarter view. " + raw_prompt
             return raw_prompt
 
-        kf_tasks = [
-            (_resolve_scene_image_prompt(scene), ep_dir / f"keyframe_p{scene.scene_index}.jpg", ep_dir / f"fal_req_p{scene.scene_index}.json", scene.scene_index)
-            for scene in sb.scenes
-        ]
-        kf_force_rerun = force_rerun and photos_only
-        keyframe_paths = await visual_batch_service.render_keyframes_batch(kf_tasks, force_rerun=kf_force_rerun, image_model=image_model)
+        t_stage2 = time.time()
+        logger.info(f"stage_triggered: stage='Stage 2: Keyframes' episode_id='{ep_dir.name}' timestamp={t_stage2}")
+        print(f"\n[STAGE 2 TRIGGERED] Synthesizing Keyframes for {ep_dir.name}...")
+        try:
+            kf_tasks = [
+                (_resolve_scene_image_prompt(scene), ep_dir / f"keyframe_p{scene.scene_index}.jpg", ep_dir / f"fal_req_p{scene.scene_index}.json", scene.scene_index)
+                for scene in sb.scenes
+            ]
+            kf_force_rerun = force_rerun and photos_only
+            keyframe_paths = await visual_batch_service.render_keyframes_batch(kf_tasks, force_rerun=kf_force_rerun, image_model=image_model)
+            dur_stage2 = time.time() - t_stage2
+            logger.info(f"stage_completed: stage='Stage 2: Keyframes' episode_id='{ep_dir.name}' duration={dur_stage2:.2f}s count={len(keyframe_paths)} timestamp={time.time()}")
+            print(f"[STAGE 2 COMPLETED] Keyframes ready in {dur_stage2:.2f}s ({len(keyframe_paths)} images).")
+        except Exception as ex:
+            dur_stage2 = time.time() - t_stage2
+            logger.error(f"stage_failed: stage='Stage 2: Keyframes' episode_id='{ep_dir.name}' duration={dur_stage2:.2f}s error='{ex}' timestamp={time.time()}")
+            raise
 
         # Stage 2 Gate: If photos_only is requested, dispatch review notification and stop
         if photos_only:
@@ -135,25 +147,36 @@ class AmbientWorldProducer:
                 "storage_path": str(ep_dir),
             }
 
-        # Stage 3: AI Video Diffusion Motion Synthesis (Concurrent Parallel Batch via visual_batch_service)
-        motion_tasks = [
-            MotionClipTask(
-                image_path=kf_path,
-                motion_prompt=scene.motion_prompt,
-                visual_prompt=scene.visual_prompt,
-                output_path=ep_dir / f"motion_p{scene.scene_index}.mp4",
-                duration_seconds=scene.duration_seconds,
-                model=motion_model,
-                domain=scene.domain,
-                req_file=ep_dir / f"fal_diff_req_p{scene.scene_index}.json",
-                allow_fallback=allow_fallback,
-                force_rerun=force_rerun,
-                negative_prompt=_resolve_scene_negative_prompt(scene),
-                model_configs=getattr(scene, "model_configs", {}),
-            )
-            for scene, kf_path in zip(sb.scenes, keyframe_paths)
-        ]
-        video_clip_paths = await visual_batch_service.render_motion_batch(motion_tasks)
+        # Stage 3: AI Video Diffusion Motion Synthesis
+        t_stage3 = time.time()
+        logger.info(f"stage_triggered: stage='Stage 3: Video Motion' episode_id='{ep_dir.name}' model='{motion_model}' timestamp={t_stage3}")
+        print(f"\n[STAGE 3 TRIGGERED] Synthesizing Video Motion for {ep_dir.name} ({motion_model})...")
+        try:
+            motion_tasks = [
+                MotionClipTask(
+                    image_path=kf_path,
+                    motion_prompt=scene.motion_prompt,
+                    visual_prompt=scene.visual_prompt,
+                    output_path=ep_dir / f"motion_p{scene.scene_index}.mp4",
+                    duration_seconds=scene.duration_seconds,
+                    model=motion_model,
+                    domain=scene.domain,
+                    req_file=ep_dir / f"fal_diff_req_p{scene.scene_index}.json",
+                    allow_fallback=allow_fallback,
+                    force_rerun=force_rerun,
+                    negative_prompt=_resolve_scene_negative_prompt(scene),
+                    model_configs=getattr(scene, "model_configs", {}),
+                )
+                for scene, kf_path in zip(sb.scenes, keyframe_paths)
+            ]
+            video_clip_paths = await visual_batch_service.render_motion_batch(motion_tasks)
+            dur_stage3 = time.time() - t_stage3
+            logger.info(f"stage_completed: stage='Stage 3: Video Motion' episode_id='{ep_dir.name}' duration={dur_stage3:.2f}s count={len(video_clip_paths)} timestamp={time.time()}")
+            print(f"[STAGE 3 COMPLETED] Motion clips ready in {dur_stage3:.2f}s ({len(video_clip_paths)} clips).")
+        except Exception as ex:
+            dur_stage3 = time.time() - t_stage3
+            logger.error(f"stage_failed: stage='Stage 3: Video Motion' episode_id='{ep_dir.name}' duration={dur_stage3:.2f}s error='{ex}' timestamp={time.time()}")
+            raise
 
         # Stage 3 Gate: If motion_only is requested, stop and return motion clips for review
         if motion_only:
@@ -164,18 +187,36 @@ class AmbientWorldProducer:
             }
 
         # Stage 4: Audio Synthesis & Binaural 3D Velvet Mastering (unless --no-bgm)
-        master_bgm_path = None
-        if not no_bgm:
-            raw_bgm_path, master_bgm_path = ep_dir / "raw_soundtrack.mp3", ep_dir / "velvet_binaural_master_48k.mp3"
-            if not master_bgm_path.is_file() or master_bgm_path.stat().st_size < 1000:
-                await soundtrack_service.synthesize_ambient_soundtrack(sb.title, sb.audio_tags, raw_bgm_path, sb.total_duration, episode_id=ep_dir.name)
-                apply_binaural_spatial_mastering(input_audio=raw_bgm_path, output_audio=master_bgm_path, target_lufs=-21.0)
-            else:
-                logger.info(f"decision_audio_master_cache_hit: Reusing {master_bgm_path.name} ($0.00 spend)")
-                print(f"[DECISION - AUDIO MASTER CACHE HIT] Master audio already exists on disk ({master_bgm_path.name}). Reusing asset ($0.00 spend).")
-        else:
-            logger.info("decision_no_bgm_active: Preserving 100% native video audio without external BGM soundtrack.")
-            print("[DECISION - NATIVE AUDIO ACTIVE (--no-bgm)] Skipping external Suno BGM. Preserving natural sound directly from video diffusion.")
+        t_stage4 = time.time()
+        logger.info(f"stage_triggered: stage='Stage 4: Audio' episode_id='{ep_dir.name}' timestamp={t_stage4}")
+        print(f"\n[STAGE 4 TRIGGERED] Synthesizing & Mastering Audio for {ep_dir.name}...")
+        try:
+            master_bgm_path = None
+            if not no_bgm:
+                raw_bgm_path, master_bgm_path = ep_dir / "raw_soundtrack.mp3", ep_dir / "velvet_binaural_master_48k.mp3"
+                if not master_bgm_path.is_file() or master_bgm_path.stat().st_size < 1000:
+                    eff_archetype = sb.primary_archetype or getattr(sb, "sub_genre", "")
+                    await soundtrack_service.synthesize_ambient_soundtrack(
+                        title=sb.title,
+                        tags=sb.audio_tags,
+                        out_path=raw_bgm_path,
+                        total_duration=sb.total_duration,
+                        genre=f"ambient_{sb.cluster}",
+                        episode_id=ep_dir.name,
+                        archetype=eff_archetype,
+                        force_rerun=force_rerun and audio_only,
+                    )
+                    await asyncio.to_thread(apply_binaural_spatial_mastering, input_audio=raw_bgm_path, output_audio=master_bgm_path, target_lufs=-21.0)
+                else:
+                    logger.info(f"decision_audio_master_cache_hit: Reusing {master_bgm_path.name} ($0.00 spend)")
+                    print(f"[DECISION - AUDIO MASTER CACHE HIT] Master audio already exists on disk ({master_bgm_path.name}). Reusing asset ($0.00 spend).")
+            dur_stage4 = time.time() - t_stage4
+            logger.info(f"stage_completed: stage='Stage 4: Audio' episode_id='{ep_dir.name}' duration={dur_stage4:.2f}s timestamp={time.time()}")
+            print(f"[STAGE 4 COMPLETED] Audio ready in {dur_stage4:.2f}s.")
+        except Exception as ex:
+            dur_stage4 = time.time() - t_stage4
+            logger.error(f"stage_failed: stage='Stage 4: Audio' episode_id='{ep_dir.name}' duration={dur_stage4:.2f}s error='{ex}' timestamp={time.time()}")
+            raise
 
         # Stage 4 Gate: If audio_only is requested, stop and return stems for review
         if audio_only:
@@ -186,33 +227,51 @@ class AmbientWorldProducer:
             }
 
         # Stage 5: Master Assembly & Packaging Delegation
-        masters = assemble_dual_masters(video_clip_paths, master_bgm_path, ep_dir)
-        master_4k_path = masters["music_master"]
-        master_nature_path = masters["nature_master"]
+        t_stage5 = time.time()
+        logger.info(f"stage_triggered: stage='Stage 5: 4K Master & Packaging' episode_id='{ep_dir.name}' duration_target={sb.total_duration}s timestamp={t_stage5}")
+        print(f"\n[STAGE 5 TRIGGERED] Assembling 4K Master & Packaging for {ep_dir.name} (target: {sb.total_duration}s)...")
+        try:
+            masters = await asyncio.to_thread(
+                assemble_dual_masters,
+                video_clips=video_clip_paths,
+                audio_path=master_bgm_path,
+                ep_dir=ep_dir,
+                scene_hold_sec=sb.total_duration or 60.0,
+                force_rerun=force_rerun,
+            )
+            master_4k_path = masters["music_master"]
+            master_nature_path = masters["nature_master"]
 
-        long_play_path = handle_long_play_export(master_4k_path, ep_dir, long_play_hours, fade_to_black_hours)
-        short_video_path = handle_short_export(master_4k_path, ep_dir, generate_short)
+            long_play_path = await asyncio.to_thread(handle_long_play_export, master_4k_path, ep_dir, long_play_hours, fade_to_black_hours)
+            short_video_path = await asyncio.to_thread(handle_short_export, master_4k_path, ep_dir, generate_short)
 
-        # Render high-CTR SEO Thumbnails in Stage 5 once master broadcast is locked
-        long_thumb_prompt = f"Award-winning high-CTR YouTube thumbnail landscape photograph of {sb.title}. High contrast, stunning cinematic depth, crisp 35mm bokeh, cozy atmospheric light, 8k, zero text."
-        short_thumb_prompt = f"Award-winning high-CTR vertical YouTube Short thumbnail photograph of {sb.title}. Striking 9:16 vertical composition, intense visual depth, rich atmospheric mist, 8k, zero text."
-        thumbnail_paths = await visual_batch_service.render_thumbnails_batch(
-            tasks=[
-                (long_thumb_prompt, ep_dir / "thumbnail_music_4k.jpg", "16:9"),
-                (short_thumb_prompt, ep_dir / "thumbnail_9x16_short.jpg", "9:16"),
-            ],
-            force_rerun=force_rerun,
-            image_model=image_model,
-        )
+            # Render high-CTR SEO Thumbnails in Stage 5 once master broadcast is locked
+            long_thumb_prompt = f"Award-winning high-CTR YouTube thumbnail landscape photograph of {sb.title}. High contrast, stunning cinematic depth, crisp 35mm bokeh, cozy atmospheric light, 8k, zero text."
+            short_thumb_prompt = f"Award-winning high-CTR vertical YouTube Short thumbnail photograph of {sb.title}. Striking 9:16 vertical composition, intense visual depth, rich atmospheric mist, 8k, zero text."
+            thumbnail_paths = await visual_batch_service.render_thumbnails_batch(
+                tasks=[
+                    (long_thumb_prompt, ep_dir / "thumbnail_music_4k.jpg", "16:9"),
+                    (short_thumb_prompt, ep_dir / "thumbnail_9x16_short.jpg", "9:16"),
+                ],
+                force_rerun=force_rerun,
+                image_model=image_model,
+            )
 
-        yt_package, ab_thumbnails, localized = export_metadata_packages(sb, ep_dir, long_play_hours, fade_to_black_hours)
-        await topic_memory.remember_topic(
-            topic=sb.title,
-            genre=f"ambient_{sb.cluster}",
-            tags=[sb.primary_archetype, sb.cluster],
-            story_synopsis=f"{sb.title} ({len(sb.scenes)} visual perspectives 4K UHD)",
-            episode_id=ep_dir.name,
-        )
+            yt_package, ab_thumbnails, localized = export_metadata_packages(sb, ep_dir, long_play_hours, fade_to_black_hours)
+            await topic_memory.remember_topic(
+                topic=sb.title,
+                genre=f"ambient_{sb.cluster}",
+                tags=[sb.primary_archetype, sb.cluster],
+                story_synopsis=f"{sb.title} ({len(sb.scenes)} visual perspectives 4K UHD)",
+                episode_id=ep_dir.name,
+            )
+            dur_stage5 = time.time() - t_stage5
+            logger.info(f"stage_completed: stage='Stage 5: 4K Master & Packaging' episode_id='{ep_dir.name}' duration={dur_stage5:.2f}s master='{master_4k_path.name}' timestamp={time.time()}")
+            print(f"[STAGE 5 COMPLETED] 4K Master & Packaging finished in {dur_stage5:.2f}s.")
+        except Exception as ex:
+            dur_stage5 = time.time() - t_stage5
+            logger.error(f"stage_failed: stage='Stage 5: 4K Master & Packaging' episode_id='{ep_dir.name}' duration={dur_stage5:.2f}s error='{ex}' timestamp={time.time()}")
+            raise
 
         render_time = round(time.time() - t_start, 2)
         logger.info(f"ambient_production_ready: {ep_dir.name} in {render_time}s")

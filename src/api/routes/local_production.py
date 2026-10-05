@@ -164,6 +164,14 @@ async def produce_video_locally(req: LocalProduceRequest):
     eff_fallback = bool(req.allow_fallback or not has_fal)
     eff_motion = req.motion_model if req.motion_model and req.motion_model != "auto" else ("wan" if capped_duration <= 10.0 else "auto")
 
+    t0 = time.time()
+    logger.info(
+        f"api_production_triggered: episode_id='{episode_id}' channel='{eff_channel_id}' "
+        f"script_only={eff_script_only} photos_only={eff_photos_only} motion_only={eff_motion_only} "
+        f"audio_only={eff_audio_only} master_only={eff_master_only} duration={capped_duration}s timestamp={t0}"
+    )
+    print(f"\n[API PRODUCTION TRIGGERED] Episode: {episode_id} | Channel: {eff_channel_id} | Flags: script={eff_script_only}, photos={eff_photos_only}, motion={eff_motion_only}, audio={eff_audio_only}, master={eff_master_only} | Duration: {capped_duration}s")
+
     try:
         result = await produce_channel_video(
             channel_id=eff_channel_id,
@@ -228,12 +236,18 @@ async def produce_video_locally(req: LocalProduceRequest):
                 topic=result.get("title") or title, metadata={"video_type": req.video_type, "format_type": req.format_type, "style_type": req.style_type},
                 final_story=req.prompt, episode_id=episode_id, user_id=user_id_val, channel_id=eff_channel_id,
             )
+        total_dur = time.time() - t0
+        logger.info(f"api_production_completed: episode_id='{episode_id}' total_duration={total_dur:.2f}s timestamp={time.time()}")
+        print(f"[API PRODUCTION COMPLETED] Episode {episode_id} finished in {total_dur:.2f}s.\n")
         return LocalProduceResponse(**result)
     except HTTPException:
+        total_dur = time.time() - t0
+        logger.error(f"api_production_failed: episode_id='{episode_id}' duration={total_dur:.2f}s error='HTTPException' timestamp={time.time()}")
         job_manager.update_job(job_id=job_id, status="failed", error="HTTP Exception")
         raise
     except Exception as exc:
-        logger.error(f"local_production_failed: {exc}", exc_info=True)
+        total_dur = time.time() - t0
+        logger.error(f"local_production_failed: episode_id='{episode_id}' duration={total_dur:.2f}s error='{exc}' timestamp={time.time()}", exc_info=True)
         job_manager.update_job(job_id=job_id, status="failed", error=str(exc))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Local production failed: {str(exc)}")
 

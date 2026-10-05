@@ -108,10 +108,12 @@ class SunoMusicAdapter(MusicProviderProtocol):
         else:
             is_ambient = any(w in (genre + " " + mood).lower() for w in ["ambient", "relax", "meditat", "sleep", "soundscape", "zen", "nature"])
             if is_ambient:
+                from src.services.cultural_acoustic_service import resolve_cultural_acoustic_profile
+                prof = resolve_cultural_acoustic_profile(archetype=genre, sub_genre=mood, title=title)
                 body = {
                     "custom_mode": True,
-                    "prompt": "[Instrumental Ambient Meditation]\n[432Hz Solfeggio Harmonic Resonance]\n[Joyful Uplifting Handpan & Singing Bowls]\n[Warm Velvet Ambient Pads & Celtic Harp]\n[Airy Nay Flute & Serene Soundbath]\n[Deep De-stressing & Restful Sleep Drone]\n[Outro: Infinite Peaceful Fade]",
-                    "tags": f"{genre}, {mood}, zero solo guitar"[:120],
+                    "prompt": prof.suno_prompt,
+                    "tags": prof.suno_tags[:120],
                     "title": (title or f"{genre[:50]} track")[:75], "mv": "sonic-v5",
                 }
             else:

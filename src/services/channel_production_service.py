@@ -1,6 +1,7 @@
 """Channel Production Service executing real multi-channel pipelines for API and Web Studio."""
 
 import json
+import time
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -223,22 +224,36 @@ async def produce_channel_video(
         except Exception as ex:
             logger.warning(f"failed_to_write_user_inputs: {ex}")
 
+    t_stage1 = time.time()
+    logger.info(f"stage_triggered: stage='Stage 1: Screenplay' episode_id='{episode_id}' timestamp={t_stage1}")
     if existing_sp:
         universal_sp = existing_sp
+        dur_stage1 = time.time() - t_stage1
+        logger.info(f"stage_reused: stage='Stage 1: Screenplay' episode_id='{episode_id}' title='{universal_sp.title}' duration={dur_stage1:.2f}s reason='cache_hit' timestamp={time.time()}")
+        print(f"[STAGE 1 CACHE REUSED] Screenplay reused for {episode_id} in {dur_stage1:.2f}s ($0.00 spend).")
     else:
-        universal_sp = await dispatch_studio_director(
-            genre=eff_genre,
-            sub_genre=sub_genre,
-            primary_archetype=primary_archetype,
-            channel_id=channel_id,
-            custom_prompt=prompt,
-            duration_seconds=duration_seconds or 60.0,
-            num_shots=effective_shots,
-            camera_motion=camera_motion or "locked_tripod",
-            user_id=effective_user,
-            raw_output_path=(ep_dir / "raw_gemini_screenplay.json") if ep_dir else None,
-            image_model=image_model,
-        )
+        print(f"\n[STAGE 1 TRIGGERED] Formulating Screenplay for {episode_id}...")
+        try:
+            universal_sp = await dispatch_studio_director(
+                genre=eff_genre,
+                sub_genre=sub_genre,
+                primary_archetype=primary_archetype,
+                channel_id=channel_id,
+                custom_prompt=prompt,
+                duration_seconds=duration_seconds or 60.0,
+                num_shots=effective_shots,
+                camera_motion=camera_motion or "locked_tripod",
+                user_id=effective_user,
+                raw_output_path=(ep_dir / "raw_gemini_screenplay.json") if ep_dir else None,
+                image_model=image_model,
+            )
+            dur_stage1 = time.time() - t_stage1
+            logger.info(f"stage_completed: stage='Stage 1: Screenplay' episode_id='{episode_id}' duration={dur_stage1:.2f}s scenes={len(universal_sp.scenes)} timestamp={time.time()}")
+            print(f"[STAGE 1 COMPLETED] Screenplay ready in {dur_stage1:.2f}s ({len(universal_sp.scenes)} scenes).")
+        except Exception as ex:
+            dur_stage1 = time.time() - t_stage1
+            logger.error(f"stage_failed: stage='Stage 1: Screenplay' episode_id='{episode_id}' duration={dur_stage1:.2f}s error='{ex}' timestamp={time.time()}")
+            raise
 
     if episode_id:
         universal_sp.production_id = episode_id
