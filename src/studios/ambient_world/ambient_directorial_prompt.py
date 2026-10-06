@@ -144,11 +144,12 @@ STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
    - In "visual_prompt", format for high-stability 16:9 landscape framing on a locked tripod with balanced natural depth.
    - In "motion_prompt", ALWAYS anchor with: "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, zero panning, zero tilting, zero zooming."
 
-3. SMOOTH HYPNOTIC KINETICS & ANTI-DRIFT CINEMAGRAPH STANDARD:
-   - Zero Environmental Warping: Mountains, rock cliffs, forest trees, and the horizon line MUST remain 100% frozen, rigid, and static.
-   - Fluid & Atmospheric Animation Only: Animate ONLY the natural dynamic elements (flowing stream water, rolling ocean surf, flickering hearth embers, or gentle rising vapor mist).
-   - Anti-Motion-Fatigue Clear Sky Standard: In all relaxation/nature vistas (alpine mountains, valleys, meadows, fjords, lakes, waterfalls, hearths), the sky MUST be a crystal-clear, cloudless azure sky ("crystal-clear cloudless blue sky, zero clouds, completely clear atmosphere"). STRICTLY PROHIBIT clouds, cumulus formations, overcast skies, and drifting clouds, as sky/cloud motion causes visual fatigue in living wallpapers.
-   - Domain Specification: Set "water_fluid" for water/rain/falls, "landscape_solid" for mountain/forest vistas, or "cozy_hearth" for campfires.
+3. HYBRID MOTION DIRECTORIAL SCRIPT CONTRACT:
+   - SCRIPT IS THE MANDATORY FOUNDATION FOR PRODUCTION. Every scene MUST explicitly specify "motion_type" ("ai_diffusion" | "ken_burns") and "motion_rationale". Zero fallbacks allowed.
+   - MANDATORY "ai_diffusion": living subjects (people, animals), fluid dynamics (rivers, waves, falls, rain, embers, steam), macro kinetics (swaying flower petals, rustling leaves), or moving vehicles.
+   - MANDATORY "ken_burns": rigid monumental terrain (distant mountain peaks, granite cliffs, dunes) and architecture (stone temples, palaces, room walls) to preserve 100% geometry at $0.00 compute.
+   - Anti-Motion-Fatigue Clear Sky Standard: The sky MUST be a crystal-clear cloudless azure sky. STRICTLY PROHIBIT drifting clouds.
+   - Domain Specification: Set "water_fluid" for water/rain/falls, "landscape_solid" for mountain/forest, or "cozy_hearth" for campfires.
 
 4. MODEL-SPECIFIC IMAGE PROMPTS ("image_model_configs"):
    - For every scene, generate model-tailored image prompts inside "image_model_configs" for the target image model ("{image_model}"):

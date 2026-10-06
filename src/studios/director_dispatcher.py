@@ -34,6 +34,7 @@ async def dispatch_studio_director(
     user_id: Optional[str] = None,
     raw_output_path: Optional[os.PathLike | str] = None,
     image_model: str = "flux_1_1_pro_ultra",
+    tier: str = "balanced",
 ) -> RelaxScreenplay:
     """Dispatch screenplay request to the appropriate specialized studio director."""
     p_lower = (custom_prompt or "").lower()
@@ -46,6 +47,7 @@ async def dispatch_studio_director(
         custom_prompt=custom_prompt, duration_seconds=duration_seconds, num_shots=num_shots,
         camera_motion=camera_motion, user_id=user_id, raw_output_path=raw_output_path,
         image_model=image_model, channel_id=channel_id or "earth_serenade",
+        tier=tier,
     )
 
     # 0. Dedicated Ocean Studio Dispatch (All 6 Diurnal Timings under genre 'relax/ocean')

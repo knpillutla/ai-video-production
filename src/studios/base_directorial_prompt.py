@@ -83,9 +83,11 @@ def build_base_directorial_prompt(
     curation_landmarks: Optional[List[str]] = None,
     color_temp_kelvin: int = 5500,
     channel_id: Optional[str] = None,
+    tier: str = "balanced",
 ) -> str:
     """Compose the authoritative directorial system prompt for Gemini storyboarding."""
     per_shot_dur = round(duration_seconds / max(1, num_shots), 1)
+    clean_tier = (tier or "balanced").strip().lower()
 
     exclusion_block = ""
     if excluded_topics:
@@ -126,13 +128,13 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
    - In "visual_prompt", format for high-stability 16:9 landscape framing on a locked tripod with balanced natural depth.
    - In "motion_prompt", ALWAYS anchor with: "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, zero panning, zero tilting, zero zooming."
 
-3. SMOOTH HYPNOTIC KINETICS & ANTI-DRIFT CINEMAGRAPH STANDARD:
-   - Zero Environmental Warping: Mountains, rock cliffs, forest trees, and the horizon line MUST remain 100% frozen, rigid, and static.
-   - Fluid & Atmospheric Animation Only: Animate ONLY the natural dynamic elements (flowing stream water, rolling ocean surf, flickering hearth embers, or gentle rising vapor mist).
-   - Hybrid Motion Determination ("motion_type" & "camera_movement"):
-     * Autonomously determine for each scene whether it needs live AI motion ("ai_diffusion") or local Ken Burns steadycam ("ken_burns" / "static").
-     * In Balanced Tier: Allocate fluid scenes (water/mist/traffic) to "ai_diffusion" (Wan 2.1). Allocate rigid monuments, temples, or solid terrain to "ken_burns" ("slow_zoom_in", "pan_right") to preserve 100% geometry at $0.00 compute.
-     * Include "motion_type" ("ai_diffusion"|"ken_burns"|"static"), "camera_movement", and "motion_rationale" in each scene.
+3. HYBRID MOTION DIRECTORIAL SCRIPT CONTRACT (TIER: {clean_tier.upper()}):
+   - SCRIPT IS THE MANDATORY FOUNDATION FOR PRODUCTION. Every scene MUST explicitly specify "motion_type" ("ai_diffusion" | "ken_burns") and "motion_rationale". Zero fallbacks allowed; downstream execution halts if missing.
+   - Cinematic Tier: Set "motion_type": "ai_diffusion" for 100% of scenes.
+   - Low-Cost Tier: Set "motion_type": "ken_burns" for 100% of scenes.
+   - Balanced Tier (Directorial Kinetic Allocation):
+     * MANDATORY "ai_diffusion": living subjects (people, performers, animals, birds), fluid dynamics (rivers, waves, falls, rain, embers, steam), macro kinetics (swaying flower petals, rustling leaves), or moving vehicles.
+     * MANDATORY "ken_burns": rigid monumental terrain (distant mountain peaks, granite cliffs, dunes) and architecture (stone temples, palaces, room walls) to preserve 100% geometry at $0.00 compute.
    - Anti-Motion-Fatigue Clear Sky Standard: Skies MUST be crystal-clear, cloudless azure skies. STRICTLY PROHIBIT drifting clouds.
    - Domain Specification: Set "water_fluid" for water/rain/falls, "landscape_solid" for mountain/citadels/forest, or "cozy_hearth" for fires.
 

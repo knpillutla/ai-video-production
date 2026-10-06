@@ -160,6 +160,8 @@ async def produce_channel_video(
         except Exception:
             pass
 
+    eff_tier = tier or saved_inputs.get("tier", "balanced")
+
     is_downstream_stage = bool(photos_only or motion_only or audio_only or master_only)
     inputs_match = (
         saved_inputs.get("input_schema_version") == 1
@@ -231,7 +233,7 @@ async def produce_channel_video(
         "pipeline_strategy": pipeline_strategy,
         "allow_fallback": allow_fallback,
         "dual_editions": dual_editions,
-        "tier": tier or saved_inputs.get("tier", "balanced"),
+        "tier": eff_tier,
     }
     if user_inputs_file:
         try:
@@ -268,6 +270,7 @@ async def produce_channel_video(
                 user_id=effective_user,
                 raw_output_path=(ep_dir / "raw_gemini_screenplay.json") if ep_dir else None,
                 image_model=image_model,
+                tier=eff_tier,
             )
             dur_stage1 = time.time() - t_stage1
             if ep_dir:
@@ -325,6 +328,7 @@ async def produce_channel_video(
         "channel_id": channel_id,
         "pipeline_strategy": pipeline_strategy,
         "execution_mode": execution_mode,
+        "tier": eff_tier,
         "current_stage": 1 if script_only else 5,
         "stage_status": "ready" if script_only else "completed",
         "stage_approvals": {"script": True, "keyframes": not script_only, "motion": not script_only, "audio": not script_only, "master": not script_only},
@@ -342,6 +346,7 @@ async def produce_channel_video(
     manifest_payload = {
         "episode_id": episode_id,
         "title": universal_sp.title,
+        "tier": eff_tier,
         "prompt": prompt,
         "genre": eff_genre,
         "primary_archetype": generated_primary_archetype,
@@ -395,6 +400,7 @@ async def produce_channel_video(
     result = await pipeline.execute(
         sb=sb,
         episode_id=episode_id,
+        tier=eff_tier,
         motion_model=eff_motion,
         image_model=image_model or "flux_dev",
         photos_only=photos_only,

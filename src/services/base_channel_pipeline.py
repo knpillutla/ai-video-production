@@ -42,6 +42,7 @@ class BaseChannelPipeline:
         self,
         sb: AmbientStoryboard,
         episode_id: Optional[str] = None,
+        tier: str = "balanced",
         motion_model: str = "auto",
         image_model: str = "flux_dev",
         long_play_hours: Optional[float] = None,
@@ -63,10 +64,11 @@ class BaseChannelPipeline:
         eff_model = motion_model or self.config.default_motion_model
         crf_val = 16 if uncompressed else 22
 
-        logger.info(f"starting_channel_job: {self.config.channel_name} id={episode_id} image={image_model} motion={eff_model} photos_only={photos_only} motion_only={motion_only} no_bgm={no_bgm}")
+        logger.info(f"starting_channel_job: {self.config.channel_name} id={episode_id} tier={tier} image={image_model} motion={eff_model} photos_only={photos_only} motion_only={motion_only} no_bgm={no_bgm}")
         print(f"\n[DECISION - CHANNEL PIPELINE INITIALIZED]")
         print(f"   * Channel:     {self.config.channel_name} ({self.config.channel_handle})")
         print(f"   * Title:       {sb.title}")
+        print(f"   * Tier:        {tier.upper()}")
         print(f"   * Image Model: {image_model}")
         if self.config.strategy_description:
             print(f"   * Strategy:    {self.config.strategy_description}")
@@ -75,6 +77,7 @@ class BaseChannelPipeline:
         result = await self.producer.produce(
             sb=sb,
             episode_id=episode_id,
+            tier=tier,
             motion_model=eff_model,
             image_model=image_model,
             long_play_hours=None,

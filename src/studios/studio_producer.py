@@ -21,6 +21,7 @@ from src.services.broadcast_export_service import (
     handle_long_play_export,
     handle_short_export,
 )
+from src.services.motion_tier_router import resolve_scene_motion_model
 from src.services.soundtrack_service import soundtrack_service
 from src.services.topic_memory import topic_memory
 from src.services.visual_batch_service import MotionClipTask, visual_batch_service
@@ -59,6 +60,7 @@ class StudioProducer:
         self,
         sb: AmbientStoryboard,
         episode_id: Optional[str] = None,
+        tier: str = "balanced",
         motion_model: str = "auto",
         image_model: str = "flux_dev",
         long_play_hours: Optional[float] = None,
@@ -76,6 +78,12 @@ class StudioProducer:
         t_start = time.time()
         ep_dir = (self.output_base / episode_id) if episode_id else (self.output_base / f"ep_{sb.primary_archetype[:20]}_{int(time.time())}")
         ep_dir.mkdir(parents=True, exist_ok=True)
+
+        if not sb or not getattr(sb, "scenes", None) or len(sb.scenes) == 0:
+            raise RuntimeError(
+                "Production halted: Screenplay script is the mandatory foundation for all production. "
+                "No script or scenes found; stopping."
+            )
 
         # Stage 1: Pre-Flight Deduplication & Autonomous Creative Auto-Pivot Gate
         if not episode_id:
@@ -138,6 +146,14 @@ class StudioProducer:
         motion_tasks = []
         for idx, (s, kf) in enumerate(zip(sb.scenes, valid_keyframes), 1):
             custom_model_cfg = getattr(s, "model_configs", None) if isinstance(getattr(s, "model_configs", None), dict) else None
+            chosen_model, m_allow_fallback, m_rationale = resolve_scene_motion_model(
+                scene=s,
+                tier=tier,
+                requested_motion_model=motion_model,
+                scene_index=idx - 1,
+                total_scenes=len(valid_keyframes),
+                genre=getattr(sb, "cluster", "relax/nature"),
+            )
             motion_tasks.append(
                 MotionClipTask(
                     image_path=kf,
@@ -145,10 +161,10 @@ class StudioProducer:
                     visual_prompt=s.visual_prompt,
                     output_path=ep_dir / f"motion_p{idx}.mp4",
                     duration_seconds=s.duration_seconds,
-                    model=motion_model,
+                    model=chosen_model,
                     domain=s.domain,
                     req_file=ep_dir / f"fal_motion_req_p{idx}.json",
-                    allow_fallback=allow_fallback,
+                    allow_fallback=allow_fallback or m_allow_fallback,
                     force_rerun=force_rerun,
                     negative_prompt=_resolve_scene_negative_prompt(s),
                     model_configs=custom_model_cfg,

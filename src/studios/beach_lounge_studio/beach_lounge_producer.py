@@ -16,6 +16,7 @@ class BeachLoungeStudioProducer:
     async def produce(
         self,
         sb: BeachLoungeStoryboard,
+        tier: str = "balanced",
         motion_model: str = "wan",
         motion_only: bool = False,
         keyframes_only: bool = False,
@@ -44,12 +45,16 @@ class BeachLoungeStudioProducer:
                     duration_seconds=s.duration_seconds,
                     domain=s.domain,
                     location_hub=s.location_hub,
+                    motion_type=getattr(s, "motion_type", "ai_diffusion"),
+                    camera_movement=getattr(s, "camera_movement", "slow_zoom_in"),
+                    motion_rationale=getattr(s, "motion_rationale", None),
                 )
                 for s in sb.scenes
             ],
         )
         return await self.producer.produce(
             sb=amb_sb,
+            tier=tier,
             motion_model=motion_model,
             motion_only=motion_only,
             keyframes_only=keyframes_only,

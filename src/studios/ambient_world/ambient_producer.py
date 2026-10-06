@@ -21,6 +21,7 @@ from src.services.ambient_export_service import (
     handle_short_export,
 )
 from src.services.binaural_spatial_audio import apply_binaural_spatial_mastering
+from src.services.motion_tier_router import resolve_scene_motion_model
 from src.services.soundtrack_service import soundtrack_service
 from src.services.topic_memory import topic_memory
 from src.services.visual_batch_service import MotionClipTask, visual_batch_service
@@ -60,6 +61,7 @@ class AmbientWorldProducer:
         self,
         sb: AmbientStoryboard,
         episode_id: Optional[str] = None,
+        tier: str = "balanced",
         motion_model: str = "auto",
         image_model: str = "flux_dev",
         long_play_hours: Optional[float] = None,
@@ -76,6 +78,8 @@ class AmbientWorldProducer:
     ) -> Dict[str, Any]:
         """Execute 4-Stage Progressive Quality Gate with 100% Artifact Idempotency."""
         t_start = time.time()
+        if not sb or not getattr(sb, "scenes", None) or len(sb.scenes) == 0:
+            raise RuntimeError("Production halted: Script is the mandatory foundation for all production. Missing script; stopping.")
         ep_dir = (self.output_base / episode_id) if episode_id else (self.output_base / f"ep_{sb.primary_archetype[:20]}_{int(time.time())}")
         ep_dir.mkdir(parents=True, exist_ok=True)
 
@@ -83,14 +87,12 @@ class AmbientWorldProducer:
         if not episode_id:
             is_dup, conflict = await topic_memory.is_duplicate_topic(sb.title, genre=f"ambient_{sb.cluster}")
             if is_dup and conflict:
-                logger.warning(f"decision_duplicate_detected: '{sb.title}' matches {conflict.get('episode_id')}. Auto-pivoting to unique sunset theme...")
-                print(f"[DECISION - TOPIC DEDUPLICATION] Duplicate topic detected (matches {conflict.get('episode_id')}). Auto-pivoting to unique Twilight variation to protect channel CTR.")
+                logger.warning(f"decision_duplicate_detected: '{sb.title}' matches {conflict.get('episode_id')}. Auto-pivoting...")
                 sb.title = f"{sb.title} ~ Golden Twilight Serenade"
                 for s in sb.scenes:
                     s.visual_prompt = f"{s.visual_prompt} Bathed in warm golden twilight and serene evening tranquility."
             else:
                 logger.info(f"decision_deduplication_clean: '{sb.title}' is unique. Proceeding without conflict.")
-                print(f"[DECISION - TOPIC DEDUPLICATION] Title '{sb.title}' is 100% novel in Topic Memory. Proceeding without conflict.")
 
         # Stage 2: Keyframe Image Gate (Concurrent Idempotent Batch via visual_batch_service)
         def _resolve_scene_image_prompt(s: AmbientScenePrompt) -> str:
@@ -155,9 +157,14 @@ class AmbientWorldProducer:
         try:
             motion_tasks = []
             for i, (scene, kf_path) in enumerate(zip(sb.scenes, keyframe_paths)):
-                s_m = (getattr(scene, "motion_type", None) or "").lower()
-                is_ai = (s_m == "ai_diffusion") or (not s_m and (getattr(scene, "domain", "") in ("water_fluid", "water_impact_collision") or i == 0 or len(sb.scenes) == 1))
-                m_choice = motion_model if is_ai else "local_zoompan"
+                m_choice, m_allow_fb, m_rationale = resolve_scene_motion_model(
+                    scene=scene,
+                    tier=tier,
+                    requested_motion_model=motion_model,
+                    scene_index=i,
+                    total_scenes=len(keyframe_paths),
+                    genre=getattr(sb, "cluster", "ambient"),
+                )
                 motion_tasks.append(MotionClipTask(
                     image_path=kf_path,
                     motion_prompt=scene.motion_prompt,
@@ -167,7 +174,7 @@ class AmbientWorldProducer:
                     model=m_choice,
                     domain=scene.domain,
                     req_file=ep_dir / f"fal_diff_req_p{scene.scene_index}.json",
-                    allow_fallback=allow_fallback or (m_choice == "local_zoompan"),
+                    allow_fallback=allow_fallback or m_allow_fb,
                     force_rerun=force_rerun,
                     negative_prompt=_resolve_scene_negative_prompt(scene),
                     model_configs=getattr(scene, "model_configs", {}),
