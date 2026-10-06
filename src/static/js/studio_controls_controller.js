@@ -115,31 +115,34 @@ function onStudioDurationDropdownChange(val) {
 }
 
 function getEffectiveProductionDuration() {
-  if (typeof activeExecutionMode === "undefined" || activeExecutionMode !== "prod") {
-    return { durSec: (typeof activeShotsCount !== "undefined" ? activeShotsCount * 5.0 : 5.0), lpHours: 0.0 };
-  }
-  const durVal = document.getElementById("studio-stretch-hours")?.value || "3h";
+  const durVal = document.getElementById("studio-stretch-hours")?.value || "2m";
+  let resolvedDur = { durSec: 120.0, lpHours: 0.0 };
+
   if (durVal === "custom") {
-    const custNum = parseFloat(document.getElementById("studio-custom-minutes-input")?.value || "20") || 20;
+    const custNum = parseFloat(document.getElementById("studio-custom-minutes-input")?.value || "2") || 2;
     const unit = document.getElementById("studio-custom-unit-select")?.value || "mins";
     if (unit === "hours") {
-      return { durSec: 90.0, lpHours: custNum };
+      resolvedDur = { durSec: 90.0, lpHours: custNum };
+    } else {
+      resolvedDur = { durSec: custNum * 60.0, lpHours: 0.0 };
     }
-    return { durSec: custNum * 60.0, lpHours: 0.0 };
-  }
-  if (durVal.endsWith("h")) {
+  } else if (durVal.endsWith("h")) {
     const hours = parseFloat(durVal) || 3.0;
-    return { durSec: 90.0, lpHours: hours };
+    resolvedDur = { durSec: 90.0, lpHours: hours };
+  } else if (durVal.endsWith("m")) {
+    const mins = parseInt(durVal, 10) || 2;
+    resolvedDur = { durSec: mins * 60.0, lpHours: 0.0 };
+  } else if (durVal === "90s" || durVal === "0") {
+    resolvedDur = { durSec: 90.0, lpHours: 0.0 };
+  } else {
+    const num = parseFloat(durVal) || 2.0;
+    resolvedDur = num <= 8 ? { durSec: 90.0, lpHours: num } : { durSec: num * 60.0, lpHours: 0.0 };
   }
-  if (durVal.endsWith("m")) {
-    const mins = parseInt(durVal, 10) || 3;
-    return { durSec: mins * 60.0, lpHours: 0.0 };
+
+  if (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "draft_preview_5s") {
+    return { durSec: (typeof activeShotsCount !== "undefined" ? activeShotsCount * 5.0 : 15.0), lpHours: 0.0 };
   }
-  if (durVal === "90s" || durVal === "0") {
-    return { durSec: 90.0, lpHours: 0.0 };
-  }
-  const num = parseFloat(durVal) || 3.0;
-  return num <= 8 ? { durSec: 90.0, lpHours: num } : { durSec: num * 60.0, lpHours: 0.0 };
+  return resolvedDur;
 }
 
 function calculateLiveCostEstimate() {

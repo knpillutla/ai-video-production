@@ -24,8 +24,9 @@ TRAVEL & SCENIC STUDIO DIRECTORIAL & AUTONOMOUS CURATION RULES:
      * Historic Quarters & Boutique Districts: Heritage bazaars, famous boutique streets, artisan lanes, cobblestone plazas.
    - Scene Diversity Contract: Every scene MUST showcase a distinct attraction or viewpoint; never repeat the same monument or angle across scenes.
 
-3. 4K CINEMATIC AERIAL DRONE FRAMING (DEFAULT CAMERA RIG):
-   - All shots default to 4K cinematic aerial drone cinematography (sweeping forward glides, slow circular orbits, dramatic reveals, or high-altitude panoramas).
+3. 4K CINEMATIC AERIAL DRONE FRAMING & MULTI-WAYPOINT CHOREOGRAPHY:
+   - All shots default to 4K cinematic aerial drone cinematography with multi-waypoint camera choreography ('camera_waypoints').
+   - For long shots (15s–40s+), orchestrate dynamic multi-phase flights (e.g. 15s forward glide -> 15s orbital pan -> 10s gentle elevation crane) so the perspective flows continuously without repetitive looping.
    - Gimbal Purity: Ensure horizons remain 100% level, transitions are buttery-smooth, zero erratic camera maneuvers.
    - Architectural Elegance: Keep focus on breathtaking architectural geometry, bridges, and city planning without crowd clutter.
 
@@ -42,6 +43,13 @@ TRAVEL & SCENIC STUDIO DIRECTORIAL & AUTONOMOUS CURATION RULES:
 
 6. FLUID DYNAMICS (RULE 20):
    - For urban rivers, lakes, oceans, or waterfalls, specify smooth laminar water surfaces and specular light reflections.
+
+7. WIDE-SCALE KINETIC MICRO-ZONES ('kinetic_micro_zones'):
+   - For wide aerial shots, specify normalized bounding boxes [ymin, ymax, xmin, xmax] (0.0-1.0) to animate distant elements:
+     * 'sprites': Distant cars on boulevards, boats on waterways, or pedestrian clusters in courtyards (drifting via 'delta_pct').
+     * 'tree_sway_zones': Distant park/hillside tree canopies with wind sway.
+     * 'water_zones': Distant river/lake surfaces with subtle harmonic ripples.
+     * 'celestial_zone': Subtle solar/lunar corona shimmer.
 """
 
 

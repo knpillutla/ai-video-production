@@ -79,7 +79,10 @@ def build_base_directorial_prompt(
     tier: str = "balanced",
 ) -> str:
     """Compose the authoritative directorial system prompt for Gemini storyboarding."""
-    per_shot_dur = round(duration_seconds / max(1, num_shots), 1)
+    eff_shots = num_shots if num_shots > 0 else max(1, round(duration_seconds / 20.0))
+    per_shot_dur = round(duration_seconds / max(1, eff_shots), 1)
+    target_words = max(25, int(duration_seconds * 1.95))
+    per_shot_words = max(12, int(target_words / max(1, eff_shots)))
     clean_tier = (tier or "balanced").strip().lower()
     eff_kelvin, tod_key, tod_desc = detect_lighting_directive(custom_prompt, archetype, color_temp_kelvin or 5500)
     lighting_block = format_universal_lighting_guardrails(tod_key, eff_kelvin, tod_desc)
@@ -134,18 +137,15 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
      * MANDATORY "ai_diffusion": living subjects (people, performers, animals, birds), fluid dynamics (rivers, waves, falls, rain, embers, steam), macro kinetics (swaying flower petals, rustling leaves), or moving vehicles.
      * MANDATORY "ken_burns": rigid monumental terrain (distant mountain peaks, granite cliffs, dunes) and architecture (stone temples, palaces, room walls) to preserve 100% geometry at $0.00 compute.
    - Anti-Motion-Fatigue Clear Sky Standard: Skies MUST be crystal-clear, cloudless azure skies. STRICTLY PROHIBIT drifting clouds.
+   - Multi-Waypoint Kinetic Choreography: In "camera_waypoints", provide an array of sub-movements and durations summing to duration_seconds (e.g. slow_drone_forward, pan_right, crane_up, reveal_pull_back) so the camera moves smoothly without repetitive loops.
+   - Wide-Scale Micro-Kinetics: In "kinetic_micro_zones", specify optional normalized bboxes [ymin, ymax, xmin, xmax] (0.0-1.0) for "sprites" (cars, people, boats drifting via delta_pct), "tree_sway_zones", and "water_zones".
    - Domain Specification: Set "water_fluid" for water/rain/falls, "landscape_solid" for mountain/citadels/forest, or "cozy_hearth" for fires.
 
 4. MULTI-MODEL IMAGE PROMPTS ("image_model_configs"):
-   - For every scene, you MUST generate model-tailored image prompts inside "image_model_configs" for ALL THREE image models:
-     * "flux_dev": Model "fal-ai/flux/dev". Natural balanced landscape phrasing, aspect_ratio: "16:9", guidance_scale: 3.5, num_inference_steps: 28.
-     * "flux_pro": Model "fal-ai/flux-pro/v1.1-ultra". Ultra-detailed 8K Hasselblad photorealistic prompt, aspect_ratio: "16:9", raw: true.
-     * "zimage": Model "fal-ai/z-image/turbo". Punchy high-contrast photographic prompt, aspect_ratio: "16:9", num_inference_steps: 8.
+   - For every scene, author model-tailored landscape prompts for "flux_dev" (natural balanced), "flux_pro" (8K Hasselblad raw), and "zimage" (punchy 8-step turbo).
 
 5. MODEL-SPECIFIC VIDEO DIFFUSION DIRECTIVES ("model_configs"):
-   - For every scene, you MUST generate model-specific positive prompts, negative prompts, and optimal API settings inside "model_configs" for:
-     * "kling_v1_6_pro": Model "fal-ai/kling-video/v1.6/pro/image-to-video". Directorial action command style.
-     * "wan_2_1": Model "fal-ai/wan-i2v". Continuous fluid kinetic phrasing.
+   - For every scene, author model-tailored positive/negative prompts for "kling_v1_6_pro" (directorial action) and "wan_2_1" (continuous fluid kinetic).
 
 6. MANDATORY NEGATIVE PROMPT:
    - For Pure Wilderness: Always include: "clouds, cloudy, overcast sky, cumulus, stratus, cirrus, storm clouds, dark clouds, moving clouds, timelapse clouds, rapid clouds, rolling clouds, cloud morphing, rapid cloud shadows, camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings".
@@ -202,7 +202,7 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
   "cast": [],
   "audio_master": {{
     "audio_mode": "ambient_nature",
-    "spoken_narration_script": "Mindful, poetic, and educational voiceover narration describing the natural sanctuary, geography, and tranquil atmosphere, paced at 125 wpm.",
+    "spoken_narration_script": "Continuous unbroken master voiceover (~{target_words} words for {duration_seconds}s at 125 WPM), seamlessly narrating the journey without loops.",
     "singing_lyrics_spec": "",
     "suno_musical_tags": "432Hz meditative soundbath, joyful uplifting handpan, singing bowls, warm velvet synth pads, deep stress relief, peaceful sleep drone, zero solo guitar, -21 LUFS",
     "vocal_gender": "none",
@@ -220,59 +220,32 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
       "color_temp_kelvin": {eff_kelvin},
       "visual_prompt": "A photorealistic, symmetrical 16:9 cinematic landscape view of [Landmark Name], shot on locked tripod. Pristine natural wilderness, strictly zero buildings, zero tourists, zero vehicles.",
       "image_model_configs": {{
-        "flux_dev": {{
-          "model": "fal-ai/flux/dev",
-          "prompt": "A photorealistic, wide panoramic landscape view of [Landmark Name]. Symmetrical 16:9 cinematic framing on a locked tripod. In the majestic background, towering terrain rises into a crisp clear sky; in the foreground, pristine natural elements frame the vista. Pristine wilderness, zero buildings, zero tourists.",
-          "aspect_ratio": "16:9",
-          "guidance_scale": 3.5,
-          "num_inference_steps": 28
-        }},
-        "flux_pro": {{
-          "model": "fal-ai/flux-pro/v1.1-ultra",
-          "prompt": "Ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c with prime 24mm f/5.6 lens. Symmetrical 16:9 cinematic framing, shot on a locked tripod. A breathtaking panoramic landscape view of [Landmark Name]. Pristine untouched wilderness, strictly zero humans, zero modern structures, zero vehicles.",
-          "aspect_ratio": "16:9",
-          "raw": true
-        }},
-        "zimage": {{
-          "model": "fal-ai/z-image/turbo",
-          "prompt": "Stunning photorealistic panoramic landscape of [Landmark Name], 16:9 locked tripod framing, pristine nature, 8k, sharp focus.",
-          "aspect_ratio": "16:9",
-          "num_inference_steps": 8
-        }}
+        "flux_dev": {{"model": "fal-ai/flux/dev", "prompt": "Photorealistic wide panoramic view of [Landmark Name], 16:9 cinematic.", "aspect_ratio": "16:9", "guidance_scale": 3.5, "num_inference_steps": 28}},
+        "flux_pro": {{"model": "fal-ai/flux-pro/v1.1-ultra", "prompt": "Ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c of [Landmark Name], 16:9.", "aspect_ratio": "16:9", "raw": true}},
+        "zimage": {{"model": "fal-ai/z-image/turbo", "prompt": "Stunning photorealistic panoramic landscape of [Landmark Name], 16:9, sharp focus.", "aspect_ratio": "16:9", "num_inference_steps": 8}}
       }},
-      "motion_prompt": "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, zero panning, zero tilting, zero zooming. Rock cliffs, horizon line, and landscape structure remain 100% frozen and static. Only the natural kinetic elements gently flow in continuous motion with soft vapor mist steadily rising.",
-      "motion_negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings",
+      "motion_prompt": "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement.",
+      "motion_negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, artifacts",
       "model_configs": {{
-        "wan_2_1": {{
-          "model": "fal-ai/wan-i2v",
-          "prompts": {{
-            "positive_prompt": "Living wallpaper cinemagraph, completely stationary static frame. Landscape structure remains 100% frozen and unmoving. Smooth continuous natural motion, tranquil rising vapor mist. Stable uniform illumination, seamless loop compatible.",
-            "negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, shifting rocks, altering cliff structures, structural drift, changing perspective, flickering, temporal jump, sunny sky, rainbow, changing lighting, parched, frozen ice, stagnant water, artifacts, humans, tourist, boat, railings, buildings"
-          }},
-          "settings": {{
-            "guide_scale": 5.0,
-            "num_inference_steps": 30,
-            "aspect_ratio": "16:9"
-          }}
-        }},
-        "kling_v1_6_pro": {{
-          "model": "fal-ai/kling-video/v1.6/pro/image-to-video",
-          "prompts": {{
-            "positive_prompt": "Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Rock cliffs and horizon line remain 100% frozen and static. Continuous natural flow directly matching the source image, soft rising vapor mist, seamless cyclic motion, pristine untouched nature, zero humans.",
-            "negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water"
-          }},
-          "settings": {{
-            "mode": "pro",
-            "duration": "5",
-            "aspect_ratio": "16:9"
-          }}
-        }}
+        "wan_2_1": {{"model": "fal-ai/wan-i2v", "prompts": {{"positive_prompt": "Living wallpaper cinemagraph, fluid motion.", "negative_prompt": "camera movement, artifacts"}}, "settings": {{"guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9"}}}},
+        "kling_v1_6_pro": {{"model": "fal-ai/kling-video/v1.6/pro/image-to-video", "prompts": {{"positive_prompt": "Cinemagraph living wallpaper.", "negative_prompt": "camera movement, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}}
       }},
       "domain": "water_fluid",
       "motion_type": "ai_diffusion",
       "camera_movement": "slow_zoom_in",
+      "camera_waypoints": [
+        {{"motion": "slow_drone_forward", "duration_seconds": 15.0}},
+        {{"motion": "pan_right", "duration_seconds": 15.0}},
+        {{"motion": "crane_up", "duration_seconds": 10.0}}
+      ],
+      "kinetic_micro_zones": {{
+        "sprites": [{{"label": "car_eastbound", "bbox": [0.72, 0.74, 0.30, 0.33], "delta_pct": [0.08, 0.0]}}],
+        "tree_sway_zones": [[0.20, 0.50, 0.80, 0.95]],
+        "water_zones": [[0.65, 0.95, 0.10, 0.90]]
+      }},
       "motion_rationale": "Fluid water surface requires live AI diffusion for natural ripples",
-      "duration_seconds": {per_shot_dur}
+      "duration_seconds": {per_shot_dur},
+      "narration_text": "Evocative, continuous narration for this vista (~{per_shot_words} words) paced smoothly for {per_shot_dur}s."
     }}
   ],
   "publishing": {{

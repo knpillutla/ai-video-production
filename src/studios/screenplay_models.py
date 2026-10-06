@@ -82,6 +82,31 @@ class RelaxSceneDirective(BaseModel):
     camera_movement: str = "slow_zoom_in"
     motion_rationale: Optional[str] = None
     duration_seconds: float = 30.0
+    narration_text: Optional[str] = None
+    camera_waypoints: List[CameraWaypointDirective] = Field(default_factory=list)
+    kinetic_micro_zones: Optional[KineticMicroSpec] = None
+
+
+class KineticSpriteSpec(BaseModel):
+    """Moving sprite specification (car, pedestrian, boat, animal) for wide shots."""
+    label: str = "moving_object"
+    bbox: List[float] = Field(default_factory=list)
+    delta_pct: List[float] = Field(default_factory=lambda: [0.03, 0.0])
+    bobbing: bool = False
+
+
+class KineticMicroSpec(BaseModel):
+    """Tier-0 micro-kinetic zones for wide architectural & landscape shots."""
+    sprites: List[KineticSpriteSpec] = Field(default_factory=list)
+    tree_sway_zones: List[List[float]] = Field(default_factory=list)
+    water_zones: List[List[float]] = Field(default_factory=list)
+    celestial_zone: Optional[Dict[str, Any]] = None
+
+
+class CameraWaypointDirective(BaseModel):
+    """Single timed camera kinetic waypoint for multi-phase drone choreography."""
+    motion: str = "slow_drone_forward"
+    duration_seconds: float = 5.0
 
 
 class RelaxPublishingPackage(BaseModel):

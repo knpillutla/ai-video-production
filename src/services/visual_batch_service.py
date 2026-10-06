@@ -34,27 +34,29 @@ class MotionClipTask:
     force_rerun: bool = False
     negative_prompt: Optional[str] = None
     model_configs: Optional[dict[str, Any]] = None
+    camera_waypoints: Optional[list] = None
+    kinetic_micro_zones: Optional[dict] = None
 
 
 def resolve_motion_model(model: str, prompt_context: str, total_shots: int = 4) -> tuple[str, str]:
     """Dynamically route to optimal AI video diffusion model with directorial rationale."""
     m_clean = (model or "").lower()
     if m_clean in ("wan_4k", "wan_super_res", "wan_upscale"):
-        return "wan_4k", "Alibaba Wan 2.1 (1080p) + AI 4K Super-Resolution selected for true 4K high-fidelity living wallpaper"
+        return "wan_4k", "Alibaba Wan 2.1 (1080p) + AI 4K Super-Resolution"
     if m_clean in ("wan", "wan_2_1", "wan21"):
-        return "wan", "Alibaba Wan 2.1 cost-effective motion diffusion selected for fluid landscapes"
+        return "wan", "Alibaba Wan 2.1 motion diffusion"
     if m_clean in ("kling_pro", "kling_v1_6_pro", "kling_v1_5_pro", "kling_1_6", "kling_1_5", "kling"):
-        return "kling_pro", "Kling 1.6 Pro selected for flagship high-coherence video diffusion"
+        return "kling_pro", "Kling 1.6 Pro high-coherence video diffusion"
     if m_clean in ("kling_v3", "kling_4k", "kling_v3_4k"):
-        return "kling_v3", "Kling v3 4K Native selected for native 4K UHD video diffusion"
+        return "kling_v3", "Kling v3 4K Native video diffusion"
     if m_clean in ("hunyuan", "lanczos", "local_zoompan", "ken_burns", "zoompan"):
-        return m_clean, f"Direct configuration override ({model})"
+        return m_clean, f"Configuration override ({model})"
     if total_shots <= 5:
-        return "kling_v3", f"Kling v3 4K Native selected as default for <=5 shots ({total_shots} shots) for native 4K UHD OLED fidelity"
+        return "kling_v3", f"Kling v3 4K Native default ({total_shots} shots)"
     p = prompt_context.lower()
     if any(k in p for k in ("fire", "flame", "ember", "hearth", "waterfall", "rapids", "cascade", "chimney")):
-        return "kling_v3", "Kling v3 4K Native selected for high volumetric momentum, dynamic fire embers, and fluid splash plumes"
-    return "wan_4k", "Alibaba Wan 2.1 + AI 4K Super-Resolution selected for fluid landscapes"
+        return "kling_v3", "Kling v3 4K Native for fluid dynamics"
+    return "wan_4k", "Alibaba Wan 2.1 + AI 4K Super-Resolution"
 
 
 def _is_clip_4k(video_path: Path) -> bool:
@@ -166,9 +168,12 @@ class VisualBatchService:
 
         async def _process_single_motion(task: MotionClipTask) -> Path:
             if not task.force_rerun and task.output_path.is_file() and task.output_path.stat().st_size > 1000:
-                logger.info(f"decision_motion_cache_hit: Reusing {task.output_path.name} ($0.00 spend)")
-                print(f"[DECISION - MOTION CACHE HIT] Clip {task.output_path.name} exists on disk. Reusing asset ($0.00 spend).")
-                return task.output_path
+                from src.services.ambient_export_service import get_media_duration
+                c_dur = get_media_duration(task.output_path) or 0.0
+                if abs(c_dur - float(task.duration_seconds)) <= 2.0:
+                    logger.info(f"decision_motion_cache_hit: Reusing {task.output_path.name} ($0.00 spend)")
+                    print(f"[DECISION - MOTION CACHE HIT] Clip {task.output_path.name} exists on disk. Reusing asset ($0.00 spend).")
+                    return task.output_path
 
             if task.force_rerun:
                 task.output_path.unlink(missing_ok=True)
@@ -189,7 +194,7 @@ class VisualBatchService:
                         )
                     )
                 )
-                return await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds, movement=mov)
+                return await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds, movement=mov, waypoints=task.camera_waypoints, kinetic_micro_zones=task.kinetic_micro_zones)
 
             eff_prompt = task.motion_prompt
             eff_neg = task.negative_prompt
@@ -236,16 +241,13 @@ class VisualBatchService:
                         await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, req_file=task.req_file)
 
                     if raw_diff.is_file() and raw_diff.stat().st_size > 1000:
-                        # Direct 4K Pass-Through: If already 4K native, move directly (0% CPU, 0s compute)
                         if _is_clip_4k(raw_diff):
-                            logger.info(f"decision_4k_direct_pass: {task.output_path.name} is already 4K native. Skipping re-encoding.")
-                            print(f"[DECISION - 4K DIRECT PASS] {task.output_path.name} is native 4K UHD. Preserved directly without CPU re-encoding.")
+                            logger.info(f"decision_4k_direct_pass: {task.output_path.name} is native 4K. Skipping re-encoding.")
                             if task.output_path.exists():
                                 task.output_path.unlink()
                             raw_diff.rename(task.output_path)
                             return task.output_path
 
-                        # Only scale/encode if clip is not 4K (e.g. 1080p fallback) with thread capping
                         ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
                         cmd_scale = [
                             ffmpeg_bin, "-y", "-i", str(raw_diff),
@@ -272,24 +274,19 @@ class VisualBatchService:
 
             # Fallback only when explicitly permitted
             if task.allow_fallback:
-                return await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds)
+                return await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds, task.camera_movement, task.camera_waypoints, task.kinetic_micro_zones)
             raise RuntimeError(f"Cannot generate motion clip {task.output_path.name}: Image missing or diffusion unavailable without --allow-fallback.")
 
         return list(await asyncio.gather(*[_process_single_motion(t) for t in tasks]))
 
-    async def _render_local_fallback(self, img_path: Path, out_path: Path, duration_sec: float, movement: str = "slow_drone_forward") -> Path:
+    async def _render_local_fallback(self, img_path: Path, out_path: Path, duration_sec: float, movement: str = "slow_drone_forward", waypoints: Optional[list] = None, kinetic_micro_zones: Optional[dict] = None) -> Path:
         """Deterministic 4K CPU perspective drone & camera homography motion engine ($0.00 spend)."""
         logger.info(f"decision_motion_fallback: 4K CPU perspective drone for {out_path.name} (movement: {movement})")
         from src.scripts.local_perspective_drone import render_perspective_drone_clip
         return await render_perspective_drone_clip(
-            image_path=img_path,
-            output_path=out_path,
-            duration_seconds=duration_sec,
-            fps=24,
-            target_res=(3840, 2160),
-            camera_movement=movement,
-            speed_factor=1.0,
-            force_rerun=True,
+            image_path=img_path, output_path=out_path, duration_seconds=duration_sec,
+            fps=24, target_res=(3840, 2160), camera_movement=movement, speed_factor=1.0, force_rerun=True, camera_waypoints=waypoints,
+            kinetic_micro_zones=kinetic_micro_zones,
         )
 
 

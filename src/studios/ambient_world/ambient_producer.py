@@ -42,11 +42,8 @@ def _resolve_scene_negative_prompt(scene: Any, default_camera: str = "locked_tri
         extra_tokens.append("clouds, cloudy, overcast sky, overcast, cumulus, stratus, cirrus, storm clouds, dark clouds, moving clouds, timelapse clouds, rapid clouds, rolling clouds, cloud morphing, rapid cloud shadows, sky flickering")
     if "waterfall" in p_text or "cascade" in p_text:
         extra_tokens.append("frozen ice, motionless water, stagnant pond, reverse water flow")
-    extra_tokens.append("fast moving clouds, timelapse, time-lapse, rapid clouds, rolling storm clouds, accelerated sky, swirling clouds, cloud morphing, rapid cloud shadows, high-speed wind, storm winds, flickering sky")
-    extra_tokens.append("gelatinous water, melting foam, static frozen water, boiling water artifacts, rubbery water, unnatural foam blobs, zero static vertical streaks, artifacts")
-    
-    parts = [p for p in [base_neg, ", ".join(extra_tokens)] if p]
-    return ", ".join(parts)
+    extra_tokens.append("fast moving clouds, timelapse, cloud morphing, flickering sky, gelatinous water, melting foam, artifacts")
+    return ", ".join([p for p in [base_neg, ", ".join(extra_tokens)] if p])
 
 
 class AmbientWorldProducer:
@@ -178,6 +175,8 @@ class AmbientWorldProducer:
                     force_rerun=force_rerun,
                     negative_prompt=_resolve_scene_negative_prompt(scene),
                     model_configs=getattr(scene, "model_configs", {}),
+                    camera_waypoints=getattr(scene, "camera_waypoints", None),
+                    kinetic_micro_zones=scene.kinetic_micro_zones.model_dump() if getattr(scene, "kinetic_micro_zones", None) else None,
                 ))
             video_clip_paths = await visual_batch_service.render_motion_batch(motion_tasks)
             dur_stage3 = time.time() - t_stage3
@@ -201,26 +200,31 @@ class AmbientWorldProducer:
         logger.info(f"stage_triggered: stage='Stage 4: Audio' episode_id='{ep_dir.name}' timestamp={t_stage4}")
         print(f"\n[STAGE 4 TRIGGERED] Synthesizing & Mastering Audio for {ep_dir.name}...")
         try:
-            master_bgm_path = None
+            raw_bgm_path, master_bgm_path = ep_dir / "raw_soundtrack.mp3", ep_dir / "velvet_binaural_master_48k.mp3"
             if not no_bgm:
-                raw_bgm_path, master_bgm_path = ep_dir / "raw_soundtrack.mp3", ep_dir / "velvet_binaural_master_48k.mp3"
                 if not master_bgm_path.is_file() or master_bgm_path.stat().st_size < 1000:
                     eff_archetype = sb.primary_archetype or getattr(sb, "sub_genre", "")
                     await soundtrack_service.synthesize_ambient_soundtrack(
-                        title=sb.title,
-                        tags=sb.audio_tags,
-                        out_path=raw_bgm_path,
-                        total_duration=sb.total_duration,
-                        genre=f"ambient_{sb.cluster}",
-                        episode_id=ep_dir.name,
-                        archetype=eff_archetype,
-                        force_rerun=force_rerun and audio_only,
-                        prompt=getattr(sb, "audio_prompt", None),
+                        title=sb.title, tags=sb.audio_tags, out_path=raw_bgm_path, total_duration=sb.total_duration,
+                        genre=f"ambient_{sb.cluster}", episode_id=ep_dir.name, archetype=eff_archetype,
+                        force_rerun=force_rerun and audio_only, prompt=getattr(sb, "audio_prompt", None)
                     )
                     await asyncio.to_thread(apply_binaural_spatial_mastering, input_audio=raw_bgm_path, output_audio=master_bgm_path, target_lufs=-21.0)
-                else:
-                    logger.info(f"decision_audio_master_cache_hit: Reusing {master_bgm_path.name} ($0.00 spend)")
-                    print(f"[DECISION - AUDIO MASTER CACHE HIT] Master audio already exists on disk ({master_bgm_path.name}). Reusing asset ($0.00 spend).")
+            else:
+                master_bgm_path = None
+
+            from src.services.shot_narration_service import synthesize_shot_aligned_narration
+            n_script = getattr(sb, "spoken_narration_script", None)
+            narr_res = await synthesize_shot_aligned_narration(
+                scenes=sb.scenes, ep_dir=ep_dir, fallback_script=n_script,
+                total_target_sec=float(sb.total_duration or 60.0), voice_id="en-US-JennyNeural",
+                force_rerun=force_rerun and audio_only,
+            )
+            narr_path = narr_res.get("narration_path")
+            eff_shot_durs = narr_res.get("shot_durations")
+            if narr_res.get("total_duration") and narr_res["total_duration"] > float(sb.total_duration or 60.0):
+                sb.total_duration = narr_res["total_duration"]
+
             dur_stage4 = time.time() - t_stage4
             logger.info(f"stage_completed: stage='Stage 4: Audio' episode_id='{ep_dir.name}' duration={dur_stage4:.2f}s timestamp={time.time()}")
             print(f"[STAGE 4 COMPLETED] Audio ready in {dur_stage4:.2f}s.")
@@ -243,39 +247,27 @@ class AmbientWorldProducer:
         print(f"\n[STAGE 5 TRIGGERED] Assembling 4K Master & Packaging for {ep_dir.name} (target: {sb.total_duration}s)...")
         try:
             masters = await asyncio.to_thread(
-                assemble_dual_masters,
-                video_clips=video_clip_paths,
-                audio_path=master_bgm_path,
-                ep_dir=ep_dir,
-                force_rerun=force_rerun,
-                target_duration_sec=float(sb.total_duration or 60.0),
+                assemble_dual_masters, video_clips=video_clip_paths, audio_path=master_bgm_path, ep_dir=ep_dir,
+                force_rerun=force_rerun, target_duration_sec=float(sb.total_duration or 60.0),
+                narration_audio_path=narr_path if (narr_path and Path(narr_path).is_file()) else None,
+                shot_durations=eff_shot_durs,
             )
             master_4k_path = masters["music_master"]
-            master_nature_path = masters["nature_master"]
+            master_nature_path = masters.get("narration_master", masters["nature_master"])
 
-            long_play_path = await asyncio.to_thread(handle_long_play_export, master_4k_path, ep_dir, long_play_hours, fade_to_black_hours)
+            is_relax = getattr(sb, "cluster", "") == "nature" or "relax" in getattr(sb, "genre", "")
+            long_play_path = await asyncio.to_thread(handle_long_play_export, master_4k_path, ep_dir, long_play_hours, fade_to_black_hours) if is_relax else None
             short_video_path = await asyncio.to_thread(handle_short_export, master_4k_path, ep_dir, generate_short)
 
-            # Render high-CTR SEO Thumbnails in Stage 5 once master broadcast is locked
-            long_thumb_prompt = f"Award-winning high-CTR YouTube thumbnail landscape photograph of {sb.title}. High contrast, stunning cinematic depth, crisp 35mm bokeh, cozy atmospheric light, 8k, zero text."
-            short_thumb_prompt = f"Award-winning high-CTR vertical YouTube Short thumbnail photograph of {sb.title}. Striking 9:16 vertical composition, intense visual depth, rich atmospheric mist, 8k, zero text."
-            thumbnail_paths = await visual_batch_service.render_thumbnails_batch(
-                tasks=[
-                    (long_thumb_prompt, ep_dir / "thumbnail_music_4k.jpg", "16:9"),
-                    (short_thumb_prompt, ep_dir / "thumbnail_9x16_short.jpg", "9:16"),
-                ],
-                force_rerun=force_rerun,
-                image_model=image_model,
+            long_thumb_prompt = f"Award-winning high-CTR landscape photograph of {sb.title}, 35mm bokeh, 8k, zero text."
+            short_thumb_prompt = f"Award-winning high-CTR vertical Short photograph of {sb.title}, 9:16 vertical, 8k, zero text."
+            await visual_batch_service.render_thumbnails_batch(
+                tasks=[(long_thumb_prompt, ep_dir / "thumbnail_music_4k.jpg", "16:9"), (short_thumb_prompt, ep_dir / "thumbnail_9x16_short.jpg", "9:16")],
+                force_rerun=force_rerun, image_model=image_model,
             )
-
             yt_package, ab_thumbnails, localized = export_metadata_packages(sb, ep_dir, long_play_hours, fade_to_black_hours)
-            await topic_memory.remember_topic(
-                topic=sb.title,
-                genre=f"ambient_{sb.cluster}",
-                tags=[sb.primary_archetype, sb.cluster],
-                story_synopsis=f"{sb.title} ({len(sb.scenes)} visual perspectives 4K UHD)",
-                episode_id=ep_dir.name,
-            )
+            await topic_memory.remember_topic(topic=sb.title, genre=f"ambient_{sb.cluster}", tags=[sb.primary_archetype, sb.cluster],
+                                              story_synopsis=f"{sb.title} ({len(sb.scenes)} vistas 4K UHD)", episode_id=ep_dir.name)
             dur_stage5 = time.time() - t_stage5
             logger.info(f"stage_completed: stage='Stage 5: 4K Master & Packaging' episode_id='{ep_dir.name}' duration={dur_stage5:.2f}s master='{master_4k_path.name}' timestamp={time.time()}")
             print(f"[STAGE 5 COMPLETED] 4K Master & Packaging finished in {dur_stage5:.2f}s.")

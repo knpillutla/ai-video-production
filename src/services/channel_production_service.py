@@ -472,9 +472,23 @@ async def produce_channel_video(
             "color": "emerald",
         })
 
+    if manifest_file and (manifest_file.parent / "spoken_narration.mp3").exists() and (manifest_file.parent / "spoken_narration.mp3").stat().st_size > 1000:
+        raw_narr_f = manifest_file.parent / "spoken_narration.mp3"
+        audio_stems.append({
+            "name": "TTS Spoken Narration",
+            "filename": "spoken_narration.mp3",
+            "type": "Spoken Narration",
+            "duration": f"{duration_seconds:.0f}s",
+            "url": _to_url(str(raw_narr_f)),
+            "status": "completed",
+            "color": "amber",
+        })
+
     master_nature_v = result.get("master_nature_video_path") or result.get("master_nature_video")
+    if not master_nature_v and manifest_file and (manifest_file.parent / "master_4k_narration.mp4").is_file():
+        master_nature_v = str(manifest_file.parent / "master_4k_narration.mp4")
     video_url = _to_url(master_v) if master_v else (motion_clips[0]["url"] if motion_clips and not photos_only else None)
-    nature_video_url = _to_url(master_nature_v) if master_nature_v else None
+    nature_video_url = _to_url(master_nature_v) if master_nature_v else video_url
 
     dur_str = f"{int(duration_seconds)}s"
     editions = []
@@ -500,7 +514,7 @@ async def produce_channel_video(
                 "duration": dur_str,
                 "format": "4K Narration",
                 "status": "completed",
-                "url": video_url,
+                "url": nature_video_url,
             })
         else:
             editions.append({

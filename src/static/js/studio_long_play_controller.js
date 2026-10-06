@@ -18,8 +18,8 @@ function renderLongPlayStretchSection(vid) {
     vid.status !== "processing" &&
     (vid.currentStage >= 4 || vid.status === "completed") &&
     (vid.videoUrl || vid.video_url || (vid.editions && vid.editions.length > 0))
-  );
-  if (!hasMaster) {
+  const isRelax = Boolean(vid.genre?.includes("relax") || vid.cluster === "nature" || (vid.long_play_hours && parseFloat(vid.long_play_hours) > 0));
+  if (!hasMaster || !isRelax) {
     container.classList.add("hidden");
     if (approvalCard) approvalCard.classList.add("hidden");
     dualGrid.innerHTML = "";
