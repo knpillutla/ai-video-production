@@ -181,7 +181,15 @@ class VisualBatchService:
             logger.info(f"decision_motion_routing: {task.output_path.name} -> {chosen_model.upper()} ({rationale})")
             print(f"[DECISION - MOTION ROUTING] {task.output_path.name} -> {chosen_model.upper()} ({rationale})")
             if chosen_model in ("lanczos", "local_zoompan", "ken_burns", "zoompan"):
-                return await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds)
+                p_text = f"{task.visual_prompt} {task.motion_prompt}".lower()
+                mov = "crane_ascend" if any(k in p_text for k in ("crane", "tilt_up", "ascend", "vertical")) else (
+                    "drone_sweep_left" if any(k in p_text for k in ("left", "sweep_left", "pan_left")) else (
+                        "drone_sweep_right" if any(k in p_text for k in ("right", "sweep_right", "pan_right")) else (
+                            "dolly_pullback" if any(k in p_text for k in ("pull_back", "reveal", "zoom_out")) else "slow_drone_forward"
+                        )
+                    )
+                )
+                return await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds, movement=mov)
 
             eff_prompt = task.motion_prompt
             eff_neg = task.negative_prompt
@@ -269,27 +277,20 @@ class VisualBatchService:
 
         return list(await asyncio.gather(*[_process_single_motion(t) for t in tasks]))
 
-    async def _render_local_fallback(self, img_path: Path, out_path: Path, duration_sec: float) -> Path:
-        """Deterministic 4K slow steadycam zoom-pan fallback (used only when --allow-fallback is active)."""
-        logger.warning(f"decision_motion_fallback: Using high-quality 4K zoom-pan for {out_path.name}")
-        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-        total_frames = int(duration_sec * 24)
-        cmd = [
-            ffmpeg_bin, "-y", "-loop", "1", "-i", str(img_path),
-            "-vf", f"zoompan=z='min(zoom+0.0003,1.06)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={total_frames}:fps=24,scale=3840:2160:flags=bicubic",
-            "-t", str(duration_sec), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-r", "24", str(out_path),
-        ]
-        try:
-            subprocess.run(cmd, capture_output=True, text=True, check=True)
-        except Exception as e:
-            logger.error(f"zoompan_primary_failed: {e}. Falling back to safe 4K loop.")
-            cmd_safe = [
-                ffmpeg_bin, "-y", "-loop", "1", "-i", str(img_path),
-                "-vf", "scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160",
-                "-t", str(duration_sec), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-r", "24", str(out_path),
-            ]
-            subprocess.run(cmd_safe, capture_output=True, text=True, check=True)
-        return out_path
+    async def _render_local_fallback(self, img_path: Path, out_path: Path, duration_sec: float, movement: str = "slow_drone_forward") -> Path:
+        """Deterministic 4K CPU perspective drone & camera homography motion engine ($0.00 spend)."""
+        logger.info(f"decision_motion_fallback: 4K CPU perspective drone for {out_path.name} (movement: {movement})")
+        from src.scripts.local_perspective_drone import render_perspective_drone_clip
+        return await render_perspective_drone_clip(
+            image_path=img_path,
+            output_path=out_path,
+            duration_seconds=duration_sec,
+            fps=24,
+            target_res=(3840, 2160),
+            camera_movement=movement,
+            speed_factor=1.0,
+            force_rerun=True,
+        )
 
 
 visual_batch_service = VisualBatchService()

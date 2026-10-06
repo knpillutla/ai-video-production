@@ -49,10 +49,11 @@ async def execute_directorial_screenplay(
     logger.info(f"gemini_screenplay_engine_request: tier='{eff_tier}' genre='{genre}' archetype='{primary_archetype}' search={google_search_enabled}")
 
     try:
-        resp = await client.post(url, json=payload, timeout=50.0)
+        resp = await client.post(url, json=payload, timeout=120.0)
     except Exception as net_err:
-        logger.error(f"gemini_network_error: {net_err}")
-        raise RuntimeError(f"Gemini API request failed due to network exception: {net_err}") from net_err
+        err_desc = f"{type(net_err).__name__}: {net_err}" if str(net_err) else type(net_err).__name__
+        logger.error(f"gemini_network_error: {err_desc}")
+        raise RuntimeError(f"Gemini API request failed due to network exception: {err_desc}") from net_err
 
     if resp.status_code != 200:
         err_msg = f"Gemini API error (HTTP {resp.status_code}): {resp.text[:500]}"

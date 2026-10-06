@@ -61,19 +61,26 @@ def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf
         return clip_path
 
     base_stem = clip_path.stem.replace("_fwd_seamless", "")
-    out_seamless = clip_path.parent / f"{base_stem}_fwd_seamless.mp4"
+    sp_file = clip_path.parent / "screenplay.json"
+    if "p" in base_stem and sp_file.is_file():
+        try:
+            import json
+            sp = json.loads(sp_file.read_text(encoding="utf-8"))
+            idx = int("".join(filter(str.isdigit, base_stem)) or "1")
+            scs = sp.get("scenes", [])
+            if idx - 1 < len(scs) and scs[idx - 1].get("motion_type") in ("ken_burns", "static", "local_zoompan"):
+                return clip_path
+        except Exception:
+            pass
 
+    out_seamless = clip_path.parent / f"{base_stem}_fwd_seamless.mp4"
     duration = get_media_duration(clip_path)
     if duration <= xfade_dur + 0.5:
         return clip_path
 
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-    has_audio = False
-    try:
-        check = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], capture_output=True, text=True, errors="ignore")
-        has_audio = "Audio:" in check.stderr
-    except Exception:
-        pass
+    check = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], capture_output=True, text=True, errors="ignore")
+    has_audio = "Audio:" in check.stderr
 
     if out_seamless.is_file() and out_seamless.stat().st_size > 1000:
         if has_audio:
@@ -181,6 +188,7 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
                 "-movflags", "+faststart", str(out_master)
             ]
     else:
+        x_dur = min(1.0, eff_master_dur / (n * 3)) if eff_master_dur <= 30.0 else 2.0
         shot_hold = (eff_master_dur + ((n - 1) * x_dur)) / n
         inputs = []
         for c in seamless_clips:
@@ -220,19 +228,9 @@ def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], e
     seamless_clips = [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
     master_music = ep_dir / "master_4k_ambient.mp4"
     cached_dur = get_media_duration(master_music) if master_music.is_file() else None
-    duration_mismatch = (
-        eff_target_dur is not None
-        and cached_dur is not None
-        and abs(cached_dur - float(eff_target_dur)) > 2.0
-    )
-    needs_music_rebuild = (
-        force_rerun
-        or not master_music.is_file()
-        or master_music.stat().st_size < 1000
-        or duration_mismatch
-        or any(sc.stat().st_mtime > master_music.stat().st_mtime for sc in seamless_clips)
-    )
-    if needs_music_rebuild:
+    dur_mis = eff_target_dur and cached_dur and abs(cached_dur - float(eff_target_dur)) > 2.0
+    needs_rebuild = force_rerun or not master_music.is_file() or master_music.stat().st_size < 1000 or dur_mis or any(sc.stat().st_mtime > master_music.stat().st_mtime for sc in seamless_clips)
+    if needs_rebuild:
         assemble_4k_master(seamless_clips, audio_path, master_music, scene_hold_sec=scene_hold_sec, crf=crf, target_duration_sec=eff_target_dur)
     else:
         logger.info(f"decision_master_video_cache_hit: Reusing {master_music.name} ($0.00 spend)")
