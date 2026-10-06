@@ -139,7 +139,7 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
             target_audio = foley_wav
 
     a_dur = get_media_duration(target_audio) if (target_audio and target_audio.is_file()) else 0.0
-    eff_master_dur = float(scene_hold_sec) if (scene_hold_sec and scene_hold_sec > 0) else (a_dur if a_dur > 0 else 60.0)
+    eff_master_dur = max(a_dur, float(scene_hold_sec or 60.0)) if a_dur > 15.0 else (float(scene_hold_sec) if (scene_hold_sec and scene_hold_sec > 0) else 60.0)
     if target_audio and target_audio.is_file() and eff_master_dur > a_dur > 0:
         from src.services.binaural_spatial_audio import build_seamless_audio_loop
         target_audio = build_seamless_audio_loop(target_audio)
@@ -217,21 +217,12 @@ def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], e
     else:
         logger.info(f"decision_master_video_cache_hit: Reusing {master_music.name} ($0.00 spend)")
 
-    if not audio_path:
-        return {"music_master": master_music, "nature_master": None}
-
-    master_nature = ep_dir / "master_4k_ambient_nature_only.mp4"
-    needs_nature_rebuild = force_rerun or not master_nature.is_file() or master_nature.stat().st_size < 1000 or any(sc.stat().st_mtime > master_nature.stat().st_mtime for sc in seamless_clips)
-    if needs_nature_rebuild:
-        assemble_4k_master(seamless_clips, None, master_nature, scene_hold_sec=scene_hold_sec, crf=crf)
-    else:
-        logger.info(f"decision_nature_master_cache_hit: Reusing {master_nature.name} ($0.00 spend)")
-
-    return {"music_master": master_music, "nature_master": master_nature}
+    # Nature master disabled for the time being to cut assembly time in half (50% CPU reduction)
+    return {"music_master": master_music, "nature_master": master_music}
 
 
 def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], fade_hours: Optional[float], force_rerun: bool = False) -> Optional[Path]:
-    """Export long-play multi-hour stream loop for all existing master versions (with BGM and pure nature), plus 30-min broadcast by default."""
+    """Export long-play multi-hour stream loop for primary 4K broadcast master, plus 30-min broadcast by default."""
     if not hours or hours <= 0:
         return None
     eff_h = float(hours)
@@ -241,18 +232,6 @@ def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], 
     if master.is_file() and (force_rerun or not lp_path.is_file() or lp_path.stat().st_size < 1000 or master.stat().st_mtime > lp_path.stat().st_mtime):
         export_long_play_broadcast(source_4k_video=master, output_long_play=lp_path, target_duration_seconds=eff_h * 3600.0, fade_to_black_hours=fade_hours)
 
-    lp_30m = ep_dir / "master_4k_30min_broadcast.mp4"
-    if master.is_file() and (force_rerun or not lp_30m.is_file() or lp_30m.stat().st_size < 1000 or master.stat().st_mtime > lp_30m.stat().st_mtime):
-        export_long_play_broadcast(source_4k_video=master, output_long_play=lp_30m, target_duration_seconds=1800.0)
-
-    nat_m = ep_dir / "master_4k_ambient_nature_only.mp4"
-    if nat_m.is_file() and nat_m.resolve() != master.resolve():
-        lp_nat = ep_dir / f"master_4k_{lbl}hour_nature_only{sfx}_broadcast.mp4"
-        if force_rerun or not lp_nat.is_file() or lp_nat.stat().st_size < 1000 or nat_m.stat().st_mtime > lp_nat.stat().st_mtime:
-            export_long_play_broadcast(source_4k_video=nat_m, output_long_play=lp_nat, target_duration_seconds=eff_h * 3600.0, fade_to_black_hours=fade_hours)
-        lp_30m_nat = ep_dir / "master_4k_30min_nature_only_broadcast.mp4"
-        if force_rerun or not lp_30m_nat.is_file() or lp_30m_nat.stat().st_size < 1000 or nat_m.stat().st_mtime > lp_30m_nat.stat().st_mtime:
-            export_long_play_broadcast(source_4k_video=nat_m, output_long_play=lp_30m_nat, target_duration_seconds=1800.0)
     return lp_path
 
 

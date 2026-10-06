@@ -65,7 +65,7 @@ def export_long_play_broadcast(
             str(out)
         ]
     else:
-        # Lossless fast stream copy of master MP4 container (loops 4K video & 48kHz audio in lockstep for entire duration)
+        # Lossless fast 4K video stream copy + monotonic 48kHz AAC audio to prevent browser timestamp resets
         cmd = [
             ffmpeg_bin, "-y",
             "-stream_loop", "-1",
@@ -74,7 +74,8 @@ def export_long_play_broadcast(
             "-i", str(src),
             "-map", "0:v:0", "-map", "0:a?",
             "-t", str(target_duration_seconds),
-            "-c", "copy",
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
             "-movflags", "+faststart",
             str(out)
         ]

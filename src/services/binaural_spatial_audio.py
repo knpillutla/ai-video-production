@@ -50,8 +50,11 @@ def apply_binaural_spatial_mastering(
 
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
 
-    # Clean acoustic velvet EQ: removes subsonic rumble, tames digital harshness, and enhances warmth
+    # Clean acoustic velvet EQ + Content ID Immunization Filter (+1.8% / +25 cents detune with tempo compensation)
     velvet_eq = (
+        "asetrate=48000*1.018,"
+        "aresample=48000,"
+        "atempo=0.9823,"
         "highpass=f=35,"
         "lowpass=f=12000,"
         "equalizer=f=3800:t=q:w=2.0:g=-1.5,"

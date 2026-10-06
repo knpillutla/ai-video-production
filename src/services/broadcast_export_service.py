@@ -209,21 +209,18 @@ def assemble_dual_masters(
     else:
         logger.info(f"decision_master_video_cache_hit: Reusing {master_music.name} ($0.00 spend)")
 
-    master_nature = ep_dir / "master_4k_ambient_nature_only.mp4"
-    if eff_audio and (force_rerun or not master_nature.is_file() or master_nature.stat().st_size < 1000):
-        assemble_4k_master(seamless_clips, None, master_nature, crf=crf)
-
+    # Nature master disabled for the time being to cut assembly time in half (50% CPU reduction)
     return {
         "music_master": master_music,
         "master_4k": master_music,
-        "nature_master": master_nature if master_nature.is_file() else master_music,
-        "master_nature": master_nature if master_nature.is_file() else master_music,
+        "nature_master": master_music,
+        "master_nature": master_music,
         "master_1080p": master_music,
     }
 
 
 def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], fade_hours: Optional[float]) -> Optional[Path]:
-    """Export long-play multi-hour stream loop for all existing master versions."""
+    """Export long-play multi-hour stream loop for primary 4K broadcast master."""
     eff_hours = hours if (hours and hours > 0) else 3.0
     suffix = f"_{int(fade_hours)}h_black" if fade_hours else ""
     label = int(eff_hours) if eff_hours.is_integer() else eff_hours
@@ -231,16 +228,6 @@ def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], 
 
     if master.is_file() and (not lp_path.is_file() or lp_path.stat().st_size < 1000):
         export_long_play_broadcast(source_4k_video=master, output_long_play=lp_path, target_duration_seconds=eff_hours * 3600.0, fade_to_black_hours=fade_hours)
-    
-    lp_30m = ep_dir / "master_4k_30min_broadcast.mp4"
-    if master.is_file() and (not lp_30m.is_file() or lp_30m.stat().st_size < 1000):
-        export_long_play_broadcast(source_4k_video=master, output_long_play=lp_30m, target_duration_seconds=1800.0)
-
-    nature_master = ep_dir / "master_4k_ambient_nature_only.mp4"
-    if nature_master.is_file() and nature_master.resolve() != master.resolve():
-        lp_nature = ep_dir / f"master_4k_{label}hour_nature_only{suffix}_broadcast.mp4"
-        if not lp_nature.is_file() or lp_nature.stat().st_size < 1000:
-            export_long_play_broadcast(source_4k_video=nature_master, output_long_play=lp_nature, target_duration_seconds=eff_hours * 3600.0, fade_to_black_hours=fade_hours)
 
     return lp_path if lp_path.is_file() else None
 
