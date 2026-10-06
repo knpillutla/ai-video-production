@@ -247,7 +247,14 @@ def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], e
             if m_music.is_file() and m_music.stat().st_size > 1000:
                 t_r = time.time()
                 t_dur = float(eff_target_dur or get_media_duration(m_music) or 60.0)
-                cmd_r = [imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error", "-i", str(m_music), "-i", str(narr_audio), "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-af", f"apad,afade=t=out:st={max(0, t_dur - 3.0):.2f}:d=3.0", "-t", f"{t_dur:.2f}", "-movflags", "+faststart", str(m_narr)]
+                cmd_r = [
+                    imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error",
+                    "-i", str(m_music), "-i", str(narr_audio),
+                    "-filter_complex", f"[0:a]volume=0.22[bgm];[1:a]volume=1.0[vox];[bgm][vox]amix=inputs=2:duration=first:dropout_transition=3,apad,afade=t=out:st={max(0, t_dur - 3.0):.2f}:d=3.0[aout]",
+                    "-map", "0:v:0", "-map", "[aout]",
+                    "-c:v", "copy", "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
+                    "-t", f"{t_dur:.2f}", "-movflags", "+faststart", str(m_narr)
+                ]
                 subprocess.run(cmd_r, check=True)
                 logger.info(f"fast_narration_master_remuxed: duration={time.time() - t_r:.2f}s target={t_dur:.2f}s")
             else:

@@ -11,37 +11,12 @@ from src.studios.ambient_world.ambient_catalog import ARCHETYPES, AtmosphericArc
 from src.services.audio_tag_service import normalize_audio_tags
 
 
-class AmbientScenePrompt(BaseModel):
-    """Scene prompt specification for an ambient production."""
-    scene_index: int
-    perspective_type: str  # wide_atmospheric, intimate_macro, mid_environmental, golden_canopy
-    visual_prompt: str
-    motion_prompt: str
-    duration_seconds: float = 30.0
-    domain: str = "landscape_solid"
-    motion_type: str = "ai_diffusion"
-    camera_movement: str = "slow_zoom_in"
-    motion_rationale: Optional[str] = None
-    image_model_configs: dict = Field(default_factory=dict)
-    model_configs: dict = Field(default_factory=dict)
-
-
-class AmbientStoryboard(BaseModel):
-    """Directorial storyboard for Ambient & Relaxation productions."""
-    title: str
-    story_topic: Optional[str] = ""
-    primary_archetype: str
-    secondary_archetype: Optional[str] = None
-    cluster: str
-    total_duration: float = 60.0
-    recommended_fps: int = 24
-    audio_tags: str = ""
-    audio_prompt: Optional[str] = ""
-    scenes: List[AmbientScenePrompt] = Field(default_factory=list)
-
-    @field_validator("audio_tags", mode="before")
-    @classmethod
-    def normalize_audio_tags(cls, v): return normalize_audio_tags(v)
+from src.studios.screenplay_models import (
+    BaseScenePrompt,
+    BaseStoryboard,
+    AmbientScenePrompt,
+    AmbientStoryboard,
+)
 
 
 def resolve_archetype(key_or_name: str) -> AtmosphericArchetype:

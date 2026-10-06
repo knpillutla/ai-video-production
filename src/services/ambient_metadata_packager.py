@@ -41,8 +41,10 @@ def generate_youtube_ambient_package(
     fade_to_black_hours: Optional[float] = None,
 ) -> YouTubeAmbientPackage:
     """Generate high-CTR YouTube metadata, thumbnail prompt, and chapter timestamps."""
-    key = archetype_key.lower().replace("-", "_").replace(" ", "_")
-    clean_name = archetype_key.replace("_", " ").title()
+    if not isinstance(archetype_key, str):
+        archetype_key = getattr(archetype_key, "primary_archetype", None) or getattr(archetype_key, "cluster", None) or "nature_sanctuary"
+    key = str(archetype_key).lower().replace("-", "_").replace(" ", "_")
+    clean_name = str(archetype_key).replace("_", " ").title()
     base_title = TITLE_TEMPLATES.get(key, f"{clean_name} 4K • Calming Nature Ambience & Soft Music")
 
     if secondary_element and "•" in base_title:

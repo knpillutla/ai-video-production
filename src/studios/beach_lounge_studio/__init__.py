@@ -4,7 +4,7 @@ from src.studios.beach_lounge_studio.beach_lounge_director import (
     BeachLoungeStoryboard,
     generate_beach_lounge_screenplay_gemini,
 )
-from src.studios.beach_lounge_studio.beach_lounge_producer import BeachLoungeStudioProducer
+from src.studios.studio_producer import StudioProducer as BeachLoungeStudioProducer
 
 __all__ = [
     "BEACH_LOUNGE_ARCHETYPES",

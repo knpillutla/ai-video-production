@@ -169,6 +169,7 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
         (["master_4k_3hour_broadcast.mp4", "master_4k_3hour_sleep.mp4"], "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3 Hours)", "16:9 Long-Play", "published", "12.87 GB"),
         (["master_4k_1hour_broadcast.mp4", "master_4k_1hour_sleep.mp4"], "1h_music", "1-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "1:00:00 (1 Hour)", "16:9 Long-Play", "published", "4.29 GB"),
         (["master_4k_ambient.mp4"], "master_music", "4K Master Set (Broadcast)", "fa-clapperboard text-purple-400", "Broadcast Master", "90s (Master)", "16:9 Master", "completed", "155 MB"),
+        (["master_4k_narration.mp4"], "master_narration", "4K Master Set (Narration + BGM)", "fa-microphone text-teal-400", "Spoken Voiceover + Ducked BGM", "Master", "16:9 Master", "completed", "155 MB"),
         (["short_9x16_teaser.mp4"], "short_teaser", "9:16 Vertical Short Teaser", "fa-mobile-screen text-pink-400", "Music + Ambient", "20s (Short)", "9:16 Short", "completed", "6.6 MB"),
     ]
     for fn_list, eid, name, icon, mode, dur, fmt, st, sz in edition_defs:
@@ -288,6 +289,9 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
         "created_by": "AI Studio Autonomous Producer",
         "is_approved": is_approved,
         "approved": is_approved,
+        "dual_editions": bool(user_inputs_data.get("dual_editions") or ("master_4k_narration.mp4" in files and "master_4k_ambient.mp4" in files)),
+        "execution_mode": user_inputs_data.get("execution_mode", "test"),
+        "duration_seconds": float(user_inputs_data.get("duration_seconds") or screenplay_data.get("total_duration_seconds") or 120.0),
         "youtube_packaging": yt_pack,
         "youtube_packaging_nature_only": yt_pack_nature,
     }

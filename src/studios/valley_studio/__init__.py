@@ -4,7 +4,7 @@ from src.studios.valley_studio.valley_director import (
     ValleyStoryboard,
     generate_valley_screenplay_gemini,
 )
-from src.studios.valley_studio.valley_producer import ValleyStudioProducer
+from src.studios.studio_producer import StudioProducer as ValleyStudioProducer
 
 __all__ = [
     "VALLEY_ARCHETYPES",

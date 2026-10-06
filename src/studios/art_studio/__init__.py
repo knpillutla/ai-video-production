@@ -9,7 +9,7 @@ from src.studios.art_studio.art_director import (
     ArtStoryboard,
     generate_art_screenplay_gemini,
 )
-from src.studios.art_studio.art_producer import ArtStudioProducer
+from src.studios.studio_producer import StudioProducer as ArtStudioProducer
 
 __all__ = [
     "ART_ARCHETYPES",

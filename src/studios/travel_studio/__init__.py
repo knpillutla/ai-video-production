@@ -9,7 +9,7 @@ from src.studios.travel_studio.travel_director import (
     TravelStoryboard,
     generate_travel_screenplay_gemini,
 )
-from src.studios.travel_studio.travel_producer import TravelStudioProducer
+from src.studios.studio_producer import StudioProducer as TravelStudioProducer
 
 __all__ = [
     "TRAVEL_ARCHETYPES",

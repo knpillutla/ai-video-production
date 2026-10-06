@@ -81,6 +81,10 @@ function renderInspectorFromVideo(vid) {
     }
   }
 
+  if (typeof populateProductionControlsFromEpisode === "function") {
+    populateProductionControlsFromEpisode(vid);
+  }
+
   const statusBadge = document.getElementById("top-ep-status-badge");
   if (statusBadge) {
     if (vid.status === "failed") {

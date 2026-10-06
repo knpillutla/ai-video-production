@@ -10,6 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 import imageio_ffmpeg
+from src.core.step_logger import log_pipeline_step
 from src.providers.tts.azure_speech import AzureSpeechTTSAdapter
 from src.services.ambient_export_service import get_media_duration
 
@@ -85,6 +86,14 @@ async def synthesize_shot_aligned_narration(
         part_raw = stem_dir / f"shot_{idx + 1}_raw.mp3"
         part_padded = stem_dir / f"shot_{idx + 1}_padded.mp3"
 
+        log_pipeline_step("checking audio", f"Shot {idx + 1} Narration Stem", "started", metadata={"file": part_padded.name})
+        if not force_rerun and part_padded.is_file() and part_padded.stat().st_size > 1000:
+            padded_dur = get_media_duration(part_padded) or p_dur
+            effective_shot_durs.append(round(padded_dur, 2))
+            padded_part_paths.append(part_padded)
+            log_pipeline_step("checking audio", f"Shot {idx + 1} Narration Stem", "completed", "narration stem exists, TTS not recreated", {"file": part_padded.name, "duration": round(padded_dur, 2), "cost": "$0.00"})
+            continue
+
         if text:
             if not part_raw.is_file() or force_rerun:
                 await tts_adapter.synthesize_to_file(text, output_path=part_raw, voice_id=voice_id)
@@ -118,18 +127,24 @@ async def synthesize_shot_aligned_narration(
             ]
         subprocess.run(cmd, check=True)
         padded_part_paths.append(part_padded)
+        log_pipeline_step("checking audio", f"Shot {idx + 1} Narration Stem", "completed", "narration stem synthesized", {"file": part_padded.name, "duration": final_shot_dur})
 
     # Concat all padded shots into master spoken_narration.mp3
-    concat_list = ep_dir / "narration_concat.txt"
-    concat_list.write_text("\n".join(f"file '{p.resolve().as_posix()}'" for p in padded_part_paths), encoding="utf-8")
-    cmd_concat = [
-        ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
-        "-f", "concat", "-safe", "0", "-i", str(concat_list),
-        "-c", "copy",
-        str(out_master),
-    ]
-    subprocess.run(cmd_concat, check=True)
+    log_pipeline_step("checking audio", "Master Narration Concat", "started", metadata={"shots": len(padded_part_paths)})
     total_master_dur = sum(effective_shot_durs)
+    if not force_rerun and out_master.is_file() and out_master.stat().st_size > 1000:
+        log_pipeline_step("checking audio", "Master Narration Concat", "completed", "master narration exists, concat not recreated", {"file": out_master.name, "cost": "$0.00"})
+    else:
+        concat_list = ep_dir / "narration_concat.txt"
+        concat_list.write_text("\n".join(f"file '{p.resolve().as_posix()}'" for p in padded_part_paths), encoding="utf-8")
+        cmd_concat = [
+            ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
+            "-f", "concat", "-safe", "0", "-i", str(concat_list),
+            "-c", "copy",
+            str(out_master),
+        ]
+        subprocess.run(cmd_concat, check=True)
+        log_pipeline_step("checking audio", "Master Narration Concat", "completed", "concatenated spoken_narration.mp3 from padded stems", {"file": out_master.name, "total_duration": round(total_master_dur, 2), "cost": "$0.00"})
 
     logger.info(
         f"shot_aligned_narration_synthesized: episode_id='{ep_dir.name}' "

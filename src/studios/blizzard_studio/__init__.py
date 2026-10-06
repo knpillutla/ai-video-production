@@ -4,7 +4,7 @@ from src.studios.blizzard_studio.blizzard_director import (
     BlizzardStoryboard,
     generate_blizzard_screenplay_gemini,
 )
-from src.studios.blizzard_studio.blizzard_producer import BlizzardStudioProducer
+from src.studios.studio_producer import StudioProducer as BlizzardStudioProducer
 
 __all__ = [
     "BLIZZARD_ARCHETYPES",

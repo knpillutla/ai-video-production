@@ -26,7 +26,7 @@ const PRODUCTION_TIERS = {
   }
 };
 
-let currentTier = "cinematic";
+let currentTier = "balanced";
 let activeTab = "studio";
 
 let currentUser = {

@@ -12,29 +12,12 @@ from src.studios.travel_studio.travel_catalog import TRAVEL_ARCHETYPES, get_trav
 from src.studios.travel_studio.travel_prompt import build_travel_prompt
 
 
-class TravelScenePrompt(BaseModel):
-    scene_index: int
-    perspective_type: str = "wide_aerial_drone_glide"
-    visual_prompt: str
-    motion_prompt: str
-    duration_seconds: float = 30.0
-    domain: str = "landscape_solid"
-    location_hub: str = ""
-
-
-class TravelStoryboard(BaseModel):
-    title: str
-    theme: str
-    story_topic: str = ""
-    genre: str = "travel/scenic"
-    sub_genre: str = "cities"
-    primary_archetype: str = "cities"
-    secondary_archetype: str = ""
-    cluster: str = "travel"
-    total_duration: float = 60.0
-    recommended_fps: int = 24
-    audio_tags: Any = ""
-    scenes: List[TravelScenePrompt] = Field(default_factory=list)
+from src.studios.screenplay_models import (
+    BaseScenePrompt,
+    BaseStoryboard,
+    TravelScenePrompt,
+    TravelStoryboard,
+)
 
 
 async def generate_travel_screenplay_gemini(

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from src.studios.ambient_world.ambient_catalog import ARCHETYPES
-from src.studios.ambient_world.ambient_producer import AmbientWorldProducer
+from src.studios.studio_producer import StudioProducer as AmbientWorldProducer
 from src.studios.ambient_world.ambient_storyboard import generate_ambient_storyboard
 
 

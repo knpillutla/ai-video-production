@@ -4,7 +4,7 @@ from src.studios.forest_studio.forest_director import (
     ForestStoryboard,
     generate_forest_screenplay_gemini,
 )
-from src.studios.forest_studio.forest_producer import ForestStudioProducer
+from src.studios.studio_producer import StudioProducer as ForestStudioProducer
 
 __all__ = [
     "FOREST_ARCHETYPES",

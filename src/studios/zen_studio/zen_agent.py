@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from src.studios.zen_studio.zen_producer import ZenStudioProducer
+from src.studios.studio_producer import StudioProducer as ZenStudioProducer
 from src.studios.zen_studio.zen_director import generate_zen_storyboard
 
 

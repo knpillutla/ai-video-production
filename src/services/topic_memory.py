@@ -61,6 +61,27 @@ class TopicMemoryService:
         except Exception as exc:
             logger.warning(f"topic_memory_save_fallback: {exc}")
 
+    async def record_production(
+        self,
+        topic: str,
+        genre: str,
+        tags: List[str],
+        episode_id: str,
+        story_synopsis: str = "",
+        user_id: Optional[str] = None,
+        channel_id: Optional[str] = None,
+    ) -> None:
+        """Alias for remember_topic to persist completed productions."""
+        await self.remember_topic(
+            topic=topic,
+            genre=genre,
+            tags=tags,
+            story_synopsis=story_synopsis or topic,
+            episode_id=episode_id,
+            user_id=user_id,
+            channel_id=channel_id,
+        )
+
     def get_recent_topics(
         self,
         user_id: Optional[str] = None,

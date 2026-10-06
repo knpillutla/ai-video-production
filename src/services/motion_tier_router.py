@@ -44,41 +44,30 @@ def resolve_scene_motion_model(
             "The script is the mandatory base for all production. Missing script; stopping."
         )
 
-    clean_tier = (tier or "balanced").strip().lower()
+    raw_motion_type = (getattr(scene, "motion_type", None) or "").strip().lower()
     base_model = requested_motion_model or "wan"
+    clean_tier = (tier or "balanced").strip().lower()
 
-    # 1. Flagship Cinematic Tier -> 100% AI Video Diffusion
-    if clean_tier in ("cinematic", "movie", "high", "flagship") or force_ai_motion:
-        rationale = f"Cinematic tier: Full neural video diffusion mandated ({base_model})"
-        return base_model, False, rationale
-
-    # 2. Low-Cost / Local Tier -> 100% Local Steadycam Zoom-Pan ($0.00 compute)
-    if clean_tier in ("low_cost", "low", "quick", "test", "local", "offline"):
-        rationale = "Low-cost tier: Single-pass 4K Ken Burns steadycam mandated ($0.00)"
+    # Absolute Rule: Respect the value motion_type strictly from JSON script (Gemini output).
+    # Whether balanced, 4K/cinematic, or draft/low_cost, ken_burns determines local vs AI model ($0.00 compute).
+    if raw_motion_type in ("ken_burns", "static", "locked_tripod", "local_zoompan", "zoompan", "local"):
+        rationale = (
+            f"Directorial Script Directive: Scene {scene_index + 1} specifies '{raw_motion_type}' "
+            "- executing 100% local steadycam perspective drone ($0.00 compute, 100% geometry lock)"
+        )
         return "local_zoompan", False, rationale
 
-    # 3. Balanced Tier -> Strict Script Directorial Decision (No Implicit Fallbacks)
-    raw_motion_type = (getattr(scene, "motion_type", None) or "").strip().lower()
+    if raw_motion_type in ("ai_diffusion", "diffusion", "neural", "neural_diffusion"):
+        rationale = (
+            f"Directorial Script Directive: Scene {scene_index + 1} specifies '{raw_motion_type}' "
+            f"- executing AI video diffusion ({base_model})"
+        )
+        return base_model, False, rationale
 
     if not raw_motion_type:
-        raise ValueError(
-            f"Production halted: Scene {scene_index + 1} is missing mandatory 'motion_type' in script. "
-            "The screenplay script is the foundation for all production. Fallback is prohibited; stopping."
-        )
-
-    if raw_motion_type == "ai_diffusion":
-        rationale = (
-            f"Balanced tier (Script Directive): Scene {scene_index + 1} explicitly dictates "
-            f"live AI video diffusion ({base_model})"
-        )
-        return base_model, False, rationale
-
-    if raw_motion_type in ("ken_burns", "static", "locked_tripod"):
-        rationale = (
-            f"Balanced tier (Script Directive): Scene {scene_index + 1} explicitly dictates "
-            "steadycam local zoompan ($0.00 compute, 100% geometry lock)"
-        )
-        return "local_zoompan", False, rationale
+        if clean_tier in ("cinematic", "movie", "high", "flagship") or force_ai_motion:
+            return base_model, False, f"Cinematic tier default: AI video diffusion ({base_model})"
+        return "local_zoompan", False, "Tier default: local steadycam zoompan ($0.00 compute)"
 
     raise ValueError(
         f"Production halted: Scene {scene_index + 1} contains unknown motion_type '{raw_motion_type}'. "

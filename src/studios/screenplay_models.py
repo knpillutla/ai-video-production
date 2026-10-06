@@ -162,34 +162,41 @@ class RelaxScreenplay(BaseModel):
         return v or RelaxAudioMasterSpec()
 
 
-class AmbientScenePrompt(BaseModel):
-    """Scene prompt specification for backward-compatible pipeline execution."""
+class BaseScenePrompt(BaseModel):
+    """Universal scene prompt specification for studio pipeline execution."""
     scene_index: int = 1
     perspective_type: str = "wide_panoramic"
+    location_hub: Optional[str] = ""
     visual_prompt: str = ""
     motion_prompt: str = ""
+    motion_negative_prompt: Optional[str] = None
     duration_seconds: float = 30.0
     domain: str = "landscape_solid"
     motion_type: str = "ai_diffusion"
+    camera_rig: str = "locked_tripod"
     camera_movement: str = "slow_zoom_in"
     motion_rationale: Optional[str] = None
+    narration_text: Optional[str] = None
+    camera_waypoints: List[CameraWaypointDirective] = Field(default_factory=list)
+    kinetic_micro_zones: Optional[KineticMicroSpec] = None
     image_model_configs: dict = Field(default_factory=dict)
     model_configs: dict = Field(default_factory=dict)
 
 
-class AmbientStoryboard(BaseModel):
-    """Directorial storyboard representation."""
+class BaseStoryboard(BaseModel):
+    """Universal directorial storyboard representation across all channels and genres."""
     title: str = "Studio Production"
     story_topic: Optional[str] = ""
-    primary_archetype: str = "waterfall"
+    primary_archetype: str = "cities"
     secondary_archetype: Optional[str] = None
-    cluster: str = "waterfall"
+    cluster: str = "travel"
     tier: str = "balanced"
     total_duration: float = 60.0
     recommended_fps: int = 24
     audio_tags: str = ""
+    audio_prompt: Optional[str] = ""
     spoken_narration_script: Optional[str] = ""
-    scenes: List[AmbientScenePrompt] = Field(default_factory=list)
+    scenes: List[BaseScenePrompt] = Field(default_factory=list)
 
     @field_validator("audio_tags", mode="before")
     @classmethod
@@ -197,34 +204,54 @@ class AmbientStoryboard(BaseModel):
         return normalize_audio_tags(v)
 
 
-def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> AmbientStoryboard:
-    """Convert RelaxScreenplay to AmbientStoryboard representation."""
+# Universal base aliases for full backward compatibility
+AmbientScenePrompt = BaseScenePrompt
+StudioScenePrompt = BaseScenePrompt
+TravelScenePrompt = BaseScenePrompt
+AmbientStoryboard = BaseStoryboard
+StudioStoryboard = BaseStoryboard
+TravelStoryboard = BaseStoryboard
+
+
+def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> BaseStoryboard:
+    """Convert RelaxScreenplay to universal BaseStoryboard without dropping voiceover or kinetics."""
     scenes = []
     for idx, s in enumerate(sp.scenes, 1):
         scenes.append(
-            AmbientScenePrompt(
+            BaseScenePrompt(
                 scene_index=idx,
                 perspective_type=s.shot_type,
+                location_hub=getattr(s, "location_hub", "") or "",
                 visual_prompt=s.visual_prompt,
                 motion_prompt=s.motion_prompt,
+                motion_negative_prompt=getattr(s, "motion_negative_prompt", None),
                 duration_seconds=s.duration_seconds,
                 domain=s.domain,
                 motion_type=getattr(s, "motion_type", "ai_diffusion"),
+                camera_rig=getattr(s, "camera_rig", "locked_tripod"),
                 camera_movement=getattr(s, "camera_movement", "slow_zoom_in"),
                 motion_rationale=getattr(s, "motion_rationale", None),
+                narration_text=getattr(s, "narration_text", None),
+                camera_waypoints=getattr(s, "camera_waypoints", []),
+                kinetic_micro_zones=getattr(s, "kinetic_micro_zones", None),
                 image_model_configs=s.image_model_configs,
                 model_configs={k: v.model_dump() for k, v in s.model_configs.items()} if s.model_configs else {},
             )
         )
-    return AmbientStoryboard(
+    return BaseStoryboard(
         title=sp.title,
         story_topic=sp.story_topic,
-        primary_archetype=sp.sub_genre or sp.primary_archetype or "waterfall",
-        cluster="waterfall",
-        tier=sp.tier or "balanced",
+        primary_archetype=sp.primary_archetype or sp.sub_genre or "cities",
+        secondary_archetype=sp.secondary_archetype,
+        cluster=sp.cluster or "travel",
+        tier=getattr(sp, "tier", None) or "balanced",
         total_duration=sp.total_duration_seconds or sum(s.duration_seconds for s in sp.scenes) or 60.0,
         recommended_fps=sp.recommended_fps or 24,
         audio_tags=sp.audio_master.suno_musical_tags if sp.audio_master else "",
         spoken_narration_script=getattr(sp.audio_master, "spoken_narration_script", "") if sp.audio_master else "",
         scenes=scenes,
     )
+
+
+relax_to_studio_storyboard = relax_to_ambient_storyboard
+

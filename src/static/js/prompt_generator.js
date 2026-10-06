@@ -157,6 +157,7 @@ function clearStudioInputs() {
   setC("studio-toggle-tts", false); setC("studio-toggle-lipsync", false);
   setV("studio-voice-gender", "female"); setV("studio-language", "en");
   clearTemplateCardHighlights(); selectProductionTier("low_cost");
+  if (typeof setProductionControlsViewOnly === "function") setProductionControlsViewOnly(false, null);
 }
 
 function deriveTitleFromInput(text, mode) {

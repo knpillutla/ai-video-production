@@ -6,7 +6,13 @@ from typing import Any, Dict, Optional
 
 from src.core.telemetry import logger
 from src.studios.ambient_world.ambient_directorial_prompt import build_ambient_directorial_prompt
-from src.studios.ambient_world.ambient_storyboard import AmbientScenePrompt, AmbientStoryboard
+from src.studios.screenplay_models import (
+    BaseScenePrompt,
+    BaseStoryboard,
+    AmbientScenePrompt,
+    AmbientStoryboard,
+    relax_to_ambient_storyboard,
+)
 from src.studios.ambient_world.relax_models import (
     LoopStrategySpec, RelaxAudioMasterSpec, RelaxGlobalCultureSpec,
     RelaxModelConfigDirective, RelaxModelPromptsSpec, RelaxSceneDirective,
@@ -191,35 +197,12 @@ def _build_deterministic_relax_screenplay(
     )
 
 
-def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> AmbientStoryboard:
-    """Convert RelaxScreenplay to backward-compatible AmbientStoryboard contract with autonomous cluster."""
-    primary_arch = sp.primary_archetype or sp.sub_genre or sp.genre or "nature_sanctuary"
-    sec_arch = sp.secondary_archetype
-    cluster_val = sp.cluster or sp.sub_genre or primary_arch
-    return AmbientStoryboard(
-        title=sp.title,
-        story_topic=sp.story_topic,
-        primary_archetype=primary_arch,
-        secondary_archetype=sec_arch,
-        cluster=cluster_val,
-        total_duration=sp.total_duration_seconds,
-        recommended_fps=sp.recommended_fps,
-        audio_tags=sp.audio_master.suno_musical_tags if sp.audio_master else "",
-        audio_prompt=getattr(sp.audio_master, "suno_prompt", "") if sp.audio_master else "",
-        scenes=[
-            AmbientScenePrompt(
-                scene_index=s.scene_index,
-                perspective_type=s.shot_type,
-                visual_prompt=s.visual_prompt,
-                motion_prompt=s.motion_prompt,
-                duration_seconds=s.duration_seconds,
-                domain=s.domain,
-                motion_type=getattr(s, "motion_type", "ai_diffusion"),
-                camera_movement=getattr(s, "camera_movement", "slow_zoom_in"),
-                motion_rationale=getattr(s, "motion_rationale", None),
-                image_model_configs=getattr(s, "image_model_configs", {}),
-                model_configs=getattr(s, "model_configs", {}),
-            )
-            for s in sp.scenes
-        ],
-    )
+# relax_to_ambient_storyboard is imported directly from screenplay_models
+__all__ = [
+    "generate_relax_screenplay_gemini",
+    "relax_to_ambient_storyboard",
+    "AmbientScenePrompt",
+    "AmbientStoryboard",
+    "BaseScenePrompt",
+    "BaseStoryboard",
+]

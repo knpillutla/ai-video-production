@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from src.studios.rain_retreat.rain_producer import RainRetreatProducer
+from src.studios.studio_producer import StudioProducer as RainRetreatProducer
 from src.studios.rain_retreat.rain_storyboard import generate_rain_storyboard
 
 

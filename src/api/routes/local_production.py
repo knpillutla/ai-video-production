@@ -134,7 +134,11 @@ async def produce_video_locally(req: LocalProduceRequest):
     eff_audio_only = bool(req.audio_only)
     eff_master_only = bool(req.master_only)
 
-    if strat == "manual" and not (eff_script_only or eff_photos_only or eff_motion_only or eff_audio_only or eff_master_only):
+    has_target_ep = bool(req.episode_id)
+    if has_target_ep:
+        if not (eff_photos_only or eff_motion_only or eff_audio_only or eff_master_only):
+            eff_script_only = False
+    elif strat == "manual" and not (eff_script_only or eff_photos_only or eff_motion_only or eff_audio_only or eff_master_only):
         eff_script_only = True
 
     eff_channel_id = req.channel_id

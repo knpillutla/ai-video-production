@@ -1,5 +1,6 @@
 """Channel Production Service executing real multi-channel pipelines for API and Web Studio."""
 
+from datetime import datetime, timezone
 import json
 import time
 from dataclasses import replace
@@ -7,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from src.core.storage import storage_service
+from src.core.step_logger import log_pipeline_step
 from src.core.telemetry import logger
 from src.domain.repo import repo
 from src.services.base_channel_pipeline import BaseChannelPipeline, ChannelPipelineConfig
@@ -92,6 +94,20 @@ async def produce_channel_video(
     user_chan_dir = storage_service.get_user_container_path(effective_user) / "channels" / channel_id
     user_chan_dir.mkdir(parents=True, exist_ok=True)
 
+    t_resynth_start = time.time()
+    dt_resynth_start = datetime.now(timezone.utc).isoformat()
+    log_pipeline_step(
+        process_name="re-synthesize",
+        step="pipeline execution",
+        status="started",
+        action="re-synthesize started",
+        metadata={
+            "starttime": dt_resynth_start,
+            "episode_id": episode_id or "EP-001",
+            "channel": channel_id,
+        },
+    )
+
     # Dynamic lookup from DB or fallback map
     ch_entity = None
     user_obj = repo.get_user_by_email(effective_user) if "@" in effective_user else None
@@ -173,7 +189,7 @@ async def produce_channel_video(
 
     existing_sp = None
     if screenplay_file and screenplay_file.is_file() and screenplay_file.stat().st_size > 50:
-        if is_downstream_stage or is_resume_flow:
+        if not force_rerun:
             try:
                 sp_data = json.loads(screenplay_file.read_text("utf-8"))
                 is_legacy_fallback = (
@@ -190,14 +206,15 @@ async def produce_channel_video(
             except Exception as ex:
                 logger.warning(f"screenplay_read_error: {ex}")
 
-    eff_tier = (getattr(existing_sp, "tier", None) or saved_inputs.get("tier") or tier or "balanced") if (is_downstream_stage or existing_sp) else (tier or saved_inputs.get("tier", "balanced"))
+    eff_tier = (tier or saved_inputs.get("tier") or getattr(existing_sp, "tier", None) or "balanced")
+    if existing_sp:
+        existing_sp.tier = eff_tier
     eff_voiceover = enable_voiceover or bool(saved_inputs.get("enable_voiceover", False))
     eff_no_bgm = no_bgm if not is_downstream_stage else bool(saved_inputs.get("no_bgm", no_bgm))
 
     is_travel_genre = (
         eff_genre.lower().startswith("travel")
         or eff_genre.lower() in ("travel/scenic", "travel_scenic", "travel_walking")
-        or channel_id == "skylinediariesindia4k"
         or "travel" in (sub_genre or "").lower()
         or (primary_archetype or "").lower() in ("cities", "tourist_places", "iconic_places", "spiritual_places", "natural_wonders", "remote_places")
         or num_shots == -1
@@ -219,6 +236,10 @@ async def produce_channel_video(
     primary_archetype_final = (getattr(existing_sp, "primary_archetype", None) if existing_sp else None) or (primary_archetype or "")
     prompt_final = (getattr(existing_sp, "story_topic", None) or prompt or saved_inputs.get("prompt", "")) if existing_sp else (prompt or "")
 
+    eff_dur = getattr(existing_sp, "total_duration_seconds", None) or duration_seconds or saved_inputs.get("duration_seconds", 60.0)
+    has_dual = bool(dual_editions or saved_inputs.get("dual_editions", False) or ((ep_dir / "master_4k_narration.mp4").is_file() if ep_dir else False))
+    eff_exec_mode = execution_mode or saved_inputs.get("execution_mode", "test")
+
     user_inputs_payload = {
         "input_schema_version": 1,
         "prompt": prompt_final,
@@ -230,7 +251,8 @@ async def produce_channel_video(
         "screenplay_generation_status": "completed" if existing_sp else "pending",
         "episode_id": episode_id or "EP-001",
         "user_id": effective_user,
-        "duration_seconds": duration_seconds,
+        "execution_mode": eff_exec_mode,
+        "duration_seconds": float(eff_dur),
         "long_play_hours": long_play_hours,
         "num_shots": -1 if (is_travel_genre or num_shots == -1) else effective_shots,
         "image_model": image_model,
@@ -238,7 +260,7 @@ async def produce_channel_video(
         "camera_motion": camera_motion,
         "pipeline_strategy": pipeline_strategy,
         "allow_fallback": allow_fallback,
-        "dual_editions": dual_editions,
+        "dual_editions": has_dual,
         "enable_bgm": not eff_no_bgm,
         "enable_voiceover": eff_voiceover,
         "no_bgm": eff_no_bgm,
@@ -246,7 +268,6 @@ async def produce_channel_video(
     }
     if user_inputs_file:
         try:
-            from datetime import datetime, timezone
             user_inputs_payload["created_at"] = saved_inputs.get("created_at") or datetime.now(timezone.utc).isoformat()
             user_inputs_file.parent.mkdir(parents=True, exist_ok=True)
             user_inputs_file.write_text(json.dumps(user_inputs_payload, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -255,17 +276,22 @@ async def produce_channel_video(
             logger.warning(f"failed_to_write_user_inputs: {ex}")
 
     t_stage1 = time.time()
-    logger.info(f"stage_triggered: stage='Stage 1: Screenplay' episode_id='{episode_id}' timestamp={t_stage1}")
+    log_pipeline_step("checking script", "Stage 1 (Screenplay Verification)", "started", metadata={"episode_id": episode_id, "channel": channel_id})
     if existing_sp:
         universal_sp = existing_sp
         dur_stage1 = time.time() - t_stage1
-        logger.info(f"stage_reused: stage='Stage 1: Screenplay' episode_id='{episode_id}' title='{universal_sp.title}' duration={dur_stage1:.2f}s reason='cache_hit' timestamp={time.time()}")
-        print(f"[STAGE 1 CACHE REUSED] Screenplay reused for {episode_id} in {dur_stage1:.2f}s ($0.00 spend).")
+        log_pipeline_step(
+            "checking script",
+            "Stage 1 (Screenplay Verification)",
+            "completed",
+            "script exists, script not recreated",
+            {"file": "screenplay.json", "scenes": len(universal_sp.scenes), "duration_seconds": getattr(universal_sp, "total_duration_seconds", 30.0), "cost": "$0.00"},
+        )
     elif is_downstream_stage and screenplay_file and screenplay_file.is_file() and screenplay_file.stat().st_size > 50:
         universal_sp = RelaxScreenplay(**json.loads(screenplay_file.read_text("utf-8")))
-        logger.info(f"downstream_stage_screenplay_fallback_preserved: episode_id='{episode_id}' title='{universal_sp.title}'")
+        log_pipeline_step("checking script", "Stage 1 (Screenplay Verification)", "completed", "script exists, script not recreated", {"file": "screenplay.json", "scenes": len(universal_sp.scenes), "cost": "$0.00"})
     else:
-        print(f"\n[STAGE 1 TRIGGERED] Formulating Screenplay for {episode_id}...")
+        log_pipeline_step("checking script", "Stage 1 (Screenplay Formulation)", "started", "script missing, formulating via Gemini", {"tier": eff_tier, "duration": duration_seconds})
         try:
             universal_sp = await dispatch_studio_director(
                 genre=eff_genre,
@@ -292,12 +318,8 @@ async def produce_channel_video(
                     except Exception as raw_g_err:
                         logger.warning(f"failed_to_guarantee_raw_gemini_screenplay: {raw_g_err}")
             logger.info(f"stage_completed: stage='Stage 1: Screenplay' episode_id='{episode_id}' duration={dur_stage1:.2f}s scenes={len(universal_sp.scenes)} timestamp={time.time()}")
+            log_pipeline_step("checking script", "Stage 1 (Screenplay Formulation)", "completed", "script created via Gemini", {"file": "screenplay.json", "scenes": len(universal_sp.scenes), "duration_seconds": getattr(universal_sp, "total_duration_seconds", 30.0)})
             print(f"[STAGE 1 COMPLETED] Screenplay ready in {dur_stage1:.2f}s ({len(universal_sp.scenes)} scenes).")
-            if is_travel_genre or eff_tier == "low_cost" or channel_id == "skylinediariesindia4k":
-                for sc in universal_sp.scenes:
-                    sc.motion_type = "ken_burns"
-                    if not sc.motion_rationale or "ai diffusion" in sc.motion_rationale.lower():
-                        sc.motion_rationale = "100% local 4K perspective drone homography with 2.5D depth parallax and micro-kinetics ($0.00 compute)."
         except Exception as ex:
             dur_stage1 = time.time() - t_stage1
             logger.error(f"stage_failed: stage='Stage 1: Screenplay' episode_id='{episode_id}' duration={dur_stage1:.2f}s error='{ex}' timestamp={time.time()}")
@@ -305,7 +327,9 @@ async def produce_channel_video(
 
     if episode_id:
         universal_sp.production_id = episode_id
-    if screenplay_file and not existing_sp:
+    if hasattr(universal_sp, "tier"):
+        universal_sp.tier = eff_tier
+    if screenplay_file:
         try:
             screenplay_file.parent.mkdir(parents=True, exist_ok=True)
             screenplay_file.write_text(json.dumps(universal_sp.model_dump(), indent=2), encoding="utf-8")
@@ -383,6 +407,22 @@ async def produce_channel_video(
             logger.warning(f"failed_to_write_manifest: {ex}")
 
     if script_only:
+        t_resynth_end = time.time()
+        dt_resynth_end = datetime.now(timezone.utc).isoformat()
+        total_time_sec = round(t_resynth_end - t_resynth_start, 2)
+        log_pipeline_step(
+            process_name="re-synthesize",
+            step="pipeline execution",
+            status="completed",
+            action="re-synthesize ended",
+            metadata={
+                "starttime": dt_resynth_start,
+                "endtime": dt_resynth_end,
+                "total_time": f"{total_time_sec:.2f}s",
+                "episode_id": episode_id or "EP-001",
+                "channel": channel_id,
+            },
+        )
         return {
             "success": True,
             "job_id": f"job_{episode_id.lower() if episode_id else 'ep001'}",
@@ -716,6 +756,23 @@ async def produce_channel_video(
             pipeline_state_file.write_text(json.dumps(pipeline_state_payload, indent=2), encoding="utf-8")
         except Exception as ex:
             logger.warning(f"failed_to_write_pipeline_state: {ex}")
+
+    t_resynth_end = time.time()
+    dt_resynth_end = datetime.now(timezone.utc).isoformat()
+    total_time_sec = round(t_resynth_end - t_resynth_start, 2)
+    log_pipeline_step(
+        process_name="re-synthesize",
+        step="pipeline execution",
+        status="completed",
+        action="re-synthesize ended",
+        metadata={
+            "starttime": dt_resynth_start,
+            "endtime": dt_resynth_end,
+            "total_time": f"{total_time_sec:.2f}s",
+            "episode_id": ep_id,
+            "channel": channel_id,
+        },
+    )
 
     return {
         "success": True,

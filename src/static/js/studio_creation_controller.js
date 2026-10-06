@@ -13,7 +13,8 @@ function switchCreationTab(tabKey) {
   if (tabKey === "new") {
     if (viewNew) viewNew.classList.remove("hidden");
     if (viewArch) viewArch.classList.add("hidden");
-    if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
+    if (!currentActiveInspectorEpisode && typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
+    else if (currentActiveInspectorEpisode && typeof populateProductionControlsFromEpisode === "function") populateProductionControlsFromEpisode(currentActiveInspectorEpisode);
   } else {
     if (viewNew) viewNew.classList.add("hidden");
     if (viewArch) viewArch.classList.remove("hidden");

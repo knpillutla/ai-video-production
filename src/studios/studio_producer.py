@@ -12,6 +12,7 @@ from pathlib import Path
 import time
 from typing import Any, Dict, List, Optional
 
+from src.core.step_logger import log_pipeline_step
 from src.core.telemetry import logger
 from src.services.binaural_spatial_audio import apply_binaural_spatial_mastering
 from src.services.broadcast_export_service import (
@@ -31,21 +32,7 @@ from src.studios.screenplay_models import AmbientScenePrompt, AmbientStoryboard
 def _resolve_scene_negative_prompt(scene: Any, default_camera: str = "locked_tripod") -> str:
     neg = getattr(scene, "motion_negative_prompt", None)
     base_neg = neg.strip() if (neg and isinstance(neg, str)) else ""
-    cam = getattr(scene, "camera_rig", "") or default_camera
-    extra_tokens = []
-    if cam == "locked_tripod":
-        extra_tokens.append("camera movement, camera pan, panning, tilt, zoom, zoom in, zoom out, forward camera movement, camera flythrough, walking tour, walking cadence, dolly, tracking shot, handheld camera, camera shake, jitter, violent wind, rapid shaking, fast motion, sudden lighting shift, flickering light, jumping foliage, jumping branches, discontinuous water flow, abrupt mist displacement, temporal jump, loop seam, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, sunny sky, rainbow, sunlight shifts, altering colors")
-    p_text = f"{getattr(scene, 'visual_prompt', '')} {getattr(scene, 'motion_prompt', '')}".lower()
-    if "rain" in p_text or "monsoon" in p_text:
-        extra_tokens.append("dry weather, bright sunshine, clear blue sky, cloudless, arid, parched")
-    else:
-        extra_tokens.append("clouds, cloudy, overcast sky, overcast, cumulus, stratus, cirrus, storm clouds, dark clouds, moving clouds, timelapse clouds, rapid clouds, rolling clouds, cloud morphing, rapid cloud shadows, sky flickering")
-    if "waterfall" in p_text or "cascade" in p_text:
-        extra_tokens.append("frozen ice, motionless water, stagnant pond, reverse water flow")
-    extra_tokens.append("fast moving clouds, timelapse, time-lapse, rapid clouds, rolling storm clouds, accelerated sky, swirling clouds, cloud morphing, rapid cloud shadows, high-speed wind, storm winds, flickering sky")
-    extra_tokens.append("gelatinous water, melting foam, static frozen water, boiling water artifacts, rubbery water, unnatural foam blobs, zero static vertical streaks, artifacts")
-    parts = [p for p in [base_neg, ", ".join(extra_tokens)] if p]
-    return ", ".join(parts)
+    return ", ".join([p for p in [base_neg, "camera movement, camera pan, panning, tilt, zoom, camera shake, jitter, rapid motion, flickering, temporal jump, loop seam, morphing, changing environment, clouds, overcast, storm clouds, gelatinous water, artifacts"] if p])
 
 
 class StudioProducer:
@@ -99,19 +86,13 @@ class StudioProducer:
 
         # Stage 2: Keyframe Image Gate (Concurrent Idempotent Batch via visual_batch_service)
         def _resolve_scene_image_prompt(s: AmbientScenePrompt) -> str:
-            raw_prompt = ""
             m_target = (image_model or "flux_dev").lower()
-            if getattr(s, "image_model_configs", None) and isinstance(s.image_model_configs, dict):
-                keys = ["flux_dev", "flux", "flux_pro", "zimage"] if "dev" in m_target else (["flux_pro", "flux_1_1_pro_ultra", "flux_dev", "zimage"] if "pro" in m_target or "ultra" in m_target else ["zimage", "flux_dev", "flux_pro"])
-                for k in keys:
-                    if k in s.image_model_configs:
-                        cfg = s.image_model_configs[k]
-                        if isinstance(cfg, dict) and cfg.get("prompt"):
-                            raw_prompt = str(cfg["prompt"]).strip()
-                            break
-            if not raw_prompt:
-                raw_prompt = s.visual_prompt.strip()
-            return raw_prompt
+            cfgs = getattr(s, "image_model_configs", None) or {}
+            keys = ["flux_dev", "flux", "flux_pro", "zimage"] if "dev" in m_target else (["flux_pro", "flux_1_1_pro_ultra", "flux_dev", "zimage"] if "pro" in m_target or "ultra" in m_target else ["zimage", "flux_dev", "flux_pro"])
+            for k in keys:
+                if k in cfgs and isinstance(cfgs[k], dict) and cfgs[k].get("prompt"):
+                    return str(cfgs[k]["prompt"]).strip()
+            return s.visual_prompt.strip()
 
         keyframe_tasks = [
             (
@@ -197,27 +178,42 @@ class StudioProducer:
             except Exception:
                 pass
         if not no_bgm:
-            if not bgm_path.is_file() or bgm_path.stat().st_size < 1000:
+            log_pipeline_step("checking audio", "BGM Soundtrack", "started", metadata={"file": bgm_path.name})
+            if bgm_path.is_file() and bgm_path.stat().st_size >= 1000 and not force_rerun:
+                log_pipeline_step("checking audio", "BGM Soundtrack", "completed", "soundtrack exists, soundtrack not recreated", {"file": bgm_path.name, "cost": "$0.00"})
+            else:
+                log_pipeline_step("checking audio", "BGM Soundtrack", "started", "soundtrack missing, synthesizing via Suno/DSP", {"file": bgm_path.name})
                 bgm_path = await soundtrack_service.synthesize_ambient_soundtrack(
                     title=sb.title,
-                    tags=sb.audio_tags or "waterfall brown noise, roaring cascade, natural water foley, 432hz ambient",
+                    tags=sb.audio_tags or "432Hz ambient soundscape, deep relaxation, -14 LUFS",
                     out_path=bgm_path,
                     total_duration=sb.total_duration,
-                    genre="ambient nature waterfall soundscape",
+                    genre=f"{getattr(sb, 'cluster', 'studio')} soundscape",
                     episode_id=ep_dir.name,
                 )
+                log_pipeline_step("checking audio", "BGM Soundtrack", "completed", "soundtrack synthesized", {"file": bgm_path.name})
             if bgm_path and bgm_path.is_file():
                 audio_stems.append(bgm_path)
 
-        voice_path = ep_dir / "voiceover_tts.wav"
+        voice_path = ep_dir / "spoken_narration.mp3"
         spoken_text = getattr(sb, "spoken_narration_script", None)
-        if enable_voiceover and spoken_text and spoken_text.strip():
-            if not voice_path.is_file() or voice_path.stat().st_size < 1000:
+        has_narr = any(bool(getattr(s, "narration_text", None)) for s in sb.scenes) if hasattr(sb, "scenes") else False
+        if enable_voiceover and (spoken_text or has_narr):
+            log_pipeline_step("checking audio", "Spoken Narration Voiceover", "started", metadata={"file": voice_path.name})
+            if voice_path.is_file() and voice_path.stat().st_size >= 1000 and not force_rerun:
+                log_pipeline_step("checking audio", "Spoken Narration Voiceover", "completed", "narration exists, voiceover not recreated", {"file": voice_path.name, "cost": "$0.00"})
+            else:
                 try:
-                    from src.providers.tts.azure_speech import AzureSpeechTTSAdapter
-                    tts = AzureSpeechTTSAdapter()
-                    v_id = "te-IN-ShrutiNeural" if any("\u0c00" <= c <= "\u0c7f" for c in spoken_text) else "en-US-JennyNeural"
-                    await tts.synthesize_to_file(text=spoken_text.strip(), output_path=voice_path, voice_id=v_id)
+                    from src.services.shot_narration_service import synthesize_shot_aligned_narration
+                    narr_res = await synthesize_shot_aligned_narration(
+                        scenes=sb.scenes,
+                        ep_dir=ep_dir,
+                        fallback_script=spoken_text,
+                        total_target_sec=float(sb.total_duration or 60.0),
+                        force_rerun=force_rerun and audio_only,
+                    )
+                    if narr_res.get("narration_path") and Path(narr_res["narration_path"]).is_file():
+                        voice_path = Path(narr_res["narration_path"])
                 except Exception as tts_err:
                     logger.warning(f"tts_voiceover_failed: {tts_err}")
             if voice_path.is_file() and voice_path.stat().st_size > 1000:
@@ -230,15 +226,18 @@ class StudioProducer:
                 legacy_spatial.rename(spatial_audio_path)
             except Exception:
                 pass
-        if not spatial_audio_path.is_file() or spatial_audio_path.stat().st_size < 1000:
-            spatial_audio_path = await asyncio.to_thread(
-                apply_binaural_spatial_mastering,
-                input_audio_stems=audio_stems,
-                output_path=spatial_audio_path,
-                target_lufs=-14.0,
-                ducking_db=-18.0,
-                duration_seconds=None,
-            )
+        log_pipeline_step("checking audio", "Spatial Binaural Master", "started", metadata={"file": spatial_audio_path.name})
+        if spatial_audio_path.is_file() and spatial_audio_path.stat().st_size >= 1000 and not force_rerun:
+            log_pipeline_step("checking audio", "Spatial Binaural Master", "completed", "spatial audio exists, spatial audio not recreated", {"file": spatial_audio_path.name, "cost": "$0.00"})
+        else:
+            if bgm_path and Path(bgm_path).is_file():
+                spatial_audio_path = await asyncio.to_thread(
+                    apply_binaural_spatial_mastering,
+                    input_audio=bgm_path,
+                    output_audio=spatial_audio_path,
+                    target_lufs=-14.0,
+                )
+                log_pipeline_step("checking audio", "Spatial Binaural Master", "completed", "spatial audio synthesized", {"file": spatial_audio_path.name})
 
         if audio_only:
             return {
@@ -246,38 +245,36 @@ class StudioProducer:
                 "stage": "audio_only",
                 "episode_id": ep_dir.name,
                 "keyframes": [str(p) for p in image_results],
+                "bgm_path": str(spatial_audio_path),
+                "narration_path": str(voice_path) if voice_path.is_file() else None,
                 "spatial_audio": str(spatial_audio_path),
                 "episode_dir": str(ep_dir),
             }
 
-        # Stage 5: Broadcast Assembly & Export
+        target_dur = float(getattr(sb, "total_duration_seconds", None) or getattr(sb, "total_duration", None) or 60.0)
         if generate_short:
             return await handle_short_export(
                 sb, ep_dir, video_clips, spatial_audio_path, t_start,
-                long_play_hours, fade_to_black_hours, force_rerun
+                long_play_hours, fade_to_black_hours, force_rerun,
+                narration_audio_path=voice_path,
+                target_duration_sec=target_dur,
             )
-
-        target_dur = float(getattr(sb, "total_duration_seconds", None) or getattr(sb, "total_duration", None) or 60.0)
         dual_res = await asyncio.to_thread(
             assemble_dual_masters,
-            video_clips=video_clips,
-            audio_track=spatial_audio_path,
-            ep_dir=ep_dir,
-            target_fps=sb.recommended_fps,
-            force_rerun=force_rerun,
-            music_only_audio=bgm_path,
-            target_duration_sec=target_dur,
+            video_clips=video_clips, audio_path=spatial_audio_path, ep_dir=ep_dir,
+            target_fps=sb.recommended_fps, force_rerun=force_rerun,
+            narration_audio_path=voice_path, target_duration_sec=target_dur,
         )
-
         metadata_pkgs = export_metadata_packages(sb, ep_dir)
 
-        # Update Topic Memory
-        await topic_memory.record_production(
-            topic=sb.title,
-            genre=f"nature_{sb.cluster}",
-            tags=metadata_pkgs.get("youtube", {}).get("seo_tags", []),
-            episode_id=ep_dir.name,
-        )
+        try:
+            await topic_memory.remember_topic(
+                topic=sb.title, genre=f"studio_{getattr(sb, 'cluster', 'travel')}",
+                tags=metadata_pkgs.get("youtube", {}).get("seo_tags", []),
+                story_synopsis=getattr(sb, "story_topic", sb.title) or sb.title, episode_id=ep_dir.name,
+            )
+        except Exception:
+            pass
 
         return {
             "status": "success",
@@ -292,5 +289,7 @@ class StudioProducer:
         }
 
 
-# Backwards compatibility alias
-AmbientWorldProducer = StudioProducer
+# Universal backwards compatibility aliases
+AmbientWorldProducer = TravelStudioProducer = ZenStudioProducer = ArtStudioProducer = BeachLoungeStudioProducer = BlizzardStudioProducer = CozyAmbianceProducer = StudioProducer
+DesertStudioProducer = ForestStudioProducer = HealingRelaxationProducer = MountainStudioProducer = NatureRetreatProducer = OceanStudioProducer = RainRetreatProducer = ValleyStudioProducer = StudioProducer
+

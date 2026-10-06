@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from src.core.telemetry import logger
-from src.studios.nature_retreat.retreat_producer import produce_nature_retreat
+from src.studios.nature_retreat import produce_nature_retreat
 
 
 DEFAULT_THEMES = [

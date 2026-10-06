@@ -21,6 +21,15 @@
     </div>
   </div>
 
+  <!-- View-Only Active Episode Lock Banner (Prevents accidental re-creation) -->
+  <div id="studio-view-only-banner" class="hidden px-2 py-1 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between text-xs text-amber-700 dark:text-amber-300">
+    <div class="flex items-center gap-1.5">
+      <i class="fa-solid fa-lock text-[10px]"></i>
+      <span id="studio-view-only-text" class="font-bold text-[11px]">Episode Active (View-Only)</span>
+    </div>
+    <button type="button" onclick="unlockForNewProduction()" class="text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:underline">New +</button>
+  </div>
+
   <!-- SECTION 1: PRODUCTION TIERS -->
   <div class="space-y-1">
     <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
@@ -78,10 +87,12 @@
     <div id="exec-options-test" class="p-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1">
       <div class="grid grid-cols-2 gap-1.5">
         <select id="studio-test-shots" onchange="setTestShots(this.value)" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold">
+          <option value="-1">Auto Dynamic</option>
           <option value="1" selected>1 Shot (Cineloop)</option>
           <option value="2">2 Shots (Dual Angle)</option>
           <option value="3">3 Shots (3-Angle)</option>
           <option value="4">4 Shots (4-Hub)</option>
+          <option value="10">10 Shots (Tour)</option>
         </select>
         <select id="studio-test-stretch" onchange="setBroadcastHours(this.value)" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold">
           <option value="0">Draft (5s/10s)</option>
@@ -99,12 +110,15 @@
     <div id="exec-options-prod" class="p-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1 hidden">
       <div class="grid grid-cols-2 gap-1.5">
         <select id="studio-prod-shots" onchange="calculateLiveCostEstimate()" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold">
+          <option value="-1">Auto Dynamic</option>
           <option value="1" selected>1 Shot (Cineloop)</option>
           <option value="2">2 Shots (Dual Angle)</option>
           <option value="3">3 Shots (3-Angle)</option>
           <option value="4">4 Shots (Full Journey)</option>
+          <option value="10">10 Shots (Tour)</option>
         </select>
         <select id="studio-stretch-hours" onchange="onStudioDurationDropdownChange(this.value)" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold">
+          <option value="0.033">2 Min (120s)</option>
           <option value="0">Short Master (90s)</option>
           <option value="1.0">1 Hour Stream</option>
           <option value="3.0" selected>3 Hours (4K Broadcast)</option>
@@ -148,7 +162,7 @@
     </div>
     
     <div class="flex items-center gap-2">
-      <button type="button" onclick="clearStudioInputs()" class="btn-runway-secondary" title="Reset Inputs &amp; Controls">
+      <button type="button" id="btn-studio-reset" onclick="clearStudioInputs()" class="btn-runway-secondary" title="Reset Inputs &amp; Controls">
         <span>Reset</span>
       </button>
       <button id="btn-guided-generate" onclick="quickTestProduceFromPrompt()" class="btn-runway-primary flex-1">

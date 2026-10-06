@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from src.core.telemetry import logger
-from src.studios.cozy_ambiance.cozy_producer import CozyAmbianceProducer
+from src.studios.studio_producer import StudioProducer as CozyAmbianceProducer
 from src.studios.cozy_ambiance.cozy_storyboard import generate_cozy_storyboard
 
 

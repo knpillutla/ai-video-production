@@ -14,8 +14,8 @@ from typing import Any, Dict, List, Optional
 from src.core.telemetry import logger
 from src.services.long_play_stretcher import export_long_play_broadcast
 from src.services.notification import notification_service
-from src.studios.ambient_world.ambient_producer import AmbientWorldProducer
-from src.studios.ambient_world.ambient_storyboard import AmbientStoryboard
+from src.studios.studio_producer import StudioProducer
+from src.studios.screenplay_models import AmbientStoryboard, BaseStoryboard
 
 
 @dataclass
@@ -34,9 +34,9 @@ class ChannelPipelineConfig:
 class BaseChannelPipeline:
     """Reusable pipeline runner executing all stages and review gates."""
 
-    def __init__(self, config: ChannelPipelineConfig):
+    def __init__(self, config: ChannelPipelineConfig, producer=None):
         self.config = config
-        self.producer = AmbientWorldProducer(output_base_dir=config.output_dir)
+        self.producer = producer or StudioProducer(output_base_dir=config.output_dir)
 
     async def execute(
         self,
@@ -137,8 +137,10 @@ class BaseChannelPipeline:
             return result
 
         # Stage 2 Gate: 4K Master Video Review
-        master_path = Path(result["master_video_path"])
-        nature_master_path = Path(result["master_nature_video_path"]) if result.get("master_nature_video_path") else None
+        raw_m = result.get("master_video_path") or result.get("master_4k_path") or result.get("master_video") or (result.get("editions", [{}])[0].get("url") if result.get("editions") else None)
+        master_path = Path(raw_m) if raw_m else (ep_dir / "master_4k_ambient.mp4")
+        raw_nat = result.get("master_nature_video_path") or result.get("master_narration_path")
+        nature_master_path = Path(raw_nat) if raw_nat else None
         actual_dur = int(sb.total_duration)
         print("\n" + "=" * 70)
         print(f"[STAGE 2 COMPLETE] {actual_dur}-SECOND 4K MASTER READY ({len(sb.scenes)} Shots)!")
@@ -155,7 +157,7 @@ class BaseChannelPipeline:
         await notification_service.notify_channel_master_ready(
             channel_name=self.config.channel_name,
             episode_id=ep_id,
-            title=result["title"],
+            title=result.get("title") or getattr(sb, "title", f"Episode {ep_id}"),
             master_video_path=str(master_path.resolve()),
             short_video_path=result.get("short_video_path"),
             long_play_hours=effective_hours,

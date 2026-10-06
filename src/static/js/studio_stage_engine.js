@@ -69,9 +69,12 @@ async function resumeStudioProduction(episodeId) {
 async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
   if (!vid) return;
   currentActiveInspectorEpisode = vid;
-  vid.pipelineStrategy = strategy || (typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "manual");
+  vid.pipelineStrategy = (strategy === "autonomous" || vid.pipelineStrategy === "autonomous") ? "autonomous" : (strategy || (typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "manual"));
   vid.status = "processing";
   studioAbortController = new AbortController();
+  const resynthStartTime = new Date().toISOString();
+  const tStartMs = Date.now();
+  console.log(`${resynthStartTime}, process name: re-synthesize, step: pipeline execution, status: started, action: re-synthesize started, metadata: [starttime: ${resynthStartTime}, episode_id: ${vid.id || vid.episode_id}, strategy: ${vid.pipelineStrategy}]`);
 
   const isManual = (vid.pipelineStrategy === "manual");
   let isScriptOnly = false;
@@ -233,9 +236,13 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         episode_id: epId,
         user_id: uEmail,
         tier: (function() {
+          const checkedRadio = document.querySelector('input[name="tier_choice"]:checked') || document.querySelector('input[name="production_tier"]:checked');
+          if (checkedRadio && checkedRadio.value) return checkedRadio.value;
+          const tierSelect = document.getElementById("studio-tier-select");
+          if (tierSelect && tierSelect.value) return tierSelect.value;
+          if (typeof currentTier !== "undefined" && currentTier) return currentTier;
           if (vid && (vid.tier || vid.tierKey)) return vid.tier || vid.tierKey;
-          const r = document.querySelector('input[name="tier_choice"]:checked');
-          return r ? r.value : (typeof currentTier !== "undefined" ? currentTier : "balanced");
+          return "balanced";
         })(),
         motion_model: vid.motionModel || (durSec <= 10 ? "wan" : "auto"),
         image_model: vid.imageModel || "flux_dev",
@@ -406,6 +413,9 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         }
         if (typeof fetchAndRenderChannelArchive === "function") fetchAndRenderChannelArchive();
         if (typeof fetchChannelHubVideos === "function") fetchChannelHubVideos();
+        const resynthEndTime = new Date().toISOString();
+        const totalDurSec = ((Date.now() - tStartMs) / 1000).toFixed(2);
+        console.log(`${resynthEndTime}, process name: re-synthesize, step: pipeline execution, status: completed, action: re-synthesize ended, metadata: [starttime: ${resynthStartTime}, endtime: ${resynthEndTime}, total_time: ${totalDurSec}s, episode_id: ${vid.id || vid.episode_id}]`);
       }
       renderInspectorFromVideo(vid);
       if (typeof updateStageGateDock === "function") updateStageGateDock(vid);
@@ -564,6 +574,7 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
   ep.id = targetId;
   ep.episode_id = targetId;
   ep.status = "processing";
+  ep.pipelineStrategy = "autonomous";
   ep.is_approved = true;
   ep.errorMessage = null;
   ep.failedStage = null;
@@ -575,9 +586,13 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
   renderInspectorFromVideo(ep);
   if (typeof filterChannelArchive === "function") filterChannelArchive();
 
+  const chSlug = ep.channelId || ep.channel_id || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : "skylinediariesindia4k");
+  ep.channelId = chSlug;
+  ep.channel_id = chSlug;
+  console.log(`[REPROCESS] Reprocessing episode ${targetId} for channel ${chSlug} (autonomous resumption)`);
+
   // Persist disk approval
   try {
-    const chSlug = ep.channelId || ep.channel_id || (typeof selectedStudioChannel !== "undefined" ? selectedStudioChannel : "earth_serenade");
     const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
     fetch(`/api/production/episodes/${targetId}/approve?channel_id=${chSlug}&user_id=${encodeURIComponent(uEmail)}`, { method: "POST" }).catch(() => {});
   } catch (e) {}

@@ -130,6 +130,7 @@ class RelaxScreenplay(BaseModel):
     recommended_fps: int = 24
     aspect_ratio: str = "16:9"
     total_duration_seconds: float = 60.0
+    tier: str = Field(default="balanced", validation_alias=AliasChoices("tier", "motion_tier"))
     
     global_culture: Optional[RelaxGlobalCultureSpec] = None
     travel_tourism: Optional[RelaxTravelTourismSpec] = None

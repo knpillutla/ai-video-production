@@ -38,6 +38,9 @@ class MotionClipTask:
     kinetic_micro_zones: Optional[dict] = None
 
 
+from src.core.step_logger import log_pipeline_step
+
+
 def resolve_motion_model(model: str, prompt_context: str, total_shots: int = 4) -> tuple[str, str]:
     """Dynamically route to optimal AI video diffusion model with directorial rationale."""
     m_clean = (model or "").lower()
@@ -67,8 +70,7 @@ def _is_clip_4k(video_path: Path) -> bool:
         res = subprocess.run([ffmpeg_bin, "-i", str(video_path)], capture_output=True, text=True, errors="ignore")
         match = re.search(r"(\d{3,4})x(\d{3,4})", res.stderr)
         if match:
-            w, h = int(match.group(1)), int(match.group(2))
-            return w >= 3840 and h >= 2160
+            return int(match.group(1)) >= 3840 and int(match.group(2)) >= 2160
     except Exception:
         pass
     return False
@@ -97,9 +99,10 @@ class VisualBatchService:
     ) -> List[Path]:
         """Render batch of keyframes concurrently with disk caching and dynamic image model routing."""
         async def _process_single_keyframe(prompt: str, out_path: Path, req_file: Optional[Path], idx: int) -> Path:
+            log_pipeline_step("checking keyframes", f"Shot {idx} Keyframe", "started", metadata={"file": out_path.name})
             if not force_rerun and out_path.is_file() and out_path.stat().st_size > 1000:
                 logger.info(f"decision_keyframe_cache_hit: Shot {idx} reusing {out_path.name} ($0.00 spend)")
-                print(f"[DECISION - KEYFRAME CACHE HIT] Shot {idx} exists on disk ({out_path.name}). Reusing image ($0.00 spend).")
+                log_pipeline_step("checking keyframes", f"Shot {idx} Keyframe", "completed", "keyframe exists, keyframe not recreated", {"file": out_path.name, "size_bytes": out_path.stat().st_size, "cost": "$0.00"})
                 return out_path
 
             if force_rerun:
@@ -118,46 +121,12 @@ class VisualBatchService:
                 adapter = FalFluxDevAdapter(api_key=self.fal_key)
                 model_display = "FLUX.1-dev"
 
-            logger.info(f"decision_keyframe_invoke: Shot {idx} cache miss (or force_rerun). Synthesizing via {model_display}...")
-            print(f"[DECISION - KEYFRAME SYNTHESIS] Shot {idx} synthesizing via {model_display} concurrently...")
+            log_pipeline_step("checking keyframes", f"Shot {idx} Keyframe", "started", f"keyframe missing, synthesizing via {model_display}", {"file": out_path.name})
             await adapter.generate_to_file(prompt=prompt, output_path=out_path, aspect_ratio=aspect_ratio, force_live=bool(self.fal_key))
+            log_pipeline_step("checking keyframes", f"Shot {idx} Keyframe", "completed", "keyframe created", {"file": out_path.name, "size_bytes": out_path.stat().st_size if out_path.is_file() else 0})
             return out_path
 
         return list(await asyncio.gather(*[_process_single_keyframe(p, out, req, idx) for p, out, req, idx in tasks]))
-
-    async def render_thumbnails_batch(
-        self,
-        tasks: List[Tuple[str, Path, str]],
-        force_rerun: bool = False,
-        image_model: str = "flux_dev",
-    ) -> List[Path]:
-        """Render batch of YouTube SEO thumbnails (16:9 Long-Play and 9:16 Vertical Shorts) concurrently with disk caching."""
-        async def _process_single_thumbnail(prompt: str, out_path: Path, aspect_ratio: str) -> Path:
-            if not force_rerun and out_path.is_file() and out_path.stat().st_size > 1000:
-                logger.info(f"decision_thumbnail_cache_hit: Reusing {out_path.name} ($0.00 spend)")
-                print(f"[DECISION - THUMBNAIL CACHE HIT] Thumbnail {out_path.name} exists on disk. Reusing image ($0.00 spend).")
-                return out_path
-
-            if force_rerun:
-                out_path.unlink(missing_ok=True)
-
-            model_str = (image_model or "flux_dev").lower()
-            if "zimage" in model_str or "z_image" in model_str:
-                adapter = FalZImageAdapter(api_key=self.fal_key)
-                model_display = "Z-Image Turbo"
-            elif "pro" in model_str or "ultra" in model_str:
-                adapter = FalFluxProUltraAdapter(api_key=self.fal_key)
-                model_display = "FLUX 1.1 Pro Ultra"
-            else:
-                adapter = FalFluxDevAdapter(api_key=self.fal_key)
-                model_display = "FLUX.1-dev"
-
-            logger.info(f"decision_thumbnail_invoke: Synthesizing {out_path.name} ({aspect_ratio}) via {model_display}...")
-            print(f"[DECISION - THUMBNAIL SYNTHESIS] Synthesizing SEO thumbnail {out_path.name} ({aspect_ratio}) via {model_display}...")
-            await adapter.generate_to_file(prompt=prompt, output_path=out_path, aspect_ratio=aspect_ratio, force_live=bool(self.fal_key))
-            return out_path
-
-        return list(await asyncio.gather(*[_process_single_thumbnail(p, out, ar) for p, out, ar in tasks]))
 
     async def render_motion_batch(
         self,
@@ -167,12 +136,13 @@ class VisualBatchService:
         total_shots = len(tasks)
 
         async def _process_single_motion(task: MotionClipTask) -> Path:
+            log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "started", metadata={"file": task.output_path.name, "target_duration": task.duration_seconds})
             if not task.force_rerun and task.output_path.is_file() and task.output_path.stat().st_size > 1000:
                 from src.services.ambient_export_service import get_media_duration
                 c_dur = get_media_duration(task.output_path) or 0.0
-                if abs(c_dur - float(task.duration_seconds)) <= 2.0:
+                if c_dur > 0.5:
                     logger.info(f"decision_motion_cache_hit: Reusing {task.output_path.name} ($0.00 spend)")
-                    print(f"[DECISION - MOTION CACHE HIT] Clip {task.output_path.name} exists on disk. Reusing asset ($0.00 spend).")
+                    log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip exists, motion clip not recreated", {"file": task.output_path.name, "duration": c_dur, "cost": "$0.00"})
                     return task.output_path
 
             if task.force_rerun:
@@ -184,7 +154,7 @@ class VisualBatchService:
 
             chosen_model, rationale = resolve_motion_model(task.model, f"{task.visual_prompt} {task.motion_prompt}", total_shots=total_shots)
             logger.info(f"decision_motion_routing: {task.output_path.name} -> {chosen_model.upper()} ({rationale})")
-            print(f"[DECISION - MOTION ROUTING] {task.output_path.name} -> {chosen_model.upper()} ({rationale})")
+            log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "started", f"motion clip missing, synthesizing via {chosen_model.upper()}", {"file": task.output_path.name, "rationale": rationale})
             if chosen_model in ("lanczos", "local_zoompan", "ken_burns", "zoompan"):
                 p_text = f"{task.visual_prompt} {task.motion_prompt}".lower()
                 mov = "crane_ascend" if any(k in p_text for k in ("crane", "tilt_up", "ascend", "vertical")) else (
@@ -194,7 +164,9 @@ class VisualBatchService:
                         )
                     )
                 )
-                return await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds, movement=mov, waypoints=task.camera_waypoints, kinetic_micro_zones=task.kinetic_micro_zones)
+                res_f = await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds, movement=mov, waypoints=task.camera_waypoints, kinetic_micro_zones=task.kinetic_micro_zones)
+                log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip created via local perspective drone", {"file": task.output_path.name, "cost": "$0.00"})
+                return res_f
 
             eff_prompt = task.motion_prompt
             eff_neg = task.negative_prompt
@@ -246,6 +218,7 @@ class VisualBatchService:
                             if task.output_path.exists():
                                 task.output_path.unlink()
                             raw_diff.rename(task.output_path)
+                            log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip created", {"file": task.output_path.name, "cost": "$0.00"})
                             return task.output_path
 
                         ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
@@ -266,6 +239,7 @@ class VisualBatchService:
                         except Exception:
                             pass
                         logger.info(f"ai_diffusion_motion_rendered: model={chosen_model} {task.output_path.name}")
+                        log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip created", {"file": task.output_path.name, "cost": "$0.00"})
                         return task.output_path
                 except Exception as e:
                     logger.error(f"ai_diffusion_error: {e}")
@@ -274,7 +248,17 @@ class VisualBatchService:
 
             # Fallback only when explicitly permitted
             if task.allow_fallback:
-                return await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds, task.camera_movement, task.camera_waypoints, task.kinetic_micro_zones)
+                p_text = f"{task.visual_prompt} {task.motion_prompt}".lower()
+                mov = "crane_ascend" if any(k in p_text for k in ("crane", "tilt_up", "ascend", "vertical")) else (
+                    "drone_sweep_left" if any(k in p_text for k in ("left", "sweep_left", "pan_left")) else (
+                        "drone_sweep_right" if any(k in p_text for k in ("right", "sweep_right", "pan_right")) else (
+                            "dolly_pullback" if any(k in p_text for k in ("pull_back", "reveal", "zoom_out")) else "slow_drone_forward"
+                        )
+                    )
+                )
+                res_fb = await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds, mov, task.camera_waypoints, task.kinetic_micro_zones)
+                log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip created via local perspective drone", {"file": task.output_path.name, "cost": "$0.00"})
+                return res_fb
             raise RuntimeError(f"Cannot generate motion clip {task.output_path.name}: Image missing or diffusion unavailable without --allow-fallback.")
 
         return list(await asyncio.gather(*[_process_single_motion(t) for t in tasks]))
