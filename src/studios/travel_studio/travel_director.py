@@ -59,10 +59,12 @@ async def generate_travel_screenplay_gemini(
     raw_topics = topic_memory.get_recent_topics(user_id=user_id, channel_id=eff_channel, limit=20)
     excluded = [t if isinstance(t, str) else t.get("title", "") for t in raw_topics]
 
+    eff_shots = max(2, round((duration_seconds or 60.0) / 12.5))
+    logger.info(f"travel_director_cadence: duration={duration_seconds}s -> eff_shots={eff_shots} (ignoring incoming num_shots={num_shots})")
     sys_prompt = build_travel_prompt(
         custom_prompt=custom_prompt or "",
         duration_seconds=duration_seconds,
-        num_shots=num_shots,
+        num_shots=eff_shots,
         archetype=eff_arch,
         camera_motion=camera_motion,
         excluded_topics=excluded,

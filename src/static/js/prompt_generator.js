@@ -204,14 +204,11 @@ function quickTestProduceFromPrompt() {
 
   const getChk = id => { const el = document.getElementById(id); return el ? el.checked : true; };
   const getVal = (id, fallback) => { const el = document.getElementById(id); return el?.value || fallback; };
-  const numShots = isTestMode
-    ? (typeof activeShotsCount !== "undefined" ? activeShotsCount : 1)
-    : parseInt(document.getElementById("studio-prod-shots")?.value || "1", 10);
   const effective = (typeof getEffectiveProductionDuration === "function")
     ? getEffectiveProductionDuration()
-    : { durSec: isTestMode ? (activeTestDuration || 5) : 90, lpHours: isTestMode ? (activeBroadcastHours || 0) : 3.0 };
-  const durationSec = isTestMode ? (activeTestDuration || 5) : effective.durSec;
-  const longPlayHours = isTestMode ? (activeBroadcastHours || 0) : effective.lpHours;
+    : { durSec: 120, lpHours: 0.0 };
+  const durationSec = effective.durSec;
+  const longPlayHours = effective.lpHours;
   const langVal = getVal("studio-language", "en");
 
   if (!selChan) {
@@ -227,6 +224,10 @@ function quickTestProduceFromPrompt() {
   const archEl = document.getElementById("studio-archetype-selector");
   const chGenre = (chId === "silent_hearth") ? "Fireplace & ASMR" : (chId === "earth_serenade" ? "4K Nature Ambiance" : (chId === "cineai_docs" ? "24fps BBC Nature Doc" : (chId === "telugu_comedy" ? "Comedy Satire Shorts" : vType)));
   const selGenreVal = genreEl?.value || chGenre;
+  const isTravelOrSkyline = (chId === "skylinediariesindia4k" || selGenreVal.startsWith("travel") || (typeof currentChannel !== "undefined" && currentChannel?.genre?.startsWith("travel")));
+  const numShots = isTravelOrSkyline
+    ? -1
+    : (isTestMode ? (typeof activeShotsCount !== "undefined" ? activeShotsCount : 1) : parseInt(document.getElementById("studio-prod-shots")?.value || "1", 10));
   const selGenreLabel = genreEl?.selectedOptions?.[0]?.textContent?.trim() || "";
   const selSubgenreVal = subgenreEl?.value || null;
   const selSubgenreLabel = subgenreEl?.selectedOptions?.[0]?.textContent?.trim() || "";
@@ -259,7 +260,7 @@ function quickTestProduceFromPrompt() {
     enableTts: document.getElementById("studio-toggle-tts")?.checked || false,
     enableLipsync: document.getElementById("studio-toggle-lipsync")?.checked || false,
     allowFallback: document.getElementById("studio-toggle-fallback")?.checked || false,
-    motionModel: isTestMode ? "wan" : "auto",
+    motionModel: isTravelOrSkyline ? "ken_burns" : (isTestMode ? "wan" : "auto"),
     voiceGender: getVal("studio-voice-gender", "female"),
     pipelineStrategy: typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "auto",
     createdAt: Date.now(), startedAt: null, completedAt: null, publishedAt: null

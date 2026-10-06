@@ -34,6 +34,7 @@ function setExecutionMode(mode) {
         : "Produce Master Video";
     }
   }
+  syncTravelShotUI();
   calculateLiveCostEstimate();
 }
 
@@ -71,8 +72,32 @@ function setTestShots(val) {
   calculateLiveCostEstimate();
 }
 
+function parseTestDuration(val, isTravel) {
+  const v = String(val || "");
+  const num = parseFloat(v) || 0.0;
+  if (v === "0.0083" || v === "30s" || (num > 0.007 && num < 0.010)) {
+    return { durSec: 30.0, lpHours: 0.0083 };
+  }
+  if (v === "0.0167" || v === "60s" || v === "1m" || (num > 0.015 && num < 0.020)) {
+    return { durSec: 60.0, lpHours: 0.0167 };
+  }
+  if (v === "0.033" || v === "120s" || v === "2m" || (num > 0.030 && num < 0.040)) {
+    return { durSec: 120.0, lpHours: 0.033 };
+  }
+  if (num >= 1.0) {
+    return { durSec: Math.round(num * 3600), lpHours: num };
+  }
+  if (isTravel) {
+    return { durSec: 120.0, lpHours: 0.033 };
+  }
+  return { durSec: (activeShotsCount || 1) * 5.0, lpHours: 0.0 };
+}
+
 function setBroadcastHours(val) {
-  activeBroadcastHours = parseFloat(val) || 0;
+  const isTravel = (typeof isTravelOrSkylineChannel === "function") && isTravelOrSkylineChannel();
+  const parsed = parseTestDuration(val, isTravel);
+  activeBroadcastHours = parsed.lpHours;
+  activeTestDuration = parsed.durSec;
   calculateLiveCostEstimate();
 }
 
@@ -115,6 +140,14 @@ function onStudioDurationDropdownChange(val) {
 }
 
 function getEffectiveProductionDuration() {
+  const isTravel = (typeof isTravelOrSkylineChannel === "function") && isTravelOrSkylineChannel();
+  const isTest = (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test");
+
+  if (isTest) {
+    const testStretchEl = document.getElementById("studio-test-stretch");
+    return parseTestDuration(testStretchEl?.value || (isTravel ? "0.033" : "0"), isTravel);
+  }
+
   const durVal = document.getElementById("studio-stretch-hours")?.value || "2m";
   let resolvedDur = { durSec: 120.0, lpHours: 0.0 };
 
@@ -139,10 +172,63 @@ function getEffectiveProductionDuration() {
     resolvedDur = num <= 8 ? { durSec: 90.0, lpHours: num } : { durSec: num * 60.0, lpHours: 0.0 };
   }
 
-  if (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "draft_preview_5s") {
-    return { durSec: (typeof activeShotsCount !== "undefined" ? activeShotsCount * 5.0 : 15.0), lpHours: 0.0 };
-  }
   return resolvedDur;
+}
+
+function isTravelOrSkylineChannel() {
+  const selChan = (typeof currentChannel !== "undefined" && currentChannel?.id) || document.getElementById("studio-channel-select")?.value || "";
+  const genreVal = document.getElementById("studio-genre-selector")?.value || "";
+  return (
+    selChan === "skylinediariesindia4k" ||
+    selChan.includes("skyline") ||
+    genreVal.startsWith("travel") ||
+    (typeof currentChannel !== "undefined" && currentChannel?.genre?.startsWith("travel"))
+  );
+}
+
+function syncTravelShotUI() {
+  const isTravel = isTravelOrSkylineChannel();
+  const testShotsEl = document.getElementById("studio-test-shots");
+  const prodShotsEl = document.getElementById("studio-prod-shots");
+  const testStretchEl = document.getElementById("studio-test-stretch");
+  const prodStretchEl = document.getElementById("studio-stretch-hours");
+  const cadenceCont = document.getElementById("relaxation-cadence-container");
+  const btnProduceText = document.getElementById("btn-produce-text");
+
+  if (cadenceCont) {
+    cadenceCont.style.display = isTravel ? "none" : "";
+  }
+  if (testShotsEl) {
+    testShotsEl.style.display = isTravel ? "none" : "";
+  }
+  if (prodShotsEl) {
+    prodShotsEl.style.display = isTravel ? "none" : "";
+  }
+  if (testStretchEl && testStretchEl.parentElement) {
+    testStretchEl.parentElement.className = isTravel ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-2 gap-1.5";
+    if (isTravel && (!testStretchEl.value || testStretchEl.value === "0")) {
+      testStretchEl.value = "0.033";
+      activeBroadcastHours = 0.033;
+      activeTestDuration = 120;
+    }
+  }
+  if (prodStretchEl && prodStretchEl.parentElement) {
+    prodStretchEl.parentElement.className = isTravel ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-2 gap-1.5";
+  }
+
+  if (isTravel && typeof selectProductionTier === "function" && typeof currentTier !== "undefined" && currentTier !== "balanced") {
+    selectProductionTier("balanced");
+  }
+
+  if (btnProduceText) {
+    if (activeExecutionMode === "test") {
+      btnProduceText.textContent = isTravel
+        ? "Run Preview (Autonomous Cadence)"
+        : (activePipelineStrategy === "manual" ? `Run Test (${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''})` : `Run Draft (${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''})`);
+    } else {
+      btnProduceText.textContent = activePipelineStrategy === "manual" ? "Produce Video (Gate)" : "Produce Master Video";
+    }
+  }
 }
 
 function calculateLiveCostEstimate() {
@@ -150,14 +236,22 @@ function calculateLiveCostEstimate() {
   const tierBadge = document.getElementById("tier-active-badge");
   const tier = (typeof PRODUCTION_TIERS !== "undefined" ? PRODUCTION_TIERS[currentTier] : null) || { name: "Draft", priceUsd: 0.02, priceStr: "$0.02 USD" };
 
-  const shots = activeExecutionMode === "test" ? activeShotsCount : parseInt(document.getElementById("studio-prod-shots")?.value || "1", 10);
+  syncTravelShotUI();
+
+  const isTravel = isTravelOrSkylineChannel();
+  const effective = (typeof getEffectiveProductionDuration === "function") ? getEffectiveProductionDuration() : { durSec: 120, lpHours: 0.0 };
+  const durSec = effective.durSec;
+  const shots = isTravel ? Math.max(2, Math.round(durSec / 12.5)) : (activeExecutionMode === "test" ? activeShotsCount : parseInt(document.getElementById("studio-prod-shots")?.value || "1", 10));
   const durSelectVal = document.getElementById("studio-stretch-hours")?.value || "3h";
 
   let baseCost = shots * 0.04;
   let durLabel = "";
 
-  if (activeExecutionMode === "test") {
-    durLabel = activeBroadcastHours > 0 ? ` + ${activeBroadcastHours}h 4K Broadcast` : " (Draft)";
+  if (isTravel) {
+    const pace = shots > 0 ? Math.round(durSec / shots) : 12;
+    durLabel = ` • ${durSec}s (${shots} Landmarks @ ${pace}s)`;
+  } else if (activeExecutionMode === "test") {
+    durLabel = activeBroadcastHours >= 1.0 ? ` + ${activeBroadcastHours}h 4K Broadcast` : (activeTestDuration > 10 ? ` (${activeTestDuration}s Preview)` : " (Draft)");
   } else if (durSelectVal === "custom") {
     const custNum = parseFloat(document.getElementById("studio-custom-minutes-input")?.value || "20") || 20;
     const unit = document.getElementById("studio-custom-unit-select")?.value || "mins";
@@ -180,11 +274,20 @@ function calculateLiveCostEstimate() {
   if (tierBadge) tierBadge.textContent = `${tier.name} (${tier.priceStr})`;
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+  syncTravelShotUI();
+  calculateLiveCostEstimate();
+  ["studio-channel-select", "studio-genre-selector"].forEach(id => {
+    document.getElementById(id)?.addEventListener("change", () => {
+      syncTravelShotUI();
+      calculateLiveCostEstimate();
+    });
+  });
+});
+
 document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
     e.preventDefault();
-    if (typeof quickTestProduceFromPrompt === "function") {
-      quickTestProduceFromPrompt();
-    }
+    if (typeof quickTestProduceFromPrompt === "function") quickTestProduceFromPrompt();
   }
 });

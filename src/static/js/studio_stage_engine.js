@@ -59,10 +59,9 @@ async function resumeStudioProduction(episodeId) {
   if (!ep) return;
   ep.status = "processing";
   if (!ep.durationSeconds) {
-    const isTest = (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test");
-    const eff = (typeof getEffectiveProductionDuration === "function") ? getEffectiveProductionDuration() : { durSec: 90, lpHours: 3.0 };
-    ep.durationSeconds = isTest ? (activeTestDuration || 5) : eff.durSec;
-    ep.longPlayHours = isTest ? (activeBroadcastHours || 0) : eff.lpHours;
+    const eff = (typeof getEffectiveProductionDuration === "function") ? getEffectiveProductionDuration() : { durSec: 120, lpHours: 0.0 };
+    ep.durationSeconds = eff.durSec;
+    ep.longPlayHours = eff.lpHours;
   }
   startStudioLiveStageProgress(ep, ep.pipelineStrategy);
 }
@@ -142,7 +141,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
   const chSlug = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : (vid.channelId || vid.channel_id || "earth_serenade");
   const epId = vid.id || vid.episode_id || "EP-001";
   const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
-  const durSec = vid.durationSeconds || (vid.duration ? parseInt(vid.duration, 10) : ((typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test") ? (activeTestDuration || 5) : 5));
+  const durSec = vid.durationSeconds || (vid.duration ? parseInt(vid.duration, 10) : ((typeof getEffectiveProductionDuration === "function") ? getEffectiveProductionDuration().durSec : 120));
 
   const pollArtifacts = async () => {
     try {
@@ -249,10 +248,16 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         photos_only: isPhotosOnly,
         motion_only: isMotionOnly,
         audio_only: isAudioOnly,
-        master_only: isMasterOnly,
-        num_shots: (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "prod")
-          ? parseInt(document.getElementById("studio-prod-shots")?.value || "1", 10)
-          : (typeof activeShotsCount !== "undefined" ? activeShotsCount : (vid.numShots || 1)),
+        num_shots: (function() {
+          const g = ((document.getElementById("studio-genre-selector")?.value) || vid.genre || "").toLowerCase();
+          const ch = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : (vid.channelId || vid.channel_id || "");
+          if (ch === "skylinediariesindia4k" || g.startsWith("travel") || vid.numShots === -1 || vid.num_shots === -1) {
+            return -1;
+          }
+          return (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "prod")
+            ? parseInt(document.getElementById("studio-prod-shots")?.value || "1", 10)
+            : (typeof activeShotsCount !== "undefined" ? activeShotsCount : (vid.numShots || 1));
+        })(),
         long_play_hours: (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "prod")
           ? parseFloat(document.getElementById("studio-stretch-hours")?.value || "3.0")
           : (typeof activeBroadcastHours !== "undefined" ? activeBroadcastHours : (vid.longPlayHours || 0)),

@@ -59,6 +59,12 @@ function onGenreChange(genreVal) {
     bgmToggle.checked = (genreVal !== "relax/hearth" && genreVal !== "documentary");
   }
   syncDualMastersVisibility();
+  if (typeof syncTravelShotUI === "function") {
+    syncTravelShotUI();
+  }
+  if (typeof calculateLiveCostEstimate === "function") {
+    calculateLiveCostEstimate();
+  }
 }
 
 function syncDualMastersVisibility() {

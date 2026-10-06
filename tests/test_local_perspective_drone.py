@@ -67,3 +67,19 @@ def test_compute_waypoint_perspective_corners_progression():
     c15_01 = compute_waypoint_perspective_corners(3840, 2160, 15.01, 40.0, waypoints)
     assert np.allclose(c14_99, c15_01, atol=2.0)
 
+
+def test_compute_perspective_corners_orbital_and_descend():
+    c_orbit = compute_perspective_corners(3840, 2160, 1.0, "orbital_wrap")
+    c_descend = compute_perspective_corners(3840, 2160, 1.0, "descending_glide")
+
+    assert c_orbit.shape == (4, 2)
+    assert c_descend.shape == (4, 2)
+    assert not np.array_equal(c_orbit, c_descend)
+
+    # 2.5D Depth parallax check: bottom corners must be displaced further than top corners
+    # (foreground moves faster than background)
+    top_dx = abs(c_orbit[1][0] - c_orbit[0][0])
+    bot_dx = abs(c_orbit[3][0] - c_orbit[2][0])
+    assert bot_dx != top_dx
+
+

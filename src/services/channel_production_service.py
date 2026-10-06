@@ -194,10 +194,21 @@ async def produce_channel_video(
     eff_voiceover = enable_voiceover or bool(saved_inputs.get("enable_voiceover", False))
     eff_no_bgm = no_bgm if not is_downstream_stage else bool(saved_inputs.get("no_bgm", no_bgm))
 
+    is_travel_genre = (
+        eff_genre.lower().startswith("travel")
+        or eff_genre.lower() in ("travel/scenic", "travel_scenic", "travel_walking")
+        or channel_id == "skylinediariesindia4k"
+        or "travel" in (sub_genre or "").lower()
+        or (primary_archetype or "").lower() in ("cities", "tourist_places", "iconic_places", "spiritual_places", "natural_wonders", "remote_places")
+        or num_shots == -1
+    )
     if existing_sp and existing_sp.scenes:
         effective_shots = len(existing_sp.scenes)
         if getattr(existing_sp, "total_duration_seconds", None):
             duration_seconds = float(existing_sp.total_duration_seconds)
+    elif is_travel_genre or num_shots == -1:
+        effective_shots = max(2, round((duration_seconds or 60.0) / 12.5))
+        logger.info(f"travel_cadence_override: channel='{channel_id}' genre='{eff_genre}' duration={duration_seconds}s -> effective_shots={effective_shots} (num_shots={num_shots})")
     elif num_shots is not None and num_shots > 0:
         effective_shots = num_shots
     else:
@@ -221,7 +232,7 @@ async def produce_channel_video(
         "user_id": effective_user,
         "duration_seconds": duration_seconds,
         "long_play_hours": long_play_hours,
-        "num_shots": effective_shots,
+        "num_shots": -1 if (is_travel_genre or num_shots == -1) else effective_shots,
         "image_model": image_model,
         "motion_model": motion_model,
         "camera_motion": camera_motion,
@@ -282,6 +293,11 @@ async def produce_channel_video(
                         logger.warning(f"failed_to_guarantee_raw_gemini_screenplay: {raw_g_err}")
             logger.info(f"stage_completed: stage='Stage 1: Screenplay' episode_id='{episode_id}' duration={dur_stage1:.2f}s scenes={len(universal_sp.scenes)} timestamp={time.time()}")
             print(f"[STAGE 1 COMPLETED] Screenplay ready in {dur_stage1:.2f}s ({len(universal_sp.scenes)} scenes).")
+            if is_travel_genre or eff_tier == "low_cost" or channel_id == "skylinediariesindia4k":
+                for sc in universal_sp.scenes:
+                    sc.motion_type = "ken_burns"
+                    if not sc.motion_rationale or "ai diffusion" in sc.motion_rationale.lower():
+                        sc.motion_rationale = "100% local 4K perspective drone homography with 2.5D depth parallax and micro-kinetics ($0.00 compute)."
         except Exception as ex:
             dur_stage1 = time.time() - t_stage1
             logger.error(f"stage_failed: stage='Stage 1: Screenplay' episode_id='{episode_id}' duration={dur_stage1:.2f}s error='{ex}' timestamp={time.time()}")

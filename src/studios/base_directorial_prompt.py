@@ -79,7 +79,18 @@ def build_base_directorial_prompt(
     tier: str = "balanced",
 ) -> str:
     """Compose the authoritative directorial system prompt for Gemini storyboarding."""
-    eff_shots = num_shots if num_shots > 0 else max(1, round(duration_seconds / 20.0))
+    g_lower = (genre or "").lower()
+    a_lower = (archetype or "").lower()
+    ch_lower = (channel_id or "").lower()
+    is_urban_or_travel = (
+        g_lower.startswith("travel")
+        or "travel" in g_lower
+        or a_lower in ("cities", "tourist_places", "iconic_places", "spiritual_places", "natural_wonders", "remote_places")
+        or ch_lower == "skylinediariesindia4k"
+        or (ch_lower == "earth_serenade" and not g_lower.startswith("relax"))
+        or num_shots == -1
+    )
+    eff_shots = max(2, round(duration_seconds / 12.5)) if is_urban_or_travel else (num_shots if num_shots > 0 else max(1, round(duration_seconds / 20.0)))
     per_shot_dur = round(duration_seconds / max(1, eff_shots), 1)
     target_words = max(25, int(duration_seconds * 1.95))
     per_shot_words = max(12, int(target_words / max(1, eff_shots)))
@@ -100,17 +111,46 @@ def build_base_directorial_prompt(
         if profile:
             channel_block = "\n" + profile.format_directorial_guardrails_block() + "\n"
 
-    is_urban_or_travel = genre.startswith("travel") or archetype in ("cities", "tourist_places", "iconic_places", "spiritual_places")
     if is_urban_or_travel:
         d1 = """1. 4K CINEMATIC DRONE ARCHITECTURAL & SCENIC SHOWCASE:
-   - For Cities & Skylines: Show magnificent architectural skylines, gleaming glass towers reflecting sky, suspension bridges, and historic monuments from a sweeping 4K aerial drone perspective in crisp natural daytime (evening/night lights ONLY if user explicitly requested night).
+   - Scenic Relaxation Shot Cadence (10s-14s per Vista): Showcase distinct world-class architectural landmarks across scenes (monuments, skylines, bridges, waterfronts, historic plazas) with ~12s per shot, exactly matching 4K scenic relaxation films.
+   - For Cities & Skylines: Show magnificent architectural skylines, gleaming glass towers reflecting sky, suspension bridges, and historic monuments from a sweeping 4K aerial drone perspective in crisp natural daytime.
    - For Heritage & Citadels: Show monumental ancient architecture, grand stone ramparts, temples, and palaces.
    - Zero Tourist Crowd Clutter: Keep focus on breathtaking architectural monuments, skylines, and landscape geometry."""
+        cadence_spec = (
+            f"- Total Duration: {duration_seconds} seconds\n"
+            f"- Autonomous Cadence Contract (num_shots: -1): Shot count is not fixed by user (-1). Gemini MUST autonomously derive the scene count strictly from duration ({duration_seconds}s at ~12.5s per landmark = exactly {eff_shots} scenes, ~{per_shot_dur}s per shot). Under NO circumstances generate only 1 shot or a static loop.\n"
+            f"- Mandatory Scene Count: The 'scenes' array MUST contain an array of exactly {eff_shots} scene objects (Scene 1 to Scene {eff_shots}), each curating a distinct architectural attraction or vista."
+        )
+        schema_mandate = f"\n- You MUST generate an array of exactly {eff_shots} scenes inside 'scenes' for this {duration_seconds}s video."
     else:
         d1 = """1. PURE PRISTINE UNINHABITED NATURE (ZERO HUMANS, ZERO STRUCTURES):
    - Every scene MUST be 100% uninhabited, wild, raw, primordial nature.
    - Absolutely zero humans, tourists, swimmers, hikers, guides, voices, or faces.
    - Strictly zero modern structures, buildings, cabins, paved roads, vehicles, fences, power lines, boats, or railings."""
+        cadence_spec = f"- Total Duration: {duration_seconds} seconds\n- Shot Count: {eff_shots} shots ({per_shot_dur}s per shot)"
+        schema_mandate = ""
+
+    ex_motion_type = "ken_burns" if is_urban_or_travel else "ai_diffusion"
+    ex_rationale = "100% local 4K perspective drone flight with 2.5D depth parallax and micro-kinetics ($0.00 compute)." if is_urban_or_travel else "Fluid water surface requires live AI diffusion for natural ripples"
+
+    if is_urban_or_travel:
+        motion_rule = """3. 100% TIER-0 LOCAL PERSPECTIVE DRONE & MICRO-KINETICS CONTRACT ($0.00 COMPUTE):
+   - MANDATORY 100% LOCAL MOTION: Set "motion_type": "ken_burns" for 100% OF SCENES. STRICTLY PROHIBIT "ai_diffusion".
+   - Zero AI diffusion calls ($0.00 API expenditure). All 4K motion is handled by the local perspective homography drone engine with multi-waypoint flight choreography ('camera_waypoints') and 2.5D parallax.
+   - For all water, trees, and traffic, direct local deterministic kinetics in 'kinetic_micro_zones' (harmonic water ripples via 'water_zones', canopy sway via 'tree_sway_zones', and sprite drifts via 'sprites')."""
+    else:
+        motion_rule = f"""3. HYBRID MOTION DIRECTORIAL SCRIPT CONTRACT (TIER: {clean_tier.upper()}):
+   - SCRIPT IS THE MANDATORY FOUNDATION FOR PRODUCTION. Every scene MUST explicitly specify "motion_type" ("ai_diffusion" | "ken_burns") and "motion_rationale". Zero fallbacks allowed; downstream execution halts if missing.
+   - Cinematic Tier: Set "motion_type": "ai_diffusion" for 100% of scenes.
+   - Low-Cost Tier: Set "motion_type": "ken_burns" for 100% of scenes.
+   - Balanced Tier (Directorial Kinetic Allocation):
+     * MANDATORY "ai_diffusion": living subjects (people, performers, animals, birds), fluid dynamics (rivers, waves, falls, rain, embers, steam), macro kinetics (swaying flower petals, rustling leaves), or moving vehicles.
+     * MANDATORY "ken_burns": rigid monumental terrain (distant mountain peaks, granite cliffs, dunes) and architecture (stone temples, palaces, room walls) to preserve 100% geometry at $0.00 compute.
+   - Anti-Motion-Fatigue Clear Sky Standard: Skies MUST be crystal-clear, cloudless azure skies. STRICTLY PROHIBIT drifting clouds.
+   - Multi-Waypoint Kinetic Choreography: In "camera_waypoints", provide an array of sub-movements and durations summing to duration_seconds (e.g. slow_drone_forward, pan_right, crane_up, reveal_pull_back) so the camera moves smoothly without repetitive loops.
+   - Wide-Scale Micro-Kinetics: In "kinetic_micro_zones", specify optional normalized bboxes [ymin, ymax, xmin, xmax] (0.0-1.0) for "sprites" (cars, people, boats drifting via delta_pct), "tree_sway_zones", and "water_zones".
+   - Domain Specification: Set "water_fluid" for water/rain/falls, "landscape_solid" for mountain/citadels/forest, or "cozy_hearth" for fires."""
 
     return f"""You are the Master Visual Director and Senior Cinematic Storyboard Artist for CineAI Studio.
 Your role is to author a complete, production-ready, broadcast-grade Screenplay for the "{genre}" channel genre.
@@ -129,17 +169,7 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
    - In "visual_prompt", format for high-stability 16:9 landscape framing on a locked tripod with balanced natural depth.
    - In "motion_prompt", ALWAYS anchor with: "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, zero panning, zero tilting, zero zooming."
 
-3. HYBRID MOTION DIRECTORIAL SCRIPT CONTRACT (TIER: {clean_tier.upper()}):
-   - SCRIPT IS THE MANDATORY FOUNDATION FOR PRODUCTION. Every scene MUST explicitly specify "motion_type" ("ai_diffusion" | "ken_burns") and "motion_rationale". Zero fallbacks allowed; downstream execution halts if missing.
-   - Cinematic Tier: Set "motion_type": "ai_diffusion" for 100% of scenes.
-   - Low-Cost Tier: Set "motion_type": "ken_burns" for 100% of scenes.
-   - Balanced Tier (Directorial Kinetic Allocation):
-     * MANDATORY "ai_diffusion": living subjects (people, performers, animals, birds), fluid dynamics (rivers, waves, falls, rain, embers, steam), macro kinetics (swaying flower petals, rustling leaves), or moving vehicles.
-     * MANDATORY "ken_burns": rigid monumental terrain (distant mountain peaks, granite cliffs, dunes) and architecture (stone temples, palaces, room walls) to preserve 100% geometry at $0.00 compute.
-   - Anti-Motion-Fatigue Clear Sky Standard: Skies MUST be crystal-clear, cloudless azure skies. STRICTLY PROHIBIT drifting clouds.
-   - Multi-Waypoint Kinetic Choreography: In "camera_waypoints", provide an array of sub-movements and durations summing to duration_seconds (e.g. slow_drone_forward, pan_right, crane_up, reveal_pull_back) so the camera moves smoothly without repetitive loops.
-   - Wide-Scale Micro-Kinetics: In "kinetic_micro_zones", specify optional normalized bboxes [ymin, ymax, xmin, xmax] (0.0-1.0) for "sprites" (cars, people, boats drifting via delta_pct), "tree_sway_zones", and "water_zones".
-   - Domain Specification: Set "water_fluid" for water/rain/falls, "landscape_solid" for mountain/citadels/forest, or "cozy_hearth" for fires.
+{motion_rule}
 
 4. MULTI-MODEL IMAGE PROMPTS ("image_model_configs"):
    - For every scene, author model-tailored landscape prompts for "flux_dev" (natural balanced), "flux_pro" (8K Hasselblad raw), and "zimage" (punchy 8-step turbo).
@@ -163,14 +193,13 @@ PRODUCTION SPECIFICATIONS:
 - Primary Archetype: {archetype}
 - Geographic Cluster: {cluster}
 - Motion & Quality Tier: {clean_tier}
-- Total Duration: {duration_seconds} seconds
-- Shot Count: {num_shots} shots ({per_shot_dur}s per shot)
+{cadence_spec}
 - Camera Rig: {camera_motion}
 - Target Image Models: ["flux_dev", "flux_pro", "zimage"]
 - Target Video Models: ["kling_v1_6_pro", "wan_2_1"]
 
 CRITICAL SCHEMA ENFORCEMENT:
-Return ONLY a valid JSON object matching RelaxScreenplay:
+Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
 {{
   "production_id": "EP-001",
   "title": "Authentic Atmospheric Title for the specific location",
@@ -230,8 +259,8 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
         "wan_2_1": {{"model": "fal-ai/wan-i2v", "prompts": {{"positive_prompt": "Living wallpaper cinemagraph, fluid motion.", "negative_prompt": "camera movement, artifacts"}}, "settings": {{"guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9"}}}},
         "kling_v1_6_pro": {{"model": "fal-ai/kling-video/v1.6/pro/image-to-video", "prompts": {{"positive_prompt": "Cinemagraph living wallpaper.", "negative_prompt": "camera movement, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}}
       }},
-      "domain": "water_fluid",
-      "motion_type": "ai_diffusion",
+      "domain": "landscape_solid",
+      "motion_type": "{ex_motion_type}",
       "camera_movement": "slow_zoom_in",
       "camera_waypoints": [
         {{"motion": "slow_drone_forward", "duration_seconds": 15.0}},
@@ -243,7 +272,7 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
         "tree_sway_zones": [[0.20, 0.50, 0.80, 0.95]],
         "water_zones": [[0.65, 0.95, 0.10, 0.90]]
       }},
-      "motion_rationale": "Fluid water surface requires live AI diffusion for natural ripples",
+      "motion_rationale": "{ex_rationale}",
       "duration_seconds": {per_shot_dur},
       "narration_text": "Evocative, continuous narration for this vista (~{per_shot_words} words) paced smoothly for {per_shot_dur}s."
     }}

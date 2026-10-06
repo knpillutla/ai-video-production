@@ -140,6 +140,9 @@ function selectStudioChannel(channelId) {
   if (typeof syncCameraAngleVisibility === "function") {
     syncCameraAngleVisibility(channelId);
   }
+  if (typeof calculateLiveCostEstimate === "function") {
+    calculateLiveCostEstimate();
+  }
 }
 
 function updateStudioChannelBadge() {

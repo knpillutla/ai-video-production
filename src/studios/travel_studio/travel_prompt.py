@@ -24,15 +24,15 @@ TRAVEL & SCENIC STUDIO DIRECTORIAL & AUTONOMOUS CURATION RULES:
      * Historic Quarters & Boutique Districts: Heritage bazaars, famous boutique streets, artisan lanes, cobblestone plazas.
    - Scene Diversity Contract: Every scene MUST showcase a distinct attraction or viewpoint; never repeat the same monument or angle across scenes.
 
-3. 4K CINEMATIC AERIAL DRONE FRAMING & MULTI-WAYPOINT CHOREOGRAPHY:
-   - All shots default to 4K cinematic aerial drone cinematography with multi-waypoint camera choreography ('camera_waypoints').
-   - For long shots (15s–40s+), orchestrate dynamic multi-phase flights (e.g. 15s forward glide -> 15s orbital pan -> 10s gentle elevation crane) so the perspective flows continuously without repetitive looping.
-   - Gimbal Purity: Ensure horizons remain 100% level, transitions are buttery-smooth, zero erratic camera maneuvers.
+3. 4K CINEMATIC AERIAL DRONE FRAMING & SCENIC PACING:
+   - Cadence & Variety (10s-14s per Landmark): Direct distinct iconic attractions across scenes with ~12s per vista, matching the mesmerizing rhythm of 4K scenic relaxation films.
+   - All shots feature deep 4K aerial drone cinematography with multi-waypoint camera choreography ('camera_waypoints').
+   - Compound Rigs: Employ forward drone sweeps, orbital wraps, elevation reveals, and coastal glides with continuous perspective flight.
    - Architectural Elegance: Keep focus on breathtaking architectural geometry, bridges, and city planning without crowd clutter.
 
-4. STORY-DRIVEN HYBRID MOTION ARCHITECTURE:
-   - Allocate high-res camera glides ("ken_burns") to rigid monumental terrain and stone architecture to preserve 100% structural fidelity at $0.00 compute.
-   - Allocate live AI video motion ("ai_diffusion") to dynamic water bodies, traffic light trails, fountains, or moving atmosphere.
+4. 100% TIER-0 LOCAL 4K PERSPECTIVE ENGINE ($0.00 COMPUTE):
+   - Set "motion_type": "ken_burns" for all architectural & skyline scenes to preserve 100% geometric stability without AI diffusion warping.
+   - Combine with "kinetic_micro_zones" for distant car drift, boat bobbing, water ripples, and canopy sway at zero cloud API cost.
 
 5. AUTONOMOUS SOUNDTRACK DIRECTIVE (MANDATORY):
    - Metropolises & City Skylines: Melodious cosmopolitan jazz lounge, warm Rhodes piano, brushed swing drums, upright acoustic bass, expressive muted trumpet/sax melodies.
@@ -100,6 +100,16 @@ def build_travel_prompt(
     else:
         eff_topic = default_topic
 
+    eff_shots = max(2, round(duration_seconds / 12.5))
+    per_shot_dur = round(duration_seconds / max(1, eff_shots), 1)
+    travel_rules_dynamic = TRAVEL_SPECIFIC_RULES + f"""
+8. DURATION-DRIVEN SCENE CADENCE CONTRACT (MANDATORY, num_shots: -1):
+   - Total Video Duration: {duration_seconds} seconds.
+   - For all travel & skyline productions, shot count is strictly determined by duration (num_shots: -1), NEVER by a fixed 1-shot default.
+   - You MUST author an array of exactly {eff_shots} scenes (~{per_shot_dur}s each) in 'scenes'.
+   - Each of the {eff_shots} scenes MUST showcase a completely different landmark, monument, or viewpoint (e.g. Landmark 1 to Landmark {eff_shots}).
+   - Under NO circumstances return 1 shot. Output all {eff_shots} distinct scenes.
+"""
     return build_base_directorial_prompt(
         genre="travel/scenic",
         sub_genre=archetype,
@@ -107,10 +117,10 @@ def build_travel_prompt(
         cluster=cluster,
         custom_prompt=eff_topic,
         duration_seconds=duration_seconds,
-        num_shots=num_shots,
+        num_shots=eff_shots,
         camera_motion=camera_motion or "slow_drone_forward",
         excluded_topics=excluded_topics,
-        specific_rules=TRAVEL_SPECIFIC_RULES,
+        specific_rules=travel_rules_dynamic,
         curation_landmarks=None,
         color_temp_kelvin=eff_kelvin,
         channel_id=channel_id or "earth_serenade",

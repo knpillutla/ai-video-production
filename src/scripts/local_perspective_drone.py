@@ -15,24 +15,28 @@ import numpy as np
 def _get_movement_deltas(movement: str) -> Tuple[float, float, float, float]:
     mov = (movement or "slow_drone_forward").lower().strip()
     if any(k in mov for k in ("left", "sweep_left", "pan_left")):
-        return 0.04, -0.06, -0.020, 0.0
+        return 0.08, -0.15, -0.040, 0.0
     elif any(k in mov for k in ("right", "sweep_right", "pan_right")):
-        return 0.04, 0.06, 0.020, 0.0
-    elif any(k in mov for k in ("up", "tilt_up", "crane", "ascend", "pedestal_up")):
-        return 0.04, 0.0, 0.030, -0.05
-    elif any(k in mov for k in ("out", "pull_back", "reveal", "zoom_out")):
-        return -0.06, 0.0, -0.010, 0.0
-    return 0.075, 0.015, 0.018, 0.0
+        return 0.08, 0.15, 0.040, 0.0
+    elif any(k in mov for k in ("up", "tilt_up", "crane", "ascend", "pedestal_up", "reveal")):
+        return 0.10, 0.0, 0.060, -0.10
+    elif any(k in mov for k in ("out", "pull_back", "zoom_out", "dolly_out")):
+        return -0.14, 0.0, -0.030, 0.04
+    elif any(k in mov for k in ("orbit", "wrap", "arc")):
+        return 0.12, 0.14, 0.050, -0.03
+    elif any(k in mov for k in ("descend", "water_skim", "dive")):
+        return 0.18, 0.0, -0.040, 0.08
+    return 0.16, 0.025, 0.035, -0.03
 
 
 def _corners_from_deltas(w: int, h: int, zoom_factor: float, pan_track: float, tilt_skew: float, y_shift: float) -> np.ndarray:
-    zoom_factor = min(0.15, max(-0.10, zoom_factor))
+    zoom_factor = min(0.25, max(-0.18, zoom_factor))
     x_left_top = w * (zoom_factor + pan_track + tilt_skew)
     x_right_top = w * (1.0 - zoom_factor + pan_track - tilt_skew)
-    x_left_bot = w * (zoom_factor + pan_track)
-    x_right_bot = w * (1.0 - zoom_factor + pan_track)
+    x_left_bot = w * (zoom_factor * 1.30 + pan_track * 1.25)
+    x_right_bot = w * (1.0 - zoom_factor * 1.30 + pan_track * 1.25)
     y_top_row = h * (zoom_factor + y_shift)
-    y_bot_row = h * (1.0 - zoom_factor + y_shift)
+    y_bot_row = h * (1.0 - zoom_factor * 1.30 + y_shift * 1.20)
     return np.float32([[x_left_top, y_top_row], [x_right_top, y_top_row], [x_left_bot, y_bot_row], [x_right_bot, y_bot_row]])
 
 

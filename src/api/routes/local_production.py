@@ -174,6 +174,17 @@ async def produce_video_locally(req: LocalProduceRequest):
     )
     print(f"\n[API PRODUCTION TRIGGERED] Episode: {episode_id} | Channel: {eff_channel_id} | Flags: script={eff_script_only}, photos={eff_photos_only}, motion={eff_motion_only}, audio={eff_audio_only}, master={eff_master_only} | Duration: {capped_duration}s")
 
+    req_g_lower = (req.genre or "").lower()
+    is_req_travel = (
+        req_g_lower.startswith("travel")
+        or eff_channel_id == "skylinediariesindia4k"
+        or (req.primary_archetype or "").lower() in ("cities", "tourist_places", "iconic_places", "spiritual_places", "natural_wonders", "remote_places")
+        or req.num_shots == -1
+    )
+    eff_api_shots = -1 if is_req_travel else (req.num_shots or 0)
+    if is_req_travel:
+        logger.info(f"api_travel_shots_cadence: duration={capped_duration}s -> num_shots=-1 (autonomous cadence)")
+
     try:
         result = await produce_channel_video(
             channel_id=eff_channel_id,
@@ -188,7 +199,7 @@ async def produce_video_locally(req: LocalProduceRequest):
             pipeline_strategy=strat,
             no_bgm=not eff_bgm,
             enable_voiceover=bool(req.enable_voiceover),
-            num_shots=req.num_shots or 0,
+            num_shots=eff_api_shots,
             allow_fallback=eff_fallback,
             user_id=user_id_val,
             motion_model=eff_motion,
