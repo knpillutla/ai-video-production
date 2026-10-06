@@ -166,15 +166,9 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
 
     edition_defs = [
         (["master_4k_8hour_broadcast.mp4", "master_4k_8hour_sleep.mp4"], "8h_music", "8-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "8:00:00 (8 Hours)", "16:9 Long-Play", "published", "25.35 GB"),
-        (["master_4k_8hour_nature_only_broadcast.mp4", "master_4k_8hour_nature_only_sleep.mp4"], "8h_nature", "8-Hour 4K Broadcast (Pure Nature ASMR)", "fa-water text-cyan-400", "Pure Nature ASMR", "8:00:00 (8 Hours)", "16:9 Long-Play", "published", "25.09 GB"),
         (["master_4k_3hour_broadcast.mp4", "master_4k_3hour_sleep.mp4"], "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3 Hours)", "16:9 Long-Play", "published", "12.87 GB"),
-        (["master_4k_3hour_nature_only_broadcast.mp4", "master_4k_3hour_nature_only_sleep.mp4"], "3h_nature", "3-Hour 4K Broadcast (Pure Nature ASMR)", "fa-water text-cyan-400", "Pure Nature ASMR", "3:00:00 (3 Hours)", "16:9 Long-Play", "published", "12.72 GB"),
         (["master_4k_1hour_broadcast.mp4", "master_4k_1hour_sleep.mp4"], "1h_music", "1-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "1:00:00 (1 Hour)", "16:9 Long-Play", "published", "4.29 GB"),
-        (["master_4k_1hour_nature_only_broadcast.mp4", "master_4k_1hour_nature_only_sleep.mp4"], "1h_nature", "1-Hour 4K Broadcast (Pure Nature ASMR)", "fa-water text-cyan-400", "Pure Nature ASMR", "1:00:00 (1 Hour)", "16:9 Long-Play", "published", "4.24 GB"),
-        (["master_4k_30min_broadcast.mp4", "master_4k_0.5hour_broadcast.mp4"], "30m_music", "30-Minute 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "30:00 (30 Mins)", "16:9 Long-Play", "published", "2.14 GB"),
-        (["master_4k_30min_nature_only_broadcast.mp4", "master_4k_0.5hour_nature_only_broadcast.mp4"], "30m_nature", "30-Minute 4K Broadcast (Pure Nature ASMR)", "fa-water text-cyan-400", "Pure Nature ASMR", "30:00 (30 Mins)", "16:9 Long-Play", "published", "2.12 GB"),
-        (["master_4k_ambient.mp4"], "master_music", "4K Master Set (Music)", "fa-clapperboard text-purple-400", "Music Master", "90s (Master)", "16:9 Master", "completed", "155 MB"),
-        (["master_4k_ambient_nature_only.mp4"], "master_nature", "4K Master Set (Pure Nature)", "fa-water text-cyan-400", "Pure Nature ASMR", "90s (Master)", "16:9 Master", "completed", "153 MB"),
+        (["master_4k_ambient.mp4"], "master_music", "4K Master Set (Broadcast)", "fa-clapperboard text-purple-400", "Broadcast Master", "90s (Master)", "16:9 Master", "completed", "155 MB"),
         (["short_9x16_teaser.mp4"], "short_teaser", "9:16 Vertical Short Teaser", "fa-mobile-screen text-pink-400", "Music + Ambient", "20s (Short)", "9:16 Short", "completed", "6.6 MB"),
     ]
     for fn_list, eid, name, icon, mode, dur, fmt, st, sz in edition_defs:

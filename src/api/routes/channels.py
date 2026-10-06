@@ -26,38 +26,43 @@ def _slugify(text: str) -> str:
 
 @router.get("", response_model=list[Channel])
 async def list_channels(current_user: User = Depends(get_current_user)):
-    """List all distribution channels configured by current user."""
-    channels = repo.list_channels(current_user.id)
-    from src.config.channel_registry import load_channel_profiles
-    profiles = load_channel_profiles(force_reload=True)
-    existing_slugs = {c.channel_slug.lower() for c in channels if c.channel_slug}
-    
-    # Sync profiles from src/config/channels/*.json into user repo
-    for p in profiles.values():
-        p_slug = p.channel_id.lower().strip()
-        if p_slug not in existing_slugs:
-            chan = Channel(
-                user_id=current_user.id,
-                channel_name=p.channel_name,
-                channel_slug=p_slug,
-                channel_handle=p.handle,
-                category=p.niche_category,
-                primary_genre=p.allowed_genres[0] if p.allowed_genres else "relax/nature",
-                description=p.target_audience,
-                tag=p.tag,
-                comments=p.comments,
-                default_tags=p.youtube_seo_defaults.primary_tags if p.youtube_seo_defaults else [],
-                icon="fa-mountain-sun" if "earth" in p_slug else ("fa-fire" if "hearth" in p_slug else ("fa-film" if "cineai" in p_slug else "fa-masks-theater")),
-                color="emerald" if "earth" in p_slug else ("amber" if "hearth" in p_slug else ("blue" if "cineai" in p_slug else "pink"))
-            )
-            repo.save_channel(chan)
-        else:
-            # Sync tag and comments to existing channel object if not set
-            existing_ch = next((c for c in channels if c.channel_slug and c.channel_slug.lower() == p_slug), None)
-            if existing_ch and (not existing_ch.tag or not existing_ch.comments):
-                if p.tag and not existing_ch.tag: existing_ch.tag = p.tag
-                if p.comments and not existing_ch.comments: existing_ch.comments = p.comments
-                repo.save_channel(existing_ch)
+    """List all distribution channels stored in user storage directory."""
+    user_chan_dir = storage_service.get_user_container_path(current_user.email) / "channels"
+    user_chan_dir.mkdir(parents=True, exist_ok=True)
+    import json
+    for c_dir in user_chan_dir.iterdir():
+        if c_dir.is_dir():
+            slug = c_dir.name
+            prof_file = c_dir / "channel_profile.json"
+            existing = repo.get_channel(current_user.id, slug)
+            if prof_file.exists():
+                try:
+                    data = json.loads(prof_file.read_text(encoding="utf-8"))
+                    ch = Channel(
+                        user_id=current_user.id,
+                        channel_name=data.get("channel_name") or slug.replace("_", " ").title(),
+                        channel_slug=slug,
+                        channel_handle=data.get("handle") or f"@{slug}",
+                        category=data.get("niche_category", "General"),
+                        primary_genre=(data.get("allowed_genres") or ["travel/scenic"])[0],
+                        allowed_genres=data.get("allowed_genres", []),
+                        description=data.get("comments") or data.get("description", ""),
+                    )
+                    repo.save_channel(ch)
+                except Exception:
+                    pass
+            elif not existing:
+                ch = Channel(
+                    user_id=current_user.id,
+                    channel_name=slug.replace("_", " ").title(),
+                    channel_slug=slug,
+                    channel_handle=f"@{slug}",
+                    category="General",
+                    primary_genre="travel/scenic",
+                    allowed_genres=["travel/scenic"],
+                    description="",
+                )
+                repo.save_channel(ch)
     return repo.list_channels(current_user.id)
 
 
@@ -82,7 +87,7 @@ async def create_channel(
     current_user: User = Depends(get_current_user),
 ):
     """Register and configure a new distribution channel in user storage."""
-    slug = req.channel_slug or _slugify(req.channel_name)
+    slug = _slugify(req.channel_slug or req.channel_name)
     existing = repo.get_channel(current_user.id, slug)
     if existing:
         raise HTTPException(
@@ -90,18 +95,25 @@ async def create_channel(
             detail=f"A channel with slug '{slug}' already exists.",
         )
 
+    clean_handle = (req.channel_handle or f"@{slug}").strip()
+    if not clean_handle.startswith("@"):
+        clean_handle = f"@{clean_handle}"
+
     channel = Channel(
         user_id=current_user.id,
         platform=req.platform,
         channel_name=req.channel_name,
         channel_slug=slug,
-        channel_handle=req.channel_handle or f"@{slug}",
+        channel_handle=clean_handle,
         category=req.category or "General",
-        primary_genre=req.primary_genre,
+        primary_genre=req.primary_genre or (req.allowed_genres[0] if req.allowed_genres else None),
+        allowed_genres=req.allowed_genres,
         primary_language=req.primary_language or "en",
         icon=req.icon or "fa-clapperboard",
         color=req.color or "indigo",
         description=req.description or "",
+        tag=req.tag or "",
+        comments=req.comments or "",
         default_tags=req.default_tags,
     )
     saved = repo.save_channel(channel)
@@ -126,10 +138,13 @@ async def update_channel(
     if req.channel_handle is not None: channel.channel_handle = req.channel_handle
     if req.category is not None: channel.category = req.category
     if req.primary_genre is not None: channel.primary_genre = req.primary_genre
+    if req.allowed_genres is not None: channel.allowed_genres = req.allowed_genres
     if req.primary_language is not None: channel.primary_language = req.primary_language
     if req.icon is not None: channel.icon = req.icon
     if req.color is not None: channel.color = req.color
     if req.description is not None: channel.description = req.description
+    if req.tag is not None: channel.tag = req.tag
+    if req.comments is not None: channel.comments = req.comments
     if req.default_tags is not None: channel.default_tags = req.default_tags
     if req.is_active is not None: channel.is_active = req.is_active
 
@@ -258,10 +273,13 @@ async def save_profile(
     profile_data: dict,
     current_user: User = Depends(get_current_user),
 ):
-    """Persist an individual channel profile JSON file into src/config/channels/<slug>.json."""
-    from src.config.channel_registry import ChannelProfile, save_channel_profile
+    """Persist an individual channel profile JSON file into user storage."""
+    from src.config.channel_registry import ChannelProfile
     profile = ChannelProfile(**profile_data)
-    saved_path = save_channel_profile(profile)
-    return {"status": "ok", "saved_file": str(saved_path), "channel_id": profile.channel_id}
+    user_chan_dir = storage_service.get_user_container_path(current_user.email) / "channels" / profile.channel_id.lower().strip()
+    user_chan_dir.mkdir(parents=True, exist_ok=True)
+    target_file = user_chan_dir / "channel_profile.json"
+    target_file.write_text(profile.model_dump_json(indent=2), encoding="utf-8")
+    return {"status": "ok", "saved_file": str(target_file), "channel_id": profile.channel_id}
 
 

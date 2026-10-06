@@ -8,8 +8,10 @@ function updateStudioChannelMetas(channelsList) {
     channelsList.forEach(ch => {
       const slug = ch.channel_slug || ch.channel_name.toLowerCase().replace(/[^a-z0-9]/g, "_");
       const cachedProf = (typeof cachedChannelProfiles !== "undefined" && cachedChannelProfiles[slug]) ? cachedChannelProfiles[slug] : null;
-      const defaultGenres = (typeof DEFAULT_CHANNEL_GENRES !== "undefined" && DEFAULT_CHANNEL_GENRES[slug]) ? DEFAULT_CHANNEL_GENRES[slug] : null;
-      const allowed = ch.allowed_genres || cachedProf?.allowed_genres || defaultGenres || (ch.primary_genre ? [ch.primary_genre] : null);
+      const rawAllowed = (ch.allowed_genres && ch.allowed_genres.length > 0) ? ch.allowed_genres :
+        (cachedProf?.allowed_genres && cachedProf.allowed_genres.length > 0) ? cachedProf.allowed_genres :
+        (defaultGenres || (ch.primary_genre ? [ch.primary_genre] : null));
+      const allowed = rawAllowed ? rawAllowed.map(g => g === "relax/scenic" ? "travel/scenic" : g) : null;
 
       studioChannelMetas[slug] = {
         id: ch.id,

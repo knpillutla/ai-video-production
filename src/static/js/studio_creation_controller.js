@@ -28,27 +28,16 @@ function syncGenreDropdownForChannel(channelSlug) {
   const genresDict = (typeof ALL_STUDIO_GENRES !== "undefined") ? ALL_STUDIO_GENRES : {};
   const channelGenres = (typeof DEFAULT_CHANNEL_GENRES !== "undefined") ? DEFAULT_CHANNEL_GENRES : {};
 
-  let allowed = null;
-  if (typeof cachedChannelProfiles !== "undefined" && cachedChannelProfiles[channelSlug]?.allowed_genres?.length) {
-    allowed = cachedChannelProfiles[channelSlug].allowed_genres;
-  } else if (typeof studioChannelMetas !== "undefined" && studioChannelMetas[channelSlug]?.allowed_genres?.length) {
-    allowed = studioChannelMetas[channelSlug].allowed_genres;
-  } else if (typeof studioChannelMetas !== "undefined" && studioChannelMetas[channelSlug]?.raw?.allowed_genres?.length) {
-    allowed = studioChannelMetas[channelSlug].raw.allowed_genres;
-  } else if (typeof studioChannelMetas !== "undefined" && studioChannelMetas[channelSlug]?.raw?.primary_genre) {
-    allowed = [studioChannelMetas[channelSlug].raw.primary_genre];
-  } else if (channelGenres[channelSlug]) {
-    allowed = channelGenres[channelSlug];
-  }
+  const p = (typeof cachedChannelProfiles !== "undefined" ? cachedChannelProfiles[channelSlug] : null) || (typeof studioChannelMetas !== "undefined" ? studioChannelMetas[channelSlug] : null);
+  const allowed = p?.allowed_genres || p?.raw?.allowed_genres || (p?.raw?.primary_genre ? [p.raw.primary_genre] : channelGenres[channelSlug]);
 
-  const genresToShow = (allowed && allowed.length > 0 && channelSlug !== "all") ? allowed : Object.keys(genresDict);
+  const normalized = (allowed && allowed.length > 0 && channelSlug !== "all")
+    ? allowed.map(g => g === "relax/scenic" ? "travel/scenic" : g).filter(g => Boolean(genresDict[g]))
+    : Object.keys(genresDict);
+  const genresToShow = normalized.length > 0 ? normalized : Object.keys(genresDict);
 
-  gSelector.innerHTML = genresToShow.map(k => {
-    const label = genresDict[k] || k;
-    return `<option value="${k}">${label}</option>`;
-  }).join("");
-
-  const first = genresToShow[0] || "relax/nature";
+  gSelector.innerHTML = genresToShow.map(k => `<option value="${k}">${genresDict[k] || k}</option>`).join("");
+  const first = genresToShow[0] || "travel/scenic";
   gSelector.value = first;
   onGenreChange(first);
 }
@@ -67,12 +56,18 @@ function onGenreChange(genreVal) {
   // Sync active channel BGM default
   const bgmToggle = document.getElementById("studio-toggle-bgm");
   if (bgmToggle) {
-    if (genreVal === "documentary" || genreVal === "relax/hearth") {
-      bgmToggle.checked = (genreVal !== "relax/hearth" && genreVal !== "documentary");
-    } else {
-      bgmToggle.checked = true;
-    }
+    bgmToggle.checked = (genreVal !== "relax/hearth" && genreVal !== "documentary");
   }
+  syncDualMastersVisibility();
+}
+
+function syncDualMastersVisibility() {
+  const row = document.getElementById("studio-dual-editions-row");
+  if (!row) return;
+  const g = (document.getElementById("studio-genre-selector")?.value || "").toLowerCase();
+  const vo = Boolean(document.getElementById("studio-toggle-voice-over")?.checked);
+  const isRelevant = g.includes("travel") || g.includes("doc") || vo;
+  row.classList.toggle("hidden", !isRelevant);
 }
 
 function updateArchetypeOptions(genreVal, subGenreVal) {
@@ -267,7 +262,7 @@ async function deleteStudioEpisode(epId, event, channelId) {
   try {
     await fetch(`/api/production/episodes/${epId}?channel_id=${chSlug}&user_id=${encodeURIComponent(uEmail)}`, { method: "DELETE" });
   } catch (e) { console.warn("Delete episode request notice:", e); }
-  if (typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) {
+  if (Array.isArray(studioVideos)) {
     const idx = studioVideos.findIndex(x => (x.id === epId || x.episode_id === epId) && (x.channelId || x.channel_id || "earth_serenade") === chSlug);
     if (idx >= 0) studioVideos.splice(idx, 1);
   }
@@ -275,7 +270,7 @@ async function deleteStudioEpisode(epId, event, channelId) {
   if (typeof saveVideosState === "function") saveVideosState();
   if (typeof renderStudioVideoHistory === "function") renderStudioVideoHistory();
   filterChannelArchive();
-  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id === epId || currentActiveInspectorEpisode.episode_id === epId) && (currentActiveInspectorEpisode.channelId || currentActiveInspectorEpisode.channel_id) === chSlug) {
+  if (currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id === epId || currentActiveInspectorEpisode.episode_id === epId)) {
     if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
   }
   if (typeof showProfileStatusToast === "function") showProfileStatusToast(`Episode ${epId} deleted.`);

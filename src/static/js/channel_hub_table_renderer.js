@@ -44,6 +44,9 @@ const GENRE_LABELS = {
   "relax/cozy": "🪵 Cozy",
   "relax/ambient": "🌌 Ambient",
   "documentary": "🦅 Wildlife",
+  "travel/scenic": "✈️ Travel & Nature",
+  "relax/scenic": "✈️ Travel & Nature",
+  "relax/art": "🎨 Living Art",
   "travel_walking": "🚶 Walking",
   "dance/folk": "💃 Folk Dance",
   "comedy/satire": "🎭 Comedy"

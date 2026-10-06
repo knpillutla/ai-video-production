@@ -209,10 +209,10 @@ def assemble_dual_masters(
     else:
         logger.info(f"decision_master_video_cache_hit: Reusing {master_music.name} ($0.00 spend)")
 
-    # Nature master disabled for the time being to cut assembly time in half (50% CPU reduction)
     return {
         "music_master": master_music,
         "master_4k": master_music,
+        "narrative_master": master_music,
         "nature_master": master_music,
         "master_nature": master_music,
         "master_1080p": master_music,

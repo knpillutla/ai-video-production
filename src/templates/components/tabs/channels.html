@@ -92,6 +92,7 @@
     <form id="channel-crud-form" onsubmit="saveChannelForm(event)" class="space-y-3 text-xs">
       <input type="hidden" id="crud-is-edit" value="false">
       <input type="hidden" id="crud-channel-id" value="">
+      <input type="hidden" id="crud-channel-tags" value="">
 
       <div class="grid grid-cols-2 gap-3">
         <div>
@@ -138,54 +139,20 @@
           <span class="text-[9px] text-[var(--text-muted)] font-medium">Select all that apply</span>
         </div>
         <div id="crud-genres-container" class="grid grid-cols-3 gap-1.5 text-[10px]">
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
-            <input type="checkbox" name="crud_genre" value="relax/nature" class="accent-[var(--accent)] rounded">
-            <span>🏔️ Alpine Nature</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
-            <input type="checkbox" name="crud_genre" value="relax/healing" class="accent-[var(--accent)] rounded">
-            <span>✨ 528Hz Healing</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
-            <input type="checkbox" name="crud_genre" value="relax/zen" class="accent-[var(--accent)] rounded">
-            <span>🪷 Kyoto Zen</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
-            <input type="checkbox" name="crud_genre" value="relax/waterfall" class="accent-[var(--accent)] rounded">
-            <span>🌊 Waterfalls</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
-            <input type="checkbox" name="crud_genre" value="relax/hearth" class="accent-[var(--accent)] rounded">
-            <span>🔥 Beach Hearth</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
-            <input type="checkbox" name="crud_genre" value="relax/rain" class="accent-[var(--accent)] rounded">
-            <span>🌧️ Rain ASMR</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
-            <input type="checkbox" name="crud_genre" value="relax/cozy" class="accent-[var(--accent)] rounded">
-            <span>🪵 Cozy Living</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
-            <input type="checkbox" name="crud_genre" value="relax/ambient" class="accent-[var(--accent)] rounded">
-            <span>🌌 Velvet Ambient</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
-            <input type="checkbox" name="crud_genre" value="documentary" class="accent-[var(--accent)] rounded">
-            <span>🦅 BBC Wildlife</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
-            <input type="checkbox" name="crud_genre" value="travel_walking" class="accent-[var(--accent)] rounded">
-            <span>🚶 Walking Tours</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
-            <input type="checkbox" name="crud_genre" value="dance/folk" class="accent-[var(--accent)] rounded">
-            <span>💃 Folk Dance</span>
-          </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition">
-            <input type="checkbox" name="crud_genre" value="comedy/satire" class="accent-[var(--accent)] rounded">
-            <span>🎭 Comedy Satire</span>
-          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/art" class="accent-[var(--accent)] rounded"><span>🎨 Living Art</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="travel/scenic" class="accent-[var(--accent)] rounded"><span>✈️ Travel &amp; Nature Scenic</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/nature" class="accent-[var(--accent)] rounded"><span>🏔️ Alpine Nature</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/healing" class="accent-[var(--accent)] rounded"><span>✨ 528Hz Healing</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/zen" class="accent-[var(--accent)] rounded"><span>🪷 Kyoto Zen</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/waterfall" class="accent-[var(--accent)] rounded"><span>🌊 Waterfalls</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/hearth" class="accent-[var(--accent)] rounded"><span>🔥 Beach Hearth</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/rain" class="accent-[var(--accent)] rounded"><span>🌧️ Rain ASMR</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/cozy" class="accent-[var(--accent)] rounded"><span>🪵 Cozy Living</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/ambient" class="accent-[var(--accent)] rounded"><span>🌌 Velvet Ambient</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="documentary" class="accent-[var(--accent)] rounded"><span>🦅 BBC Wildlife</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="travel_walking" class="accent-[var(--accent)] rounded"><span>🚶 Walking Tours</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="dance/folk" class="accent-[var(--accent)] rounded"><span>💃 Folk Dance</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="comedy/satire" class="accent-[var(--accent)] rounded"><span>🎭 Comedy Satire</span></label>
         </div>
       </div>
 
@@ -237,7 +204,20 @@
         <div>
           <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Icon Style</label>
           <select id="crud-channel-icon" class="w-full px-2.5 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none">
-            <option value="fa-mountain-sun">Mountain / Nature</option><option value="fa-leaf">Leaf / Forest</option><option value="fa-fire">Fire / Hearth</option><option value="fa-film">Film / Cinema</option><option value="fa-compass">Compass / Wildlife</option><option value="fa-masks-theater">Masks / Comedy</option><option value="fa-spa">Spa / Zen</option><option value="fa-tower-broadcast">Broadcast</option>
+            <option value="fa-palette">🎨 Palette / Art &amp; Gallery</option>
+            <option value="fa-plane-departure">✈️ Plane / Travel</option>
+            <option value="fa-earth-americas">🌍 World / Global Travel</option>
+            <option value="fa-mountain-sun">🏔️ Mountain / Nature</option>
+            <option value="fa-tree">🌲 Tree / Nature</option>
+            <option value="fa-city">🏙️ City / Skylines</option>
+            <option value="fa-landmark">🏛️ Landmark / Heritage</option>
+            <option value="fa-leaf">🍃 Leaf / Forest</option>
+            <option value="fa-fire">🔥 Fire / Hearth</option>
+            <option value="fa-film">🎬 Film / Cinema</option>
+            <option value="fa-compass">🧭 Compass / Wildlife</option>
+            <option value="fa-masks-theater">🎭 Masks / Comedy</option>
+            <option value="fa-spa">🪷 Spa / Zen</option>
+            <option value="fa-tower-broadcast">📡 Broadcast</option>
           </select>
         </div>
         <div>

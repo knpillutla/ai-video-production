@@ -84,8 +84,10 @@ class RelaxSceneDirective(BaseModel):
     motion_negative_prompt: Optional[str] = Field(None, description="Director-specified negative constraints")
     model_configs: Dict[str, RelaxModelConfigDirective] = Field(default_factory=dict)
     image_model_configs: Dict[str, Any] = Field(default_factory=dict)
-    loop_strategy: Optional[LoopStrategySpec] = None
     domain: str = "landscape_solid"  # landscape_solid, water_fluid
+    motion_type: str = "ai_diffusion"  # ai_diffusion, ken_burns, static
+    camera_movement: str = "slow_zoom_in"  # slow_zoom_in, slow_zoom_out, pan_left, pan_right, tilt_up, locked_tripod
+    motion_rationale: Optional[str] = None  # Directorial reasoning for choosing AI diffusion vs local Ken Burns
     duration_seconds: float = 30.0
 
 

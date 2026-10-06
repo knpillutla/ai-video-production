@@ -1,0 +1,30 @@
+{
+  "channel_id": "skylinediariesindia4k",
+  "channel_name": "Skyline Diaries India",
+  "handle": "@SkylineDiariesIndia4K",
+  "niche_category": "General",
+  "target_audience": "",
+  "tag": "",
+  "comments": "",
+  "allowed_genres": [
+    "travel/scenic"
+  ],
+  "audio_profile": {
+    "bgm_enabled_by_default": true,
+    "style": "Harmonic Soundscape",
+    "instruments": [],
+    "foley_elements": [],
+    "target_lufs": -14.0,
+    "bgm_ducking_db": -18.0,
+    "suno_tag_template": ""
+  },
+  "visual_lighting_guardrails": {
+    "lighting_temperature": "Natural (5400K)",
+    "negative_visual_tokens": "modern clutter, blurry optics",
+    "purity_rule": "Pure Scenery"
+  },
+  "youtube_seo_defaults": {
+    "primary_tags": [],
+    "category_id": "10"
+  }
+}

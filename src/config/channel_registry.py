@@ -80,43 +80,53 @@ ACTIVE CHANNEL BRANDING & AUDIENCE GUARDRAILS ({self.handle} - {self.channel_nam
 _CACHE: Optional[Dict[str, ChannelProfile]] = None
 
 
-def load_channel_profiles(force_reload: bool = False) -> Dict[str, ChannelProfile]:
-    """Load and parse all per-channel JSON files from src/config/channels/."""
+def load_channel_profiles(force_reload: bool = False, user_email: str = "knpillutla@gmail.com") -> Dict[str, ChannelProfile]:
+    """Load and parse all per-channel JSON files from user storage directory."""
     global _CACHE
     if _CACHE is not None and not force_reload:
         return _CACHE
 
     profiles: Dict[str, ChannelProfile] = {}
-    CHANNELS_DIR.mkdir(parents=True, exist_ok=True)
+    from src.core.storage import storage_service
+    user_chan_dir = storage_service.get_user_container_path(user_email) / "channels"
+    if user_chan_dir.exists():
+        for prof_file in user_chan_dir.glob("*/channel_profile.json"):
+            try:
+                data = json.loads(prof_file.read_text(encoding="utf-8"))
+                profile = ChannelProfile(**data)
+                profiles[profile.channel_id.lower()] = profile
+            except Exception as exc:
+                logger.warning(f"Failed to load channel profile {prof_file}: {exc}")
 
-    for json_file in CHANNELS_DIR.glob("*.json"):
-        try:
-            content = json_file.read_text(encoding="utf-8")
-            data = json.loads(content)
-            profile = ChannelProfile(**data)
-            profiles[profile.channel_id.lower()] = profile
-        except Exception as exc:
-            logger.warning(f"Failed to load channel profile {json_file.name}: {exc}")
+    if not profiles and CHANNELS_DIR.exists():
+        for json_file in CHANNELS_DIR.glob("*.json"):
+            try:
+                data = json.loads(json_file.read_text(encoding="utf-8"))
+                profile = ChannelProfile(**data)
+                profiles[profile.channel_id.lower()] = profile
+            except Exception:
+                pass
 
     _CACHE = profiles
     return _CACHE
 
 
-def get_channel_profile(channel_id: Optional[str]) -> Optional[ChannelProfile]:
+def get_channel_profile(channel_id: Optional[str], user_email: str = "knpillutla@gmail.com") -> Optional[ChannelProfile]:
     """Retrieve profile for a specific channel slug or return default."""
     if not channel_id:
         return None
-    profiles = load_channel_profiles()
+    profiles = load_channel_profiles(user_email=user_email)
     slug = channel_id.lower().strip()
     return profiles.get(slug)
 
 
-def save_channel_profile(profile: ChannelProfile) -> Path:
-    """Save or update an individual channel profile JSON file."""
-    CHANNELS_DIR.mkdir(parents=True, exist_ok=True)
-    target_file = CHANNELS_DIR / f"{profile.channel_id.lower().strip()}.json"
-    json_text = profile.model_dump_json(indent=2)
-    target_file.write_text(json_text, encoding="utf-8")
-    load_channel_profiles(force_reload=True)
+def save_channel_profile(profile: ChannelProfile, user_email: str = "knpillutla@gmail.com") -> Path:
+    """Save or update an individual channel profile JSON file in user storage."""
+    from src.core.storage import storage_service
+    user_chan_dir = storage_service.get_user_container_path(user_email) / "channels" / profile.channel_id.lower().strip()
+    user_chan_dir.mkdir(parents=True, exist_ok=True)
+    target_file = user_chan_dir / "channel_profile.json"
+    target_file.write_text(profile.model_dump_json(indent=2), encoding="utf-8")
+    load_channel_profiles(force_reload=True, user_email=user_email)
     logger.info(f"Saved channel profile: {target_file}")
     return target_file

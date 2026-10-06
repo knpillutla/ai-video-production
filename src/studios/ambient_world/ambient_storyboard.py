@@ -19,6 +19,9 @@ class AmbientScenePrompt(BaseModel):
     motion_prompt: str
     duration_seconds: float = 30.0
     domain: str = "landscape_solid"
+    motion_type: str = "ai_diffusion"
+    camera_movement: str = "slow_zoom_in"
+    motion_rationale: Optional[str] = None
     image_model_configs: dict = Field(default_factory=dict)
     model_configs: dict = Field(default_factory=dict)
 
@@ -56,8 +59,7 @@ def resolve_contextual_defaults(cluster: str, user_duration: Optional[float], us
     """Autonomously determine optimal master duration and shot count with explicit directorial rationale."""
     dur = user_duration or 30.0
     shots = user_shots if (user_shots and user_shots in (1, 2, 3, 4)) else 1
-    rationale = f"Master duration {dur:.1f}s with {shots} perspective(s) for living wallpaper loop cadence."
-    return dur, shots, rationale
+    return dur, shots, f"Master duration {dur:.1f}s with {shots} perspective(s) for living wallpaper loop cadence."
 
 
 def generate_ambient_storyboard(
@@ -291,8 +293,6 @@ async def generate_ambient_storyboard_gemini(
         raise RuntimeError(f"Gemini LLM returned empty or malformed storyboard data: {data}")
     except Exception as ex:
         logger.error(f"gemini_storyboard_fatal_error: {ex}")
-        print(f"\n[GEMINI FATAL ERROR] Directorial screenplay synthesis failed: {ex}\n")
         raise RuntimeError(f"Gemini directorial screenplay generation failed: {ex}") from ex
-
 
 __all__ = ["AmbientScenePrompt", "AmbientStoryboard", "generate_ambient_storyboard", "generate_ambient_storyboard_gemini"]

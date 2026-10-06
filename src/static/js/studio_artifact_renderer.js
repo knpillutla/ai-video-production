@@ -95,22 +95,12 @@ function renderMasterVideosList(vid) {
   if (eds.length === 0 && masterUrl && isMasterReady) {
     eds.push({
       edition_id: "master_music",
-      name: `🎵 Ambient Soundtrack (${dur})`,
-      label: `4K Ambient Music & 432Hz BGM`,
+      name: `🎵 4K Broadcast Master (${dur})`,
+      label: `4K UHD Master`,
       format: "4K Master",
       duration: dur,
       url: masterUrl
     });
-    if (natureUrl && natureUrl !== masterUrl) {
-      eds.push({
-        edition_id: "master_nature",
-        name: `🌊 Pure Nature ASMR (${dur})`,
-        label: `4K Pure Nature Soundscape`,
-        format: "4K Master",
-        duration: dur,
-        url: natureUrl
-      });
-    }
   }
 
   // CASE 2: Not yet ready -> Waiting for Approval or Queued

@@ -284,6 +284,9 @@ def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> AmbientStoryboard:
                 motion_prompt=s.motion_prompt,
                 duration_seconds=s.duration_seconds,
                 domain=s.domain,
+                motion_type=getattr(s, "motion_type", "ai_diffusion"),
+                camera_movement=getattr(s, "camera_movement", "slow_zoom_in"),
+                motion_rationale=getattr(s, "motion_rationale", None),
                 image_model_configs=getattr(s, "image_model_configs", {}),
                 model_configs=getattr(s, "model_configs", {}),
             )

@@ -72,6 +72,7 @@ class AmbientWorldProducer:
         no_bgm: bool = False,
         allow_fallback: bool = False,
         force_rerun: bool = False,
+        **kwargs: Any,
     ) -> Dict[str, Any]:
         """Execute 4-Stage Progressive Quality Gate with 100% Artifact Idempotency."""
         t_start = time.time()
@@ -152,23 +153,25 @@ class AmbientWorldProducer:
         logger.info(f"stage_triggered: stage='Stage 3: Video Motion' episode_id='{ep_dir.name}' model='{motion_model}' timestamp={t_stage3}")
         print(f"\n[STAGE 3 TRIGGERED] Synthesizing Video Motion for {ep_dir.name} ({motion_model})...")
         try:
-            motion_tasks = [
-                MotionClipTask(
+            motion_tasks = []
+            for i, (scene, kf_path) in enumerate(zip(sb.scenes, keyframe_paths)):
+                s_m = (getattr(scene, "motion_type", None) or "").lower()
+                is_ai = (s_m == "ai_diffusion") or (not s_m and (getattr(scene, "domain", "") in ("water_fluid", "water_impact_collision") or i == 0 or len(sb.scenes) == 1))
+                m_choice = motion_model if is_ai else "local_zoompan"
+                motion_tasks.append(MotionClipTask(
                     image_path=kf_path,
                     motion_prompt=scene.motion_prompt,
                     visual_prompt=scene.visual_prompt,
                     output_path=ep_dir / f"motion_p{scene.scene_index}.mp4",
                     duration_seconds=scene.duration_seconds,
-                    model=motion_model,
+                    model=m_choice,
                     domain=scene.domain,
                     req_file=ep_dir / f"fal_diff_req_p{scene.scene_index}.json",
-                    allow_fallback=allow_fallback,
+                    allow_fallback=allow_fallback or (m_choice == "local_zoompan"),
                     force_rerun=force_rerun,
                     negative_prompt=_resolve_scene_negative_prompt(scene),
                     model_configs=getattr(scene, "model_configs", {}),
-                )
-                for scene, kf_path in zip(sb.scenes, keyframe_paths)
-            ]
+                ))
             video_clip_paths = await visual_batch_service.render_motion_batch(motion_tasks)
             dur_stage3 = time.time() - t_stage3
             logger.info(f"stage_completed: stage='Stage 3: Video Motion' episode_id='{ep_dir.name}' duration={dur_stage3:.2f}s count={len(video_clip_paths)} timestamp={time.time()}")

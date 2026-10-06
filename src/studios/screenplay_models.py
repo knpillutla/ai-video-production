@@ -77,8 +77,10 @@ class RelaxSceneDirective(BaseModel):
     motion_negative_prompt: Optional[str] = Field(None, description="Director-specified negative constraints")
     model_configs: Dict[str, RelaxModelConfigDirective] = Field(default_factory=dict)
     image_model_configs: Dict[str, Any] = Field(default_factory=dict)
-    loop_strategy: Optional[LoopStrategySpec] = None
     domain: str = "landscape_solid"
+    motion_type: str = "ai_diffusion"
+    camera_movement: str = "slow_zoom_in"
+    motion_rationale: Optional[str] = None
     duration_seconds: float = 30.0
 
 

@@ -222,14 +222,30 @@ function quickTestProduceFromPrompt() {
   }
 
   const chId = selChan;
+  const genreEl = document.getElementById("studio-genre-selector");
+  const subgenreEl = document.getElementById("studio-subgenre-selector");
+  const archEl = document.getElementById("studio-archetype-selector");
   const chGenre = (chId === "silent_hearth") ? "Fireplace & ASMR" : (chId === "earth_serenade" ? "4K Nature Ambiance" : (chId === "cineai_docs" ? "24fps BBC Nature Doc" : (chId === "telugu_comedy" ? "Comedy Satire Shorts" : vType)));
+  const selGenreVal = genreEl?.value || chGenre;
+  const selGenreLabel = genreEl?.selectedOptions?.[0]?.textContent?.trim() || "";
+  const selSubgenreVal = subgenreEl?.value || null;
+  const selSubgenreLabel = subgenreEl?.selectedOptions?.[0]?.textContent?.trim() || "";
+  const selArchVal = archEl?.value || null;
+  const selArchLabel = archEl?.selectedOptions?.[0]?.textContent?.trim() || "";
+  const dualEditionsChecked = Boolean(document.getElementById("studio-toggle-dual-editions")?.checked);
 
   const newId = nextEpisodeIdForChannel(chId);
   const uniqueJobId = `job_${newId.toLowerCase()}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
   const newVid = {
     id: newId, episode_id: newId, jobId: uniqueJobId, title, concept, story_topic: concept,
-    channel_id: chId, channelId: chId, genre: chGenre,
-    videoType: chGenre, formatType: fmtType, styleType: styType, productionType: prodType,
+    channel_id: chId, channelId: chId, genre: selGenreVal,
+    videoType: selGenreVal, formatType: fmtType, styleType: styType, productionType: prodType,
+    sub_genre: selSubgenreVal, subGenre: selSubgenreVal,
+    primary_archetype: selArchVal, primaryArchetype: selArchVal,
+    genre_label: selGenreLabel, genreLabel: selGenreLabel,
+    sub_genre_label: selSubgenreLabel, subGenreLabel: selSubgenreLabel,
+    primary_archetype_label: selArchLabel, primaryArchetypeLabel: selArchLabel,
+    dual_editions: dualEditionsChecked,
     status: "queued", youtubeStatus: "unpublished", youtubeChannel: null, youtubeUrl: null,
     youtubeReferenceUrl: ytUrl, videoUrl: "/static/videos/preview_master.mp4",
     durationSeconds: durationSec, duration: longPlayHours > 0 ? `${longPlayHours}h` : `${durationSec}s`, numShots, num_shots: numShots,

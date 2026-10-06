@@ -83,6 +83,16 @@ async def dispatch_studio_director(
         from src.studios.forest_studio.forest_director import generate_forest_screenplay_gemini
         return await generate_forest_screenplay_gemini(genre="relax/forest", sub_genre=sub_genre or primary_archetype or "forest_mossy_canopy_day", primary_archetype=primary_archetype or "forest_mossy_canopy_day", **kwargs)
 
+    # 0.7 Dedicated Travel & Scenic Wonders Studio Dispatch (genre 'travel/scenic')
+    if genre_lower in {"travel/scenic", "travel", "travel_scenic"} or "travel" in genre_lower or arch_lower in {"cities", "natural_wonders", "remote_places", "tourist_places", "spiritual_places", "iconic_places"} or sub_lower in {"cities", "natural_wonders", "remote_places", "tourist_places", "spiritual_places", "iconic_places"} or any(w in p_lower for w in ["drone aerial", "city skyline", "charminar", "hitec city", "golconda"]):
+        from src.studios.travel_studio.travel_director import generate_travel_screenplay_gemini
+        return await generate_travel_screenplay_gemini(genre="travel/scenic", sub_genre=sub_genre or primary_archetype or "cities", primary_archetype=primary_archetype or "cities", **kwargs)
+
+    # 0.8 Dedicated Living Art & Gallery Studio Dispatch (genre 'relax/art')
+    if genre_lower in {"relax/art", "art", "living_art"} or "art" in genre_lower or arch_lower in {"living_impressionism", "grand_gallery", "artist_atelier", "sumie_ukiyoe", "stained_glass", "klimt_gold_leaf", "surrealist_dream"} or sub_lower in {"living_impressionism", "grand_gallery", "artist_atelier", "sumie_ukiyoe", "stained_glass", "klimt_gold_leaf", "surrealist_dream"} or any(w in p_lower for w in ["oil painting", "living canvas", "museum gallery", "atelier", "monet", "van gogh", "klimt"]):
+        from src.studios.art_studio.art_director import generate_art_screenplay_gemini
+        return await generate_art_screenplay_gemini(genre="relax/art", sub_genre=sub_genre or primary_archetype or "living_impressionism", primary_archetype=primary_archetype or "living_impressionism", **kwargs)
+
     # 1. Japanese Zen Studio Dispatch (Kyoto Zen, Bamboo Groves, Raked Rock Gardens, Tsukubai)
     if genre_lower in {"relax/zen", "zen"} or sub_lower in {"zen_garden", "bamboo_grove", "lotus_pond"} or arch_lower in {"zen_garden", "bamboo_grove"}:
         logger.info(f"dispatcher_route: target='ZenStudio' genre='{genre}' sub_genre='{sub_genre}' archetype='{primary_archetype}' channel='{channel_id}'")

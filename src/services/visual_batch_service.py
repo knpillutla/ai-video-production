@@ -47,7 +47,7 @@ def resolve_motion_model(model: str, prompt_context: str, total_shots: int = 4) 
         return "kling_pro", "Kling 1.6 Pro selected for flagship high-coherence video diffusion"
     if m_clean in ("kling_v3", "kling_4k", "kling_v3_4k"):
         return "kling_v3", "Kling v3 4K Native selected for native 4K UHD video diffusion"
-    if m_clean in ("hunyuan", "lanczos"):
+    if m_clean in ("hunyuan", "lanczos", "local_zoompan", "ken_burns", "zoompan"):
         return m_clean, f"Direct configuration override ({model})"
     if total_shots <= 5:
         return "kling_v3", f"Kling v3 4K Native selected as default for <=5 shots ({total_shots} shots) for native 4K UHD OLED fidelity"
@@ -180,6 +180,8 @@ class VisualBatchService:
             chosen_model, rationale = resolve_motion_model(task.model, f"{task.visual_prompt} {task.motion_prompt}", total_shots=total_shots)
             logger.info(f"decision_motion_routing: {task.output_path.name} -> {chosen_model.upper()} ({rationale})")
             print(f"[DECISION - MOTION ROUTING] {task.output_path.name} -> {chosen_model.upper()} ({rationale})")
+            if chosen_model in ("lanczos", "local_zoompan", "ken_burns", "zoompan"):
+                return await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds)
 
             eff_prompt = task.motion_prompt
             eff_neg = task.negative_prompt

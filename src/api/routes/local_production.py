@@ -71,6 +71,8 @@ class LocalProduceRequest(BaseModel):
     master_only: Optional[bool] = False
     pipeline_strategy: Optional[str] = "manual"
     force_rerun: Optional[bool] = False
+    enable_voiceover: Optional[bool] = False
+    dual_editions: Optional[bool] = False
 
 
 class LocalProduceResponse(BaseModel):
@@ -201,6 +203,8 @@ async def produce_video_locally(req: LocalProduceRequest):
                 "primary_archetype": req.primary_archetype_label or "",
             },
             image_model=req.image_model or "flux_dev",
+            dual_editions=bool(req.dual_editions),
+            tier=req.tier or "balanced",
         )
         eff_job_id = result.get("job_id") or job_id
         if eff_script_only:
@@ -291,20 +295,14 @@ async def poll_production_artifacts(channel_id: str, episode_id: str, user_id: s
     dur_str = f"{int(m_data.get('duration_seconds', 5))}s"
     editions = []
     if master_url:
-        editions.append({"edition_id": "master_music", "name": f"🎵 Ambient Soundtrack ({dur_str})", "label": "4K Ambient Music & 432Hz BGM", "format": "4K UHD", "duration": dur_str, "url": master_url})
-    if nature_master_url:
-        editions.append({"edition_id": "master_nature", "name": f"🌊 Pure Nature ASMR ({dur_str})", "label": "4K Pure Nature Soundscape", "format": "4K Nature", "duration": dur_str, "url": nature_master_url})
+        editions.append({"edition_id": "master_music", "name": f"🎵 4K Broadcast Master ({dur_str})", "label": "4K Broadcast Master", "format": "4K UHD", "duration": dur_str, "url": master_url})
     if "short_9x16_teaser.mp4" in files and files["short_9x16_teaser.mp4"].stat().st_size > 1000:
         editions.append({"edition_id": "short_teaser", "name": "📱 9:16 Vertical Short Teaser (20s)", "label": "9:16 Vertical YouTube Short / Reel", "format": "9:16 Short", "duration": "20s", "url": _file_url(files["short_9x16_teaser.mp4"])})
 
     long_play_editions = []
     lp_patterns = [
         (["master_4k_8hour_broadcast.mp4", "master_4k_8hour_sleep.mp4"], "8h_music", "8-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "8:00:00 (8h)", "16:9 Long-Play"),
-        (["master_4k_8hour_nature_only_broadcast.mp4", "master_4k_8hour_nature_only_sleep.mp4"], "8h_nature", "8-Hour 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature ASMR", "8:00:00 (8h)", "16:9 Long-Play"),
         (["master_4k_3hour_broadcast.mp4", "master_4k_3hour_sleep.mp4"], "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3h)", "16:9 Long-Play"),
-        (["master_4k_3hour_nature_only_broadcast.mp4", "master_4k_3hour_nature_only_sleep.mp4"], "3h_nature", "3-Hour 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature ASMR", "3:00:00 (3h)", "16:9 Long-Play"),
-        (["master_4k_30min_broadcast.mp4", "master_4k_0.5hour_broadcast.mp4"], "30m_music", "30-Minute 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "30:00 (30m)", "16:9 Long-Play"),
-        (["master_4k_30min_nature_only_broadcast.mp4", "master_4k_0.5hour_nature_only_broadcast.mp4"], "30m_nature", "30-Minute 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature ASMR", "30:00 (30m)", "16:9 Long-Play"),
     ]
     for fn_list, eid, name, icon, mode, dur, fmt in lp_patterns:
         target_f = next((files[fn] for fn in fn_list if fn in files and files[fn].stat().st_size > 1000), None)

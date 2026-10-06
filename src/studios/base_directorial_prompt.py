@@ -99,6 +99,18 @@ def build_base_directorial_prompt(
         if profile:
             channel_block = "\n" + profile.format_directorial_guardrails_block() + "\n"
 
+    is_urban_or_travel = genre.startswith("travel") or archetype in ("cities", "tourist_places", "iconic_places", "spiritual_places")
+    if is_urban_or_travel:
+        d1 = """1. 4K CINEMATIC DRONE ARCHITECTURAL & SCENIC SHOWCASE:
+   - For Cities & Skylines: Show magnificent architectural skylines, illuminated glass towers, suspension bridges, historic monuments, and evening city lights from a sweeping 4K aerial drone perspective.
+   - For Heritage & Citadels: Show monumental ancient architecture, grand stone ramparts, temples, and palaces.
+   - Zero Tourist Crowd Clutter: Keep focus on breathtaking architectural monuments, skylines, and landscape geometry."""
+    else:
+        d1 = """1. PURE PRISTINE UNINHABITED NATURE (ZERO HUMANS, ZERO STRUCTURES):
+   - Every scene MUST be 100% uninhabited, wild, raw, primordial nature.
+   - Absolutely zero humans, tourists, swimmers, hikers, guides, voices, or faces.
+   - Strictly zero modern structures, buildings, cabins, paved roads, vehicles, fences, power lines, boats, or railings."""
+
     return f"""You are the Master Visual Director and Senior Cinematic Storyboard Artist for CineAI Studio.
 Your role is to author a complete, production-ready, broadcast-grade Screenplay for the "{genre}" channel genre.
 
@@ -106,10 +118,7 @@ Your role is to author a complete, production-ready, broadcast-grade Screenplay 
 ======================================================================
 UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
 ======================================================================
-1. PURE PRISTINE UNINHABITED NATURE (ZERO HUMANS, ZERO STRUCTURES):
-   - Every scene MUST be 100% uninhabited, wild, raw, primordial nature.
-   - Absolutely zero humans, tourists, swimmers, hikers, guides, voices, or faces.
-   - Strictly zero modern structures, buildings, cabins, paved roads, vehicles, fences, power lines, boats, or railings.
+{d1}
 
 2. LIVING WALLPAPER & BALANCED CINEMATIC COMPOSITION:
    - Format visual and motion framing as a LIVING WALLPAPER / CINEMAGRAPH.
@@ -120,8 +129,12 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
 3. SMOOTH HYPNOTIC KINETICS & ANTI-DRIFT CINEMAGRAPH STANDARD:
    - Zero Environmental Warping: Mountains, rock cliffs, forest trees, and the horizon line MUST remain 100% frozen, rigid, and static.
    - Fluid & Atmospheric Animation Only: Animate ONLY the natural dynamic elements (flowing stream water, rolling ocean surf, flickering hearth embers, or gentle rising vapor mist).
-   - Anti-Motion-Fatigue Clear Sky Standard: In all relaxation/nature scenes (except explicit rain themes), skies MUST be crystal-clear, cloudless azure skies ("crystal-clear cloudless blue sky, zero clouds, completely clear atmosphere"). STRICTLY PROHIBIT clouds, overcast skies, or drifting clouds, as sky/cloud motion causes visual fatigue in living wallpapers.
-   - Domain Specification: Set "water_fluid" for water/rain/falls, "landscape_solid" for mountain/forest vistas, or "cozy_hearth" for campfires.
+   - Hybrid Motion Determination ("motion_type" & "camera_movement"):
+     * Autonomously determine for each scene whether it needs live AI motion ("ai_diffusion") or local Ken Burns steadycam ("ken_burns" / "static").
+     * In Balanced Tier: Allocate fluid scenes (water/mist/traffic) to "ai_diffusion" (Wan 2.1). Allocate rigid monuments, temples, or solid terrain to "ken_burns" ("slow_zoom_in", "pan_right") to preserve 100% geometry at $0.00 compute.
+     * Include "motion_type" ("ai_diffusion"|"ken_burns"|"static"), "camera_movement", and "motion_rationale" in each scene.
+   - Anti-Motion-Fatigue Clear Sky Standard: Skies MUST be crystal-clear, cloudless azure skies. STRICTLY PROHIBIT drifting clouds.
+   - Domain Specification: Set "water_fluid" for water/rain/falls, "landscape_solid" for mountain/citadels/forest, or "cozy_hearth" for fires.
 
 4. MULTI-MODEL IMAGE PROMPTS ("image_model_configs"):
    - For every scene, you MUST generate model-tailored image prompts inside "image_model_configs" for ALL THREE image models:
@@ -254,6 +267,9 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
         }}
       }},
       "domain": "water_fluid",
+      "motion_type": "ai_diffusion",
+      "camera_movement": "slow_zoom_in",
+      "motion_rationale": "Fluid water surface requires live AI diffusion for natural ripples",
       "duration_seconds": {per_shot_dur}
     }}
   ],

@@ -217,7 +217,11 @@ Every time a relaxation, ambient, nature, sleep, meditation, or cozy studio agen
   - `audio_master.suno_musical_tags`: Foley and musical textures strictly matching the authentic terrain (e.g., thunderous waterfall roar for waterfalls, ocean surf for coasts, mountain breeze for peaks).
 * **Strict Ban on Vocabulary Contamination:** Never inject or permit vocabulary from one geographic archetype to contaminate another:
   - Strictly prohibit words like `"alpine"`, `"meadow"`, `"chalet"`, `"glacier"` in river gorge, escarpment, ocean coast, canyon, or woodland environments (e.g. Niagara Falls, Iguazu, Redwoods, Big Sur).
-  - Use terrain-authentic affirmative descriptors: `"empty river gorge"`, `"canyon basin"`, `"wild stone riverbank"`, `"natural gravel and boulder shoreline"`, `"primeval forest sanctuary"`, `"untouched natural terrain"`.
+### 32. Mandatory raw_gemini_screenplay.json Persistence Across All Studios (Zero Missing Raw JSON Guarantee)
+* **Mandatory Creation on Every Screenplay Execution:** Every single studio director (`*_director.py`) across all genres (travel, scenic, ocean, mountain, desert, living art, zen, alpine, cozy, dance, etc.) MUST write `raw_gemini_screenplay.json` to `raw_output_path` whenever `raw_output_path` is passed.
+* **Fail-Safe Fallback & Offline Persistence:** If the Gemini API fails, times out, throws an exception, or is bypassed offline, the studio director MUST still write the structured fallback screenplay payload to `raw_output_path` (with `_source: "fallback"` diagnostic marker). Under NO circumstances may a studio director exit without persisting `raw_output_path` when specified.
+* **Parent Directory Safety:** Always call `raw_p.parent.mkdir(parents=True, exist_ok=True)` prior to writing to prevent path errors.
+* **Central Safety Net Guarantee:** The central pipeline dispatcher (`channel_production_service.py`) and studio runners must enforce a post-dispatch check: if `raw_gemini_screenplay.json` does not exist on disk after director dispatch, the system immediately persists `screenplay.model_dump()` to `raw_gemini_screenplay.json`, guaranteeing 100% artifact availability for telemetry, auditability, and debugging across all current and future studios.
 
 Refer to [AGENT_INSTRUCTIONS.md](file:///c:/neel-1/projects/content-generation/AGENT_INSTRUCTIONS.md) for detailed architecture, code patterns, and the pre-commit self-audit checklist.
 

@@ -31,9 +31,7 @@
 21. **Mandatory Agentic Context Enrichment & Gemini Directorial Scripting (All Studios & Channels):** Studio agents must never dispatch raw user prompts or rely on static catalog fallbacks. Agents must autonomously enrich the narrative context with geographic/architectural lore, fluid and atmospheric dynamics, 35mm optical framing, proactive negative purity tokens (suppressing modern vehicles/clutter in natural/rural settings), and acoustic tags before querying Gemini LLM for structured screenplay and motion storyboard synthesis. All queries, responses, and manifests must be transparently logged and saved to `episode_manifest.json`.
 22. **Mandatory Anti-Fatigue Music & Video Motion Standards (All Relaxation Channels):** Video motion prompts and audio scores across all relaxation, sleep, meditation, ambient, nature, and cozy channels must strictly eliminate visual and acoustic fatigue. Video motion must be slow, hypnotic, and gentle (locked tripod or <=0.5 m/s drift) with zero rapid pans, sudden zooms, or strobing effects. Music and audio stems must feature warm acoustic textures (432Hz tuning, gentle piano/harp/flute pads, binaural foley) with zero harsh high-frequency sizzle (>8kHz), zero jarring percussion, and -14.0 LUFS velvet mastering.
 23. **Mandatory Relaxation Agent Creation Contract & Invariant Blueprint:** Every time a relaxation, ambient, nature, sleep, meditation, or cozy studio agent or pipeline is created or implemented, it MUST strictly adhere to the 5-point contract: (1) Natural micro-kinematics for water, clouds, flowers, and grass; (2) Seamless forward-stitching compatibility for 3-hour stretched broadcasts; (3) Anti-fatigue visual/acoustic guardrails; (4) Autonomous context and negative purity enrichment; (5) Directorial Gemini screenplay with full manifest persistence (`episode_manifest.json`).
-
-
-
+24. **Mandatory raw_gemini_screenplay.json Persistence Across All Studios:** Every single studio director (`*_director.py`) across all genres (travel, scenic, ocean, mountain, desert, living art, zen, alpine, cozy, dance, etc.) MUST write `raw_gemini_screenplay.json` to `raw_output_path` on every run. If Gemini fails, times out, or triggers deterministic fallback, the structured fallback payload (with `_source: "fallback"`) MUST still be saved to `raw_output_path`. In addition, the central pipeline dispatcher (`channel_production_service.py`) enforces an automated safety net to guarantee `raw_gemini_screenplay.json` is always present on disk in the episode folder.
 
 ---
 
@@ -388,6 +386,16 @@ Whenever any relaxation, ambient, nature retreat, cozy hearth, or meditation stu
 * **Strict Ban on Vocabulary Contamination:** Never inject or permit vocabulary from one geographic archetype to contaminate another:
   - Strictly prohibit words like `"alpine"`, `"meadow"`, `"chalet"`, `"glacier"` in river gorge, escarpment, ocean coast, canyon, or woodland environments (e.g. Niagara Falls, Iguazu, Redwoods, Big Sur).
   - Use terrain-authentic affirmative descriptors: `"empty river gorge"`, `"canyon basin"`, `"wild stone riverbank"`, `"natural gravel and boulder shoreline"`, `"primeval forest sanctuary"`, `"untouched natural terrain"`.
+
+---
+
+## 21. Mandatory raw_gemini_screenplay.json Persistence Across All Studios
+
+Whenever any studio director (`*_director.py`) is implemented or executed:
+1. **Mandatory Execution Persistence:** The director MUST write `raw_gemini_screenplay.json` to the path passed via `raw_output_path`.
+2. **Deterministic Fallback Persistence:** If Gemini API fails, times out, throws an exception, or is bypassed offline, the studio director MUST still write the fallback JSON structure (marked with `_source: "fallback"`) to `raw_output_path`. Under no circumstances may a studio director exit without persisting `raw_output_path`.
+3. **Safety Net Guarantee in Central Dispatcher:** In `channel_production_service.py` and the local produce runner, if `raw_gemini_screenplay.json` does not exist after dispatch, the system immediately writes `screenplay.model_dump()` to `ep_dir / "raw_gemini_screenplay.json"`. This guarantees 100% telemetry, auditability, and prompt inspection across all present and future studios.
+
 
 
 

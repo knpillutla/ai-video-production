@@ -233,6 +233,7 @@ class StudioProducer:
             ep_dir=ep_dir,
             target_fps=sb.recommended_fps,
             force_rerun=force_rerun,
+            music_only_audio=bgm_path,
         )
 
         metadata_pkgs = export_metadata_packages(sb, ep_dir)
@@ -247,7 +248,7 @@ class StudioProducer:
 
         return {
             "status": "success",
-            "production_type": "broadcast_dual_master",
+            "production_type": "broadcast_master",
             "episode_id": ep_dir.name,
             "master_4k_path": str(dual_res["master_4k"]),
             "master_1080p_path": str(dual_res["master_1080p"]),

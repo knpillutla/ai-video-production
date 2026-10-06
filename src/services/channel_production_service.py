@@ -83,6 +83,8 @@ async def produce_channel_video(
     sub_genre: Optional[str] = None,
     primary_archetype: Optional[str] = None,
     selection_labels: Optional[dict[str, str]] = None,
+    dual_editions: bool = False,
+    tier: Optional[str] = "balanced",
 ) -> Dict[str, Any]:
     """Execute live channel pipeline script for selected channel inside isolated user channel folder."""
     effective_user = user_id or "user_krishna_01"
@@ -118,17 +120,24 @@ async def produce_channel_video(
 
     pipeline = BaseChannelPipeline(cfg)
 
-    # Determine effective channel genre
-    eff_genre = genre or (
-        "relax/nature" if channel_id in ("earth_serenade", "nature_retreat", "rain_retreat")
-        else ("relax/cozy" if channel_id == "cozy_ambiance"
-        else ("relax/zen" if channel_id in ("healing_relaxation", "zen_studio")
-        else ("comedy/telugu" if channel_id == "telugu_comedy"
-        else ("documentary/cineai" if channel_id == "cineai_docs"
-        else (channel_id or "relax/nature")))))
-    )
+    # Determine effective channel genre & normalize human names
+    raw_g = (genre or "").strip()
+    if raw_g.lower() in ("travel guide & doc", "travel", "travel/scenic") or "travel & nature scenic wonders" in raw_g.lower():
+        eff_genre = "travel/scenic"
+    elif raw_g:
+        eff_genre = raw_g
+    else:
+        eff_genre = (
+            "relax/nature" if channel_id in ("earth_serenade", "nature_retreat", "rain_retreat")
+            else ("relax/cozy" if channel_id == "cozy_ambiance"
+            else ("relax/zen" if channel_id in ("healing_relaxation", "zen_studio")
+            else ("comedy/telugu" if channel_id == "telugu_comedy"
+            else ("documentary/cineai" if channel_id == "cineai_docs"
+            else (channel_id or "relax/nature")))))
+        )
+    eff_genre_label = (selection_labels or {}).get("genre") or ("✈️ Travel & Nature Scenic Wonders (travel/scenic)" if eff_genre == "travel/scenic" else eff_genre)
     selected_options = {
-        "genre": {"value": eff_genre, "label": (selection_labels or {}).get("genre", "")},
+        "genre": {"value": eff_genre, "label": eff_genre_label},
         "sub_genre": {"value": sub_genre or "", "label": (selection_labels or {}).get("sub_genre", "")},
         "primary_archetype": {
             "value": primary_archetype or "",
@@ -160,8 +169,8 @@ async def produce_channel_video(
         and saved_inputs.get("num_shots") == num_shots
     )
     existing_sp = None
-    if not force_rerun and screenplay_file and screenplay_file.is_file() and screenplay_file.stat().st_size > 50:
-        if inputs_match or is_downstream_stage:
+    if screenplay_file and screenplay_file.is_file() and screenplay_file.stat().st_size > 50:
+        if is_downstream_stage or (not force_rerun and inputs_match):
             try:
                 sp_data = json.loads(screenplay_file.read_text("utf-8"))
                 is_legacy_fallback = (
@@ -174,7 +183,15 @@ async def produce_channel_video(
                     logger.warning(f"ignoring_legacy_fallback_screenplay: episode='{episode_id}'")
                 else:
                     existing_sp = RelaxScreenplay(**sp_data)
-                    if num_shots and len(existing_sp.scenes) != num_shots and not is_downstream_stage:
+                    cached_arch = getattr(existing_sp, "primary_archetype", "")
+                    cached_sub = getattr(existing_sp, "sub_genre", "")
+                    if not is_downstream_stage and primary_archetype and cached_arch and cached_arch != primary_archetype:
+                        logger.info(f"screenplay_cache_archetype_mismatch: episode='{episode_id}' requested={primary_archetype} cached={cached_arch}; regenerating")
+                        existing_sp = None
+                    elif not is_downstream_stage and sub_genre and cached_sub and cached_sub != sub_genre:
+                        logger.info(f"screenplay_cache_subgenre_mismatch: episode='{episode_id}' requested={sub_genre} cached={cached_sub}; regenerating")
+                        existing_sp = None
+                    elif num_shots and len(existing_sp.scenes) != num_shots and not is_downstream_stage:
                         logger.info(f"screenplay_cache_shot_count_mismatch: episode='{episode_id}' requested={num_shots} cached={len(existing_sp.scenes)}; regenerating")
                         existing_sp = None
                     else:
@@ -189,9 +206,9 @@ async def produce_channel_video(
     else:
         effective_shots = 1
 
-    eff_genre_final = getattr(existing_sp, "genre", None) or eff_genre
-    sub_genre_final = getattr(existing_sp, "sub_genre", None) or (sub_genre or "")
-    primary_archetype_final = getattr(existing_sp, "primary_archetype", None) or (primary_archetype or "")
+    eff_genre_final = (getattr(existing_sp, "genre", None) if (existing_sp and is_downstream_stage) else None) or eff_genre
+    sub_genre_final = (getattr(existing_sp, "sub_genre", None) if (existing_sp and is_downstream_stage) else None) or (sub_genre or "")
+    primary_archetype_final = (getattr(existing_sp, "primary_archetype", None) if (existing_sp and is_downstream_stage) else None) or (primary_archetype or "")
     prompt_final = (getattr(existing_sp, "story_topic", None) or prompt or "") if is_downstream_stage else (prompt or "")
 
     user_inputs_payload = {
@@ -213,6 +230,8 @@ async def produce_channel_video(
         "camera_motion": camera_motion,
         "pipeline_strategy": pipeline_strategy,
         "allow_fallback": allow_fallback,
+        "dual_editions": dual_editions,
+        "tier": tier or saved_inputs.get("tier", "balanced"),
     }
     if user_inputs_file:
         try:
@@ -231,6 +250,9 @@ async def produce_channel_video(
         dur_stage1 = time.time() - t_stage1
         logger.info(f"stage_reused: stage='Stage 1: Screenplay' episode_id='{episode_id}' title='{universal_sp.title}' duration={dur_stage1:.2f}s reason='cache_hit' timestamp={time.time()}")
         print(f"[STAGE 1 CACHE REUSED] Screenplay reused for {episode_id} in {dur_stage1:.2f}s ($0.00 spend).")
+    elif is_downstream_stage and screenplay_file and screenplay_file.is_file() and screenplay_file.stat().st_size > 50:
+        universal_sp = RelaxScreenplay(**json.loads(screenplay_file.read_text("utf-8")))
+        logger.info(f"downstream_stage_screenplay_fallback_preserved: episode_id='{episode_id}' title='{universal_sp.title}'")
     else:
         print(f"\n[STAGE 1 TRIGGERED] Formulating Screenplay for {episode_id}...")
         try:
@@ -248,6 +270,15 @@ async def produce_channel_video(
                 image_model=image_model,
             )
             dur_stage1 = time.time() - t_stage1
+            if ep_dir:
+                raw_target = ep_dir / "raw_gemini_screenplay.json"
+                if not raw_target.exists():
+                    try:
+                        raw_target.parent.mkdir(parents=True, exist_ok=True)
+                        raw_target.write_text(json.dumps(universal_sp.model_dump(), indent=2), encoding="utf-8")
+                        logger.info(f"raw_gemini_screenplay_guaranteed: {raw_target}")
+                    except Exception as raw_g_err:
+                        logger.warning(f"failed_to_guarantee_raw_gemini_screenplay: {raw_g_err}")
             logger.info(f"stage_completed: stage='Stage 1: Screenplay' episode_id='{episode_id}' duration={dur_stage1:.2f}s scenes={len(universal_sp.scenes)} timestamp={time.time()}")
             print(f"[STAGE 1 COMPLETED] Screenplay ready in {dur_stage1:.2f}s ({len(universal_sp.scenes)} scenes).")
         except Exception as ex:
@@ -443,29 +474,41 @@ async def produce_channel_video(
     dur_str = f"{int(duration_seconds)}s"
     editions = []
     if video_url and not photos_only and not motion_only and not audio_only and master_v:
-        editions.append({
-            "edition_id": "master_music",
-            "name": f"🎵 Ambient Soundtrack ({dur_str})",
-            "label": "4K Ambient Music & 432Hz BGM",
-            "icon": "fa-music text-indigo-400",
-            "audio_mode": "Music Master",
-            "duration": dur_str,
-            "format": "4K UHD",
-            "status": "completed",
-            "url": video_url,
-        })
-    if nature_video_url and not photos_only and not motion_only and not audio_only and master_v:
-        editions.append({
-            "edition_id": "master_nature",
-            "name": f"🌊 Pure Nature ASMR ({dur_str})",
-            "label": "4K Pure Nature Soundscape (No Music)",
-            "icon": "fa-water text-cyan-400",
-            "audio_mode": "Pure Nature ASMR",
-            "duration": dur_str,
-            "format": "4K Nature",
-            "status": "completed",
-            "url": nature_video_url,
-        })
+        if dual_editions:
+            editions.append({
+                "edition_id": "master_music",
+                "name": f"🎵 Music Soundtrack Edition ({dur_str})",
+                "label": "4K Ambient Music & BGM (No Narration)",
+                "icon": "fa-music text-indigo-400",
+                "audio_mode": "Music Master",
+                "duration": dur_str,
+                "format": "4K UHD",
+                "status": "completed",
+                "url": video_url,
+            })
+            editions.append({
+                "edition_id": "master_narration",
+                "name": f"🎙️ Narration Only Edition ({dur_str})",
+                "label": "4K Documentary Narration (Without Music)",
+                "icon": "fa-microphone text-amber-400",
+                "audio_mode": "Narration Master",
+                "duration": dur_str,
+                "format": "4K Narration",
+                "status": "completed",
+                "url": video_url,
+            })
+        else:
+            editions.append({
+                "edition_id": "master_broadcast",
+                "name": f"🎬 4K Broadcast Master ({dur_str})",
+                "label": "4K Broadcast Master",
+                "icon": "fa-film text-indigo-400",
+                "audio_mode": "Broadcast Master",
+                "duration": dur_str,
+                "format": "4K UHD",
+                "status": "completed",
+                "url": video_url,
+            })
 
     if script_only:
         current_stage = 1

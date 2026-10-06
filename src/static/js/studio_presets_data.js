@@ -116,19 +116,24 @@ const ALL_STUDIO_GENRES = {
   "relax/cozy": "🪵 Cozy Living Spaces & Fireplace (relax/cozy)",
   "relax/ambient": "🌌 Velvet Ambient World 14 Archetypes (relax/ambient)",
   "documentary": "🦅 BBC-Style 24fps Wildlife & Documentary (documentary)",
+  "travel/scenic": "✈️ Travel & Nature Scenic Wonders (travel/scenic)",
+  "relax/scenic": "✈️ Travel & Nature Scenic Wonders (travel/scenic)",
+  "relax/art": "🎨 Living Art, Museum Galleries & Ateliers (relax/art)",
   "travel_walking": "🚶 Travel & 4K 60fps Walking Tours (travel_walking)",
   "dance/folk": "💃 Dance, Folk & Music Videos (dance/folk)",
   "comedy/satire": "🎭 Telugu Comedy & Satire Shorts (comedy/satire)"
 };
 
 const DEFAULT_CHANNEL_GENRES = {
-  "earth_serenade": ["relax/ocean", "relax/beach_lounge", "relax/desert", "relax/mountain", "relax/valley", "relax/blizzard", "relax/forest", "relax/rain", "relax/nature", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient"],
+  "earth_serenade": ["relax/ocean", "relax/beach_lounge", "relax/desert", "relax/mountain", "relax/valley", "relax/blizzard", "relax/forest", "relax/rain", "relax/nature", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient", "travel/scenic", "relax/art"],
   "silent_hearth": ["relax/hearth", "relax/rain", "relax/cozy", "relax/blizzard"],
-  "cineai_docs": ["documentary"],
-  "telugu_comedy": ["comedy/satire", "dance/folk"]
+  "skylinediariesindia4k": ["travel/scenic"]
 };
 
 const STUDIO_SUBOPTIONS_MAP = {
+  "relax/art": [{ val: "living_impressionism", label: "🎨 Living Impressionist Canvas (Monet/Van Gogh)" }, { val: "grand_gallery", label: "🏛️ Louvre & Uffizi Grand Gallery Walk" }, { val: "artist_atelier", label: "🖌️ Sunlit Parisian Artist Atelier & Loft" }, { val: "sumie_ukiyoe", label: "🪷 Japanese Ukiyo-e Woodblock & Sumi-e" }, { val: "stained_glass", label: "✨ Cathedral Rose Stained Glass & Light" }, { val: "klimt_gold_leaf", label: "🪙 Art Nouveau Gold Leaf & Fluid Marble" }, { val: "surrealist_dream", label: "🌌 Surrealist Dreamscape & Floating Gardens" }],
+  "travel/scenic": [{ val: "cities", label: "🏙️ Metropolises & City Skylines" }, { val: "nature", label: "🌲 Wilderness & Nature Escapes" }, { val: "remote_places", label: "🧭 Remote Places & Untouched Frontiers" }, { val: "tourist_places", label: "🏖️ Tourist Havens & Vibrant Promenades" }, { val: "spiritual_places", label: "🪔 Spiritual Places, Shrines & Ghats" }, { val: "iconic_places", label: "🏛️ Iconic World Heritage & Historic Forts" }, { val: "natural_wonders", label: "🌋 Natural Wonders, Canyons & Cataracts" }],
+  "relax/scenic": [{ val: "cities", label: "🏙️ Metropolises & City Skylines" }, { val: "nature", label: "🌲 Wilderness & Nature Escapes" }, { val: "remote_places", label: "🧭 Remote Places & Untouched Frontiers" }, { val: "tourist_places", label: "🏖️ Tourist Havens & Vibrant Promenades" }, { val: "spiritual_places", label: "🪔 Spiritual Places, Shrines & Ghats" }, { val: "iconic_places", label: "🏛️ Iconic World Heritage & Historic Forts" }, { val: "natural_wonders", label: "🌋 Natural Wonders, Canyons & Cataracts" }],
   "relax/ocean": [{ val: "ocean_daytime_shore", label: "☀️ Overwater Villa & Daytime Lagoon" }, { val: "ocean_sunrise_coast", label: "🌅 Coastal Veranda & Pastel Dawn" }, { val: "ocean_sunset_horizon", label: "🌇 Cliffside Sanctuary & Golden Hour Sunset" }, { val: "ocean_night_bioluminescent", label: "🌌 Starlit Beach Pavilion & Bioluminescent Waves" }, { val: "ocean_campfire_hearth", label: "🔥 Open-Air Beach Campfire & Surf" }, { val: "ocean_tropical_rain", label: "🌧️ Sheltered Balcony & Tropical Ocean Rain" }],
   "relax/beach_lounge": [{ val: "beach_luxury_cabana_day", label: "☀️ Luxury Beach Cabana & Daytime Turquoise Surf" }, { val: "beach_sunset_terrace", label: "🌇 Sunset Beach Terrace & Golden Hour Horizon" }, { val: "beach_twilight_pergola", label: "🌆 Twilight Beach Pergola & Gentle Waves" }, { val: "beach_starlit_hammock", label: "🌌 Starlit Beachfront Hammock & Night Surf" }],
   "relax/desert": [{ val: "desert_daytime_tent", label: "☀️ Luxury Desert Tent & Daytime Dunes" }, { val: "desert_sunrise_tent", label: "🌅 Luxury Desert Tent & Sunrise Dawn" }, { val: "desert_sunset_tent", label: "🌇 Luxury Desert Tent & Golden Sunset" }, { val: "desert_night_tent", label: "🌌 Luxury Desert Tent & Starlit Milky Way" }, { val: "desert_campfire_hearth", label: "🔥 Desert Campfire & Bedouin Hearth" }, { val: "desert_rain_sanctuary", label: "🌧️ Luxury Desert Tent & Rain ASMR" }],
@@ -151,6 +156,19 @@ const STUDIO_SUBOPTIONS_MAP = {
 };
 
 const STUDIO_SUBGENRE_PLACEHOLDERS = {
+  living_impressionism: "e.g. Masterpiece living oil painting with visible textured brushstrokes, gently rippling water lilies, and Claude Debussy piano...",
+  grand_gallery: "e.g. Elegant high-ceilinged Louvre salon at twilight, warm gallery spotlights illuminating gilded oil canvases, peaceful reverb...",
+  artist_atelier: "e.g. Sunbeams cutting through a Paris rooftop artist loft, wooden easels, paint palettes, resting oil canvases, warm dust motes...",
+  sumie_ukiyoe: "e.g. Living Japanese woodblock print with gentle rolling Great Wave swells, falling cherry blossom petals, koto and shakuhachi...",
+  stained_glass: "e.g. Monumental Gothic cathedral rose stained glass casting kaleidoscopic jewel-toned sunlight across stone floors...",
+  klimt_gold_leaf: "e.g. Gustav Klimt inspired gold leaf textures with flowing marble fluid dynamics, undulating metallic pigments, velvet pads...",
+  surrealist_dream: "e.g. Salvador Dali inspired ethereal floating architectural archways, celestial moons, and dream gardens in starry night...",
+  cities: "e.g. 4K cinematic drone flight over illuminated Hyderabad skyline, Charminar, Hussain Sagar, and HITEC City...",
+  remote_places: "e.g. Majestic aerial drone glide over remote windswept peaks of Patagonia and solitary glacial outposts...",
+  tourist_places: "e.g. Sun-drenched drone vista soaring along Amalfi Coast colorful cliffside villas and azure waters...",
+  spiritual_places: "e.g. Sacred sunrise aerial glide over Varanasi Ganga Ghats with glowing brass lamps and morning mist...",
+  iconic_places: "e.g. Majestic 4K drone orbit around ancient Golconda Fort granite ramparts and royal bastions at sunset...",
+  natural_wonders: "e.g. Monumental drone flight revealing colossal crimson depths of Grand Canyon in golden hour light...",
   alpine_nature: "e.g. Majestic Swiss Alps panoramic peaks, wildflower valley, and crystal glacial stream...",
   glacial_fjord_lake: "e.g. Glassy mirror-still turquoise glacial lake reflecting towering forested cliffs...",
   temperate_forest: "e.g. Ancient mossy rainforest and gentle babbling river over rounded stones...",
@@ -185,6 +203,8 @@ const STUDIO_SUBGENRE_PLACEHOLDERS = {
 };
 
 const STUDIO_ARCHETYPES_MAP = {
+  "relax/art": [{ val: "living_impressionism", label: "🎨 Living Impressionism" }, { val: "grand_gallery", label: "🏛️ Grand Nocturne Gallery" }, { val: "artist_atelier", label: "🖌️ Sunlit Artist Atelier" }, { val: "sumie_ukiyoe", label: "🪷 Ukiyo-e Woodblock" }, { val: "stained_glass", label: "✨ Cathedral Stained Glass" }, { val: "klimt_gold_leaf", label: "🪙 Gold Leaf & Marble" }, { val: "surrealist_dream", label: "🌌 Surrealist Dreamscape" }],
+  "travel/scenic": [{ val: "cities", label: "🏙️ Metropolises & Skylines" }, { val: "nature", label: "🌲 Wilderness & Nature" }, { val: "remote_places", label: "🧭 Remote Frontiers" }, { val: "tourist_places", label: "🏖️ Tourist Havens" }, { val: "spiritual_places", label: "🪔 Spiritual & Sacred" }, { val: "iconic_places", label: "🏛️ Iconic Heritage Forts" }, { val: "natural_wonders", label: "🌋 Natural Wonders" }],
   "relax/ocean": [{ val: "ocean_daytime_shore", label: "☀️ Overwater Villa (Lagoon)" }, { val: "ocean_sunrise_coast", label: "🌅 Coastal Veranda (Dawn)" }, { val: "ocean_sunset_horizon", label: "🌇 Cliffside Sanctuary (Sunset)" }, { val: "ocean_night_bioluminescent", label: "🌌 Beach Pavilion (Bioluminescent)" }, { val: "ocean_campfire_hearth", label: "🔥 Beach Campfire & Surf" }, { val: "ocean_tropical_rain", label: "🌧️ Sheltered Balcony (Rain ASMR)" }],
   "relax/beach_lounge": [{ val: "beach_luxury_cabana_day", label: "☀️ Luxury Beach Cabana" }, { val: "beach_sunset_terrace", label: "🌇 Sunset Beach Terrace" }, { val: "beach_twilight_pergola", label: "🌆 Twilight Beach Pergola" }, { val: "beach_starlit_hammock", label: "🌌 Starlit Beachfront Hammock" }],
   "relax/desert": [{ val: "desert_daytime_tent", label: "☀️ Luxury Desert Tent (Dunes)" }, { val: "desert_sunrise_tent", label: "🌅 Luxury Desert Tent (Sunrise)" }, { val: "desert_sunset_tent", label: "🌇 Luxury Desert Tent (Sunset)" }, { val: "desert_night_tent", label: "🌌 Luxury Desert Tent (Milky Way)" }, { val: "desert_campfire_hearth", label: "🔥 Desert Campfire & Hearth" }, { val: "desert_rain_sanctuary", label: "🌧️ Desert Rain Sanctuary ASMR" }],
@@ -207,6 +227,19 @@ const STUDIO_ARCHETYPES_MAP = {
 };
 
 const STUDIO_ARCHETYPE_HINTS = {
+  living_impressionism: "e.g. Masterpiece living oil painting with visible textured brushstrokes, gently rippling water lilies, and Debussy piano...",
+  grand_gallery: "e.g. Elegant high-ceilinged museum gallery at twilight, warm gallery spotlights illuminating gilded oil canvases, peaceful reverb...",
+  artist_atelier: "e.g. Sunbeams cutting through a Paris rooftop artist loft, wooden easels, paint palettes, resting oil canvases, warm dust motes...",
+  sumie_ukiyoe: "e.g. Living Japanese woodblock print with gentle rolling Great Wave swells, falling cherry blossom petals, koto and shakuhachi...",
+  stained_glass: "e.g. Monumental Gothic cathedral rose stained glass casting kaleidoscopic jewel-toned sunlight across stone floors...",
+  klimt_gold_leaf: "e.g. Gustav Klimt inspired gold leaf textures with flowing marble fluid dynamics, undulating metallic pigments, velvet pads...",
+  surrealist_dream: "e.g. Salvador Dali inspired ethereal floating architectural archways, celestial moons, and dream gardens in starry night...",
+  cities: "e.g. 4K cinematic drone flight over illuminated city skyline, landmark towers, and futuristic bridges with evening traffic glow...",
+  remote_places: "e.g. Remote untouched mountain frontier with glacial valleys, zero human structures, pure raw wilderness...",
+  tourist_places: "e.g. Vibrant Mediterranean coastal harbor, turquoise waters, pastel promenades, and bustling seaside charm...",
+  spiritual_places: "e.g. Sacred ancient temple complex with towering gopurams, incense mist, and sacred river reflections...",
+  iconic_places: "e.g. Ancient stone fortress ramparts and heritage citadel arches glowing with warm alpenglow...",
+  natural_wonders: "e.g. Monumental geological chasm, roaring cataract, or geothermal emerald pools in dramatic landscape...",
   ocean_daytime_shore: "e.g. Shaded deck of luxury overwater villa looking out at vast turquoise lagoon and rolling waves in bright 5500K daylight, sheer curtains...",
   ocean_sunrise_coast: "e.g. Dawn view from Mediterranean coastal veranda, sun rising over ocean horizon, steaming coffee on stone ledge, pastel morning sea mist...",
   ocean_sunset_horizon: "e.g. Sunset golden hour from stone cliffside terrace, fiery molten gold horizon reflecting across rolling Pacific swells, evening breeze...",
