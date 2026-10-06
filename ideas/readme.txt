@@ -8,6 +8,7 @@ create live channels for the below
 -- continuous hindi songs
 -- continuous Spanish songs/Italian songs on Santorini beach with a character playing different instruments either male or female. same song repeating but with different characters everytime
 
+amazing Europe - channel
 
 yodha movie
 

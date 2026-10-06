@@ -53,6 +53,7 @@ class BaseChannelPipeline:
         audio_only: bool = False,
         master_only: bool = False,
         no_bgm: bool = False,
+        enable_voiceover: bool = False,
         auto_stretch: bool = False,
         allow_fallback: bool = False,
         uncompressed: bool = False,
@@ -64,7 +65,7 @@ class BaseChannelPipeline:
         eff_model = motion_model or self.config.default_motion_model
         crf_val = 16 if uncompressed else 22
 
-        logger.info(f"starting_channel_job: {self.config.channel_name} id={episode_id} tier={tier} image={image_model} motion={eff_model} photos_only={photos_only} motion_only={motion_only} no_bgm={no_bgm}")
+        logger.info(f"starting_channel_job: {self.config.channel_name} id={episode_id} tier={tier} image={image_model} motion={eff_model} photos_only={photos_only} motion_only={motion_only} no_bgm={no_bgm} voiceover={enable_voiceover}")
         print(f"\n[DECISION - CHANNEL PIPELINE INITIALIZED]")
         print(f"   * Channel:     {self.config.channel_name} ({self.config.channel_handle})")
         print(f"   * Title:       {sb.title}")
@@ -88,6 +89,7 @@ class BaseChannelPipeline:
             audio_only=audio_only,
             master_only=master_only,
             no_bgm=no_bgm,
+            enable_voiceover=enable_voiceover,
             allow_fallback=allow_fallback,
             force_rerun=force_rerun,
         )

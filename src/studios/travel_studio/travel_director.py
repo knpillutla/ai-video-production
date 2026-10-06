@@ -49,6 +49,7 @@ async def generate_travel_screenplay_gemini(
     raw_output_path: Optional[os.PathLike | str] = None,
     image_model: str = "flux_1_1_pro_ultra",
     channel_id: Optional[str] = None,
+    tier: str = "balanced",
 ) -> RelaxScreenplay:
     """Generate structured RelaxScreenplay for Travel Studio using Gemini Flash."""
     eff_arch = primary_archetype or sub_genre or "cities"
@@ -66,84 +67,16 @@ async def generate_travel_screenplay_gemini(
         camera_motion=camera_motion,
         excluded_topics=excluded,
         channel_id=eff_channel,
+        tier=tier,
     )
 
-    try:
-        from src.core.config import settings
-        from src.providers.base import HTTPClientPool
-        api_key = settings.llm.google_api_key or settings.llm.gemini_api_key
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
-        payload = {
-            "contents": [{"parts": [{"text": sys_prompt}]}],
-            "generationConfig": {
-                "responseMimeType": "application/json",
-                "temperature": 0.7,
-            },
-        }
-        client = HTTPClientPool.get_client()
-        logger.info(f"gemini_travel_director_request: archetype='{eff_arch}'")
-        resp = await client.post(url, json=payload, timeout=45.0)
-        if resp.status_code != 200:
-            raise RuntimeError(f"Gemini API error (HTTP {resp.status_code}): {resp.text[:500]}")
-        data = resp.json()
-        candidates = data.get("candidates", [])
-        if not candidates:
-            raise RuntimeError("Gemini returned no candidates")
-        raw_json = candidates[0]["content"]["parts"][0]["text"].strip()
-
-        if raw_output_path:
-            try:
-                raw_p = Path(raw_output_path)
-                raw_p.parent.mkdir(parents=True, exist_ok=True)
-                raw_p.write_text(raw_json, encoding="utf-8")
-                logger.info(f"raw_gemini_screenplay_saved: {raw_p}")
-            except Exception as raw_save_err:
-                logger.warning(f"failed_to_save_raw_gemini_json: {raw_save_err}")
-
-        parsed = json.loads(raw_json)
-        screenplay = RelaxScreenplay.model_validate(parsed)
-        screenplay.genre = "travel/scenic"
-        screenplay.cluster = "travel"
-        screenplay.primary_archetype = eff_arch
-        return screenplay
-    except Exception as exc:
-        logger.warning(f"gemini_travel_director_fallback: {exc}")
-        # Deterministic offline fallback using archetype catalog
-        arch_data = get_travel_archetype(eff_arch)
-        shot_dur = duration_seconds / max(1, num_shots)
-        scenes = [
-            {
-                "scene_index": i + 1,
-                "perspective_type": "wide_aerial_drone_glide" if i == 0 else "medium_aerial_orbit",
-                "visual_prompt": f"{arch_data['visual_prompt']} Part {i+1}.",
-                "motion_prompt": arch_data["motion_prompt"],
-                "duration_seconds": shot_dur,
-                "domain": arch_data["domain"],
-                "location_hub": eff_arch,
-            }
-            for i in range(num_shots)
-        ]
-        fb_dict = {
-            "title": f"4K Aerial Showcase: {arch_data['title']}",
-            "theme": arch_data["title"],
-            "story_topic": custom_prompt or arch_data["title"],
-            "genre": "travel/scenic",
-            "sub_genre": eff_arch,
-            "primary_archetype": eff_arch,
-            "secondary_archetype": "",
-            "cluster": "travel",
-            "total_duration": duration_seconds,
-            "recommended_fps": 24,
-            "audio_tags": arch_data["audio_tags"],
-            "scenes": scenes,
-            "_source": "fallback",
-        }
-        if raw_output_path:
-            try:
-                raw_p = Path(raw_output_path)
-                raw_p.parent.mkdir(parents=True, exist_ok=True)
-                raw_p.write_text(json.dumps(fb_dict, indent=2), encoding="utf-8")
-                logger.info(f"raw_gemini_screenplay_fallback_saved: {raw_p}")
-            except Exception as raw_save_err:
-                logger.warning(f"failed_to_save_raw_gemini_fallback_json: {raw_save_err}")
-        return RelaxScreenplay.model_validate(fb_dict)
+    from src.studios.base_screenplay_engine import execute_directorial_screenplay
+    return await execute_directorial_screenplay(
+        sys_prompt=sys_prompt,
+        raw_output_path=raw_output_path,
+        tier=tier,
+        genre=genre or "travel/scenic",
+        cluster="travel",
+        primary_archetype=eff_arch,
+        sub_genre=sub_genre or eff_arch,
+    )

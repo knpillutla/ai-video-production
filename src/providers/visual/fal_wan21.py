@@ -65,6 +65,48 @@ class FalWan21Adapter:
             logger.info(f"fal_wan21_cache_hit: {out.name} ({out.stat().st_size} B)")
             return f"file://{out}", out
 
+        meta_candidates = [
+            out.with_suffix(out.suffix + ".fal_meta.json"),
+            out.with_suffix(".fal_meta.json"),
+            out.parent / f"raw_diff_{out.name}.fal_meta.json",
+            out.parent / f"{out.stem}.fal_meta.json",
+        ]
+        saved_vid_url = None
+        for cand_meta in meta_candidates:
+            if cand_meta.is_file():
+                try:
+                    meta_data = json.loads(cand_meta.read_text(encoding="utf-8"))
+                    saved_vid_url = meta_data.get("video_url")
+                    if saved_vid_url:
+                        break
+                except Exception:
+                    pass
+
+        if not saved_vid_url and (out.parent / "pipeline_state.json").is_file():
+            try:
+                pipe_data = json.loads((out.parent / "pipeline_state.json").read_text(encoding="utf-8"))
+                clean_target = out.name.replace("raw_diff_", "")
+                for mc in pipe_data.get("motion_clips", []):
+                    m_fn = mc.get("filename") or Path(mc.get("url", "")).name.split("?")[0]
+                    if m_fn == clean_target or f"motion_p{mc.get('scene_index')}.mp4" == clean_target:
+                        saved_vid_url = mc.get("remote_url")
+                        if saved_vid_url:
+                            break
+            except Exception:
+                pass
+
+        if saved_vid_url and (saved_vid_url.startswith("http://") or saved_vid_url.startswith("https://")):
+            try:
+                logger.info(f"fal_wan21_reusing_remote_url: {out.name} re-downloading from {saved_vid_url} ($0.00 spend)")
+                async with httpx.AsyncClient(timeout=httpx.Timeout(180.0, connect=30.0, read=180.0)) as dl_client:
+                    v_resp = await dl_client.get(saved_vid_url)
+                    if v_resp.status_code == 200 and len(v_resp.content) > 5000:
+                        out.write_bytes(v_resp.content)
+                        logger.info(f"fal_wan21_redownload_ok: {out.name} ({len(v_resp.content)} B) ($0.00 spend)")
+                        return saved_vid_url, out
+            except Exception as dl_ex:
+                logger.warning(f"fal_wan21_redownload_failed: {dl_ex}")
+
         if is_mock_mode() and not force_live:
             return await self._fallback_local(out, duration)
 
@@ -143,6 +185,15 @@ class FalWan21Adapter:
                                 if len(v_bytes) > 5000:
                                     out.write_bytes(v_bytes)
                                     job_sidecar.unlink(missing_ok=True)
+                                    try:
+                                        meta_f = out.with_suffix(out.suffix + ".fal_meta.json")
+                                        meta_f.write_text(json.dumps({
+                                            "video_url": vid_url,
+                                            "response_url": response_url,
+                                            "status_url": status_url,
+                                        }, indent=2), encoding="utf-8")
+                                    except Exception:
+                                        pass
                                     logger.info(f"fal_wan21_ok: {out.name} ({len(v_bytes)} B)")
                                     return vid_url, out
                             except Exception as dl_err:

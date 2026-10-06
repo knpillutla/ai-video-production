@@ -6,45 +6,42 @@ Conforms strictly to the global RelaxScreenplay schema contract.
 from __future__ import annotations
 from typing import Optional
 from src.studios.base_directorial_prompt import build_base_directorial_prompt
-
-TRAVEL_LANDMARK_POOL = [
-    "Hyderabad: Charminar, Golconda Fort Ramparts, Hussain Sagar Buddha, HITEC City Skyline, Durgam Cheruvu Cable Bridge",
-    "Varanasi: Dashashwamedh Ghat, Manikarnika Ghat, River Ganga at Sunrise Dawn",
-    "Tokyo: Shinjuku & Shibuya Neon Skylines, Rainbow Bridge, Tokyo Tower Twilight",
-    "New York: Manhattan Skyline, Brooklyn Bridge, Central Park Aerial",
-    "Amalfi Coast & Positano Cliffside Pastel Villages, Tyrrhenian Sea, Italy",
-    "Grand Canyon Colossal Desert Chasms & Colorado River, Arizona, USA",
-    "Lauterbrunnen & Swiss Alps Glacial Valleys, Switzerland",
-    "Santorini Caldera & White Oia Cliffside Terraces, Greece",
-    "Kyoto Ancient Pagodas, Yasaka Shrine & Arashiyama Bamboo Ridge, Japan",
-    "Dubai Marina, Burj Khalifa & Palm Jumeirah Coastal Aerials, UAE",
-]
+from src.studios.lighting_director import detect_lighting_directive
 
 TRAVEL_SPECIFIC_RULES = """
 ======================================================================
-TRAVEL & SCENIC WONDERS DIRECTORIAL RULES & CINEMATOGRAPHY:
+TRAVEL & SCENIC STUDIO DIRECTORIAL & AUTONOMOUS CURATION RULES:
 ======================================================================
-1. 4K CINEMATIC AERIAL DRONE FRAMING (DEFAULT PERSPECTIVE):
-   - All shots default to 4K cinematic aerial drone cinematography (sweeping forward glides, slow circular orbits, dramatic reveals, or high-altitude skyline panoramas).
+1. AUTONOMOUS CITY & DESTINATION SELECTION (IF NOT PROVIDED BY USER):
+   - If the user prompt does not specify a city or region, Gemini MUST autonomously choose an iconic, visually breathtaking world city, cultural capital, or scenic wonder matching the archetype (e.g. European historic capitals, Asian metropolises, Mediterranean coastal havens, ancient heritage citadels) without repeating recently produced topics.
+
+2. COMPREHENSIVE LANDMARK, ARCHITECTURE & CULTURAL CURATION:
+   - When a city or destination is provided (e.g. "Hyderabad", "Kyoto", "Rome", "Seattle"), Gemini MUST autonomously query its geographic knowledge to identify the top iconic landmarks, architectural marvels, and cultural highlights.
+   - Never expect the user to know or list attractions. Distribute distinct, authentic attractions across the exact requested shot count from diverse categories:
+     * Monumental Heritage: Ancient citadels, royal palaces, historic fort ramparts, monumental temples, cathedrals.
+     * Modern Architectural Skylines: Iconic towers, suspension bridges, geometric glass structures, financial districts.
+     * Famous Roads, Boulevards & Waterfronts: Celebrated scenic avenues, historic bridges, coastal drives, river embankments.
+     * Historic Quarters & Boutique Districts: Heritage bazaars, famous boutique streets, artisan lanes, cobblestone plazas.
+   - Scene Diversity Contract: Every scene MUST showcase a distinct attraction or viewpoint; never repeat the same monument or angle across scenes.
+
+3. 4K CINEMATIC AERIAL DRONE FRAMING (DEFAULT CAMERA RIG):
+   - All shots default to 4K cinematic aerial drone cinematography (sweeping forward glides, slow circular orbits, dramatic reveals, or high-altitude panoramas).
    - Gimbal Purity: Ensure horizons remain 100% level, transitions are buttery-smooth, zero erratic camera maneuvers.
-   - Architectural & Urban Elegance: Unlike pure wilderness relaxation, Travel & Scenic explicitly showcases world cities, iconic glass skyscrapers, architectural bridges, historic citadels, temples, and evening traffic light trails.
+   - Architectural Elegance: Keep focus on breathtaking architectural geometry, bridges, and city planning without crowd clutter.
 
-2. STORY-DRIVEN HYBRID MOTION ARCHITECTURE (70% KEN BURNS / 30% AI VIDEO MOTION):
-   - Allocate approximately 70% of scenes to majestic high-res 4K camera glides (smooth deterministic pan/zoom at $0.00 compute).
-   - Allocate approximately 30% of key landmark scenes to live AI video motion (for moving water, traffic light trails, or mist plumes).
-   - For all shots, ensure landmark monuments, buildings, and cliffs remain rigid, stable, and razor-sharp.
+4. STORY-DRIVEN HYBRID MOTION ARCHITECTURE:
+   - Allocate high-res camera glides ("ken_burns") to rigid monumental terrain and stone architecture to preserve 100% structural fidelity at $0.00 compute.
+   - Allocate live AI video motion ("ai_diffusion") to dynamic water bodies, traffic light trails, fountains, or moving atmosphere.
 
-3. AUTONOMOUS DRONE MUSIC & SOUNDTRACK DIRECTION (MANDATORY DIRECTIVE):
-   - User Music Override: If the user explicitly specifies a musical style or instrument in the prompt (e.g. "jazz", "lo-fi", "sitar"), strictly honor and enrich that preference.
-   - Autonomous Soundtrack Directive (When user does not specify music): NEVER produce silence or bland generic drones. Gemini MUST autonomously synthesize a mesmerizing, melodious, joyful, expressive, hummable, elegant, and energetic BGM with instruments that make sense for sweeping 4K drone cinematography and smooth movements:
-     * Metropolises & City Skylines (e.g., Hyderabad, Tokyo, NY): Melodious cosmopolitan jazz lounge, warm Rhodes piano, brushed swing drums, upright acoustic bass, expressive muted trumpet/sax melodies, joyful and hummable city cadence.
-     * Heritage & Ancient Citadels (e.g., Golconda, Temples, Forts): Regal melodious acoustic fusion, hummable sitar & santoor melodies, resonant cello, elegant acoustic guitar, and subtle rhythmic tabla groove.
-     * Coastal & Tourist Havens (e.g., Amalfi, Mediterranean): Breezy joyful acoustic Spanish guitar, warm melodic accordion, and sparkling seaside percussion.
-     * Natural Wonders & Canyons: Soaring majestic orchestral score, uplifting French horns, resonant strings, and cinematic pulse.
-   - All audio tags in 'audio_master.suno_musical_tags' must be broadcast-ready (48,000 Hz, -14.0 LUFS broadcast normalization).
+5. AUTONOMOUS SOUNDTRACK DIRECTIVE (MANDATORY):
+   - Metropolises & City Skylines: Melodious cosmopolitan jazz lounge, warm Rhodes piano, brushed swing drums, upright acoustic bass, expressive muted trumpet/sax melodies.
+   - Heritage & Ancient Citadels: Regal melodious acoustic fusion, hummable sitar & santoor, resonant cello, elegant acoustic guitar, rhythmic tabla groove.
+   - Coastal Havens: Breezy joyful acoustic Spanish guitar, warm melodic accordion, sparkling seaside percussion.
+   - Natural Wonders: Soaring majestic orchestral score, uplifting French horns, resonant strings.
+   - Audio tags in 'audio_master.suno_musical_tags' must be broadcast-ready (48,000 Hz, -14.0 LUFS broadcast normalization).
 
-4. FLUID DYNAMICS (RULE 20):
-   - In shots with urban rivers, lakes, oceans, or waterfalls, specify smooth laminar water surfaces and specular light reflections.
+6. FLUID DYNAMICS (RULE 20):
+   - For urban rivers, lakes, oceans, or waterfalls, specify smooth laminar water surfaces and specular light reflections.
 """
 
 
@@ -56,45 +53,40 @@ def build_travel_prompt(
     camera_motion: str = "slow_drone_forward",
     excluded_topics: Optional[list[str]] = None,
     channel_id: Optional[str] = None,
+    tier: str = "balanced",
 ) -> str:
     """Build dedicated Travel studio directorial prompt conforming to RelaxScreenplay schema."""
     arch_lower = archetype.lower()
+    eff_kelvin, tod_key, tod_desc = detect_lighting_directive(custom_prompt, archetype, 5500)
 
     if "city" in arch_lower or "skylin" in arch_lower or "metropol" in arch_lower:
-        color_temp = 3800
         cluster = "Metropolises & Skylines"
-        default_topic = "4K cinematic drone flight over illuminated Hyderabad skyline, Charminar, Hussain Sagar, and HITEC City with jazz score"
+        default_topic = f"Autonomously select an iconic world metropolis and showcase its premier skyline, architectural monuments, and famous boulevards under {tod_desc} with cosmopolitan jazz score"
     elif "spirit" in arch_lower or "temple" in arch_lower or "ghat" in arch_lower:
-        color_temp = 4000
         cluster = "Spiritual & Sacred Sanctuaries"
-        default_topic = "Sunrise dawn drone glide over sacred ancient temple ghats along a revered river with meditative sitar music"
+        default_topic = f"Autonomously select a sacred world sanctuary or ancient temple complex along a revered river under {tod_desc} with meditative acoustic music"
     elif "iconic" in arch_lower or "fort" in arch_lower or "monument" in arch_lower or "herit" in arch_lower:
-        color_temp = 3000
         cluster = "Iconic Heritage Citadels"
-        default_topic = "Golden sunset drone orbit circling ancient Golconda Fort granite ramparts and royal bastions"
+        default_topic = f"Autonomously select a monumental ancient fortress, royal citadel, and royal palace ramparts under {tod_desc} with regal fusion score"
     elif "tourist" in arch_lower or "coastal" in arch_lower or "beach" in arch_lower:
-        color_temp = 3200
         cluster = "World Tourist Havens"
-        default_topic = "Sun-drenched drone flight along colorful coastal cliffside villas and azure Mediterranean harbor"
+        default_topic = f"Autonomously select a premier coastal harbor, cliffside pastel village, and azure sea promenade under {tod_desc} with acoustic guitar"
     elif "wonder" in arch_lower or "canyon" in arch_lower:
-        color_temp = 5400
         cluster = "Monumental Natural Wonders"
-        default_topic = "Panoramic aerial drone flight sweeping across monumental canyon chasms and emerald rivers in crisp daylight"
+        default_topic = f"Autonomously select a monumental natural chasm, river gorge, and dramatic geological wonder under {tod_desc}"
     elif "remote" in arch_lower:
-        color_temp = 4800
         cluster = "Remote Untouched Frontiers"
-        default_topic = "High-altitude drone flight over remote windswept peaks of Patagonia and solitary glacial outposts"
+        default_topic = f"Autonomously select an awe-inspiring remote mountain ridge and solitary glacial frontier under {tod_desc}"
     else:
-        color_temp = 5500
         cluster = "Untamed Wilderness & Nature"
-        default_topic = "Untamed mountain river gorge and emerald forest aerial glide under crisp natural daylight"
+        default_topic = f"Autonomously select a breathtaking untamed river canyon and emerald forest landscape under {tod_desc}"
 
     raw_p = (custom_prompt or "").strip()
     if raw_p:
         words = raw_p.split()
         drone_terms = {"drone", "aerial", "flight", "cinematic", "glide", "orbit", "flyover", "skyline"}
         if len(words) <= 6 and not any(w.lower() in drone_terms for w in words):
-            eff_topic = f"4K cinematic aerial drone showcase of {raw_p}: sweeping forward glides and orbital reveals across iconic architectural skylines, illuminated bridges, monuments, and evening urban glow"
+            eff_topic = f"4K cinematic aerial drone showcase of {raw_p}: sweeping forward glides and orbital reveals across iconic landmarks, architectural marvels, famous boulevards, and scenic vistas under {tod_desc}"
         else:
             eff_topic = raw_p
     else:
@@ -111,7 +103,8 @@ def build_travel_prompt(
         camera_motion=camera_motion or "slow_drone_forward",
         excluded_topics=excluded_topics,
         specific_rules=TRAVEL_SPECIFIC_RULES,
-        curation_landmarks=TRAVEL_LANDMARK_POOL,
-        color_temp_kelvin=color_temp,
+        curation_landmarks=None,
+        color_temp_kelvin=eff_kelvin,
         channel_id=channel_id or "earth_serenade",
+        tier=tier,
     )

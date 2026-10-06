@@ -18,11 +18,13 @@ class TravelStudioProducer:
     async def produce(
         self,
         sb: TravelStoryboard,
+        tier: str = "balanced",
         motion_model: str = "wan",
         motion_only: bool = False,
         keyframes_only: bool = False,
         audio_only: bool = False,
         no_bgm: bool = False,
+        enable_voiceover: bool = False,
         force_rerun: bool = False,
         episode_dir: Optional[Path] = None,
         long_play_hours: float = 0.0,
@@ -34,9 +36,11 @@ class TravelStudioProducer:
             primary_archetype=sb.primary_archetype,
             secondary_archetype=sb.secondary_archetype,
             cluster="travel",
+            tier=tier,
             total_duration=sb.total_duration,
             recommended_fps=sb.recommended_fps,
             audio_tags=sb.audio_tags,
+            spoken_narration_script=getattr(sb, "spoken_narration_script", ""),
             scenes=[
                 AmbientScenePrompt(
                     scene_index=s.scene_index,
@@ -46,17 +50,22 @@ class TravelStudioProducer:
                     duration_seconds=s.duration_seconds,
                     domain=s.domain,
                     location_hub=s.location_hub,
+                    motion_type=getattr(s, "motion_type", "ai_diffusion"),
+                    camera_movement=getattr(s, "camera_movement", "slow_zoom_in"),
+                    motion_rationale=getattr(s, "motion_rationale", None),
                 )
                 for s in sb.scenes
             ],
         )
         return await self.producer.produce(
             sb=amb_sb,
+            tier=tier,
             motion_model=motion_model,
             motion_only=motion_only,
             keyframes_only=keyframes_only,
             audio_only=audio_only,
             no_bgm=no_bgm,
+            enable_voiceover=enable_voiceover,
             force_rerun=force_rerun,
             episode_dir=episode_dir,
             long_play_hours=long_play_hours,

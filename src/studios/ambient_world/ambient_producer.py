@@ -247,8 +247,8 @@ class AmbientWorldProducer:
                 video_clips=video_clip_paths,
                 audio_path=master_bgm_path,
                 ep_dir=ep_dir,
-                scene_hold_sec=sb.total_duration or 60.0,
                 force_rerun=force_rerun,
+                target_duration_sec=float(sb.total_duration or 60.0),
             )
             master_4k_path = masters["music_master"]
             master_nature_path = masters["nature_master"]

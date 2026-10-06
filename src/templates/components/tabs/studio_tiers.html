@@ -13,10 +13,10 @@
   </div>
 
   <!-- Balanced Card -->
-  <div onclick="selectProductionTier('balanced')" id="tier-card-balanced" class="tier-card-option p-3 rounded-xl cursor-pointer transition">
+  <div onclick="selectProductionTier('balanced')" id="tier-card-balanced" class="tier-card-option active p-3 rounded-xl cursor-pointer transition">
     <div id="guided-card-balanced" class="flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <input type="radio" id="tier-radio-balanced" name="tier_choice" value="balanced" class="accent-[var(--accent)]">
+        <input type="radio" id="tier-radio-balanced" name="tier_choice" value="balanced" checked class="accent-[var(--accent)]">
         <span class="font-bold text-[var(--text)] text-xs">Balanced Creator</span>
       </div>
       <span class="font-mono font-bold text-[var(--text)] text-xs">$0.14 USD</span>
@@ -25,10 +25,10 @@
   </div>
 
   <!-- Cinematic Card -->
-  <div onclick="selectProductionTier('cinematic')" id="tier-card-cinematic" class="tier-card-option active p-3 rounded-xl cursor-pointer transition">
+  <div onclick="selectProductionTier('cinematic')" id="tier-card-cinematic" class="tier-card-option p-3 rounded-xl cursor-pointer transition">
     <div id="guided-card-cinematic" class="flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <input type="radio" id="tier-radio-cinematic" name="tier_choice" value="cinematic" checked class="accent-[var(--accent)]">
+        <input type="radio" id="tier-radio-cinematic" name="tier_choice" value="cinematic" class="accent-[var(--accent)]">
         <span class="font-bold text-[var(--text)] text-xs">Cinematic 4K</span>
       </div>
       <span class="font-mono font-bold text-[var(--text)] text-xs">$0.45 USD</span>

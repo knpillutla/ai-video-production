@@ -1,16 +1,9 @@
-"""Base Directorial Prompt Builder for CineAI Studio Agents.
-
-Authoritative single source of truth for:
-- Living Wallpaper & Cinemagraph Rules (Rule 13, Rule 20)
-- Multi-Model Image Prompts Contract (FLUX.1-dev, FLUX 1.1 Pro Ultra, Z-Image Turbo)
-- Multi-Model Video Diffusion Directives (Wan 2.1, Kling v1.6 Pro / v3)
-- Universal RelaxScreenplay Structured JSON Schema
-"""
-
+"""Base Directorial Prompt Builder for CineAI Studio Agents."""
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 from src.config.channel_registry import get_channel_profile
+from src.studios.lighting_director import detect_lighting_directive, format_universal_lighting_guardrails
 
 
 def build_default_image_model_configs(prompt: str, landmark_name: str = "Landmark") -> Dict[str, Any]:
@@ -88,12 +81,15 @@ def build_base_directorial_prompt(
     """Compose the authoritative directorial system prompt for Gemini storyboarding."""
     per_shot_dur = round(duration_seconds / max(1, num_shots), 1)
     clean_tier = (tier or "balanced").strip().lower()
+    eff_kelvin, tod_key, tod_desc = detect_lighting_directive(custom_prompt, archetype, color_temp_kelvin or 5500)
+    lighting_block = format_universal_lighting_guardrails(tod_key, eff_kelvin, tod_desc)
 
     exclusion_block = ""
     if excluded_topics:
         exclusion_block = "\nPREVIOUSLY PRODUCED TOPICS (MANDATORY DEDUPLICATION):\n" + "\n".join(f"- {t}" for t in excluded_topics[-15:]) + "\n"
 
     landmarks_list = "\n".join(f"      {idx}. {lm}" for idx, lm in enumerate(curation_landmarks or [], 1)) if curation_landmarks else ""
+    landmarks_block = f"\nCURATED REGIONAL LANDMARK INSPIRATION:\n{landmarks_list}\n" if landmarks_list else ""
 
     channel_block = ""
     if channel_id:
@@ -104,7 +100,7 @@ def build_base_directorial_prompt(
     is_urban_or_travel = genre.startswith("travel") or archetype in ("cities", "tourist_places", "iconic_places", "spiritual_places")
     if is_urban_or_travel:
         d1 = """1. 4K CINEMATIC DRONE ARCHITECTURAL & SCENIC SHOWCASE:
-   - For Cities & Skylines: Show magnificent architectural skylines, illuminated glass towers, suspension bridges, historic monuments, and evening city lights from a sweeping 4K aerial drone perspective.
+   - For Cities & Skylines: Show magnificent architectural skylines, gleaming glass towers reflecting sky, suspension bridges, and historic monuments from a sweeping 4K aerial drone perspective in crisp natural daytime (evening/night lights ONLY if user explicitly requested night).
    - For Heritage & Citadels: Show monumental ancient architecture, grand stone ramparts, temples, and palaces.
    - Zero Tourist Crowd Clutter: Keep focus on breathtaking architectural monuments, skylines, and landscape geometry."""
     else:
@@ -117,6 +113,8 @@ def build_base_directorial_prompt(
 Your role is to author a complete, production-ready, broadcast-grade Screenplay for the "{genre}" channel genre.
 
 {channel_block}
+{lighting_block}
+
 ======================================================================
 UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
 ======================================================================
@@ -154,7 +152,7 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
    - For Cozy Living / Bedrooms / Cabins / Walking Tours: Prohibit structural drift, flickering, and artifacts, but DO NOT ban architectural structures: "clouds, cloudy, overcast sky, cumulus, storm clouds, moving clouds, timelapse, camera movement, camera pan, panning, tilt, zoom, morphing architecture, changing furniture, structural drift, flickering, temporal jump, changing lighting, gelatinous water, melting foam, rubbery water, static vertical streaks, falling wire artifacts, artifacts, humans, tourist, clutter, plastic junk, modern electronics".
 
 {specific_rules}
-
+{landmarks_block}
 {exclusion_block}
 ======================================================================
 PRODUCTION SPECIFICATIONS:
@@ -164,6 +162,7 @@ PRODUCTION SPECIFICATIONS:
 - Sub-Genre: {sub_genre}
 - Primary Archetype: {archetype}
 - Geographic Cluster: {cluster}
+- Motion & Quality Tier: {clean_tier}
 - Total Duration: {duration_seconds} seconds
 - Shot Count: {num_shots} shots ({per_shot_dur}s per shot)
 - Camera Rig: {camera_motion}
@@ -181,6 +180,7 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
   "primary_archetype": "{archetype}",
   "secondary_archetype": null,
   "cluster": "{cluster}",
+  "tier": "{clean_tier}",
   "primary_language": "en",
   "target_dubbing_languages": ["en", "de", "fr", "ja", "es"],
   "recommended_fps": 24,
@@ -217,7 +217,7 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
       "location_hub": "Specific Vista 1 Name",
       "shot_type": "wide_panoramic_picturesque",
       "camera_rig": "{camera_motion}",
-      "color_temp_kelvin": {color_temp_kelvin},
+      "color_temp_kelvin": {eff_kelvin},
       "visual_prompt": "A photorealistic, symmetrical 16:9 cinematic landscape view of [Landmark Name], shot on locked tripod. Pristine natural wilderness, strictly zero buildings, zero tourists, zero vehicles.",
       "image_model_configs": {{
         "flux_dev": {{

@@ -35,16 +35,16 @@
         <input type="radio" id="tier-radio-low_cost" name="tier_choice" value="low_cost" class="hidden">
       </div>
       <!-- Balanced -->
-      <div onclick="selectProductionTier('balanced')" id="tier-card-balanced" class="tier-card-option">
+      <div onclick="selectProductionTier('balanced')" id="tier-card-balanced" class="tier-card-option active">
         <div class="font-bold text-xs text-[var(--text)]">Balanced</div>
         <div class="font-mono text-xs text-[var(--text-muted)] font-bold">$0.14</div>
-        <input type="radio" id="tier-radio-balanced" name="tier_choice" value="balanced" class="hidden">
+        <input type="radio" id="tier-radio-balanced" name="tier_choice" value="balanced" checked class="hidden">
       </div>
       <!-- Cinematic / 4K Master -->
-      <div onclick="selectProductionTier('cinematic')" id="tier-card-cinematic" class="tier-card-option active">
+      <div onclick="selectProductionTier('cinematic')" id="tier-card-cinematic" class="tier-card-option">
         <div class="font-bold text-xs text-[var(--text)]">4K Master</div>
         <div class="font-mono text-xs text-[var(--text-muted)] font-bold">$0.45</div>
-        <input type="radio" id="tier-radio-cinematic" name="tier_choice" value="cinematic" checked class="hidden">
+        <input type="radio" id="tier-radio-cinematic" name="tier_choice" value="cinematic" class="hidden">
       </div>
     </div>
   </div>

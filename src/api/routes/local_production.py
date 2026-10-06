@@ -187,6 +187,7 @@ async def produce_video_locally(req: LocalProduceRequest):
             master_only=eff_master_only,
             pipeline_strategy=strat,
             no_bgm=not eff_bgm,
+            enable_voiceover=bool(req.enable_voiceover),
             num_shots=req.num_shots or 0,
             allow_fallback=eff_fallback,
             user_id=user_id_val,

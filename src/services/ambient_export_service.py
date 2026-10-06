@@ -123,8 +123,8 @@ def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf
         return clip_path
 
 
-def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_master: Path, scene_hold_sec: float = 60.0, crf: int = 22) -> Path:
-    """Assemble relaxing 4K master with seamless forward cineloops, Extended Perspective Hold, and crossfades in CRF 22 format."""
+def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_master: Path, scene_hold_sec: float = 60.0, crf: int = 22, target_duration_sec: Optional[float] = None) -> Path:
+    """Assemble relaxing 4K master with seamless forward cineloops and crossfades in CRF 22 format."""
     from src.services.procedural_foley import synthesize_foley_stem
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     seamless_clips = [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
@@ -138,11 +138,21 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
                 synthesize_foley_stem(weather_type="water stream alpine breeze", setting_type="nature", space="outdoor", duration_seconds=scene_hold_sec + 5.0, output_path=foley_wav)
             target_audio = foley_wav
 
-    a_dur = get_media_duration(target_audio) if (target_audio and target_audio.is_file()) else 0.0
-    eff_master_dur = max(a_dur, float(scene_hold_sec or 60.0)) if a_dur > 15.0 else (float(scene_hold_sec) if (scene_hold_sec and scene_hold_sec > 0) else 60.0)
-    if target_audio and target_audio.is_file() and eff_master_dur > a_dur > 0:
+    if target_duration_sec and float(target_duration_sec) > 0:
+        eff_master_dur = float(target_duration_sec)
+    else:
+        a_dur = get_media_duration(target_audio) if (target_audio and target_audio.is_file()) else 0.0
+        eff_master_dur = max(a_dur, float(scene_hold_sec or 60.0)) if a_dur > 15.0 else (float(scene_hold_sec) if (scene_hold_sec and scene_hold_sec > 0) else 60.0)
+
+    if target_audio and target_audio.is_file():
         from src.services.binaural_spatial_audio import build_seamless_audio_loop
-        target_audio = build_seamless_audio_loop(target_audio)
+        a_cur = get_media_duration(target_audio) or 0.0
+        if eff_master_dur > a_cur > 0:
+            target_audio = build_seamless_audio_loop(target_audio)
+
+    fade_dur = min(3.0, eff_master_dur)
+    fade_start = max(0.0, eff_master_dur - fade_dur)
+    afade_filter = f"afade=t=out:st={fade_start:.2f}:d={fade_dur:.2f}"
 
     v_filter = build_adaptive_resolution_filter(seamless_clips[0], 3840, 2160)
     if n == 1:
@@ -153,7 +163,9 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
                 "-stream_loop", str(v_loops), "-i", str(seamless_clips[0]),
                 "-i", str(target_audio),
-                "-map", "0:v:0", "-map", "1:a:0", "-t", f"{eff_master_dur:.2f}",
+                "-map", "0:v:0", "-map", "1:a:0",
+                "-af", afade_filter,
+                "-t", f"{eff_master_dur:.2f}",
                 "-vf", v_filter,
                 "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
                 "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
@@ -184,7 +196,7 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
 
         if target_audio and target_audio.is_file():
             inputs.extend(["-i", str(target_audio)])
-            cmd = [ffmpeg_bin, "-y", "-nostats", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-map", f"{n}:a", "-t", f"{eff_master_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
+            cmd = [ffmpeg_bin, "-y", "-nostats", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-map", f"{n}:a", "-af", afade_filter, "-t", f"{eff_master_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
         else:
             filter_a = [f"[{'0:a' if i == 1 else f'a{i-1}'}][{i}:a]acrossfade=d={x_dur:.2f}[{'a' if i == n - 1 else f'a{i}'}]" for i in range(1, n)]
             cmd = [ffmpeg_bin, "-y", "-nostats", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filter_parts + filter_a), "-map", "[v]", "-map", "[a]", "-t", f"{eff_master_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
@@ -202,22 +214,29 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
     return out_master
 
 
-def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], ep_dir: Path, scene_hold_sec: float = 60.0, crf: int = 22, force_rerun: bool = False, **kwargs) -> Dict[str, Path]:
+def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], ep_dir: Path, scene_hold_sec: float = 60.0, crf: int = 22, force_rerun: bool = False, target_duration_sec: Optional[float] = None, **kwargs) -> Dict[str, Path]:
     """Assemble 4K masters in CRF 22 format. Automatically rebuilds if forward cineloops are updated."""
+    eff_target_dur = target_duration_sec or kwargs.get("target_duration")
     seamless_clips = [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
     master_music = ep_dir / "master_4k_ambient.mp4"
+    cached_dur = get_media_duration(master_music) if master_music.is_file() else None
+    duration_mismatch = (
+        eff_target_dur is not None
+        and cached_dur is not None
+        and abs(cached_dur - float(eff_target_dur)) > 2.0
+    )
     needs_music_rebuild = (
         force_rerun
         or not master_music.is_file()
         or master_music.stat().st_size < 1000
+        or duration_mismatch
         or any(sc.stat().st_mtime > master_music.stat().st_mtime for sc in seamless_clips)
     )
     if needs_music_rebuild:
-        assemble_4k_master(seamless_clips, audio_path, master_music, scene_hold_sec=scene_hold_sec, crf=crf)
+        assemble_4k_master(seamless_clips, audio_path, master_music, scene_hold_sec=scene_hold_sec, crf=crf, target_duration_sec=eff_target_dur)
     else:
         logger.info(f"decision_master_video_cache_hit: Reusing {master_music.name} ($0.00 spend)")
 
-    # Nature master disabled for the time being to cut assembly time in half (50% CPU reduction)
     return {"music_master": master_music, "nature_master": master_music}
 
 

@@ -24,26 +24,14 @@ async def generate_relax_screenplay_gemini(
     user_id: Optional[str] = None,
     channel_id: Optional[str] = None,
     raw_output_path: Optional[os.PathLike | str] = None,
-    image_model: str = "flux_1_1_pro_ultra",
+    tier: str = "balanced",
 ) -> RelaxScreenplay:
     """Synthesize fresh relaxation directorial screenplay via Gemini with Relax Genre Directives & Channel Topic Memory."""
     # Retrieve recently generated topics for this user channel to strictly prevent repeats (Rule 10)
     recent_topics = topic_memory.get_recent_topics(user_id=user_id, channel_id=channel_id, limit=20)
-
     eff_prompt = custom_prompt.strip() if custom_prompt and custom_prompt.strip() else ""
 
     from src.core.config import settings
-    from src.providers.base import HTTPClientPool
-
-    api_key = (
-        settings.llm.gemini_api_key
-        or settings.llm.google_api_key
-        or os.getenv("GEMINI_API_KEY", "")
-        or os.getenv("GOOGLE_API_KEY", "")
-    )
-    if not api_key:
-        raise RuntimeError("Gemini API key is missing. Set GEMINI_API_KEY or GOOGLE_API_KEY.")
-
     google_search_enabled = bool(settings.llm.gemini_google_search_enabled and not eff_prompt)
 
     # Genre-Specific Relaxation Directorial System Prompt with Negative Topic Exclusions
@@ -57,95 +45,37 @@ async def generate_relax_screenplay_gemini(
         excluded_topics=recent_topics,
         image_model=image_model,
         google_search_enabled=google_search_enabled,
+        tier=tier,
     )
     discovery_mode = "grounded_search" if google_search_enabled else ("knowledge_base" if not eff_prompt else "user_prompt")
     logger.info(f"gemini_relax_director_dispatch: mode='{discovery_mode}' archetype='{primary}' prompt='{eff_prompt}' exclusions={len(recent_topics)} chan='{channel_id}'")
 
+    from src.studios.base_screenplay_engine import execute_directorial_screenplay
+    screenplay = await execute_directorial_screenplay(
+        sys_prompt=sys_prompt,
+        raw_output_path=raw_output_path,
+        tier=tier or "balanced",
+        genre=genre,
+        cluster=primary,
+        primary_archetype=primary,
+        google_search_enabled=google_search_enabled,
+    )
+
+    # Commit to Topic Memory so future runs on this channel will NEVER repeat this destination (Rule 10)
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
-        payload = {
-            "contents": [{"parts": [{"text": sys_prompt}]}],
-            "generationConfig": {
-                "responseMimeType": "application/json",
-                "temperature": 0.7,
-            },
-        }
-        if google_search_enabled:
-            payload["tools"] = [{"google_search": {}}]
-        client = HTTPClientPool.get_client()
-        request_body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-        logger.info(f"gemini_api_request: model=gemini-flash-latest payload={request_body}")
-        response = await client.post(url, json=payload, timeout=45.0)
-        response_body = response.text
-        logger.info(f"gemini_api_response: status={response.status_code} body={response_body}")
-
-        if response.status_code != 200:
-            error_body = response_body[:2000]
-            logger.error(f"gemini_api_http_error: status={response.status_code} body={error_body}")
-            raise RuntimeError(f"Gemini API request failed (HTTP {response.status_code}): {error_body}")
-
-        data = response.json()
-        candidates = data.get("candidates") if isinstance(data, dict) else None
-        if not isinstance(candidates, list) or not candidates:
-            details = data.get("error") or data.get("promptFeedback") or data
-            detail_text = json.dumps(details, ensure_ascii=True)[:2000]
-            logger.error(f"gemini_response_missing_candidates: body={detail_text}")
-            raise RuntimeError(f"Gemini returned no screenplay candidates (HTTP 200): {detail_text}")
-
-        candidate = candidates[0]
-        parts = candidate.get("content", {}).get("parts", [])
-        raw_json = next(
-            (part.get("text", "").strip() for part in parts if isinstance(part, dict) and part.get("text")),
-            "",
+        await topic_memory.remember_topic(
+            topic=screenplay.title,
+            genre=genre,
+            tags=screenplay.publishing.seo_tags if screenplay.publishing else [],
+            story_synopsis=screenplay.story_topic,
+            episode_id=screenplay.production_id,
+            user_id=user_id,
+            channel_id=channel_id,
         )
-        if not raw_json:
-            reason = candidate.get("finishReason") or candidate.get("safetyRatings") or candidate
-            detail_text = json.dumps(reason, ensure_ascii=True)[:2000]
-            logger.error(f"gemini_candidate_missing_text: details={detail_text}")
-            raise RuntimeError(f"Gemini returned a candidate without screenplay text: {detail_text}")
+    except Exception as mem_ex:
+        logger.warning(f"topic_memory_commit_failed: {mem_ex}")
 
-        # Save raw Gemini response JSON for permanent reference
-        if raw_output_path:
-            try:
-                from pathlib import Path
-                raw_p = Path(raw_output_path)
-                raw_p.parent.mkdir(parents=True, exist_ok=True)
-                raw_p.write_text(raw_json, encoding="utf-8")
-                logger.info(f"raw_gemini_screenplay_saved: {raw_p}")
-                grounding = candidate.get("groundingMetadata")
-                if grounding:
-                    grounding_path = raw_p.with_suffix(".grounding.json")
-                    grounding_path.write_text(json.dumps(grounding, indent=2), encoding="utf-8")
-                    logger.info(f"gemini_grounding_metadata_saved: {grounding_path}")
-            except Exception as raw_save_err:
-                logger.warning(f"failed_to_save_raw_gemini_json: {raw_save_err}")
-
-        parsed = json.loads(raw_json)
-
-        # Validate RelaxScreenplay contract
-        screenplay = RelaxScreenplay(**parsed)
-
-        # Commit to Topic Memory so future runs on this channel will NEVER repeat this destination (Rule 10)
-        try:
-            await topic_memory.remember_topic(
-                topic=screenplay.title,
-                genre=genre,
-                tags=screenplay.publishing.seo_tags if screenplay.publishing else [],
-                story_synopsis=screenplay.story_topic,
-                episode_id=screenplay.production_id,
-                user_id=user_id,
-                channel_id=channel_id,
-            )
-        except Exception as mem_ex:
-            logger.warning(f"topic_memory_commit_failed: {mem_ex}")
-
-        return screenplay
-
-    except RuntimeError:
-        raise
-    except Exception as exc:
-        logger.exception(f"gemini_relax_director_failed: {exc}")
-        raise RuntimeError(f"Gemini screenplay generation failed: {exc}") from exc
+    return screenplay
 
 
 def _build_deterministic_relax_screenplay(

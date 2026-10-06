@@ -120,6 +120,7 @@ class RelaxScreenplay(BaseModel):
     recommended_fps: int = 24
     aspect_ratio: str = "16:9"
     total_duration_seconds: float = 60.0
+    tier: str = Field(default="balanced", validation_alias=AliasChoices("tier", "motion_tier"))
     
     global_culture: Optional[RelaxGlobalCultureSpec] = None
     travel_tourism: Optional[RelaxTravelTourismSpec] = None
@@ -144,6 +145,9 @@ class AmbientScenePrompt(BaseModel):
     motion_prompt: str = ""
     duration_seconds: float = 30.0
     domain: str = "landscape_solid"
+    motion_type: str = "ai_diffusion"
+    camera_movement: str = "slow_zoom_in"
+    motion_rationale: Optional[str] = None
     image_model_configs: dict = Field(default_factory=dict)
     model_configs: dict = Field(default_factory=dict)
 
@@ -155,9 +159,11 @@ class AmbientStoryboard(BaseModel):
     primary_archetype: str = "waterfall"
     secondary_archetype: Optional[str] = None
     cluster: str = "waterfall"
+    tier: str = "balanced"
     total_duration: float = 60.0
     recommended_fps: int = 24
     audio_tags: str = ""
+    spoken_narration_script: Optional[str] = ""
     scenes: List[AmbientScenePrompt] = Field(default_factory=list)
 
     @field_validator("audio_tags", mode="before")
@@ -190,8 +196,10 @@ def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> AmbientStoryboard:
         story_topic=sp.story_topic,
         primary_archetype=sp.sub_genre or sp.primary_archetype or "waterfall",
         cluster="waterfall",
+        tier=sp.tier or "balanced",
         total_duration=sp.total_duration_seconds or sum(s.duration_seconds for s in sp.scenes) or 60.0,
         recommended_fps=sp.recommended_fps or 24,
         audio_tags=sp.audio_master.suno_musical_tags if sp.audio_master else "",
+        spoken_narration_script=getattr(sp.audio_master, "spoken_narration_script", "") if sp.audio_master else "",
         scenes=scenes,
     )

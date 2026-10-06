@@ -214,6 +214,7 @@ async def dispatch_studio_director(
             channel_id=channel_id,
             raw_output_path=raw_output_path,
             image_model=image_model,
+            tier=tier,
         )
 
     # 7. Default Ambient World Studio (Fusion & 14 Archetypes)
@@ -228,5 +229,5 @@ async def dispatch_studio_director(
         user_id=user_id,
         channel_id=channel_id,
         raw_output_path=raw_output_path,
-        image_model=image_model,
+        tier=tier,
     )

@@ -113,8 +113,9 @@ def assemble_4k_master(
     scene_hold_sec: float = 60.0,
     x_dur: float = 2.0,
     crf: int = 22,
+    target_duration_sec: Optional[float] = None,
 ) -> Path:
-    """Concatenate 4K cineloops into a master broadcast matching the full duration of the music track."""
+    """Concatenate 4K cineloops into a master broadcast matching target_duration_sec or music track."""
     out_master.parent.mkdir(parents=True, exist_ok=True)
     n = len(seamless_clips)
     if n == 0:
@@ -123,54 +124,77 @@ def assemble_4k_master(
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     v_filter = build_adaptive_resolution_filter(seamless_clips[0], 3840, 2160)
 
+    if target_duration_sec and target_duration_sec > 0:
+        target_dur = float(target_duration_sec)
+    elif audio_path and audio_path.is_file():
+        a_dur = get_media_duration(audio_path) or 60.0
+        target_dur = max(scene_hold_sec, a_dur) if a_dur > 15.0 else scene_hold_sec
+    else:
+        target_dur = scene_hold_sec
+
+    fade_dur = min(3.0, target_dur)
+    fade_start = max(0.0, target_dur - fade_dur)
+    afade_filter = f"afade=t=out:st={fade_start:.2f}:d={fade_dur:.2f}"
+
     if n == 1:
         c_dur = get_media_duration(seamless_clips[0]) or 5.0
+        v_loops = max(1, int(target_dur / max(1.0, c_dur)) + 2)
         if audio_path and audio_path.is_file():
-            a_dur = get_media_duration(audio_path) or 60.0
-            target_dur = max(scene_hold_sec, a_dur) if a_dur > 15.0 else scene_hold_sec
-            v_loops = max(1, int(target_dur / max(1.0, c_dur)) + 2)
             cmd = [
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
                 "-stream_loop", str(v_loops), "-i", str(seamless_clips[0]),
                 "-i", str(audio_path),
-                "-map", "0:v:0", "-map", "1:a:0", "-t", str(target_dur),
+                "-map", "0:v:0", "-map", "1:a:0",
+                "-af", afade_filter,
+                "-t", f"{target_dur:.2f}",
                 "-vf", v_filter,
                 "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
                 "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
                 "-movflags", "+faststart", str(out_master)
             ]
         else:
-            target_dur = scene_hold_sec
-            v_loops = max(1, int(target_dur / max(1.0, c_dur)) + 2)
             cmd = [
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
                 "-stream_loop", str(v_loops), "-i", str(seamless_clips[0]),
-                "-map", "0:v:0", "-t", str(target_dur),
+                "-map", "0:v:0", "-t", f"{target_dur:.2f}",
                 "-vf", v_filter,
                 "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
                 "-movflags", "+faststart", str(out_master)
             ]
     else:
+        eff_hold = (target_dur + (x_dur * (n - 1))) / n
         inputs = []
         for c in seamless_clips:
-            v_loops = max(1, int(scene_hold_sec / max(1.0, get_media_duration(c) or 5.0)) + 2)
+            v_loops = max(1, int(eff_hold / max(1.0, get_media_duration(c) or 5.0)) + 2)
             inputs.extend(["-stream_loop", str(v_loops), "-i", str(c)])
 
         filter_parts = [f"[{i}:v]{build_adaptive_resolution_filter(c, 3840, 2160)}[s{i}]" for i, c in enumerate(seamless_clips)]
-        prev_tag, curr_offset = "s0", scene_hold_sec - x_dur
+        prev_tag, curr_offset = "s0", eff_hold - x_dur
         for i in range(1, n):
             out_tag = f"v{i}" if i < n - 1 else "v"
             filter_parts.append(f"[{prev_tag}][s{i}]xfade=transition=fade:duration={x_dur:.2f}:offset={curr_offset:.2f}[{out_tag}]")
-            prev_tag, curr_offset = out_tag, curr_offset + scene_hold_sec - x_dur
+            prev_tag, curr_offset = out_tag, curr_offset + eff_hold - x_dur
 
-        total_vid_dur = (scene_hold_sec * n) - (x_dur * (n - 1))
         if audio_path and audio_path.is_file():
-            a_dur = get_media_duration(audio_path) or 60.0
-            target_dur = max(total_vid_dur, a_dur) if a_dur > 15.0 else total_vid_dur
             inputs.extend(["-i", str(audio_path)])
-            cmd = [ffmpeg_bin, "-y", "-nostats", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-map", f"{n}:a", "-t", f"{target_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)]
+            cmd = [
+                ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
+                *inputs, "-filter_complex", ";".join(filter_parts),
+                "-map", "[v]", "-map", f"{n}:a",
+                "-af", afade_filter,
+                "-t", f"{target_dur:.2f}",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
+                "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
+                "-movflags", "+faststart", str(out_master)
+            ]
         else:
-            cmd = [ffmpeg_bin, "-y", "-nostats", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[v]", "-t", f"{total_vid_dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf), "-movflags", "+faststart", str(out_master)]
+            cmd = [
+                ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
+                *inputs, "-filter_complex", ";".join(filter_parts),
+                "-map", "[v]", "-t", f"{target_dur:.2f}",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
+                "-movflags", "+faststart", str(out_master)
+            ]
 
     try:
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, check=True)
@@ -189,23 +213,32 @@ def assemble_dual_masters(
     target_fps: int = 24,
     force_rerun: bool = False,
     crf: int = 22,
+    target_duration_sec: Optional[float] = None,
     **kwargs,
 ) -> Dict[str, Path]:
-    """Assemble 4K masters matching complete music track length."""
+    """Assemble 4K masters matching user requested duration or complete music track length."""
     eff_audio = audio_path or audio_track
     if not ep_dir and video_clips:
         ep_dir = video_clips[0].parent
 
+    eff_target_dur = target_duration_sec or kwargs.get("target_duration")
     seamless_clips = [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
     master_music = ep_dir / "master_4k_ambient.mp4"
+    cached_dur = get_media_duration(master_music) if master_music.is_file() else None
+    duration_mismatch = (
+        eff_target_dur is not None
+        and cached_dur is not None
+        and abs(cached_dur - float(eff_target_dur)) > 2.0
+    )
     needs_rebuild = (
         force_rerun
         or not master_music.is_file()
         or master_music.stat().st_size < 1000
+        or duration_mismatch
         or any(sc.stat().st_mtime > master_music.stat().st_mtime for sc in seamless_clips)
     )
     if needs_rebuild:
-        assemble_4k_master(seamless_clips, eff_audio, master_music, crf=crf)
+        assemble_4k_master(seamless_clips, eff_audio, master_music, crf=crf, target_duration_sec=eff_target_dur)
     else:
         logger.info(f"decision_master_video_cache_hit: Reusing {master_music.name} ($0.00 spend)")
 

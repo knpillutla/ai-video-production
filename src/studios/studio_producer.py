@@ -71,6 +71,7 @@ class StudioProducer:
         audio_only: bool = False,
         master_only: bool = False,
         no_bgm: bool = False,
+        enable_voiceover: bool = False,
         allow_fallback: bool = False,
         force_rerun: bool = False,
     ) -> Dict[str, Any]:
@@ -208,6 +209,20 @@ class StudioProducer:
             if bgm_path and bgm_path.is_file():
                 audio_stems.append(bgm_path)
 
+        voice_path = ep_dir / "voiceover_tts.wav"
+        spoken_text = getattr(sb, "spoken_narration_script", None)
+        if enable_voiceover and spoken_text and spoken_text.strip():
+            if not voice_path.is_file() or voice_path.stat().st_size < 1000:
+                try:
+                    from src.providers.tts.azure_speech import AzureSpeechTTSAdapter
+                    tts = AzureSpeechTTSAdapter()
+                    v_id = "te-IN-ShrutiNeural" if any("\u0c00" <= c <= "\u0c7f" for c in spoken_text) else "en-US-JennyNeural"
+                    await tts.synthesize_to_file(text=spoken_text.strip(), output_path=voice_path, voice_id=v_id)
+                except Exception as tts_err:
+                    logger.warning(f"tts_voiceover_failed: {tts_err}")
+            if voice_path.is_file() and voice_path.stat().st_size > 1000:
+                audio_stems.append(voice_path)
+
         spatial_audio_path = ep_dir / "velvet_binaural_master_48k.mp3"
         legacy_spatial = ep_dir / "binaural_soundscape_master.wav"
         if legacy_spatial.is_file() and not spatial_audio_path.is_file():
@@ -242,6 +257,7 @@ class StudioProducer:
                 long_play_hours, fade_to_black_hours, force_rerun
             )
 
+        target_dur = float(getattr(sb, "total_duration_seconds", None) or getattr(sb, "total_duration", None) or 60.0)
         dual_res = await asyncio.to_thread(
             assemble_dual_masters,
             video_clips=video_clips,
@@ -250,6 +266,7 @@ class StudioProducer:
             target_fps=sb.recommended_fps,
             force_rerun=force_rerun,
             music_only_audio=bgm_path,
+            target_duration_sec=target_dur,
         )
 
         metadata_pkgs = export_metadata_packages(sb, ep_dir)

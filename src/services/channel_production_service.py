@@ -70,6 +70,7 @@ async def produce_channel_video(
     master_only: bool = False,
     pipeline_strategy: str = "manual",
     no_bgm: bool = False,
+    enable_voiceover: bool = False,
     num_shots: Optional[int] = 1,
     allow_fallback: bool = False,
     user_id: Optional[str] = "user_krishna_01",
@@ -151,6 +152,13 @@ async def produce_channel_video(
     manifest_file = (ep_dir / "episode_manifest.json") if ep_dir else None
     user_inputs_file = (ep_dir / "user_inputs.json") if ep_dir else None
 
+    saved_pipeline_state: dict[str, Any] = {}
+    if pipeline_state_file and pipeline_state_file.is_file():
+        try:
+            saved_pipeline_state = json.loads(pipeline_state_file.read_text("utf-8"))
+        except Exception:
+            pass
+
     saved_inputs: dict[str, Any] = {}
     if user_inputs_file and user_inputs_file.is_file():
         try:
@@ -160,19 +168,12 @@ async def produce_channel_video(
         except Exception:
             pass
 
-    eff_tier = tier or saved_inputs.get("tier", "balanced")
-
     is_downstream_stage = bool(photos_only or motion_only or audio_only or master_only)
-    inputs_match = (
-        saved_inputs.get("input_schema_version") == 1
-        and saved_inputs.get("screenplay_generation_status") == "completed"
-        and saved_inputs.get("prompt", "") == (prompt or "")
-        and saved_inputs.get("selected_options") == selected_options
-        and saved_inputs.get("num_shots") == num_shots
-    )
+    is_resume_flow = not (script_only or force_rerun)
+
     existing_sp = None
     if screenplay_file and screenplay_file.is_file() and screenplay_file.stat().st_size > 50:
-        if is_downstream_stage or (not force_rerun and inputs_match):
+        if is_downstream_stage or is_resume_flow:
             try:
                 sp_data = json.loads(screenplay_file.read_text("utf-8"))
                 is_legacy_fallback = (
@@ -183,35 +184,29 @@ async def produce_channel_video(
                 )
                 if is_legacy_fallback:
                     logger.warning(f"ignoring_legacy_fallback_screenplay: episode='{episode_id}'")
-                else:
+                elif sp_data.get("scenes"):
                     existing_sp = RelaxScreenplay(**sp_data)
-                    cached_arch = getattr(existing_sp, "primary_archetype", "")
-                    cached_sub = getattr(existing_sp, "sub_genre", "")
-                    if not is_downstream_stage and primary_archetype and cached_arch and cached_arch != primary_archetype:
-                        logger.info(f"screenplay_cache_archetype_mismatch: episode='{episode_id}' requested={primary_archetype} cached={cached_arch}; regenerating")
-                        existing_sp = None
-                    elif not is_downstream_stage and sub_genre and cached_sub and cached_sub != sub_genre:
-                        logger.info(f"screenplay_cache_subgenre_mismatch: episode='{episode_id}' requested={sub_genre} cached={cached_sub}; regenerating")
-                        existing_sp = None
-                    elif num_shots and len(existing_sp.scenes) != num_shots and not is_downstream_stage:
-                        logger.info(f"screenplay_cache_shot_count_mismatch: episode='{episode_id}' requested={num_shots} cached={len(existing_sp.scenes)}; regenerating")
-                        existing_sp = None
-                    else:
-                        logger.info(f"reusing_existing_screenplay: episode='{episode_id}' title='{existing_sp.title}'")
+                    logger.info(f"reusing_existing_screenplay: episode='{episode_id}' title='{existing_sp.title}' scenes={len(existing_sp.scenes)}")
             except Exception as ex:
                 logger.warning(f"screenplay_read_error: {ex}")
 
+    eff_tier = (getattr(existing_sp, "tier", None) or saved_inputs.get("tier") or tier or "balanced") if (is_downstream_stage or existing_sp) else (tier or saved_inputs.get("tier", "balanced"))
+    eff_voiceover = enable_voiceover or bool(saved_inputs.get("enable_voiceover", False))
+    eff_no_bgm = no_bgm if not is_downstream_stage else bool(saved_inputs.get("no_bgm", no_bgm))
+
     if existing_sp and existing_sp.scenes:
         effective_shots = len(existing_sp.scenes)
+        if getattr(existing_sp, "total_duration_seconds", None):
+            duration_seconds = float(existing_sp.total_duration_seconds)
     elif num_shots is not None and num_shots > 0:
         effective_shots = num_shots
     else:
         effective_shots = 1
 
-    eff_genre_final = (getattr(existing_sp, "genre", None) if (existing_sp and is_downstream_stage) else None) or eff_genre
-    sub_genre_final = (getattr(existing_sp, "sub_genre", None) if (existing_sp and is_downstream_stage) else None) or (sub_genre or "")
-    primary_archetype_final = (getattr(existing_sp, "primary_archetype", None) if (existing_sp and is_downstream_stage) else None) or (primary_archetype or "")
-    prompt_final = (getattr(existing_sp, "story_topic", None) or prompt or "") if is_downstream_stage else (prompt or "")
+    eff_genre_final = (getattr(existing_sp, "genre", None) if existing_sp else None) or eff_genre
+    sub_genre_final = (getattr(existing_sp, "sub_genre", None) if existing_sp else None) or (sub_genre or "")
+    primary_archetype_final = (getattr(existing_sp, "primary_archetype", None) if existing_sp else None) or (primary_archetype or "")
+    prompt_final = (getattr(existing_sp, "story_topic", None) or prompt or saved_inputs.get("prompt", "")) if existing_sp else (prompt or "")
 
     user_inputs_payload = {
         "input_schema_version": 1,
@@ -233,6 +228,9 @@ async def produce_channel_video(
         "pipeline_strategy": pipeline_strategy,
         "allow_fallback": allow_fallback,
         "dual_editions": dual_editions,
+        "enable_bgm": not eff_no_bgm,
+        "enable_voiceover": eff_voiceover,
+        "no_bgm": eff_no_bgm,
         "tier": eff_tier,
     }
     if user_inputs_file:
@@ -407,7 +405,8 @@ async def produce_channel_video(
         motion_only=motion_only,
         audio_only=audio_only,
         master_only=master_only,
-        no_bgm=no_bgm,
+        no_bgm=eff_no_bgm,
+        enable_voiceover=eff_voiceover,
         generate_short=True,
         allow_fallback=allow_fallback,
         long_play_hours=long_play_hours,
@@ -529,12 +528,35 @@ async def produce_channel_video(
     else:
         current_stage = 3
 
+    if not keyframes and saved_pipeline_state.get("keyframes"):
+        keyframes = saved_pipeline_state["keyframes"]
+    if not motion_clips and saved_pipeline_state.get("motion_clips"):
+        motion_clips = saved_pipeline_state["motion_clips"]
+    if not audio_stems and saved_pipeline_state.get("audio_stems"):
+        audio_stems = saved_pipeline_state["audio_stems"]
+
+    # Enrich motion clips with remote URLs from .fal_meta.json or existing pipeline state
+    if ep_dir:
+        for m in motion_clips:
+            if not m.get("remote_url"):
+                fn = m.get("filename") or Path(m.get("url", "")).name.split("?")[0]
+                for cand in (ep_dir / f"{fn}.fal_meta.json", ep_dir / f"raw_diff_{fn}.fal_meta.json"):
+                    if cand.is_file():
+                        try:
+                            meta_d = json.loads(cand.read_text("utf-8"))
+                            if meta_d.get("video_url"):
+                                m["remote_url"] = meta_d["video_url"]
+                                break
+                        except Exception:
+                            pass
+
     # Update operational pipeline state in pipeline_state.json ONLY
     pipeline_state_payload = {
         "episode_id": ep_id,
         "channel_id": channel_id,
         "pipeline_strategy": pipeline_strategy,
         "execution_mode": execution_mode,
+        "tier": eff_tier,
         "current_stage": current_stage,
         "stage_status": "ready" if current_stage < 5 else "completed",
         "stage_approvals": {
@@ -551,8 +573,112 @@ async def produce_channel_video(
             "audio": current_stage >= 4 and len(audio_stems) > 0,
             "master": current_stage >= 5 and bool(master_v),
         },
+        "keyframes": keyframes,
+        "motion_clips": motion_clips,
+        "audio_stems": audio_stems,
+        "master_video": {
+            "url": video_url,
+            "nature_url": nature_video_url,
+            "path": str(master_v) if master_v else None,
+        },
         "artifacts": result.get("artifacts", []),
     }
+
+    # Build canonical artifact registry with model, owner, status, and local/remote locations
+    registry_map: dict[str, Any] = saved_pipeline_state.get("artifact_registry", {})
+    if screenplay_file and screenplay_file.is_file():
+        registry_map[f"{ep_id}_screenplay"] = {
+            "artifact_id": f"{ep_id}_screenplay",
+            "category": "screenplay",
+            "model": "gemini-2.5-pro",
+            "owner": effective_user,
+            "status": "synthesized",
+            "local_path": screenplay_file.name,
+            "local_url": _to_url(screenplay_file),
+            "file_size_bytes": screenplay_file.stat().st_size,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "metadata": {"title": universal_sp.title, "tier": eff_tier},
+        }
+
+    for idx, kf in enumerate(keyframes, 1):
+        fn = kf.get("filename") or f"keyframe_p{idx}.jpg"
+        fp = ep_dir / fn if ep_dir else None
+        sz = fp.stat().st_size if fp and fp.is_file() else 0
+        registry_map[f"{ep_id}_keyframe_p{idx}"] = {
+            "artifact_id": f"{ep_id}_keyframe_p{idx}",
+            "category": "image",
+            "scene_index": idx,
+            "model": image_model or "flux_dev",
+            "owner": effective_user,
+            "status": "synthesized" if sz > 1000 else "pending",
+            "local_path": fn,
+            "local_url": kf.get("url"),
+            "file_size_bytes": sz,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "metadata": {"scene_label": kf.get("name", "")},
+        }
+
+    for idx, mc in enumerate(motion_clips, 1):
+        fn = mc.get("filename") or f"motion_p{idx}.mp4"
+        fp = ep_dir / fn if ep_dir else None
+        sz = fp.stat().st_size if fp and fp.is_file() else 0
+        s_scene = universal_sp.scenes[idx - 1] if (idx - 1 < len(universal_sp.scenes)) else None
+        m_type = getattr(s_scene, "motion_type", "ai_diffusion") if s_scene else "ai_diffusion"
+        m_model = "local_zoompan" if m_type == "ken_burns" else (mc.get("model") or eff_motion)
+        registry_map[f"{ep_id}_motion_p{idx}"] = {
+            "artifact_id": f"{ep_id}_motion_p{idx}",
+            "category": "video",
+            "scene_index": idx,
+            "model": m_model,
+            "owner": effective_user,
+            "status": "synthesized" if sz > 1000 else ("cached" if mc.get("remote_url") else "pending"),
+            "local_path": fn,
+            "local_url": mc.get("url"),
+            "remote_url": mc.get("remote_url"),
+            "file_size_bytes": sz,
+            "duration_seconds": duration_seconds / max(1, len(motion_clips)),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "metadata": {"motion_type": m_type, "scene_label": mc.get("name", "")},
+        }
+
+    for s in audio_stems:
+        fn = s.get("filename") or "raw_soundtrack.mp3"
+        fp = ep_dir / fn if ep_dir else None
+        sz = fp.stat().st_size if fp and fp.is_file() else 0
+        s_type = s.get("type", "bgm")
+        s_model = "azure_speech" if "voice" in s_type else "suno_v3_5"
+        registry_map[f"{ep_id}_{s_type}"] = {
+            "artifact_id": f"{ep_id}_{s_type}",
+            "category": "audio",
+            "model": s_model,
+            "owner": effective_user,
+            "status": "synthesized" if sz > 1000 else "pending",
+            "local_path": fn,
+            "local_url": s.get("url"),
+            "file_size_bytes": sz,
+            "duration_seconds": duration_seconds,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "metadata": {"audio_name": s.get("name", "")},
+        }
+
+    if master_v and Path(master_v).is_file():
+        mv_path = Path(master_v)
+        registry_map[f"{ep_id}_master_4k"] = {
+            "artifact_id": f"{ep_id}_master_4k",
+            "category": "master",
+            "model": "single_pass_ffmpeg",
+            "owner": effective_user,
+            "status": "synthesized",
+            "local_path": mv_path.name,
+            "local_url": video_url,
+            "file_size_bytes": mv_path.stat().st_size,
+            "duration_seconds": duration_seconds,
+            "resolution": "3840x2160",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "metadata": {"editions": len(editions)},
+        }
+
+    pipeline_state_payload["artifact_registry"] = registry_map
 
     if pipeline_state_file:
         try:

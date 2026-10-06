@@ -233,7 +233,11 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         duration_seconds: durSec,
         episode_id: epId,
         user_id: uEmail,
-        tier: (function() { const r = document.querySelector('input[name="tier_choice"]:checked'); return r ? r.value : (vid.tierKey || (typeof currentTier !== "undefined" ? currentTier : "balanced")); })(),
+        tier: (function() {
+          if (vid && (vid.tier || vid.tierKey)) return vid.tier || vid.tierKey;
+          const r = document.querySelector('input[name="tier_choice"]:checked');
+          return r ? r.value : (typeof currentTier !== "undefined" ? currentTier : "balanced");
+        })(),
         motion_model: vid.motionModel || (durSec <= 10 ? "wan" : "auto"),
         image_model: vid.imageModel || "flux_dev",
         enable_bgm: vid.enableBgm !== false,

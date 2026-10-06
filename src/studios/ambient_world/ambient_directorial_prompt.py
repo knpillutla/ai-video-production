@@ -1,37 +1,29 @@
-"""Directorial Prompt Engineering for Ambient, Nature & Relaxation Studio Agents.
-
-Encapsulates 100% dynamic domain-specific instructions for pure nature soundscapes.
-Enforces the ZERO Humans mandate (cast: []), autonomous directorial lighting/atmosphere derivation,
-and fluid water dynamics with zero hardcoded templates or fallbacks.
-"""
-
+"""Directorial Prompt Engineering for Ambient, Nature & Relaxation Studio Agents."""
 from __future__ import annotations
 from typing import Optional
 
 
 def get_relaxation_pipeline_constraints(archetype: str = "") -> str:
-    """Returns dynamic architectural guardrails for the relaxation/nature video pipeline.
-    Adapts lighting and atmospheric constraints to the ecosystem archetype.
-    """
+    """Returns dynamic architectural guardrails for the relaxation/nature video pipeline."""
     arch_l = archetype.lower()
-    if any(w in arch_l for w in ["tent", "glamping", "daytime"]):
-        return (
-            "\n======================================================================\n"
-            "[LUXURY DESERT TENT & DAYTIME DUNES GUARDRAILS - MANDATORY]\n"
-            "======================================================================\n"
-            "1. DAYTIME DESERT MANDATE: View from INSIDE an ultra-luxury glamping tent looking out at vast golden sand dunes in natural DAYTIME sunlight (5500K) under clear blue sky. Strictly NO night, NO midnight, NO campfire, NO stars, NO darkness.\n"
-            "2. INSIDE-OUT TENT FRAMING: Shaded pavilion interior framing the view, sheer cream linen curtains fluttering in breeze, low carved table with Moroccan brass teapot and mint tea glasses, rich Berber kilims.\n"
-            "3. DAYTIME CRISP ILLUMINATION: 5500K natural daylight, sun caustics on sand ripples, zero harsh glare, zero 2200K amber nighttime wash.\n"
-            "4. AUDIO MASTER: 432Hz ultra-slow (50 BPM) meditative desert soundbath, airy wooden ney flute, qanun, soft daf heartbeat pulse, gentle desert breeze through linen, zero campfire crackle, -21 LUFS.\n"
-        )
-    if "desert" in arch_l or "dune" in arch_l:
+    if any(w in arch_l for w in ["starlight", "midnight", "hearth"]):
         return (
             "\n======================================================================\n"
             "[DESERT & STARLIT HEARTH PIPELINE GUARDRAILS - MANDATORY]\n"
             "======================================================================\n"
-            "1. DESERT MANDATE: Environment MUST strictly be vast rolling golden sand dunes under an open starlit midnight sky with Milky Way galaxy. Strictly prohibit waterfalls, rivers, lakes, snow, mountains, or green forests.\n"
-            "2. WARM CAMPFIRE & LANTERN HEARTH: Open-air luxury Bedouin pavilion on a dune ridge, Persian tribal rugs, glowing pierced Moroccan brass lanterns, and a circular stone hearth campfire with golden embers.\n"
+            "1. DESERT MANDATE: Vast rolling golden sand dunes under an open starlit midnight sky with Milky Way galaxy.\n"
+            "2. WARM CAMPFIRE & LANTERN HEARTH: Open-air luxury Bedouin pavilion on a dune ridge with glowing lanterns and hearth campfire.\n"
             "3. HYPNOTIC SERENITY: Warm lantern glow (2200K) against deep velvet indigo starry cosmos, rock-steady locked tripod.\n"
+        )
+    if any(w in arch_l for w in ["desert", "dune", "tent", "glamping", "daytime"]):
+        return (
+            "\n======================================================================\n"
+            "[LUXURY DESERT TENT & DAYTIME DUNES GUARDRAILS - MANDATORY]\n"
+            "======================================================================\n"
+            "1. DAYTIME DESERT MANDATE: View looking out at vast golden sand dunes in natural DAYTIME sunlight (5500K) under clear blue sky. Strictly NO night, NO darkness unless user specifies.\n"
+            "2. INSIDE-OUT TENT FRAMING: Shaded pavilion interior framing the view, sheer cream linen curtains, rich Berber kilims.\n"
+            "3. DAYTIME CRISP ILLUMINATION: 5500K natural daylight, sun caustics on sand ripples, zero harsh glare, zero 2200K nighttime wash.\n"
+            "4. AUDIO MASTER: 432Hz ultra-slow (50 BPM) meditative desert soundbath, airy wooden ney flute, qanun, gentle breeze, -21 LUFS.\n"
         )
     if "alpine" in arch_l or "mountain" in arch_l:
         return (

@@ -52,6 +52,7 @@ def build_alpine_prompt(
     excluded_topics: Optional[list[str]] = None,
     image_model: str = "flux_1_1_pro_ultra",
     channel_id: Optional[str] = None,
+    tier: str = "balanced",
 ) -> str:
     """Build dedicated alpine nature directorial prompt conforming to global RelaxScreenplay schema."""
     return build_base_directorial_prompt(
@@ -68,4 +69,5 @@ def build_alpine_prompt(
         curation_landmarks=ALPINE_LANDMARK_POOL,
         color_temp_kelvin=5800,
         channel_id=channel_id or "earth_serenade",
+        tier=tier,
     )
