@@ -5,7 +5,9 @@ and dynamically extends shot and video duration when narration exceeds planned l
 """
 from __future__ import annotations
 
+import json
 import logging
+import re
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -24,7 +26,8 @@ async def synthesize_shot_aligned_narration(
     total_target_sec: Optional[float] = None,
     voice_id: str = "en-US-JennyNeural",
     lead_in_sec: float = 0.8,
-    min_tail_pause_sec: float = 2.0,
+    min_tail_pause_sec: float = 2.8,
+    speech_rate: str = "-16%",
     force_rerun: bool = False,
 ) -> Dict[str, Any]:
     """Synthesize shot-aligned voiceover with anti-fatigue pauses and dynamic duration extension.
@@ -49,17 +52,23 @@ async def synthesize_shot_aligned_narration(
         scene_texts.append(txt)
         planned_durs.append(dur)
 
-    # Fallback to paragraph splitting if scene narration_text is missing
+    # Fallback to paragraph or sentence splitting if scene narration_text is missing
     has_scene_texts = any(bool(t) for t in scene_texts)
     if not has_scene_texts and fallback_script:
         paras = [p.strip() for p in fallback_script.split("\n\n") if p.strip()]
         if len(paras) == len(scenes):
             scene_texts = paras
-        elif len(paras) > 0:
-            # Distribute paragraphs across scenes
-            scene_texts = paras[:len(scenes)]
-            while len(scene_texts) < len(scenes):
-                scene_texts.append("")
+        else:
+            sents = [s.strip() for s in re.split(r'(?<=[.!?])\s+', fallback_script) if s.strip()]
+            if len(sents) == len(scenes):
+                scene_texts = sents
+            elif len(paras) > 0:
+                scene_texts = paras[:len(scenes)]
+                while len(scene_texts) < len(scenes):
+                    scene_texts.append("")
+        for sc, txt in zip(scenes, scene_texts):
+            if not getattr(sc, "narration_text", None):
+                sc.narration_text = txt
 
     # If still completely empty, fallback to single unified script
     if not any(bool(t) for t in scene_texts):
@@ -67,7 +76,7 @@ async def synthesize_shot_aligned_narration(
         if not raw_text:
             return {"narration_path": None, "shot_durations": planned_durs, "total_duration": sum(planned_durs)}
         if not out_master.is_file() or force_rerun:
-            await tts_adapter.synthesize_to_file(raw_text, output_path=out_master, voice_id=voice_id)
+            await tts_adapter.synthesize_to_file(raw_text, output_path=out_master, voice_id=voice_id, speech_rate=speech_rate)
         raw_dur = get_media_duration(out_master) or 0.0
         eff_total = max(float(total_target_sec or sum(planned_durs)), raw_dur + lead_in_sec + min_tail_pause_sec)
         n = max(1, len(scenes))
@@ -81,6 +90,35 @@ async def synthesize_shot_aligned_narration(
     padded_part_paths: List[Path] = []
     stem_dir = ep_dir / "narration_stems"
     stem_dir.mkdir(parents=True, exist_ok=True)
+
+    # Invalidate cached voice stems if speech_rate, lead_in_sec, or min_tail_pause_sec changed
+    meta_path = stem_dir / "cadence_meta.json"
+    cached_meta = {}
+    if meta_path.is_file():
+        try:
+            cached_meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except Exception:
+            cached_meta = {}
+
+    current_meta = {
+        "speech_rate": speech_rate,
+        "lead_in_sec": lead_in_sec,
+        "min_tail_pause_sec": min_tail_pause_sec,
+        "voice_id": voice_id,
+    }
+    if cached_meta != current_meta:
+        logger.info(f"narration_cadence_changed: old={cached_meta} new={current_meta}. Invalidating stems.")
+        for f in stem_dir.glob("*.mp3"):
+            try:
+                f.unlink(missing_ok=True)
+            except Exception:
+                pass
+        if out_master.is_file():
+            try:
+                out_master.unlink(missing_ok=True)
+            except Exception:
+                pass
+        meta_path.write_text(json.dumps(current_meta, indent=2), encoding="utf-8")
 
     for idx, (text, p_dur) in enumerate(zip(scene_texts, planned_durs)):
         part_raw = stem_dir / f"shot_{idx + 1}_raw.mp3"
@@ -96,7 +134,7 @@ async def synthesize_shot_aligned_narration(
 
         if text:
             if not part_raw.is_file() or force_rerun:
-                await tts_adapter.synthesize_to_file(text, output_path=part_raw, voice_id=voice_id)
+                await tts_adapter.synthesize_to_file(text, output_path=part_raw, voice_id=voice_id, speech_rate=speech_rate)
             speech_dur = get_media_duration(part_raw) or 0.0
         else:
             speech_dur = 0.0

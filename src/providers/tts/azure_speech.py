@@ -24,6 +24,7 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
         text: str,
         voice_id: str = "te-IN-ShrutiNeural",
         language_code: str = "te-IN",
+        speech_rate: str = "-16%",
     ) -> bytes:
         """Synthesize text into studio-grade 48kHz 16-bit PCM WAV audio bytes."""
         if is_mock_mode():
@@ -43,11 +44,11 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
             voice_id = "te-IN-ShrutiNeural"
             language_code = "te-IN"
 
-        # Construct SSML with deliberate, articulate broadcast rate & pitch (-12% rate for clear comprehension)
+        # Construct SSML with deliberate, articulate BBC documentary cadence (-16% rate, 115-120 WPM)
         ssml = (
             f"<speak version='1.0' xml:lang='{language_code}'>"
             f"<voice name='{voice_id}'>"
-            f"<prosody rate='-12%' pitch='0%'>{text}</prosody>"
+            f"<prosody rate='{speech_rate}' pitch='-2%'>{text}</prosody>"
             f"</voice></speak>"
         )
 
@@ -63,7 +64,7 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
         try:
             import edge_tts
 
-            comm = edge_tts.Communicate(text, voice=voice_id, rate="-12%")
+            comm = edge_tts.Communicate(text, voice=voice_id, rate=speech_rate)
             chunks = []
             async for chunk in comm.stream():
                 if chunk.get("type") == "audio":
@@ -105,6 +106,7 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
         text: str,
         output_path: Path | str,
         voice_id: str = "te-IN-ShrutiNeural",
+        speech_rate: str = "-16%",
         force_live: bool = False,
     ) -> Path:
         """Synthesize narration and write directly to disk."""
@@ -133,7 +135,7 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
                 import tempfile
                 from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary, has_ffmpeg
 
-                comm = edge_tts.Communicate(text, voice=voice_id, rate="-12%")
+                comm = edge_tts.Communicate(text, voice=voice_id, rate=speech_rate)
                 with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp_mp3:
                     tmp_name = tmp_mp3.name
                 await comm.save(tmp_name)
@@ -152,7 +154,7 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
             except Exception as ex:
                 logger.warning(f"edge_tts_file_failed: {ex}")
 
-        audio_bytes = await self.synthesize_speech(text, voice_id=voice_id)
+        audio_bytes = await self.synthesize_speech(text, voice_id=voice_id, speech_rate=speech_rate)
         out.write_bytes(audio_bytes)
         return out
 

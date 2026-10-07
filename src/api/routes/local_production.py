@@ -305,13 +305,17 @@ async def poll_production_artifacts(channel_id: str, episode_id: str, user_id: s
     if "velvet_binaural_master_48k.mp3" in files and files["velvet_binaural_master_48k.mp3"].stat().st_size > 1000:
         stems.append({"name": "432Hz Velvet Binaural ASMR", "filename": "velvet_binaural_master_48k.mp3", "url": _file_url(files["velvet_binaural_master_48k.mp3"]), "color": "emerald"})
 
-    master_url = _file_url(files["master_4k_ambient.mp4"]) if ("master_4k_ambient.mp4" in files and files["master_4k_ambient.mp4"].stat().st_size > 1000) else None
-    nature_master_url = _file_url(files["master_4k_ambient_nature_only.mp4"]) if ("master_4k_ambient_nature_only.mp4" in files and files["master_4k_ambient_nature_only.mp4"].stat().st_size > 1000) else None
+    has_narr_master = "master_4k_narration.mp4" in files and files["master_4k_narration.mp4"].stat().st_size > 1000
+    has_amb_master = "master_4k_ambient.mp4" in files and files["master_4k_ambient.mp4"].stat().st_size > 1000
+    master_url = _file_url(files["master_4k_narration.mp4"]) if has_narr_master else (_file_url(files["master_4k_ambient.mp4"]) if has_amb_master else None)
+    nature_master_url = _file_url(files["master_4k_ambient.mp4"]) if has_amb_master else None
 
     dur_str = f"{int(m_data.get('duration_seconds', 5))}s"
     editions = []
-    if master_url:
-        editions.append({"edition_id": "master_music", "name": f"🎵 4K Broadcast Master ({dur_str})", "label": "4K Broadcast Master", "format": "4K UHD", "duration": dur_str, "url": master_url})
+    if has_narr_master:
+        editions.append({"edition_id": "master_narration", "name": f"🎙️ 4K Narrated Master ({dur_str})", "label": "4K Narrated Master (Voiceover + BGM)", "format": "4K UHD", "duration": dur_str, "url": _file_url(files["master_4k_narration.mp4"])})
+    if has_amb_master:
+        editions.append({"edition_id": "master_music", "name": f"🎵 4K Music Edition ({dur_str})", "label": "4K Ambient Master (Music Only)", "format": "4K UHD", "duration": dur_str, "url": _file_url(files["master_4k_ambient.mp4"])})
     if "short_9x16_teaser.mp4" in files and files["short_9x16_teaser.mp4"].stat().st_size > 1000:
         editions.append({"edition_id": "short_teaser", "name": "📱 9:16 Vertical Short Teaser (20s)", "label": "9:16 Vertical YouTube Short / Reel", "format": "9:16 Short", "duration": "20s", "url": _file_url(files["short_9x16_teaser.mp4"])})
 

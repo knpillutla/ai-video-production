@@ -119,18 +119,19 @@ def assemble_4k_master(
                 "-movflags", "+faststart", str(out_master)
             ]
     else:
-        eff_hold = (target_dur + (x_dur * (n - 1))) / n
+        durs = [get_media_duration(c) or 10.0 for c in seamless_clips]
         inputs = []
-        for c in seamless_clips:
-            v_loops = max(1, int(eff_hold / max(1.0, get_media_duration(c) or 5.0)) + 2)
-            inputs.extend(["-stream_loop", str(v_loops), "-i", str(c)])
+        for c, d in zip(seamless_clips, durs):
+            if d < 4.0: inputs.extend(["-stream_loop", str(max(1, int(10.0 / max(1.0, d)))), "-i", str(c)])
+            else: inputs.extend(["-i", str(c)])
 
         filter_parts = [f"[{i}:v]{build_adaptive_resolution_filter(c, 3840, 2160)}[s{i}]" for i, c in enumerate(seamless_clips)]
-        prev_tag, curr_offset = "s0", eff_hold - x_dur
+        prev_tag, curr_offset = "s0", durs[0] - x_dur
         for i in range(1, n):
             out_tag = f"v{i}" if i < n - 1 else "v"
-            filter_parts.append(f"[{prev_tag}][s{i}]xfade=transition=fade:duration={x_dur:.2f}:offset={curr_offset:.2f}[{out_tag}]")
-            prev_tag, curr_offset = out_tag, curr_offset + eff_hold - x_dur
+            filter_parts.append(f"[{prev_tag}][s{i}]xfade=transition=fade:duration={x_dur:.2f}:offset={max(0.1, curr_offset):.2f}[{out_tag}]")
+            prev_tag, curr_offset = out_tag, curr_offset + durs[i] - x_dur
+        target_dur = max(target_dur, curr_offset + x_dur)
 
         if audio_path and audio_path.is_file():
             inputs.extend(["-i", str(audio_path)])
@@ -161,7 +162,6 @@ def assemble_4k_master(
         raise RuntimeError(f"FFmpeg assembly failed: {err_msg}") from err
     return out_master
 
-
 def assemble_dual_masters(
     video_clips: list[Path],
     audio_path: Optional[Path] = None,
@@ -179,62 +179,67 @@ def assemble_dual_masters(
         ep_dir = video_clips[0].parent
 
     eff_target_dur = target_duration_sec or kwargs.get("target_duration")
-    seamless_clips = [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
-    master_music = ep_dir / "master_4k_ambient.mp4"
-    cached_dur = get_media_duration(master_music) if master_music.is_file() else None
-    duration_mismatch = (
-        eff_target_dur is not None
-        and cached_dur is not None
-        and abs(cached_dur - float(eff_target_dur)) > 2.0
-    )
-    needs_rebuild = (
-        force_rerun
-        or not master_music.is_file()
-        or master_music.stat().st_size < 1000
-        or duration_mismatch
-        or any(sc.stat().st_mtime > master_music.stat().st_mtime for sc in seamless_clips)
-    )
-    log_pipeline_step("checking master", "4K Ambient Master", "started", metadata={"file": master_music.name, "target_duration": eff_target_dur})
-    if needs_rebuild:
-        assemble_4k_master(seamless_clips, eff_audio, master_music, crf=crf, target_duration_sec=eff_target_dur)
-        log_pipeline_step("checking master", "4K Ambient Master", "completed", "assembled master_4k_ambient.mp4", {"file": master_music.name, "crf": crf, "cost": "$0.00"})
-    else:
-        logger.info(f"decision_master_video_cache_hit: Reusing {master_music.name} ($0.00 spend)")
-        log_pipeline_step("checking master", "4K Ambient Master", "completed", "master_4k_ambient.mp4 exists, render not recreated", {"file": master_music.name, "duration": cached_dur, "cost": "$0.00"})
-
+    seamless_clips = video_clips if len(video_clips) > 1 else [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
     master_narr = ep_dir / "master_4k_narration.mp4"
+    master_music = ep_dir / "master_4k_ambient.mp4"
     narr_audio = kwargs.get("narration_audio_path") or (ep_dir / "spoken_narration.mp3")
-    if narr_audio and Path(narr_audio).is_file() and Path(narr_audio).stat().st_size > 1000:
-        log_pipeline_step("checking master", "4K Narration Master", "started", metadata={"file": master_narr.name})
+    has_narration = bool(narr_audio and Path(narr_audio).is_file() and Path(narr_audio).stat().st_size > 1000)
+
+    if has_narration:
+        t_dur = float(eff_target_dur or sum(get_media_duration(c) or 10.0 for c in seamless_clips) or 60.0)
+        mixed_audio = ep_dir / "master_audio_narrated_ducked.mp3"
+        if force_rerun or not mixed_audio.is_file() or mixed_audio.stat().st_size < 1000:
+            cmd_mix = [
+                imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error",
+                "-i", str(eff_audio), "-i", str(narr_audio),
+                "-filter_complex", f"[0:a]volume=0.22[bgm];[1:a]volume=1.0[vox];[bgm][vox]amix=inputs=2:duration=first:dropout_transition=3,apad,afade=t=out:st={max(0, t_dur - 3.0):.2f}:d=3.0[aout]",
+                "-map", "[aout]", "-c:a", "libmp3lame", "-b:a", "320k", "-ar", "48000",
+                "-t", f"{t_dur:.2f}", str(mixed_audio),
+            ]
+            subprocess.run(cmd_mix, check=True)
+
         c_dur_n = get_media_duration(master_narr) if master_narr.is_file() else None
         n_mis = eff_target_dur and c_dur_n and abs(c_dur_n - float(eff_target_dur)) > 2.0
-        if force_rerun or not master_narr.is_file() or master_narr.stat().st_size < 1000 or n_mis or any(sc.stat().st_mtime > master_narr.stat().st_mtime for sc in seamless_clips):
-            if master_music.is_file() and master_music.stat().st_size > 1000:
-                t_dur = float(eff_target_dur or get_media_duration(master_music) or 60.0)
-                cmd_r = [
-                    imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error",
-                    "-i", str(master_music), "-i", str(narr_audio),
-                    "-filter_complex", f"[0:a]volume=0.22[bgm];[1:a]volume=1.0[vox];[bgm][vox]amix=inputs=2:duration=first:dropout_transition=3,apad,afade=t=out:st={max(0, t_dur - 3.0):.2f}:d=3.0[aout]",
-                    "-map", "0:v:0", "-map", "[aout]",
-                    "-c:v", "copy", "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-                    "-t", f"{t_dur:.2f}", "-movflags", "+faststart", str(master_narr)
-                ]
-                subprocess.run(cmd_r, check=True)
-                logger.info(f"narration_master_remuxed: target={t_dur:.2f}s")
-                log_pipeline_step("checking master", "4K Narration Master", "completed", "assembled master_4k_narration.mp4 via audio remux with ducking", {"file": master_narr.name, "ducking": "-18dB", "cost": "$0.00"})
+        needs_n = force_rerun or not master_narr.is_file() or master_narr.stat().st_size < 1000 or n_mis or any(sc.stat().st_mtime > master_narr.stat().st_mtime for sc in seamless_clips)
+        log_pipeline_step("checking master", "4K Narration Master", "started", metadata={"file": master_narr.name, "target_duration": eff_target_dur})
+        if needs_n:
+            assemble_4k_master(seamless_clips, mixed_audio, master_narr, crf=crf, target_duration_sec=eff_target_dur)
+            log_pipeline_step("checking master", "4K Narration Master", "completed", "assembled master_4k_narration.mp4 as primary master", {"file": master_narr.name, "crf": crf, "cost": "$0.00"})
         else:
             log_pipeline_step("checking master", "4K Narration Master", "completed", "master_4k_narration.mp4 exists, render not recreated", {"file": master_narr.name, "cost": "$0.00"})
+
+        log_pipeline_step("checking master", "4K Ambient Master", "started", metadata={"file": master_music.name})
+        needs_m = force_rerun or not master_music.is_file() or master_music.stat().st_size < 1000 or master_narr.stat().st_mtime > master_music.stat().st_mtime
+        if needs_m:
+            cmd_m = [
+                imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error",
+                "-i", str(master_narr), "-i", str(eff_audio),
+                "-map", "0:v:0", "-map", "1:a:0",
+                "-c:v", "copy", "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
+                "-t", f"{t_dur:.2f}", "-movflags", "+faststart", str(master_music),
+            ]
+            subprocess.run(cmd_m, check=True)
+            log_pipeline_step("checking master", "4K Ambient Master", "completed", "remuxed master_4k_ambient.mp4 (music-only edition)", {"file": master_music.name, "cost": "$0.00"})
+        else:
+            log_pipeline_step("checking master", "4K Ambient Master", "completed", "master_4k_ambient.mp4 exists, render not recreated", {"file": master_music.name, "cost": "$0.00"})
+
     else:
+        cached_dur = get_media_duration(master_music) if master_music.is_file() else None
+        d_mis = eff_target_dur is not None and cached_dur is not None and abs(cached_dur - float(eff_target_dur)) > 2.0
+        needs_rebuild = force_rerun or not master_music.is_file() or master_music.stat().st_size < 1000 or d_mis or any(sc.stat().st_mtime > master_music.stat().st_mtime for sc in seamless_clips)
+        log_pipeline_step("checking master", "4K Ambient Master", "started", metadata={"file": master_music.name, "target_duration": eff_target_dur})
+        if needs_rebuild:
+            assemble_4k_master(seamless_clips, eff_audio, master_music, crf=crf, target_duration_sec=eff_target_dur)
+            log_pipeline_step("checking master", "4K Ambient Master", "completed", "assembled master_4k_ambient.mp4", {"file": master_music.name, "crf": crf, "cost": "$0.00"})
+        else:
+            log_pipeline_step("checking master", "4K Ambient Master", "completed", "master_4k_ambient.mp4 exists, render not recreated", {"file": master_music.name, "cost": "$0.00"})
         master_narr = master_music
 
+    primary = master_narr if has_narration else master_music
     return {
-        "music_master": master_music,
-        "master_4k": master_music,
-        "narrative_master": master_narr,
-        "narration_master": master_narr,
-        "nature_master": master_music,
-        "master_nature": master_music,
-        "master_1080p": master_music,
+        "master_4k": primary, "master_video_path": primary, "music_master": master_music,
+        "narrative_master": master_narr, "narration_master": master_narr,
+        "nature_master": master_music, "master_nature": master_music, "master_1080p": primary,
     }
 
 def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], fade_hours: Optional[float]) -> Optional[Path]:
@@ -285,14 +290,10 @@ async def handle_short_export(
     try: await topic_memory.record_production(topic=sb.title, genre=f"nature_{sb.cluster}", tags=meta.get("youtube", {}).get("seo_tags", []), episode_id=ep_dir.name)
     except Exception as tm_ex: logger.warning(f"topic_memory_record_warning: {tm_ex}")
     return {
-        "status": "success",
-        "production_type": "short_and_dual_master",
+        "status": "success", "production_type": "short_and_dual_master",
         "episode_id": ep_dir.name, "title": getattr(sb, "title", ep_dir.name),
         "master_video_path": str(dual_res["master_4k"]), "master_4k_path": str(dual_res["master_4k"]),
-        "master_nature_video_path": str(dual_res.get("narration_master", dual_res["master_4k"])),
-        "short_video_path": str(short_path),
-        "master_narration_path": str(dual_res.get("narration_master", dual_res["master_4k"])),
-        "render_time_seconds": round(time.time() - t_start, 2),
-        "video_clips": [str(c) for c in video_clips],
-        "metadata": meta,
+        "master_nature_video_path": str(dual_res.get("nature_master", dual_res["master_4k"])),
+        "short_video_path": str(short_path), "master_narration_path": str(dual_res.get("narration_master", dual_res["master_4k"])),
+        "render_time_seconds": round(time.time() - t_start, 2), "video_clips": [str(c) for c in video_clips], "metadata": meta,
     }

@@ -140,7 +140,7 @@ class VisualBatchService:
             if not task.force_rerun and task.output_path.is_file() and task.output_path.stat().st_size > 1000:
                 from src.services.ambient_export_service import get_media_duration
                 c_dur = get_media_duration(task.output_path) or 0.0
-                if c_dur > 0.5:
+                if abs(c_dur - float(task.duration_seconds)) <= 1.0:
                     logger.info(f"decision_motion_cache_hit: Reusing {task.output_path.name} ($0.00 spend)")
                     log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip exists, motion clip not recreated", {"file": task.output_path.name, "duration": c_dur, "cost": "$0.00"})
                     return task.output_path

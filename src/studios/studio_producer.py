@@ -120,7 +120,31 @@ class StudioProducer:
                 "episode_dir": str(ep_dir),
             }
 
-        # Stage 3: Motion Diffusion Gate (Parallel AI Video Diffusion with In-Flight Token Resumption)
+        # Stage 3: Shot-Aligned Narration Gate (Narration First Timing Architecture)
+        voice_path = ep_dir / "spoken_narration.mp3"
+        spoken_text = getattr(sb, "spoken_narration_script", None)
+        has_narr = any(bool(getattr(s, "narration_text", None)) for s in sb.scenes) if hasattr(sb, "scenes") else False
+        if enable_voiceover and (spoken_text or has_narr):
+            log_pipeline_step("checking audio", "Spoken Narration Voiceover", "started", metadata={"file": voice_path.name})
+            try:
+                from src.services.shot_narration_service import synthesize_shot_aligned_narration
+                narr_res = await synthesize_shot_aligned_narration(
+                    scenes=sb.scenes, ep_dir=ep_dir, fallback_script=spoken_text,
+                    total_target_sec=float(sb.total_duration or 60.0), force_rerun=force_rerun and audio_only,
+                )
+                if narr_res.get("narration_path") and Path(narr_res["narration_path"]).is_file():
+                    voice_path = Path(narr_res["narration_path"])
+                if narr_res.get("shot_durations"):
+                    for sc, n_dur in zip(sb.scenes, narr_res["shot_durations"]):
+                        sc.duration_seconds = max(float(sc.duration_seconds or 0.0), float(n_dur))
+                    tot_d = sum(float(sc.duration_seconds) for sc in sb.scenes)
+                    if hasattr(sb, "total_duration"): sb.total_duration = tot_d
+                    if hasattr(sb, "total_duration_seconds"): sb.total_duration_seconds = tot_d
+                log_pipeline_step("checking audio", "Spoken Narration Voiceover", "completed", "narration synchronized and shot durations locked", {"file": voice_path.name, "total_duration": getattr(sb, "total_duration", None)})
+            except Exception as tts_err:
+                logger.warning(f"tts_voiceover_failed: {tts_err}")
+
+        # Stage 4: Motion Diffusion Gate (Parallel AI Video Diffusion with In-Flight Token Resumption)
         valid_keyframes = [p for p in image_results if p.is_file() and p.stat().st_size > 1000]
         if not valid_keyframes:
             raise RuntimeError("visual_diffusion_aborted: Zero valid keyframes were produced.")
@@ -129,54 +153,36 @@ class StudioProducer:
         for idx, (s, kf) in enumerate(zip(sb.scenes, valid_keyframes), 1):
             custom_model_cfg = getattr(s, "model_configs", None) if isinstance(getattr(s, "model_configs", None), dict) else None
             chosen_model, m_allow_fallback, m_rationale = resolve_scene_motion_model(
-                scene=s,
-                tier=tier,
-                requested_motion_model=motion_model,
-                scene_index=idx - 1,
-                total_scenes=len(valid_keyframes),
-                genre=getattr(sb, "cluster", "relax/nature"),
+                scene=s, tier=tier, requested_motion_model=motion_model,
+                scene_index=idx - 1, total_scenes=len(valid_keyframes), genre=getattr(sb, "cluster", "relax/nature"),
             )
             motion_tasks.append(
                 MotionClipTask(
-                    image_path=kf,
-                    motion_prompt=s.motion_prompt,
-                    visual_prompt=s.visual_prompt,
-                    output_path=ep_dir / f"motion_p{idx}.mp4",
-                    duration_seconds=s.duration_seconds,
-                    model=chosen_model,
-                    domain=s.domain,
-                    req_file=ep_dir / f"fal_motion_req_p{idx}.json",
-                    allow_fallback=allow_fallback or m_allow_fallback,
-                    force_rerun=force_rerun,
-                    negative_prompt=_resolve_scene_negative_prompt(s),
-                    model_configs=custom_model_cfg,
+                    image_path=kf, motion_prompt=s.motion_prompt, visual_prompt=s.visual_prompt,
+                    output_path=ep_dir / f"motion_p{idx}.mp4", duration_seconds=s.duration_seconds,
+                    model=chosen_model, domain=s.domain, req_file=ep_dir / f"fal_motion_req_p{idx}.json",
+                    allow_fallback=allow_fallback or m_allow_fallback, force_rerun=force_rerun,
+                    negative_prompt=_resolve_scene_negative_prompt(s), model_configs=custom_model_cfg,
+                    camera_waypoints=getattr(s, "camera_waypoints", None), kinetic_micro_zones=getattr(s, "kinetic_micro_zones", None),
                 )
             )
 
-        video_clips = await visual_batch_service.render_motion_batch(
-            tasks=motion_tasks,
-        )
+        video_clips = await visual_batch_service.render_motion_batch(tasks=motion_tasks)
 
         if motion_only:
             return {
-                "status": "success",
-                "stage": "motion_only",
-                "episode_id": ep_dir.name,
-                "keyframes": [str(p) for p in image_results],
-                "raw_videos": [str(c) for c in video_clips],
-                "video_clips": [str(c) for c in video_clips],
-                "episode_dir": str(ep_dir),
+                "status": "success", "stage": "motion_only", "episode_id": ep_dir.name,
+                "keyframes": [str(p) for p in image_results], "raw_videos": [str(c) for c in video_clips],
+                "video_clips": [str(c) for c in video_clips], "episode_dir": str(ep_dir),
             }
 
-        # Stage 4: Acoustic Foley & Brown Noise Mastering Gate
+        # Stage 5: Acoustic Foley & Brown Noise Mastering Gate
         audio_stems = []
         bgm_path = ep_dir / "raw_soundtrack.mp3"
         legacy_bgm = ep_dir / "soundscape_master.mp3"
         if legacy_bgm.is_file() and not bgm_path.is_file():
-            try:
-                legacy_bgm.rename(bgm_path)
-            except Exception:
-                pass
+            try: legacy_bgm.rename(bgm_path)
+            except Exception: pass
         if not no_bgm:
             log_pipeline_step("checking audio", "BGM Soundtrack", "started", metadata={"file": bgm_path.name})
             if bgm_path.is_file() and bgm_path.stat().st_size >= 1000 and not force_rerun:
@@ -184,40 +190,15 @@ class StudioProducer:
             else:
                 log_pipeline_step("checking audio", "BGM Soundtrack", "started", "soundtrack missing, synthesizing via Suno/DSP", {"file": bgm_path.name})
                 bgm_path = await soundtrack_service.synthesize_ambient_soundtrack(
-                    title=sb.title,
-                    tags=sb.audio_tags or "432Hz ambient soundscape, deep relaxation, -14 LUFS",
-                    out_path=bgm_path,
-                    total_duration=sb.total_duration,
-                    genre=f"{getattr(sb, 'cluster', 'studio')} soundscape",
-                    episode_id=ep_dir.name,
+                    title=sb.title, tags=sb.audio_tags or "432Hz ambient soundscape, deep relaxation, -14 LUFS",
+                    out_path=bgm_path, total_duration=sb.total_duration, genre=f"{getattr(sb, 'cluster', 'studio')} soundscape", episode_id=ep_dir.name,
                 )
                 log_pipeline_step("checking audio", "BGM Soundtrack", "completed", "soundtrack synthesized", {"file": bgm_path.name})
             if bgm_path and bgm_path.is_file():
                 audio_stems.append(bgm_path)
 
-        voice_path = ep_dir / "spoken_narration.mp3"
-        spoken_text = getattr(sb, "spoken_narration_script", None)
-        has_narr = any(bool(getattr(s, "narration_text", None)) for s in sb.scenes) if hasattr(sb, "scenes") else False
-        if enable_voiceover and (spoken_text or has_narr):
-            log_pipeline_step("checking audio", "Spoken Narration Voiceover", "started", metadata={"file": voice_path.name})
-            if voice_path.is_file() and voice_path.stat().st_size >= 1000 and not force_rerun:
-                log_pipeline_step("checking audio", "Spoken Narration Voiceover", "completed", "narration exists, voiceover not recreated", {"file": voice_path.name, "cost": "$0.00"})
-            else:
-                try:
-                    from src.services.shot_narration_service import synthesize_shot_aligned_narration
-                    narr_res = await synthesize_shot_aligned_narration(
-                        scenes=sb.scenes,
-                        ep_dir=ep_dir,
-                        fallback_script=spoken_text,
-                        total_target_sec=float(sb.total_duration or 60.0),
-                        force_rerun=force_rerun and audio_only,
-                    )
-                    if narr_res.get("narration_path") and Path(narr_res["narration_path"]).is_file():
-                        voice_path = Path(narr_res["narration_path"])
-                except Exception as tts_err:
-                    logger.warning(f"tts_voiceover_failed: {tts_err}")
-            if voice_path.is_file() and voice_path.stat().st_size > 1000:
-                audio_stems.append(voice_path)
+        if voice_path.is_file() and voice_path.stat().st_size > 1000:
+            audio_stems.append(voice_path)
 
         spatial_audio_path = ep_dir / "velvet_binaural_master_48k.mp3"
         legacy_spatial = ep_dir / "binaural_soundscape_master.wav"
@@ -280,8 +261,11 @@ class StudioProducer:
             "status": "success",
             "production_type": "broadcast_master",
             "episode_id": ep_dir.name,
+            "title": getattr(sb, "title", ep_dir.name),
+            "master_video_path": str(dual_res["master_4k"]),
             "master_4k_path": str(dual_res["master_4k"]),
-            "master_1080p_path": str(dual_res["master_1080p"]),
+            "master_nature_video_path": str(dual_res.get("nature_master", dual_res["master_4k"])),
+            "master_narration_path": str(dual_res.get("narration_master", dual_res["master_4k"])),
             "render_time_seconds": round(time.time() - t_start, 2),
             "keyframes": [str(p) for p in image_results],
             "video_clips": [str(c) for c in video_clips],
