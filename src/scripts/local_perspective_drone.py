@@ -109,8 +109,23 @@ def render_perspective_drone_clip_sync(
     total_frames = max(24, int(duration_seconds * fps))
     pts_canvas = np.float32([[0, 0], [target_w, 0], [0, target_h], [target_w, target_h]])
 
+    if kinetic_micro_zones is None:
+        from src.scripts.local_micro_kinetics import auto_detect_environmental_spec
+        kinetic_micro_zones = auto_detect_environmental_spec(img)
+
     clean_base, prepared_sprites = prepare_micro_kinetics(img, kinetic_micro_zones)
-    has_micro = bool(kinetic_micro_zones and kinetic_micro_zones.get("sprites"))
+    has_micro = bool(
+        kinetic_micro_zones and (
+            kinetic_micro_zones.get("celestial_zone") or
+            kinetic_micro_zones.get("water_zones") or
+            kinetic_micro_zones.get("waterfall_zones") or
+            kinetic_micro_zones.get("is_snow")
+        )
+    )
+    snow_engine = None
+    if kinetic_micro_zones and kinetic_micro_zones.get("is_snow"):
+        from src.scripts.local_micro_kinetics import ProceduralSnowFlakeEngine
+        snow_engine = ProceduralSnowFlakeEngine(clean_base.shape[1], clean_base.shape[0])
 
     temp_raw = out.parent / f"_raw_{out.stem}.mp4"
     temp_raw.unlink(missing_ok=True)
@@ -125,7 +140,7 @@ def render_perspective_drone_clip_sync(
             sec = i / float(fps)
             pts_src = compute_waypoint_perspective_corners(w, h, sec, duration_seconds, camera_waypoints, camera_movement, speed_factor)
             matrix = cv2.getPerspectiveTransform(pts_src, pts_canvas)
-            canvas = render_micro_kinetics_frame(clean_base, prepared_sprites, kinetic_micro_zones, i, total_frames) if has_micro else clean_base
+            canvas = render_micro_kinetics_frame(clean_base, prepared_sprites, kinetic_micro_zones, i, total_frames, snow_engine=snow_engine) if has_micro else clean_base
             frame = cv2.warpPerspective(canvas, matrix, (target_w, target_h), flags=cv2.INTER_LANCZOS4)
             writer.write(frame)
     finally:

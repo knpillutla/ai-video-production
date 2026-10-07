@@ -117,8 +117,23 @@ def render_multiangle_drone_clip_sync(
 
     target_w, target_h = target_res
     total_frames = max(30, int(duration_seconds * fps))
+    if kinetic_micro_zones is None:
+        from src.scripts.local_micro_kinetics import auto_detect_environmental_spec
+        kinetic_micro_zones = auto_detect_environmental_spec(img)
+
     clean_base, prepared_sprites = prepare_micro_kinetics(img, kinetic_micro_zones)
-    has_micro = bool(kinetic_micro_zones and kinetic_micro_zones.get("sprites"))
+    has_micro = bool(
+        kinetic_micro_zones and (
+            kinetic_micro_zones.get("celestial_zone") or
+            kinetic_micro_zones.get("water_zones") or
+            kinetic_micro_zones.get("waterfall_zones") or
+            kinetic_micro_zones.get("is_snow")
+        )
+    )
+    snow_engine = None
+    if kinetic_micro_zones and kinetic_micro_zones.get("is_snow"):
+        from src.scripts.local_micro_kinetics import ProceduralSnowFlakeEngine
+        snow_engine = ProceduralSnowFlakeEngine(clean_base.shape[1], clean_base.shape[0])
 
     scales, x_pcts, y_pcts = generate_cinematic_path(clean_base.shape, total_frames)
     affine_matrices = precompute_drone_affine_matrices(clean_base.shape, scales, x_pcts, y_pcts, output_size=target_res)
@@ -132,7 +147,7 @@ def render_multiangle_drone_clip_sync(
 
     try:
         for i in range(total_frames):
-            canvas = render_micro_kinetics_frame(clean_base, prepared_sprites, kinetic_micro_zones, i, total_frames) if has_micro else clean_base
+            canvas = render_micro_kinetics_frame(clean_base, prepared_sprites, kinetic_micro_zones, i, total_frames, snow_engine=snow_engine) if has_micro else clean_base
             frame = cv2.warpAffine(canvas, affine_matrices[i], (target_w, target_h), flags=cv2.INTER_CUBIC)
             writer.write(frame)
     finally:
