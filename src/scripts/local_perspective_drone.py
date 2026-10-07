@@ -1,5 +1,6 @@
 """Tier-0 CPU Perspective Drone & Camera Homography Motion Engine."""
 
+import argparse
 import asyncio
 import os
 import subprocess
@@ -10,6 +11,11 @@ from typing import Optional, Tuple
 import cv2
 import imageio_ffmpeg
 import numpy as np
+
+from src.scripts.local_micro_kinetics import (
+    prepare_micro_kinetics,
+    render_micro_kinetics_frame,
+)
 
 
 def _get_movement_deltas(movement: str) -> Tuple[float, float, float, float]:
@@ -29,89 +35,46 @@ def _get_movement_deltas(movement: str) -> Tuple[float, float, float, float]:
     return 0.065, 0.015, 0.015, -0.015
 
 
-def _corners_from_deltas(w: int, h: int, zoom_factor: float, pan_track: float, tilt_skew: float, y_shift: float) -> np.ndarray:
-    zoom_factor = min(0.085, max(-0.085, zoom_factor))
-    x_left_top = w * (zoom_factor + pan_track + tilt_skew)
-    x_right_top = w * (1.0 - zoom_factor + pan_track - tilt_skew)
-    x_left_bot = w * (zoom_factor * 1.10 + pan_track * 1.05)
-    x_right_bot = w * (1.0 - zoom_factor * 1.10 + pan_track * 1.05)
-    y_top_row = h * (zoom_factor + y_shift)
-    y_bot_row = h * (1.0 - zoom_factor * 1.10 + y_shift * 1.05)
-    return np.float32([[x_left_top, y_top_row], [x_right_top, y_top_row], [x_left_bot, y_bot_row], [x_right_bot, y_bot_row]])
+def _corners_from_deltas(w: int, h: int, zoom: float, pan: float, tilt: float, ys: float) -> np.ndarray:
+    zoom = min(0.085, max(-0.085, zoom))
+    return np.float32([
+        [w * (zoom + pan + tilt), h * (zoom + ys)],
+        [w * (1.0 - zoom + pan - tilt), h * (zoom + ys)],
+        [w * (zoom * 1.10 + pan * 1.05), h * (1.0 - zoom * 1.10 + ys * 1.05)],
+        [w * (1.0 - zoom * 1.10 + pan * 1.05), h * (1.0 - zoom * 1.10 + ys * 1.05)]
+    ])
 
 
-def compute_perspective_corners(w: int, h: int, progress: float, movement: str = "slow_drone_forward", speed_factor: float = 1.0) -> np.ndarray:
-    """Compute 4 dynamic destination corner coordinates for 3D camera simulation."""
+def compute_perspective_corners(w: int, h: int, progress: float, movement: str = "slow_drone_forward", speed: float = 1.0) -> np.ndarray:
     t = max(0.0, min(1.0, progress))
-    easing = (1.0 - (1.0 - t) ** 3) * speed_factor
+    easing = (1.0 - (1.0 - t) ** 3) * speed
     dz, dp, dt, dy = _get_movement_deltas(movement)
     return _corners_from_deltas(w, h, dz * easing, dp * easing, dt * easing, dy * easing)
 
 
-def compute_waypoint_perspective_corners(w: int, h: int, current_sec: float, total_sec: float, waypoints: Optional[list] = None, default_mov: str = "slow_drone_forward", speed_factor: float = 1.0) -> np.ndarray:
-    """Compute 4 dynamic destination corners across multi-phase timed camera waypoints."""
+def compute_waypoint_perspective_corners(
+    w: int, h: int, sec: float, tot: float, waypoints: Optional[list] = None,
+    mov: str = "slow_drone_forward", speed: float = 1.0
+) -> np.ndarray:
     if not waypoints:
-        prog = min(1.0, max(0.0, current_sec / max(0.1, total_sec)))
-        return compute_perspective_corners(w, h, prog, default_mov, speed_factor)
-
-    norm_wps = []
-    for wp in waypoints:
-        m = getattr(wp, "motion", None) or (wp.get("motion") if isinstance(wp, dict) else str(wp))
-        d = float(getattr(wp, "duration_seconds", 0.0) or (wp.get("duration_seconds", 0.0) if isinstance(wp, dict) else 5.0))
-        norm_wps.append((m or default_mov, max(0.5, d)))
-
-    tot_wp_dur = sum(d for _, d in norm_wps) or total_sec
-    scale = total_sec / tot_wp_dur
-    scaled_wps = [(m, d * scale) for m, d in norm_wps]
-
-    cum_z, cum_p, cum_t, cum_y = 0.0, 0.0, 0.0, 0.0
-    elapsed = 0.0
-    active_m, active_tau, active_dur = scaled_wps[-1][0], 1.0, scaled_wps[-1][1]
-
-    for m, d in scaled_wps:
-        if elapsed <= current_sec <= elapsed + d:
-            active_m, active_tau, active_dur = m, min(1.0, max(0.0, (current_sec - elapsed) / d)), d
+        return compute_perspective_corners(w, h, min(1.0, max(0.0, sec / max(0.1, tot))), mov, speed)
+    norm = [(getattr(wp, "motion", None) or (wp.get("motion") if isinstance(wp, dict) else str(wp)) or mov,
+             float(getattr(wp, "duration_seconds", 0.0) or (wp.get("duration_seconds", 0.0) if isinstance(wp, dict) else 5.0)))
+            for wp in waypoints]
+    scale = tot / (sum(d for _, d in norm) or tot)
+    wps = [(m, d * scale) for m, d in norm]
+    cum_z = cum_p = cum_t = cum_y = el = 0.0
+    act_m, act_tau, act_d = wps[-1][0], 1.0, wps[-1][1]
+    for m, d in wps:
+        if el <= sec <= el + d:
+            act_m, act_tau, act_d = m, min(1.0, max(0.0, (sec - el) / d)), d
             break
         dz, dp, dt, dy = _get_movement_deltas(m)
-        w_frac = d / total_sec
-        cum_z += dz * w_frac
-        cum_p += dp * w_frac
-        cum_t += dt * w_frac
-        cum_y += dy * w_frac
-        elapsed += d
+        cum_z += dz * (d / tot); cum_p += dp * (d / tot); cum_t += dt * (d / tot); cum_y += dy * (d / tot); el += d
+    dz, dp, dt, dy = _get_movement_deltas(act_m)
+    ea = (1.0 - (1.0 - act_tau) ** 3) * speed * (act_d / tot)
+    return _corners_from_deltas(w, h, cum_z + dz * ea, cum_p + dp * ea, cum_t + dt * ea, cum_y + dy * ea)
 
-    dz, dp, dt, dy = _get_movement_deltas(active_m)
-    active_easing = (1.0 - (1.0 - active_tau) ** 3) * speed_factor
-    w_active = active_dur / total_sec
-    tot_z, tot_p = cum_z + dz * w_active * active_easing, cum_p + dp * w_active * active_easing
-    tot_t, tot_y = cum_t + dt * w_active * active_easing, cum_y + dy * w_active * active_easing
-    return _corners_from_deltas(w, h, tot_z, tot_p, tot_t, tot_y)
-
-
-from src.scripts.local_micro_kinetics import (
-    prepare_micro_kinetics,
-    render_micro_kinetics_frame,
-)
-
-
-def render_perspective_drone_clip_sync(
-    image_path: Path | str, output_path: Path | str, duration_seconds: float = 5.0, fps: int = 24,
-    target_res: Tuple[int, int] = (3840, 2160), camera_movement: str = "slow_drone_forward",
-    speed_factor: float = 1.0, force_rerun: bool = False, camera_waypoints: Optional[list] = None,
-    kinetic_micro_zones: Optional[dict] = None,
-) -> Path:
-    """Render high-precision 4K 2.5D perspective drone shot on CPU via subpixel homography with waypoint choreography and micro-kinetics."""
-    out = Path(output_path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    if not force_rerun and out.is_file() and out.stat().st_size > 1000:
-        from src.services.ambient_export_service import get_media_duration
-        c_dur = get_media_duration(out) or 0.0
-        if abs(c_dur - float(duration_seconds)) <= 2.0:
-            return out
-
-    img = cv2.imread(str(image_path))
-    if img is None:
-        raise FileNotFoundError(f"Cannot load image for perspective drone shot: {image_path}")
 
 def enhance_image_ultra_clarity(img: np.ndarray, target_w: int, target_h: int) -> np.ndarray:
     """Enhance image with 4-stage optical pipeline: 4K Lanczos resize, bilateral denoising, LAB CLAHE, and dual-band MTF boost."""
@@ -132,88 +95,90 @@ def render_perspective_drone_clip_sync(
     speed_factor: float = 1.0, force_rerun: bool = False, camera_waypoints: Optional[list] = None,
     kinetic_micro_zones: Optional[dict] = None,
 ) -> Path:
-    """Render high-precision 4K 2.5D perspective drone shot on CPU via subpixel homography with waypoint choreography and micro-kinetics."""
+    """Render calm, steady 4K perspective drone shot on CPU via subpixel homography with micro-kinetics and broadcast FFmpeg."""
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     if not force_rerun and out.is_file() and out.stat().st_size > 1000:
-        from src.services.ambient_export_service import get_media_duration
-        c_dur = get_media_duration(out) or 0.0
-        if abs(c_dur - float(duration_seconds)) <= 2.0:
-            return out
+        return out
 
     img = cv2.imread(str(image_path))
     if img is None:
         raise FileNotFoundError(f"Cannot load image for perspective drone shot: {image_path}")
 
     target_w, target_h = target_res
-    img = enhance_image_ultra_clarity(img, target_w, target_h)
-
-    h, w, _ = img.shape
     total_frames = max(24, int(duration_seconds * fps))
     pts_canvas = np.float32([[0, 0], [target_w, 0], [0, target_h], [target_w, target_h]])
+
     clean_base, prepared_sprites = prepare_micro_kinetics(img, kinetic_micro_zones)
+    has_micro = bool(kinetic_micro_zones and kinetic_micro_zones.get("sprites"))
 
     temp_raw = out.parent / f"_raw_{out.stem}.mp4"
     temp_raw.unlink(missing_ok=True)
-
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(str(temp_raw), fourcc, fps, (target_w, target_h))
     if not writer.isOpened():
         raise RuntimeError(f"Could not open OpenCV VideoWriter for {temp_raw}")
 
     try:
+        h, w = clean_base.shape[:2]
         for i in range(total_frames):
             sec = i / float(fps)
-            pts_dst = compute_waypoint_perspective_corners(w, h, sec, duration_seconds, camera_waypoints, camera_movement, speed_factor)
-            matrix = cv2.getPerspectiveTransform(pts_dst, pts_canvas)
-            canvas = render_micro_kinetics_frame(clean_base, prepared_sprites, kinetic_micro_zones, i, total_frames)
+            pts_src = compute_waypoint_perspective_corners(w, h, sec, duration_seconds, camera_waypoints, camera_movement, speed_factor)
+            matrix = cv2.getPerspectiveTransform(pts_src, pts_canvas)
+            canvas = render_micro_kinetics_frame(clean_base, prepared_sprites, kinetic_micro_zones, i, total_frames) if has_micro else clean_base
             frame = cv2.warpPerspective(canvas, matrix, (target_w, target_h), flags=cv2.INTER_LANCZOS4)
             writer.write(frame)
     finally:
         writer.release()
 
-    # Convert to broadcast H.264 (yuv420p, CRF 15, -tune film, +faststart) for pristine lossless clarity
+    # Broadcast H.264 encode via FFmpeg (yuv420p, CRF 15, -tune film, +faststart)
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
     cmd_h264 = [
         ffmpeg_bin, "-y", "-i", str(temp_raw),
-        "-c:v", "libx264", "-preset", "veryfast",
-        "-crf", "15", "-tune", "film", "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart",
-        str(out),
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "15", "-tune", "film",
+        "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out),
     ]
     res = subprocess.run(cmd_h264, capture_output=True, text=True, creationflags=flags)
     temp_raw.unlink(missing_ok=True)
-
     if res.returncode != 0:
-        raise RuntimeError(f"FFmpeg H.264 encode failed for {out.name}: {res.stderr[-300:]}")
+        raise RuntimeError(f"FFmpeg encode failed for {out.name}: {res.stderr[-300:]}")
 
     return out
 
 
 async def render_perspective_drone_clip(
-    image_path: Path | str,
-    output_path: Path | str,
-    duration_seconds: float = 5.0,
-    fps: int = 24,
-    target_res: Tuple[int, int] = (3840, 2160),
-    camera_movement: str = "slow_drone_forward",
-    speed_factor: float = 1.0,
-    force_rerun: bool = False,
-    camera_waypoints: Optional[list] = None,
+    image_path: Path | str, output_path: Path | str, duration_seconds: float = 5.0, fps: int = 24,
+    target_res: Tuple[int, int] = (3840, 2160), camera_movement: str = "slow_drone_forward",
+    speed_factor: float = 1.0, force_rerun: bool = False, camera_waypoints: Optional[list] = None,
     kinetic_micro_zones: Optional[dict] = None,
 ) -> Path:
-    """Asynchronously render 4K perspective drone shot on a worker thread."""
+    """Asynchronously render calm 4K perspective drone shot on a worker thread."""
     return await asyncio.to_thread(
         render_perspective_drone_clip_sync,
-        image_path,
-        output_path,
-        duration_seconds,
-        fps,
-        target_res,
-        camera_movement,
-        speed_factor,
-        force_rerun,
-        camera_waypoints,
-        kinetic_micro_zones,
+        image_path, output_path, duration_seconds, fps, target_res,
+        camera_movement, speed_factor, force_rerun, camera_waypoints, kinetic_micro_zones,
     )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Studio Calm 4K Perspective Drone Engine")
+    parser.add_argument("-i", "--input", required=True, help="Input image path or directory")
+    parser.add_argument("-o", "--output", required=True, help="Output MP4 file or directory")
+    parser.add_argument("-d", "--duration", type=float, default=5.0, help="Shot duration in seconds")
+    parser.add_argument("--fps", type=int, default=24, help="Frames per second (default 24)")
+    parser.add_argument("--movement", default="slow_drone_forward", help="Movement style: slow_drone_forward, pan_left, etc.")
+    args = parser.parse_args()
+
+    in_p = Path(args.input)
+    out_p = Path(args.output)
+    if in_p.is_file():
+        render_perspective_drone_clip_sync(in_p, out_p, duration_seconds=args.duration, fps=args.fps, camera_movement=args.movement)
+        print(f"[Done] Rendered {out_p}")
+    elif in_p.is_dir():
+        out_p.mkdir(parents=True, exist_ok=True)
+        imgs = [f for f in in_p.iterdir() if f.suffix.lower() in (".jpg", ".jpeg", ".png")]
+        for img in imgs:
+            target = out_p / f"{img.stem}_perspective.mp4"
+            print(f"Rendering {img.name} -> {target.name}...")
+            render_perspective_drone_clip_sync(img, target, duration_seconds=args.duration, fps=args.fps, camera_movement=args.movement)

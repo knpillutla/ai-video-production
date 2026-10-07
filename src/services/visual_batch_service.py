@@ -264,8 +264,17 @@ class VisualBatchService:
         return list(await asyncio.gather(*[_process_single_motion(t) for t in tasks]))
 
     async def _render_local_fallback(self, img_path: Path, out_path: Path, duration_sec: float, movement: str = "slow_drone_forward", waypoints: Optional[list] = None, kinetic_micro_zones: Optional[dict] = None) -> Path:
-        """Deterministic 4K CPU perspective drone & camera homography motion engine ($0.00 spend)."""
-        logger.info(f"decision_motion_fallback: 4K CPU perspective drone for {out_path.name} (movement: {movement})")
+        """Deterministic 4K CPU motion engine ($0.00 spend): calm steady drone default, multi-angle on demand."""
+        m_lower = (movement or "").lower()
+        if any(k in m_lower for k in ("multi_angle", "skyline", "mission", "fpv_drone", "dynamic_drone")):
+            logger.info(f"decision_motion_fallback: 4K CPU multi-angle skyline drone for {out_path.name}")
+            from src.scripts.local_perspective_multiangle_drone import render_multiangle_drone_clip
+            return await render_multiangle_drone_clip(
+                image_path=img_path, output_path=out_path, duration_seconds=duration_sec,
+                fps=30, target_res=(3840, 2160), force_rerun=True, kinetic_micro_zones=kinetic_micro_zones,
+            )
+
+        logger.info(f"decision_motion_fallback: 4K CPU calm perspective drone for {out_path.name} (movement: {movement})")
         from src.scripts.local_perspective_drone import render_perspective_drone_clip
         return await render_perspective_drone_clip(
             image_path=img_path, output_path=out_path, duration_seconds=duration_sec,
