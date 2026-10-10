@@ -117,8 +117,9 @@ def get_ffmpeg_writer(output_path: str, width: int, height: int, fps: float):
         "-r", str(fps),
         "-i", "-",
         "-c:v", "libx264",
-        "-preset", "fast",
-        "-crf", "18",
+        "-preset", "veryfast",
+        "-crf", "20",
+        "-threads", "4",
         "-pix_fmt", "yuv420p",
         "-movflags", "+faststart",
         str(output_path),
@@ -131,12 +132,28 @@ def get_ffmpeg_writer(output_path: str, width: int, height: int, fps: float):
 
 
 def calculate_easing(t: float, curve: str = "cosine") -> float:
-    """Computes normalized progress curve s in [0.0, 1.0] from t in [0.0, 1.0]."""
-    if curve == "linear":
+    """Computes normalized progress curve s in [0.0, 1.0] from t in [0.0, 1.0].
+    Supports standard easing as well as directorial speed ramps:
+    - 'cosine': Smooth S-curve start and finish (default)
+    - 'cubic': Smooth cubic easing
+    - 'linear': Constant velocity
+    - 'ramp-up': Slow start, fast dynamic finish (exponential power 2.5)
+    - 'ramp-down': Fast energetic burst slowing into gentle glide
+    - 'whip': Fast midpoint whip with slow starts/stops (steep power S-curve)
+    """
+    curve_key = curve.lower()
+    if curve_key == "linear":
         return t
-    elif curve == "cosine":
+    elif curve_key == "cosine":
         return float(0.5 * (1.0 - np.cos(t * np.pi)))
-    else:  # "cubic"
+    elif curve_key == "ramp-up":
+        return float(t ** 2.5)
+    elif curve_key == "ramp-down":
+        return float(1.0 - (1.0 - t) ** 2.5)
+    elif curve_key == "whip":
+        # Steep sigmoidal whip: slow first 25%, explosive middle, slow final 25%
+        return float(t * t * t * (t * (t * 6.0 - 15.0) + 10.0))
+    else:  # "cubic" default fallback
         return float(t * t * (3.0 - 2.0 * t))
 
 
@@ -160,6 +177,22 @@ VALID_ACTIONS = {
     "--zoom-out": "zoom-out",
     "--zoom-in-stay": "stay",
     "--zoom-out-stay": "stay",
+    # Advanced drone cinematography motions:
+    "--roll-left": "roll-left",
+    "--roll-right": "roll-right",
+    "--bank-left": "roll-left",
+    "--bank-right": "roll-right",
+    "--level": "level",
+    "--pedestal-up": "pedestal-up",
+    "--pedestal-down": "pedestal-down",
+    "--crane-up": "pedestal-up",
+    "--crane-down": "pedestal-down",
+    "--drift-up-right": "drift-up-right",
+    "--drift-up-left": "drift-up-left",
+    "--drift-down-right": "drift-down-right",
+    "--drift-down-left": "drift-down-left",
+    "--orbit-left": "orbit-left",
+    "--orbit-right": "orbit-right",
     # Compound simultaneous reveal actions:
     "--pan-right-zoom-out": "pan-right-zoom-out",
     "--pan-left-zoom-out": "pan-left-zoom-out",
@@ -278,10 +311,12 @@ def precompute_sequence_matrices(
     else:
         cur_tilt = 0.0
 
+    cur_roll = 0.0  # Horizon roll in degrees (e.g. -3.0 to +3.0)
+
     timeline_states = []
 
-    def resolve_target(action_name, s_d, s_p, s_t):
-        t_d, t_p, t_t = s_d, s_p, s_t
+    def resolve_target(action_name, s_d, s_p, s_t, s_r):
+        t_d, t_p, t_t, t_r = s_d, s_p, s_t, s_r
         if action_name == "stay":
             pass
         elif action_name in ("dollyin", "zoom-in"):
@@ -292,19 +327,46 @@ def precompute_sequence_matrices(
             t_p = -1.0
         elif action_name == "pan-right":
             t_p = 0.0 if s_p < -0.05 else 1.0
-        elif action_name == "tilt-up":
+        elif action_name in ("tilt-up", "pedestal-up"):
             t_t = -1.0
-        elif action_name == "tilt-down":
+        elif action_name in ("tilt-down", "pedestal-down"):
             t_t = 0.0 if s_t < -0.05 else 1.0
+        elif action_name == "roll-left":
+            t_r = -3.5  # Subtle cinematic banked horizon turn
+        elif action_name == "roll-right":
+            t_r = 3.5
+        elif action_name == "level":
+            t_r = 0.0
+        elif action_name == "drift-up-right":
+            t_p = 1.0
+            t_t = -1.0
+        elif action_name == "drift-up-left":
+            t_p = -1.0
+            t_t = -1.0
+        elif action_name == "drift-down-right":
+            t_p = 1.0
+            t_t = 1.0
+        elif action_name == "drift-down-left":
+            t_p = -1.0
+            t_t = 1.0
+        elif action_name == "orbit-left":
+            # Parallax arc: Pan left while banking horizon right slightly
+            t_p = -0.75
+            t_r = 2.5
+        elif action_name == "orbit-right":
+            t_p = 0.75
+            t_r = -2.5
         elif action_name == "pan-right-zoom-out":
             t_d = 0.0
             t_p = 0.0
             t_t = 0.0
+            t_r = 0.0
         elif action_name == "pan-left-zoom-out":
             t_d = 0.0
             t_p = 0.0
             t_t = 0.0
-        return t_d, t_p, t_t
+            t_r = 0.0
+        return t_d, t_p, t_t, t_r
 
     for item in sequence:
         action_type = item[0]
@@ -319,40 +381,45 @@ def precompute_sequence_matrices(
             if num_frames <= 0:
                 continue
 
-            start_d, start_p, start_t = cur_depth, cur_pan, cur_tilt
+            start_d, start_p, start_t, start_r = cur_depth, cur_pan, cur_tilt, cur_roll
 
             # Prepare trajectory targets and durations for each active channel
             channels = []
             for sub_act, sub_dur in sub_actions:
-                tgt_d, tgt_p, tgt_t = resolve_target(sub_act, start_d, start_p, start_t)
+                tgt_d, tgt_p, tgt_t, tgt_r = resolve_target(sub_act, start_d, start_p, start_t, start_r)
                 sub_frames = max(1, int(round(sub_dur * fps)))
-                channels.append((sub_act, tgt_d, tgt_p, tgt_t, sub_frames))
+                channels.append((sub_act, tgt_d, tgt_p, tgt_t, tgt_r, sub_frames))
 
             for f in range(num_frames):
                 d_val = start_d
                 p_val = start_p
                 t_val = start_t
+                r_val = start_r
 
-                for sub_act, tgt_d, tgt_p, tgt_t, sub_frames in channels:
+                for sub_act, tgt_d, tgt_p, tgt_t, tgt_r, sub_frames in channels:
                     prog = min(1.0, f / max(1, sub_frames - 1)) if sub_frames > 1 else 1.0
                     e = calculate_easing(prog, curve)
                     if sub_act in ("dollyin", "dollyout", "zoom-in", "zoom-out", "pan-right-zoom-out", "pan-left-zoom-out"):
                         d_val = start_d + e * (tgt_d - start_d)
-                    if sub_act in ("pan-left", "pan-right", "pan-right-zoom-out", "pan-left-zoom-out"):
+                    if sub_act in ("pan-left", "pan-right", "drift-up-right", "drift-up-left", "drift-down-right", "drift-down-left", "orbit-left", "orbit-right", "pan-right-zoom-out", "pan-left-zoom-out"):
                         p_val = start_p + e * (tgt_p - start_p)
-                    if sub_act in ("tilt-up", "tilt-down", "pan-right-zoom-out", "pan-left-zoom-out"):
+                    if sub_act in ("tilt-up", "tilt-down", "pedestal-up", "pedestal-down", "drift-up-right", "drift-up-left", "drift-down-right", "drift-down-left", "pan-right-zoom-out", "pan-left-zoom-out"):
                         t_val = start_t + e * (tgt_t - start_t)
+                    if sub_act in ("roll-left", "roll-right", "level", "orbit-left", "orbit-right"):
+                        r_val = start_r + e * (tgt_r - start_r)
 
-                timeline_states.append((d_val, p_val, t_val))
+                timeline_states.append((d_val, p_val, t_val, r_val))
 
             # Update final camera state after parallel block
-            for sub_act, tgt_d, tgt_p, tgt_t, _ in channels:
+            for sub_act, tgt_d, tgt_p, tgt_t, tgt_r, _ in channels:
                 if sub_act in ("dollyin", "dollyout", "zoom-in", "zoom-out", "pan-right-zoom-out", "pan-left-zoom-out"):
                     cur_depth = tgt_d
-                if sub_act in ("pan-left", "pan-right", "pan-right-zoom-out", "pan-left-zoom-out"):
+                if sub_act in ("pan-left", "pan-right", "drift-up-right", "drift-up-left", "drift-down-right", "drift-down-left", "orbit-left", "orbit-right", "pan-right-zoom-out", "pan-left-zoom-out"):
                     cur_pan = tgt_p
-                if sub_act in ("tilt-up", "tilt-down", "pan-right-zoom-out", "pan-left-zoom-out"):
+                if sub_act in ("tilt-up", "tilt-down", "pedestal-up", "pedestal-down", "drift-up-right", "drift-up-left", "drift-down-right", "drift-down-left", "pan-right-zoom-out", "pan-left-zoom-out"):
                     cur_tilt = tgt_t
+                if sub_act in ("roll-left", "roll-right", "level", "orbit-left", "orbit-right"):
+                    cur_roll = tgt_r
 
         else:
             action, duration_sec = item
@@ -360,8 +427,8 @@ def precompute_sequence_matrices(
             if num_frames <= 0:
                 continue
 
-            start_d, start_p, start_t = cur_depth, cur_pan, cur_tilt
-            target_d, target_p, target_t = resolve_target(action, start_d, start_p, start_t)
+            start_d, start_p, start_t, start_r = cur_depth, cur_pan, cur_tilt, cur_roll
+            target_d, target_p, target_t, target_r = resolve_target(action, start_d, start_p, start_t, start_r)
 
             for f in range(num_frames):
                 prog = f / max(1, num_frames - 1) if num_frames > 1 else 1.0
@@ -369,45 +436,55 @@ def precompute_sequence_matrices(
                 d = start_d + e * (target_d - start_d)
                 p = start_p + e * (target_p - start_p)
                 t = start_t + e * (target_t - start_t)
-                timeline_states.append((d, p, t))
+                r = start_r + e * (target_r - start_r)
+                timeline_states.append((d, p, t, r))
 
             cur_depth = target_d
             cur_pan = target_p
             cur_tilt = target_t
+            cur_roll = target_r
 
     # Convert state timeline into 2D perspective / affine transformation matrices
     matrices = []
     min_scale = max(0.20, 1.0 - max_depth)
 
-    for d, p, t in timeline_states:
+    for d, p, t, r in timeline_states:
         # Scale for dolly/zoom: from 1.0 (wide panorama) down to min_scale (tight framing)
         scale = 1.0 - d * (1.0 - min_scale)
         cw = base_w * scale
         ch = cw / target_aspect
 
-        # Maximum available pan and tilt travel inside the photo
-        # When zoomed in (scale is small), we have full room to slide across to the very edge of the image!
         avail_pan_x = (float(w) - cw) / 2.0
         avail_tilt_y = (float(h) - ch) / 2.0
 
         cx = base_cx + (p * avail_pan_x)
         cy = base_cy + (t * avail_tilt_y)
 
-        # Ensure framing remains strictly within the image boundary
         half_w = cw / 2.0
         half_h = ch / 2.0
         cx = max(half_w, min(float(w) - half_w, cx))
         cy = max(half_h, min(float(h) - half_h, cy))
 
-        src_quad = np.array(
+        # Quad corners relative to center
+        corners = np.array(
             [
-                [cx - half_w, cy - half_h],
-                [cx + half_w, cy - half_h],
-                [cx + half_w, cy + half_h],
-                [cx - half_w, cy + half_h],
+                [-half_w, -half_h],
+                [half_w, -half_h],
+                [half_w, half_h],
+                [-half_w, half_h],
             ],
             dtype=np.float32,
         )
+
+        # Apply subtle aerodynamic horizon roll / bank if non-zero
+        if abs(r) > 0.01:
+            rad = np.radians(r)
+            cos_a = np.cos(rad)
+            sin_a = np.sin(rad)
+            rot_mat = np.array([[cos_a, -sin_a], [sin_a, cos_a]], dtype=np.float32)
+            corners = corners @ rot_mat.T
+
+        src_quad = corners + np.array([cx, cy], dtype=np.float32)
 
         matrix = cv2.getPerspectiveTransform(src_quad, dst_rect)
         matrices.append(matrix)
@@ -609,15 +686,16 @@ if __name__ == "__main__":
                         help="Zoom depth scale for close-up framing (default: 0.50 for intimate detail framing)")
     parser.add_argument("--speed", type=float, default=1.0, 
                         help="Speed multiplier (default: 1.0)")
-    parser.add_argument("--curve", choices=["cosine", "cubic", "linear"], default="cosine", 
-                        help="Motion easing curve: cosine (default: smoothest glide), cubic, linear")
+    parser.add_argument("--curve", choices=["cosine", "cubic", "linear", "ramp-up", "ramp-down", "whip"], default="cosine", 
+                        help="Motion curve: cosine (default), cubic, linear, ramp-up (speed up), ramp-down (slow down), whip (fast mid-sweep)")
     parser.add_argument("--rain", action="store_true", help="Add authentic procedural cinematic rainfall & atmospheric mist")
     parser.add_argument("--rain-intensity", choices=["light", "medium", "heavy"], default="medium", 
                         help="Rain intensity: light, medium, heavy")
     parser.add_argument("--fps", type=float, default=30.0, help="Frames per second (default: 30.0)")
     parser.add_argument("--res", choices=["4k", "1080p"], default="4k", help="Output resolution: 4k (default: 3840x2160) or 1080p")
-    parser.add_argument("--fast", action="store_true", help="Fast linear interpolation")
+    parser.add_argument("--lanczos", action="store_true", help="High-precision Lanczos4 interpolation (slower)")
     parser.add_argument("--cubic", action="store_true", help="Bicubic interpolation")
+    parser.add_argument("--fast", action="store_true", help="Bilinear interpolation (default: fast and smooth)")
 
     args, unknown = parser.parse_known_args()
 
@@ -637,7 +715,7 @@ if __name__ == "__main__":
         print("    --stay 5")
         sys.exit(1)
 
-    interp = "linear" if args.fast else ("cubic" if args.cubic else "lanczos")
+    interp = "lanczos" if args.lanczos else ("cubic" if args.cubic else "linear")
 
     process_drone_flyovers(
         input_dir=args.input,

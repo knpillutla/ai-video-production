@@ -1,3 +1,5 @@
+inside palaces
+
 create live channels for the below
 -- music channel
 -- relaxing rain channel
