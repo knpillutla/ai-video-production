@@ -68,7 +68,7 @@ def onnx_confirm_patch(patch: np.ndarray, target_label: str = "bird", min_conf: 
 
 
 class CinematicRainEngine:
-    """Procedural multi-layer natural rain engine: organic translucent drizzle, stochastic respawn, and soft mist."""
+    """High-performance vectorized procedural rain engine: organic translucent drizzle, wind slant, and soft mist."""
 
     def __init__(self, width: int, height: int, intensity: str = "light", wind_tilt: float = 4.0, source_img: Optional[np.ndarray] = None):
         self.w = width
@@ -79,35 +79,30 @@ class CinematicRainEngine:
         scale_factor = width / 1920.0
         self.scale = scale_factor
 
-        # Tiered physical presets calibrated to natural organic rain:
-        # - Balanced length (moderate height, avoiding tall stripes) + dense pouring curtain
         configs = {
             "light": {
-                "drops": 450,
-                "bg_len": (6, 11),   "bg_spd": (14, 20),
-                "mg_len": (11, 18),  "mg_spd": (18, 26),
-                "fg_len": (18, 28),  "fg_spd": (24, 34),
-                "mist_alpha": 0.02,  "rain_alpha": 0.18,
-                "splash_prob": 0.01, "wind": 2.5,
+                "drops": 600,
+                "bg_len": (8, 14),   "bg_spd": (16, 24),
+                "mg_len": (14, 22),  "mg_spd": (22, 30),
+                "fg_len": (22, 34),  "fg_spd": (28, 40),
+                "mist_alpha": 0.02,  "rain_alpha": 0.22,
+                "wind": 2.5,
             },
             "medium": {
-                "drops": 5800,       # Rich continuous natural rain
+                "drops": 4500,
                 "bg_len": (20, 32),  "bg_spd": (28, 38),
                 "mg_len": (42, 64),  "mg_spd": (44, 58),
                 "fg_len": (68, 96),  "fg_spd": (58, 76),
                 "mist_alpha": 0.08,  "rain_alpha": 0.40,
-                "splash_prob": 0.08, "wind": 5.5,
-                "ripple_rate": 4,    "max_ripple_r": 20.0,
+                "wind": 5.5,
             },
             "heavy": {
-                # Category 5 Severe Storm / Tropical Hurricane Downpour
-                "drops": 19500,      # Wall-of-water deluge
-                "bg_len": (45, 80),   "bg_spd": (60, 95),
-                "mg_len": (90, 160),  "mg_spd": (100, 155),
-                "fg_len": (160, 260), "fg_spd": (145, 210),
-                "mist_alpha": 0.22,  "rain_alpha": 0.55,
-                "splash_prob": 0.45, "wind": 16.0,   # Strong wind-driven slant
-                "ripple_rate": 16,   "max_ripple_r": 36.0, # Dense, overlapping heavy water rings
+                "drops": 10500,
+                "bg_len": (40, 75),   "bg_spd": (55, 85),
+                "mg_len": (80, 140),  "mg_spd": (85, 135),
+                "fg_len": (140, 220), "fg_spd": (120, 180),
+                "mist_alpha": 0.20,   "rain_alpha": 0.55,
+                "wind": 14.0,
             },
         }
         cfg = configs.get(self.intensity, configs["medium"])
@@ -115,71 +110,58 @@ class CinematicRainEngine:
         self.wind_tilt = cfg["wind"]
         total_drops = cfg["drops"]
 
-        # Calculate left/right margin to compensate for wind-driven slant
-        # A positive wind tilt pushes drops rightward as they fall, leaving a bare triangle on the left
-        # unless drops originate from negative X coordinates upwind.
         margin = max(abs(self.wind_tilt * scale_factor) * (height / 20.0), width * 0.25)
         self.spawn_x_min = -margin if self.wind_tilt > 0 else 0
         self.spawn_x_max = width if self.wind_tilt > 0 else (width + margin)
+        self.margin = margin
 
-        # Layer 1: Background Micro-Drizzle (60% of drops)
-        self.bg_drops = []
-        for _ in range(int(total_drops * 0.60)):
-            x = random.uniform(self.spawn_x_min, self.spawn_x_max)
-            y = random.uniform(-100 * scale_factor, height)
-            length = random.uniform(*cfg["bg_len"]) * scale_factor
-            speed = random.uniform(*cfg["bg_spd"]) * scale_factor
-            jitter = random.uniform(0.75, 1.25)
-            self.bg_drops.append([x, y, length, speed, jitter])
+        # Layer 1: Background Micro-Drizzle (55% of drops)
+        N_bg = int(total_drops * 0.55)
+        self.bg_drops = np.zeros((N_bg, 5), dtype=np.float32)
+        self._init_drops(self.bg_drops, cfg["bg_len"], cfg["bg_spd"])
 
-        # Layer 2: Midground Natural Rain (30% of drops)
-        self.mg_drops = []
-        for _ in range(int(total_drops * 0.30)):
-            x = random.uniform(self.spawn_x_min, self.spawn_x_max)
-            y = random.uniform(-100 * scale_factor, height)
-            length = random.uniform(*cfg["mg_len"]) * scale_factor
-            speed = random.uniform(*cfg["mg_spd"]) * scale_factor
-            jitter = random.uniform(0.80, 1.20)
-            self.mg_drops.append([x, y, length, speed, jitter])
+        # Layer 2: Midground Natural Rain (35% of drops)
+        N_mg = int(total_drops * 0.35)
+        self.mg_drops = np.zeros((N_mg, 5), dtype=np.float32)
+        self._init_drops(self.mg_drops, cfg["mg_len"], cfg["mg_spd"])
 
-        # Layer 3: Occasional Foreground Droplets (10% of drops)
-        self.fg_drops = []
-        for _ in range(int(total_drops * 0.10)):
-            x = random.uniform(self.spawn_x_min, self.spawn_x_max)
-            y = random.uniform(-100 * scale_factor, height)
-            length = random.uniform(*cfg["fg_len"]) * scale_factor
-            speed = random.uniform(*cfg["fg_spd"]) * scale_factor
-            jitter = random.uniform(0.85, 1.15)
-            self.fg_drops.append([x, y, length, speed, jitter])
+        # Layer 3: Foreground Droplets (10% of drops)
+        N_fg = int(total_drops * 0.10)
+        self.fg_drops = np.zeros((N_fg, 5), dtype=np.float32)
+        self._init_drops(self.fg_drops, cfg["fg_len"], cfg["fg_spd"])
 
-        # Ground / Water ripples: [x, y, radius, alpha, max_radius, is_water]
-        self.splashes = []
-        self.ground_y = int(height * 0.52)  # Water plane starts around mid-frame in wide perspectives
-
-        # Dynamic overcast storm sky & sea vapor layer
-        # Creates a moody dark stormy atmosphere (dimming sunny sky + low marine haze)
+        # Overcast storm sky mist layer
         gradient = np.linspace(0.85, 1.15, height).reshape(height, 1, 1)
         storm_mist = np.full((height, width, 3), (150, 165, 175), dtype=np.float32) * gradient
         self.mist_layer = np.clip(storm_mist, 0, 255).astype(np.uint8)
 
-        # Autonomous Interior Sanctuary vs. Exterior Window Detection:
-        # Default: 1.0 (100% full screen rain for landscapes/nature like sicily and hyd1)
         self.weather_mask = None
+        self.inv_weather_mask = None
         if source_img is not None:
             self._build_weather_mask(source_img)
 
+    def _init_drops(self, arr: np.ndarray, len_range, spd_range):
+        N = len(arr)
+        arr[:, 0] = np.random.uniform(self.spawn_x_min, self.spawn_x_max, N)
+        arr[:, 1] = np.random.uniform(-100 * self.scale, self.h, N)
+        arr[:, 2] = np.random.uniform(len_range[0], len_range[1], N) * self.scale
+        arr[:, 3] = np.random.uniform(spd_range[0], spd_range[1], N) * self.scale
+        arr[:, 4] = np.random.uniform(0.80, 1.20, N)
+
     def _build_weather_mask(self, img: np.ndarray):
-        """Autonomously detects if the scene has an interior sanctuary:
-        - Alpine Tent: Dome fabric and interior gear surrounding an arched window flap
-        - Cozy Room / Cabin: Warm wooden bookshelves/bed/walls framing a glass window
-        - Open Landscape: 100% full-screen weather
-        """
         h, w = self.h, self.w
-        src_h, src_w = img.shape[:2]
         resized = cv2.resize(img, (w, h), interpolation=cv2.INTER_LINEAR)
         hsv = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
 
-        # 1. Check for Cozy Bedroom / Cabin Window (Left wall/bookshelf + bottom bed):
+        # 0. Outdoor Landscape Guard: If upper horizon has bright open sky, weather covers full screen edge-to-edge
+        tl_sky = float(np.mean(hsv[:int(h * 0.35), :int(w * 0.35), 2] > 100))
+        top_sky = float(np.mean(hsv[:int(h * 0.20), :, 2] > 100))
+        if tl_sky > 0.65 or top_sky > 0.70:
+            self.weather_mask = None
+            self.inv_weather_mask = None
+            return
+
+        # 1. Check for Cozy Bedroom / Cabin Window
         left_hsv = hsv[:, :int(w * 0.35)]
         is_warm_interior = float(np.mean((left_hsv[:, :, 0] < 25) & (left_hsv[:, :, 1] > 60))) > 0.42
 
@@ -191,166 +173,325 @@ class CinematicRainEngine:
             pts = np.array([[0, int(h * 0.70)], [post_x, int(h * 0.72)], [int(w * 0.62), h], [0, h]], np.int32)
             cv2.fillPoly(bed_mask, [pts], 255)
             mask[bed_mask == 255] = 0.0
-            self.weather_mask = cv2.GaussianBlur(mask, (21, 21), 5)[:, :, np.newaxis]
+            self.weather_mask = cv2.GaussianBlur(mask, (21, 21), 5)
+            self.inv_weather_mask = 1.0 - self.weather_mask
             print(f" -> [Sanctuary Guard] Cozy Bedroom / Cabin sanctuary detected! Weather masked exclusively to exterior window (post @ x={post_x}).")
             return
 
-        # 2. Check for Alpine / Expedition Tent Sanctuary:
-        # High-saturation orange/red fabric dome along the top and sides (H: 5-24, S > 100)
+        # 2. Check for Alpine / Expedition Tent Sanctuary
         orange_dome = (hsv[:, :, 0] >= 5) & (hsv[:, :, 0] <= 24) & (hsv[:, :, 1] > 100)
         top_orange = float(np.mean(orange_dome[:int(h * 0.20), :]))
         if top_orange > 0.40:
-            # Alpine Tent Detected: Window is the mountain opening in the center
             tent_interior = orange_dome | (hsv[:, :, 2] < 50)
             mask = (~tent_interior).astype(np.float32)
             kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (int(w * 0.02), int(h * 0.02)))
             mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-            self.weather_mask = cv2.GaussianBlur(mask, (31, 31), 8)[:, :, np.newaxis]
+            self.weather_mask = cv2.GaussianBlur(mask, (31, 31), 8)
+            self.inv_weather_mask = 1.0 - self.weather_mask
             print(" -> [Sanctuary Guard] Alpine Tent sanctuary detected! Weather masked exclusively outside the tent opening.")
             return
 
-        # 3. Pure Outdoor Landscape (Sicily ocean, courtyard, open valley):
         self.weather_mask = None
-
-    def _draw_feathered_drop(self, canvas: np.ndarray, x: float, y: float, length: float, tilt: float, base_bgr: tuple):
-        """Renders an organic raindrop with soft tapered tail and natural droplet head brightness."""
-        # Tail (top 50%): faint, wispy
-        p_top = (int(x), int(y))
-        p_mid = (int(x + tilt * 0.5), int(y + length * 0.5))
-        tail_bgr = (int(base_bgr[0] * 0.45), int(base_bgr[1] * 0.45), int(base_bgr[2] * 0.45))
-        cv2.line(canvas, p_top, p_mid, tail_bgr, 1, cv2.LINE_AA)
-
-        # Head (bottom 50%): primary droplet mass
-        p_bot = (int(x + tilt), int(y + length))
-        cv2.line(canvas, p_mid, p_bot, base_bgr, 1, cv2.LINE_AA)
+        self.inv_weather_mask = None
 
     def render(self, frame: np.ndarray) -> np.ndarray:
         h, w = self.h, self.w
         rain_canvas = np.zeros((h, w, 3), dtype=np.uint8)
         fg_canvas = np.zeros((h, w, 3), dtype=np.uint8)
-        ripple_canvas = np.zeros((h, w, 3), dtype=np.uint8)
         base_tilt = self.wind_tilt * self.scale
-        cfg = self.cfg
-        margin = max(abs(base_tilt) * (h / 20.0), w * 0.25)
-        x_max_bound = w + margin if self.wind_tilt > 0 else w
+        margin = self.margin
 
         # 1. Background Micro-Drizzle
-        for d in self.bg_drops:
-            x, y, length, speed, jitter = d
-            t = base_tilt * 0.5 * jitter
-            pt1 = (int(x), int(y))
-            pt2 = (int(x + t), int(y + length))
-            cv2.line(rain_canvas, pt1, pt2, (120, 135, 150), 1, cv2.LINE_AA)
-            d[1] += speed
-            d[0] += t
-            if d[1] > h or d[0] > (w + margin):
-                d[1] = random.uniform(-length * 2, -length)
-                d[0] = random.uniform(self.spawn_x_min, self.spawn_x_max)
+        t_bg = base_tilt * 0.5 * self.bg_drops[:, 4]
+        self.bg_drops[:, 0] += t_bg
+        self.bg_drops[:, 1] += self.bg_drops[:, 3]
+        reset_bg = (self.bg_drops[:, 1] > h) | (self.bg_drops[:, 0] > (w + margin))
+        if np.any(reset_bg):
+            cnt = np.count_nonzero(reset_bg)
+            self.bg_drops[reset_bg, 1] = np.random.uniform(-self.bg_drops[reset_bg, 2] * 2, -self.bg_drops[reset_bg, 2], cnt)
+            self.bg_drops[reset_bg, 0] = np.random.uniform(self.spawn_x_min, self.spawn_x_max, cnt)
 
-        # 2. Midground Rain (Feathered with natural wind turbulence)
-        for d in self.mg_drops:
-            x, y, length, speed, jitter = d
-            t = base_tilt * 0.85 * jitter
-            self._draw_feathered_drop(rain_canvas, x, y, length, t, (175, 190, 205))
-            d[1] += speed
-            d[0] += t
-            if d[1] > h or d[0] > (w + margin):
-                d[1] = random.uniform(-length * 2, -length)
-                d[0] = random.uniform(self.spawn_x_min, self.spawn_x_max)
-                if random.random() < cfg["splash_prob"]:
-                    sy = int(self.ground_y + random.uniform(0, h - self.ground_y))
-                    # In water / lower half: expanding circular ripples with perspective tilt (0.32)
-                    max_r = random.uniform(6.0, 18.0) * self.scale
-                    self.splashes.append([int(d[0]), sy, 1.0, 0.45, max_r])
+        bx1 = self.bg_drops[:, 0].astype(np.int32)
+        by1 = self.bg_drops[:, 1].astype(np.int32)
+        bx2 = (self.bg_drops[:, 0] + t_bg).astype(np.int32)
+        by2 = (self.bg_drops[:, 1] + self.bg_drops[:, 2]).astype(np.int32)
+        b_pts = np.stack([np.stack([bx1, by1], axis=1), np.stack([bx2, by2], axis=1)], axis=1)
+        cv2.polylines(rain_canvas, b_pts, isClosed=False, color=(125, 140, 155), thickness=1, lineType=cv2.LINE_AA)
 
-        # 3. Foreground Droplets (Rendered to separate layer for soft lens blur)
-        for d in self.fg_drops:
-            x, y, length, speed, jitter = d
-            t = base_tilt * jitter
-            self._draw_feathered_drop(fg_canvas, x, y, length, t, (215, 230, 245))
-            d[1] += speed
-            d[0] += t
-            if d[1] > h or d[0] > (w + margin):
-                d[1] = random.uniform(-length * 2, -length)
-                d[0] = random.uniform(self.spawn_x_min, self.spawn_x_max)
+        # 2. Midground Rain
+        t_mg = base_tilt * 0.85 * self.mg_drops[:, 4]
+        self.mg_drops[:, 0] += t_mg
+        self.mg_drops[:, 1] += self.mg_drops[:, 3]
+        reset_mg = (self.mg_drops[:, 1] > h) | (self.mg_drops[:, 0] > (w + margin))
+        if np.any(reset_mg):
+            cnt = np.count_nonzero(reset_mg)
+            self.mg_drops[reset_mg, 1] = np.random.uniform(-self.mg_drops[reset_mg, 2] * 2, -self.mg_drops[reset_mg, 2], cnt)
+            self.mg_drops[reset_mg, 0] = np.random.uniform(self.spawn_x_min, self.spawn_x_max, cnt)
 
-        # Apply soft 3x3 optical camera lens blur to foreground drops
+        mx1 = self.mg_drops[:, 0].astype(np.int32)
+        my1 = self.mg_drops[:, 1].astype(np.int32)
+        mx2 = (self.mg_drops[:, 0] + t_mg).astype(np.int32)
+        my2 = (self.mg_drops[:, 1] + self.mg_drops[:, 2]).astype(np.int32)
+        m_pts = np.stack([np.stack([mx1, my1], axis=1), np.stack([mx2, my2], axis=1)], axis=1)
+        cv2.polylines(rain_canvas, m_pts, isClosed=False, color=(175, 190, 205), thickness=1, lineType=cv2.LINE_AA)
+
+        # 3. Foreground Rain
+        t_fg = base_tilt * self.fg_drops[:, 4]
+        self.fg_drops[:, 0] += t_fg
+        self.fg_drops[:, 1] += self.fg_drops[:, 3]
+        reset_fg = (self.fg_drops[:, 1] > h) | (self.fg_drops[:, 0] > (w + margin))
+        if np.any(reset_fg):
+            cnt = np.count_nonzero(reset_fg)
+            self.fg_drops[reset_fg, 1] = np.random.uniform(-self.fg_drops[reset_fg, 2] * 2, -self.fg_drops[reset_fg, 2], cnt)
+            self.fg_drops[reset_fg, 0] = np.random.uniform(self.spawn_x_min, self.spawn_x_max, cnt)
+
+        fx1 = self.fg_drops[:, 0].astype(np.int32)
+        fy1 = self.fg_drops[:, 1].astype(np.int32)
+        fx2 = (self.fg_drops[:, 0] + t_fg).astype(np.int32)
+        fy2 = (self.fg_drops[:, 1] + self.fg_drops[:, 2]).astype(np.int32)
+        f_pts = np.stack([np.stack([fx1, fy1], axis=1), np.stack([fx2, fy2], axis=1)], axis=1)
+        cv2.polylines(fg_canvas, f_pts, isClosed=False, color=(215, 230, 245), thickness=2, lineType=cv2.LINE_AA)
+
         fg_canvas = cv2.GaussianBlur(fg_canvas, (3, 3), 0.8)
         rain_canvas = cv2.add(rain_canvas, fg_canvas)
 
-        # 4. Water Rings & Expanding Ocean Ripples
-        active_splashes = []
-        for s in self.splashes:
-            sx, sy, radius, s_alpha, max_r = s
-            if radius < max_r and s_alpha > 0.04:
-                # Outer water ripple ring (perspective flattened circle: 1.0 : 0.32)
-                r_int = int(radius)
-                ry_int = max(1, int(radius * 0.32))
-                ring_color = (int(185 * s_alpha), int(205 * s_alpha), int(225 * s_alpha))
-                cv2.ellipse(
-                    ripple_canvas,
-                    (sx, sy),
-                    (r_int, ry_int),
-                    0, 0, 360,
-                    ring_color,
-                    1,
-                    cv2.LINE_AA,
-                )
-                # Inner secondary concentric wave for larger ripples
-                if radius > 5.0 * self.scale:
-                    inner_rx = int(radius * 0.55)
-                    inner_ry = max(1, int(inner_rx * 0.32))
-                    inner_col = (int(140 * s_alpha), int(160 * s_alpha), int(180 * s_alpha))
-                    cv2.ellipse(
-                        ripple_canvas,
-                        (sx, sy),
-                        (inner_rx, inner_ry),
-                        0, 0, 360,
-                        inner_col,
-                        1,
-                        cv2.LINE_AA,
-                    )
-                # Splash white droplet crown center
-                if radius < 4.0 * self.scale:
-                    cv2.circle(ripple_canvas, (sx, sy), 1, (220, 235, 250), -1)
-
-                active_splashes.append([sx, sy, radius + 1.2 * self.scale, s_alpha * 0.88, max_r])
-        self.splashes = active_splashes
-
-        # 5. Composite: overcast storm atmosphere + water ripples + rain curtain
-        mist_a = cfg["mist_alpha"]
-        rain_a = cfg["rain_alpha"]
-        # Blend in atmospheric overcast storm sky
+        mist_a = self.cfg["mist_alpha"]
+        rain_a = self.cfg["rain_alpha"]
         misted_frame = cv2.addWeighted(frame, 1.0 - mist_a, self.mist_layer, mist_a, 0)
-        # Add water ripple reflections
-        with_ripples = cv2.add(misted_frame, ripple_canvas)
-        # Overlay falling rain curtain
-        weathered = cv2.addWeighted(with_ripples, 1.0, rain_canvas, rain_a, 0)
+        weathered = cv2.addWeighted(misted_frame, 1.0, rain_canvas, rain_a, 0)
 
-        # 6. Sanctuary Mask Guard:
-        # If an interior sanctuary exists (tent, cabin, bedroom), keep interior 100% dry
         if self.weather_mask is not None:
-            # Weathered outside window + original clean frame inside room
-            return np.clip(frame.astype(np.float32) * (1.0 - self.weather_mask) + weathered.astype(np.float32) * self.weather_mask, 0, 255).astype(np.uint8)
+            return cv2.blendLinear(frame, weathered, self.inv_weather_mask, self.weather_mask)
+        return weathered
+
+
+class CinematicSnowEngine:
+    """High-performance vectorized procedural snowfall engine: drifting flurries, lateral flutter, and soft bokeh."""
+
+    def __init__(self, width: int, height: int, intensity: str = "medium", wind: float = 3.5, source_img: Optional[np.ndarray] = None):
+        self.w, self.h = width, height
+        self.scale = width / 1920.0
+        self.intensity = intensity.lower()
+
+        configs = {
+            "light": {
+                "flakes": 1200,
+                "bg_r": (0.7, 1.3),  "bg_spd": (3.5, 6.0),   "bg_alpha": 0.35,
+                "mg_r": (1.2, 2.0),  "mg_spd": (5.0, 9.0),   "mg_alpha": 0.55,
+                "fg_r": (2.2, 3.8),  "fg_spd": (8.0, 14.0),  "fg_alpha": 0.35,
+                "flutter_amp": 20.0, "frost_alpha": 0.03,    "wind": 1.5,
+            },
+            "medium": {
+                "flakes": 2800,
+                "bg_r": (0.8, 1.4),  "bg_spd": (4.0, 7.5),   "bg_alpha": 0.40,
+                "mg_r": (1.4, 2.2),  "mg_spd": (6.5, 11.5),  "mg_alpha": 0.65,
+                "fg_r": (2.5, 4.2),  "fg_spd": (10.0, 18.0), "fg_alpha": 0.40,
+                "flutter_amp": 35.0, "frost_alpha": 0.06,    "wind": 3.0,
+            },
+            "heavy": {
+                "flakes": 6500,
+                "bg_r": (0.9, 1.6),  "bg_spd": (6.0, 11.0),  "bg_alpha": 0.50,
+                "mg_r": (1.6, 2.6),  "mg_spd": (9.0, 16.0),  "mg_alpha": 0.75,
+                "fg_r": (2.8, 4.8),  "fg_spd": (14.0, 24.0), "fg_alpha": 0.45,
+                "flutter_amp": 60.0, "frost_alpha": 0.12,    "wind": 6.5,
+            },
+        }
+        cfg = configs.get(self.intensity, configs["medium"])
+        self.cfg = cfg
+        self.wind = cfg["wind"] * self.scale
+        total_flakes = cfg["flakes"]
+
+        # 1. Background micro flurries (55%)
+        N_bg = int(total_flakes * 0.55)
+        self.bg_flakes = np.zeros((N_bg, 7), dtype=np.float32)
+        self._init_flakes(self.bg_flakes, cfg["bg_r"], cfg["bg_spd"], cfg["flutter_amp"] * 0.5)
+
+        # 2. Midground drifting flakes (35%)
+        N_mg = int(total_flakes * 0.35)
+        self.mg_flakes = np.zeros((N_mg, 7), dtype=np.float32)
+        self._init_flakes(self.mg_flakes, cfg["mg_r"], cfg["mg_spd"], cfg["flutter_amp"])
+
+        # 3. Foreground soft-focus bokeh flakes (10%)
+        N_fg = int(total_flakes * 0.10)
+        self.fg_flakes = np.zeros((N_fg, 7), dtype=np.float32)
+        self._init_flakes(self.fg_flakes, cfg["fg_r"], cfg["fg_spd"], cfg["flutter_amp"] * 1.4)
+
+        # Frost atmospheric tone layer
+        gradient = np.linspace(1.08, 0.94, height).reshape(height, 1, 1)
+        frost_img = np.full((height, width, 3), (225, 235, 245), dtype=np.float32) * gradient
+        self.frost_layer = np.clip(frost_img, 0, 255).astype(np.uint8)
+
+        self.weather_mask = None
+        self.inv_weather_mask = None
+        if source_img is not None:
+            self._build_weather_mask(source_img)
+
+    def _init_flakes(self, arr: np.ndarray, r_range, spd_range, flutter_amp):
+        N = len(arr)
+        arr[:, 0] = np.random.uniform(-self.w * 0.15, self.w * 1.15, N)
+        arr[:, 1] = np.random.uniform(-80, self.h, N)
+        arr[:, 2] = np.random.uniform(r_range[0], r_range[1], N) * self.scale
+        arr[:, 3] = np.random.uniform(spd_range[0], spd_range[1], N) * self.scale
+        arr[:, 4] = np.random.uniform(flutter_amp * 0.7, flutter_amp * 1.3, N) * self.scale
+        arr[:, 5] = np.random.uniform(0.04, 0.10, N)
+        arr[:, 6] = np.random.uniform(0, 2 * np.pi, N)
+
+    def _build_weather_mask(self, img: np.ndarray):
+        h, w = self.h, self.w
+        resized = cv2.resize(img, (w, h), interpolation=cv2.INTER_LINEAR)
+        hsv = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
+
+        # 0. Outdoor Landscape Guard: If upper horizon has bright open sky, weather covers full screen edge-to-edge
+        tl_sky = float(np.mean(hsv[:int(h * 0.35), :int(w * 0.35), 2] > 100))
+        top_sky = float(np.mean(hsv[:int(h * 0.20), :, 2] > 100))
+        if tl_sky > 0.65 or top_sky > 0.70:
+            self.weather_mask = None
+            self.inv_weather_mask = None
+            return
+
+        # 1. Warm interior cabin/room check:
+        left_hsv = hsv[:, :int(w * 0.35)]
+        is_warm_interior = float(np.mean((left_hsv[:, :, 0] < 25) & (left_hsv[:, :, 1] > 60))) > 0.42
+        if is_warm_interior:
+            mask = np.ones((h, w), dtype=np.float32)
+            post_x = int(w * 0.36)
+            mask[:, :post_x] = 0.0
+            bed_mask = np.zeros((h, w), dtype=np.uint8)
+            pts = np.array([[0, int(h * 0.70)], [post_x, int(h * 0.72)], [int(w * 0.62), h], [0, h]], np.int32)
+            cv2.fillPoly(bed_mask, [pts], 255)
+            mask[bed_mask == 255] = 0.0
+            self.weather_mask = cv2.GaussianBlur(mask, (21, 21), 5)
+            self.inv_weather_mask = 1.0 - self.weather_mask
+            print(f" -> [Sanctuary Guard] Cozy Bedroom / Cabin sanctuary detected! Snow masked outside window.")
+            return
+
+        # 2. Alpine tent check:
+        orange_dome = (hsv[:, :, 0] >= 5) & (hsv[:, :, 0] <= 24) & (hsv[:, :, 1] > 100)
+        top_orange = float(np.mean(orange_dome[:int(h * 0.20), :]))
+        if top_orange > 0.40:
+            tent_interior = orange_dome | (hsv[:, :, 2] < 50)
+            mask = (~tent_interior).astype(np.float32)
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (int(w * 0.02), int(h * 0.02)))
+            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+            self.weather_mask = cv2.GaussianBlur(mask, (31, 31), 8)
+            self.inv_weather_mask = 1.0 - self.weather_mask
+            print(" -> [Sanctuary Guard] Alpine Tent sanctuary detected! Snow masked outside tent opening.")
+            return
+        self.weather_mask = None
+        self.inv_weather_mask = None
+
+    def render(self, frame: np.ndarray, frame_idx: int) -> np.ndarray:
+        h, w = self.h, self.w
+        bg_canvas = np.zeros((h, w), dtype=np.uint8)
+        mg_canvas = np.zeros((h, w), dtype=np.uint8)
+        fg_canvas = np.zeros((h, w), dtype=np.uint8)
+        t = float(frame_idx)
+        cfg = self.cfg
+        tilt_angle = int(np.clip(-self.wind * 2.2, -22.0, 22.0))
+
+        # 1. Background micro flurries
+        self.bg_flakes[:, 1] += self.bg_flakes[:, 3]
+        reset_bg = self.bg_flakes[:, 1] > h
+        if np.any(reset_bg):
+            cnt = np.count_nonzero(reset_bg)
+            self.bg_flakes[reset_bg, 1] = np.random.uniform(-40, -5, cnt)
+            self.bg_flakes[reset_bg, 0] = np.random.uniform(-w * 0.15, w * 1.15, cnt)
+        cur_bx = (self.bg_flakes[:, 0] + self.bg_flakes[:, 4] * np.sin(t * self.bg_flakes[:, 5] + self.bg_flakes[:, 6]) + self.wind * (self.bg_flakes[:, 1] / h)).astype(np.int32)
+        cur_by = self.bg_flakes[:, 1].astype(np.int32)
+        for i in range(len(self.bg_flakes)):
+            rx = max(1, int(self.bg_flakes[i, 2]))
+            ry = max(2, int(rx * 2.8))
+            cv2.ellipse(bg_canvas, (cur_bx[i], cur_by[i]), (rx, ry), tilt_angle, 0, 360, 255, -1, cv2.LINE_AA)
+
+        # 2. Midground slender flakes (3.2x aerodynamic height)
+        self.mg_flakes[:, 1] += self.mg_flakes[:, 3]
+        reset_mg = self.mg_flakes[:, 1] > h
+        if np.any(reset_mg):
+            cnt = np.count_nonzero(reset_mg)
+            self.mg_flakes[reset_mg, 1] = np.random.uniform(-50, -5, cnt)
+            self.mg_flakes[reset_mg, 0] = np.random.uniform(-w * 0.15, w * 1.15, cnt)
+        cur_mx = (self.mg_flakes[:, 0] + self.mg_flakes[:, 4] * np.sin(t * self.mg_flakes[:, 5] + self.mg_flakes[:, 6]) + self.wind * (self.mg_flakes[:, 1] / h)).astype(np.int32)
+        cur_my = self.mg_flakes[:, 1].astype(np.int32)
+        for i in range(len(self.mg_flakes)):
+            rx = max(1, int(self.mg_flakes[i, 2]))
+            ry = max(3, int(rx * 3.2))
+            cv2.ellipse(mg_canvas, (cur_mx[i], cur_my[i]), (rx, ry), tilt_angle, 0, 360, 255, -1, cv2.LINE_AA)
+
+        # 3. Foreground soft-focus bokeh flakes (3.2x height with soft blur)
+        self.fg_flakes[:, 1] += self.fg_flakes[:, 3]
+        reset_fg = self.fg_flakes[:, 1] > h
+        if np.any(reset_fg):
+            cnt = np.count_nonzero(reset_fg)
+            self.fg_flakes[reset_fg, 1] = np.random.uniform(-70, -10, cnt)
+            self.fg_flakes[reset_fg, 0] = np.random.uniform(-w * 0.15, w * 1.15, cnt)
+        cur_fx = (self.fg_flakes[:, 0] + self.fg_flakes[:, 4] * np.sin(t * self.fg_flakes[:, 5] + self.fg_flakes[:, 6]) + self.wind * (self.fg_flakes[:, 1] / h)).astype(np.int32)
+        cur_fy = self.fg_flakes[:, 1].astype(np.int32)
+        for i in range(len(self.fg_flakes)):
+            rx = max(2, int(self.fg_flakes[i, 2]))
+            ry = max(5, int(rx * 3.2))
+            cv2.ellipse(fg_canvas, (cur_fx[i], cur_fy[i]), (rx, ry), tilt_angle, 0, 360, 255, -1, cv2.LINE_AA)
+
+        mg_canvas = cv2.GaussianBlur(mg_canvas, (3, 3), 0.6)
+        fg_canvas = cv2.GaussianBlur(fg_canvas, (7, 7), 2.0)
+
+        bg_rgb = cv2.merge([bg_canvas, bg_canvas, bg_canvas])
+        mg_rgb = cv2.merge([mg_canvas, mg_canvas, mg_canvas])
+        fg_rgb = cv2.merge([fg_canvas, fg_canvas, fg_canvas])
+
+        snow_layer = cv2.addWeighted(bg_rgb, cfg["bg_alpha"], mg_rgb, cfg["mg_alpha"], 0)
+        snow_layer = cv2.addWeighted(snow_layer, 1.0, fg_rgb, cfg["fg_alpha"], 0)
+
+        frost_a = cfg["frost_alpha"]
+        frosted = cv2.addWeighted(frame, 1.0 - frost_a, self.frost_layer, frost_a, 0)
+        weathered = cv2.add(frosted, snow_layer)
+
+        if self.weather_mask is not None:
+            return cv2.blendLinear(frame, weathered, self.inv_weather_mask, self.weather_mask)
         return weathered
 
 
 class LivingEnvironmentEngine:
-    """Procedural Tier-0 Environmental Dynamics:
-    1. Ocean/Water Waves: Harmonic Gerstner 2D sinusoidal surface displacement + caustic specular glint.
+    """High-performance procedural living world dynamics:
+    1. Ocean/Water Waves: Vectorized 1D broadcast Gerstner harmonic wave displacement + caustic specular glint.
     2. Volcanic / Factory Smoke: Advective upward billowing curls drifting with wind.
-    3. Option A Bird / Wildlife Trajectory Engine: Autonomous detection of mid-air birds, background inpainting,
-       and natural forward aerodynamic gliding with subtle lift oscillations across frames.
+    3. Selective Object Removal Engine (--remove-objects or --remove-object-list bird,boat,car).
+    4. Wildlife Flight Trajectory Engine: Aloft aerodynamic flight trajectories for unremoved birds.
     """
 
-    def __init__(self, img: np.ndarray, width: int, height: int):
+    def __init__(self, img: np.ndarray, width: int, height: int, remove_objects: bool = False, remove_object_list: Optional[List[str]] = None):
         self.w, self.h = width, height
         self.scale = width / 1920.0
+        self.remove_objects = remove_objects
+        self.remove_object_list = remove_object_list
+
+        # Build set of normalized target object categories to remove
+        self.remove_targets = set()
+        if remove_objects:
+            self.remove_targets = {"bird", "boat", "car", "vehicle", "plane", "person"}
+        elif remove_object_list:
+            for item in remove_object_list:
+                cleaned = item.strip().lower()
+                if cleaned in ["bird", "birds"]:
+                    self.remove_targets.add("bird")
+                elif cleaned in ["boat", "boats", "ship", "ships"]:
+                    self.remove_targets.add("boat")
+                elif cleaned in ["car", "cars", "vehicle", "vehicles", "truck", "trucks", "bus"]:
+                    self.remove_targets.add("car")
+                elif cleaned in ["person", "people", "human", "humans"]:
+                    self.remove_targets.add("person")
+                elif cleaned in ["plane", "airplane", "flight"]:
+                    self.remove_targets.add("plane")
+                else:
+                    self.remove_targets.add(cleaned)
+
+        if self.remove_targets:
+            print(f" -> [Object Removal Config] Active removal targets: {sorted(list(self.remove_targets))}")
+
         resized = cv2.resize(img, (width, height), interpolation=cv2.INTER_LINEAR)
         hsv = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
         gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 
-        # 1. Autonomous Water Body Detection (Lower 65%, Cyan/Blue Ocean or Lake)
+        # 1. Autonomous Water Body Detection
         lower_hsv = hsv[int(height * 0.35):, :]
         water_px = ((lower_hsv[:, :, 0] >= 90) & (lower_hsv[:, :, 0] <= 130) &
                     (lower_hsv[:, :, 1] >= 40) & (lower_hsv[:, :, 2] >= 35)).astype(np.uint8) * 255
@@ -359,31 +500,60 @@ class LivingEnvironmentEngine:
         water_ratio = float(np.mean(closed > 0))
 
         self.water_mask = None
+        self.inv_water_mask = None
         if water_ratio > 0.12:
             full_w = np.zeros((height, width), dtype=np.float32)
             full_w[int(height * 0.35):, :] = (closed > 0).astype(np.float32)
-            self.water_mask = cv2.GaussianBlur(full_w, (41, 41), 12)[:, :, np.newaxis]
+            self.water_mask = cv2.GaussianBlur(full_w, (41, 41), 12)
+            self.inv_water_mask = 1.0 - self.water_mask
+
+            ys = np.where(self.water_mask > 0.005)[0]
+            self.water_y_min = int(ys.min())
+            self.water_y_max = int(ys.max()) + 1
+            roi_h = self.water_y_max - self.water_y_min
+
+            self.water_x = np.arange(width, dtype=np.float32)
+            self.water_y_rel = np.arange(roi_h, dtype=np.float32)
+            self.water_gx, self.water_gy = np.meshgrid(self.water_x, self.water_y_rel)
+            self.water_weight_roi = self.water_mask[self.water_y_min:self.water_y_max, :]
+            self.inv_water_weight_roi = self.inv_water_mask[self.water_y_min:self.water_y_max, :]
             print(f" -> [Living World] Ocean/Water body detected ({water_ratio:.1%} area). Active waves & glimmer enabled!")
 
-        # 2. Autonomous Smoke / Steam Plume Detection (Upper 40% Sky, high luminance, low saturation)
+        # 2. Autonomous Smoke / Steam Plume Detection
         upper_hsv = hsv[:int(height * 0.40), :]
         upper_gray = gray[:int(height * 0.40), :]
         smoke_candidates = (upper_hsv[:, :, 1] < 45) & (upper_gray > 165) & (upper_gray < 245)
         plume_ratio = float(np.mean(smoke_candidates))
         self.smoke_mask = None
+        self.inv_smoke_mask = None
         if 0.005 < plume_ratio < 0.10:
             full_s = np.zeros((height, width), dtype=np.float32)
             full_s[:int(height * 0.40), :] = smoke_candidates.astype(np.float32)
             kernel_s = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
             full_s = cv2.morphologyEx(full_s, cv2.MORPH_OPEN, kernel_s)
-            self.smoke_mask = cv2.GaussianBlur(full_s, (31, 31), 8)[:, :, np.newaxis]
+            self.smoke_mask = cv2.GaussianBlur(full_s, (31, 31), 8)
+            self.inv_smoke_mask = 1.0 - self.smoke_mask
+
+            ys_s = np.where(self.smoke_mask > 0.005)[0]
+            self.smoke_y_min = int(ys_s.min())
+            self.smoke_y_max = int(ys_s.max()) + 1
+            s_roi_h = self.smoke_y_max - self.smoke_y_min
+            self.smoke_x = np.arange(width, dtype=np.float32)
+            self.smoke_y_rel = np.arange(s_roi_h, dtype=np.float32)
+            self.smoke_gx, self.smoke_gy = np.meshgrid(self.smoke_x, self.smoke_y_rel)
+            self.smoke_weight_roi = self.smoke_mask[self.smoke_y_min:self.smoke_y_max, :]
+            self.inv_smoke_weight_roi = self.inv_smoke_mask[self.smoke_y_min:self.smoke_y_max, :]
             print(f" -> [Living World] Smoke/Steam plume detected ({plume_ratio:.2%} area). Active billowing enabled!")
 
-        # 3. Autonomous Bird & Aerial Wildlife Flight Trajectory Engine (Option A)
+        # 3. Selective Object Detection & Inpainting Plate Construction
         self.clean_base_plate = None
         self.birds = []
         orig_h, orig_w = img.shape[:2]
-        sky_limit_y = int(orig_h * 0.55)
+        working_plate = img.copy()
+        combined_inpaint_mask = np.zeros((orig_h, orig_w), dtype=np.uint8)
+
+        # 3A. Bird Detection & Selective Removal
+        sky_limit_y = int(orig_h * 0.70)
         img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         sky_part = img_gray[:sky_limit_y, :]
         sky_med = cv2.medianBlur(sky_part, 51)
@@ -393,76 +563,104 @@ class LivingEnvironmentEngine:
         sky_th = cv2.morphologyEx(sky_th, cv2.MORPH_CLOSE, kernel_b)
 
         cnts, _ = cv2.findContours(sky_th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        full_bird_mask = np.zeros((orig_h, orig_w), dtype=np.uint8)
+        bird_mask = np.zeros((orig_h, orig_w), dtype=np.uint8)
         detected_birds = []
 
         for c in cnts:
             area = cv2.contourArea(c)
-            # Area range matches birds in flight without picking up mountain peaks or houses
-            if 200 <= area <= 5000:
+            if 250 <= area <= 6000:
                 bx, by, bw, bh = cv2.boundingRect(c)
-                # Birds must be aloft in upper atmosphere (y + bh < 0.55 * orig_h)
-                if by + bh < sky_limit_y:
-                    # Guard against structured terrain/houses:
-                    # In open sky/sea, background around the bird is smooth (std < 22).
-                    # In towns, mountains, and trees (like Sicily), local std is > 35!
+                if by + bh < sky_limit_y and bx > int(orig_w * 0.35):
                     pad = 40
                     y1_bg, y2_bg = max(0, by - pad), min(sky_part.shape[0], by + bh + pad)
                     x1_bg, x2_bg = max(0, bx - pad), min(sky_part.shape[1], bx + bw + pad)
                     surrounding_bg = sky_part[y1_bg:y2_bg, x1_bg:x2_bg]
-                    bg_std = float(np.std(surrounding_bg))
-
-                    if bg_std < 22.0:
+                    if float(np.std(surrounding_bg)) < 29.0:
                         aspect = bw / float(max(1, bh))
                         hull = cv2.convexHull(c)
                         solidity = area / float(max(1, cv2.contourArea(hull)))
-                        # Flying bird wing morphology check
-                        if 0.70 <= aspect <= 3.8 and 0.20 <= solidity <= 0.75:
-                            cv2.drawContours(full_bird_mask, [c], -1, 255, -1)
-                            pad_s = 8
+                        if 0.70 <= aspect <= 4.0 and 0.20 <= solidity <= 0.75:
+                            cv2.drawContours(bird_mask, [c], -1, 255, -1)
+                            pad_s = 10
                             x1, y1 = max(0, bx - pad_s), max(0, by - pad_s)
                             x2, y2 = min(orig_w, bx + bw + pad_s), min(orig_h, by + bh + pad_s)
                             sprite = img[y1:y2, x1:x2].copy()
-                            bird_roi_mask = full_bird_mask[y1:y2, x1:x2].astype(np.float32) / 255.0
+                            bird_roi_mask = bird_mask[y1:y2, x1:x2].astype(np.float32) / 255.0
                             feathered_mask = cv2.GaussianBlur(bird_roi_mask, (5, 5), 1.5)[:, :, np.newaxis]
                             detected_birds.append({
-                                "orig_x": float(x1),
-                                "orig_y": float(y1),
-                                "w": x2 - x1,
-                                "h": y2 - y1,
-                                "sprite": sprite,
-                                "mask": feathered_mask,
-                                "vx": float(-2.8 - (area / 1200.0) * 0.7),
+                                "orig_x": float(x1), "orig_y": float(y1),
+                                "w": x2 - x1, "h": y2 - y1,
+                                "sprite": sprite, "mask": feathered_mask,
+                                "vx": float(-3.0 - (area / 1200.0) * 0.8),
                                 "bob_amp": float(3.5 + (area / 2000.0) * 2.0),
                                 "bob_phase": float((bx * 0.05 + by * 0.03) % (2.0 * np.pi)),
                             })
 
-        # Require a flock of at least 3 genuine aloft birds before triggering trajectory animation
         if len(detected_birds) >= 3:
-            # Native 4K first, then CPU ONNX confirmation
             min_bx = int(min(b["orig_x"] for b in detected_birds))
             max_bx = int(max(b["orig_x"] + b["w"] for b in detected_birds))
             min_by = int(min(b["orig_y"] for b in detected_birds))
             max_by = int(max(b["orig_y"] + b["h"] for b in detected_birds))
             pad_ctx = 60
-            y1_ctx, y2_ctx = max(0, min_by - pad_ctx), min(orig_h, max_by + pad_ctx)
-            x1_ctx, x2_ctx = max(0, min_bx - pad_ctx), min(orig_w, max_bx + pad_ctx)
-            flock_patch = img[y1_ctx:y2_ctx, x1_ctx:x2_ctx]
+            flock_patch = img[max(0, min_by - pad_ctx):min(orig_h, max_by + pad_ctx), max(0, min_bx - pad_ctx):min(orig_w, max_bx + pad_ctx)]
 
-            confirmed_by_onnx = onnx_confirm_patch(flock_patch, target_label="bird", min_conf=0.28)
-            if confirmed_by_onnx:
-                inpaint_mask = cv2.dilate(full_bird_mask, np.ones((15, 15), np.uint8))
-                self.clean_base_plate = cv2.inpaint(img, inpaint_mask, 11, cv2.INPAINT_TELEA)
-                self.birds = detected_birds
-                print(f" -> [Living World] Detected {len(self.birds)} birds aloft (ONNX confirmed). Background inpainted & flight trajectory activated!")
-            else:
-                print(f" -> [Living World] {len(detected_birds)} aloft candidates rejected by CPU ONNX semantic check.")
+            if onnx_confirm_patch(flock_patch, target_label="bird", min_conf=0.28):
+                if "bird" in self.remove_targets:
+                    combined_inpaint_mask = cv2.bitwise_or(combined_inpaint_mask, bird_mask)
+                    self.birds = []
+                    print(f" -> [Object Removal] Completely removed {len(detected_birds)} birds from scene plate!")
+                else:
+                    self.birds = detected_birds
+                    # Inpaint under sprite so original birds don't freeze on plate while animating
+                    combined_inpaint_mask = cv2.bitwise_or(combined_inpaint_mask, bird_mask)
+                    print(f" -> [Living World] Detected {len(self.birds)} birds aloft (ONNX confirmed). Background inpainted & flight trajectory activated!")
 
-        # Precompute coordinate grids for fast vectorized remapping
-        self.gx, self.gy = np.meshgrid(
-            np.arange(width, dtype=np.float32),
-            np.arange(height, dtype=np.float32)
-        )
+        # 3B. Boat Detection & Selective Removal
+        if "boat" in self.remove_targets:
+            lower_zone = img[int(orig_h * 0.45):int(orig_h * 0.85), :int(orig_w * 0.45)]
+            l_hsv = cv2.cvtColor(lower_zone, cv2.COLOR_BGR2HSV)
+            hull_px = ((l_hsv[:, :, 1] > 55) | (l_hsv[:, :, 2] < 50))
+            cnts_boat, _ = cv2.findContours(hull_px.astype(np.uint8) * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            boat_mask = np.zeros((orig_h, orig_w), dtype=np.uint8)
+            boat_cnt = 0
+            for c in cnts_boat:
+                area = cv2.contourArea(c)
+                if 300 <= area <= 15000:
+                    bx, by, bw, bh = cv2.boundingRect(c)
+                    aspect = bw / float(max(1, bh))
+                    if 1.2 <= aspect <= 6.0:
+                        cv2.drawContours(boat_mask[int(orig_h * 0.45):int(orig_h * 0.85), :int(orig_w * 0.45)], [c], -1, 255, -1)
+                        boat_cnt += 1
+            if boat_cnt > 0:
+                combined_inpaint_mask = cv2.bitwise_or(combined_inpaint_mask, boat_mask)
+                print(f" -> [Object Removal] Completely removed {boat_cnt} coastal boats from scene plate!")
+
+        # 3C. Vehicle Detection & Selective Removal (ONNX Inference)
+        if "car" in self.remove_targets and ONNX_SESSION is not None:
+            blob = cv2.dnn.blobFromImage(img, 1 / 255.0, (640, 640), swapRB=True)
+            preds = ONNX_SESSION.run(None, {"images": blob})[0][0].T
+            veh_mask = np.zeros((orig_h, orig_w), dtype=np.uint8)
+            veh_cnt = 0
+            for row in preds:
+                classes_scores = row[4:]
+                cid = np.argmax(classes_scores)
+                conf = classes_scores[cid]
+                if conf > 0.28 and COCO_CLASSES[cid] in ["car", "truck", "bus"]:
+                    cx, cy, bw, bh = row[0:4]
+                    x1 = max(0, int((cx - bw / 2) * (orig_w / 640.0)))
+                    y1 = max(0, int((cy - bh / 2) * (orig_h / 640.0)))
+                    x2 = min(orig_w, int((cx + bw / 2) * (orig_w / 640.0)))
+                    y2 = min(orig_h, int((cy + bh / 2) * (orig_h / 640.0)))
+                    cv2.rectangle(veh_mask, (x1, y1), (x2, y2), 255, -1)
+                    veh_cnt += 1
+            if veh_cnt > 0:
+                combined_inpaint_mask = cv2.bitwise_or(combined_inpaint_mask, veh_mask)
+                print(f" -> [Object Removal] Completely removed {veh_cnt} vehicles from scene plate!")
+
+        # Perform single unified inpainting pass if any objects were masked
+        if np.any(combined_inpaint_mask > 0):
+            inpaint_mask = cv2.dilate(combined_inpaint_mask, np.ones((15, 15), np.uint8))
+            self.clean_base_plate = cv2.inpaint(img, inpaint_mask, 11, cv2.INPAINT_TELEA)
 
     def apply(self, frame: np.ndarray, frame_idx: int) -> np.ndarray:
         out = frame.copy()
@@ -485,37 +683,40 @@ class LivingEnvironmentEngine:
                     blended = np.clip(cur_sprite * cur_mask + roi * (1.0 - cur_mask), 0, 255).astype(np.uint8)
                     out[cur_y:cur_y + cur_h, cur_x:cur_x + cur_w] = blended
 
-        # B. Apply Harmonic Ocean Waves & Specular Caustic Glimmer
+        # B. Apply Harmonic Ocean Waves & Specular Caustic Glimmer (Fast ROI)
         if self.water_mask is not None:
             t = frame_idx * 0.12
-            # 2D Gerstner harmonic wave displacement
-            disp_x = (2.4 * self.scale * np.sin(self.gx * 0.035 + t)).astype(np.float32)
-            disp_y = (1.6 * self.scale * np.cos(self.gy * 0.045 + t * 0.85)).astype(np.float32)
-            map_x = np.clip(self.gx + disp_x, 0, self.w - 1).astype(np.float32)
-            map_y = np.clip(self.gy + disp_y, 0, self.h - 1).astype(np.float32)
-            wave_frame = cv2.remap(out, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+            disp_x = (2.4 * self.scale * np.sin(self.water_x * 0.035 + t)).astype(np.float32)
+            disp_y = (1.6 * self.scale * np.cos((self.water_y_rel + self.water_y_min) * 0.045 + t * 0.85)).astype(np.float32)
+            map_x = self.water_gx + disp_x
+            map_y = self.water_gy + disp_y[:, None]
 
-            # Caustic sunlight/skylight glimmer sheen
-            glimmer = 1.0 + 0.04 * (
-                np.sin(self.gx * 0.06 - t * 1.2) * np.cos(self.gy * 0.05 + t * 0.9)
-            ).astype(np.float32)
-            wave_frame = np.clip(wave_frame.astype(np.float32) * glimmer[:, :, np.newaxis], 0, 255).astype(np.uint8)
+            roi_in = out[self.water_y_min:self.water_y_max, :]
+            wave_roi = cv2.remap(roi_in, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
 
-            # Blend back using feathered water mask
-            out = np.clip(out.astype(np.float32) * (1.0 - self.water_mask) +
-                          wave_frame.astype(np.float32) * self.water_mask, 0, 255).astype(np.uint8)
+            glim_x = np.sin(self.water_x * 0.06 - t * 1.2)
+            glim_y = np.cos((self.water_y_rel + self.water_y_min) * 0.05 + t * 0.9)
+            glimmer = (1.0 + 0.04 * np.outer(glim_y, glim_x)).astype(np.float32)
+            wave_roi = np.clip(wave_roi.astype(np.float32) * glimmer[:, :, None], 0, 255).astype(np.uint8)
 
-        # C. Apply Upward Billowing & Wind Drift to Smoke Plumes
+            out[self.water_y_min:self.water_y_max, :] = cv2.blendLinear(
+                roi_in, wave_roi, self.inv_water_weight_roi, self.water_weight_roi
+            )
+
+        # C. Apply Upward Billowing & Wind Drift to Smoke Plumes (Fast ROI)
         if self.smoke_mask is not None:
             t_s = frame_idx * 0.15
-            # Advective upward curl vector
-            smoke_dx = (2.0 * self.scale * np.sin(self.gy * 0.04 + t_s * 1.1)).astype(np.float32)
-            smoke_dy = (-3.2 * self.scale - 1.5 * self.scale * np.sin(self.gx * 0.05 + t_s * 0.7)).astype(np.float32)
-            s_map_x = np.clip(self.gx + smoke_dx, 0, self.w - 1).astype(np.float32)
-            s_map_y = np.clip(self.gy + smoke_dy, 0, self.h - 1).astype(np.float32)
-            smoke_frame = cv2.remap(out, s_map_x, s_map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-            out = np.clip(out.astype(np.float32) * (1.0 - self.smoke_mask) +
-                          smoke_frame.astype(np.float32) * self.smoke_mask, 0, 255).astype(np.uint8)
+            s_dx = (2.0 * self.scale * np.sin((self.smoke_y_rel + self.smoke_y_min) * 0.04 + t_s * 1.1)).astype(np.float32)
+            s_dy = (-3.2 * self.scale - 1.5 * self.scale * np.sin(self.smoke_x * 0.05 + t_s * 0.7)).astype(np.float32)
+            s_map_x = self.smoke_gx + s_dx[:, None]
+            s_map_y = self.smoke_gy + s_dy
+
+            s_roi_in = out[self.smoke_y_min:self.smoke_y_max, :]
+            smoke_roi = cv2.remap(s_roi_in, s_map_x, s_map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+
+            out[self.smoke_y_min:self.smoke_y_max, :] = cv2.blendLinear(
+                s_roi_in, smoke_roi, self.inv_smoke_weight_roi, self.smoke_weight_roi
+            )
 
         return out
 
@@ -533,7 +734,9 @@ def get_ffmpeg_writer(output_path: str, width: int, height: int, fps: float):
         "-i", "-",
         "-c:v", "libx264",
         "-preset", "veryfast",
-        "-crf", "20",
+        "-crf", "23",
+        "-maxrate", "22M",
+        "-bufsize", "44M",
         "-threads", "4",
         "-pix_fmt", "yuv420p",
         "-movflags", "+faststart",
@@ -920,13 +1123,21 @@ def process_drone_flyovers(
     curve: str = "cosine",
     rain: bool = False,
     rain_intensity: str = "light",
+    snow: bool = False,
+    snow_intensity: str = "medium",
     res_mode: str = "4k",
     interp_mode: str = "lanczos",
     target_duration: float = None,
+    remove_objects: bool = False,
+    remove_object_list: Optional[List[str]] = None,
 ):
     os.makedirs(output_dir, exist_ok=True)
     extensions = (".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG", ".webp")
-    images = [f for f in os.listdir(input_dir) if f.lower().endswith(extensions)]
+    if os.path.isfile(input_dir):
+        images = [os.path.basename(input_dir)]
+        input_dir = os.path.dirname(input_dir)
+    else:
+        images = [f for f in os.listdir(input_dir) if f.lower().endswith(extensions)]
 
     if not images:
         print(f"Error: No images found inside: {input_dir}")
@@ -988,14 +1199,19 @@ def process_drone_flyovers(
     print(f"Total Duration: {total_sec:.1f}s (@ {fps}fps) | Easing: {curve.upper()}")
     if rain:
         print(f"Atmosphere: Active Cinematic Rain ({rain_intensity.upper()}) + Alpine Mist")
+    elif snow:
+        print(f"Atmosphere: Active Cinematic Snow ({snow_intensity.upper()}) + Frost Atmosphere")
     print(f"Output Mode: {mode_str} | Max Zoom Depth: {clamped_depth:.1%} | Interp: {interp_mode.upper()}")
 
     for img_name in images:
+        t_image_start = time.time()
         stem = os.path.splitext(img_name)[0]
         img_path = os.path.join(input_dir, img_name)
         mode_suffix = "reveal_mission" if (start_pan != "center" or start_zoom != "normal") else "flight_mission"
         if rain:
             mode_suffix += f"_rain_{rain_intensity}"
+        if snow:
+            mode_suffix += f"_snow_{snow_intensity}"
         output_path = os.path.join(output_dir, f"{stem}_{mode_suffix}.mp4")
 
         img = cv2.imread(img_path)
@@ -1148,13 +1364,18 @@ def process_drone_flyovers(
         )
         print(f" -> Precomputed {len(matrices)} transformation matrices in {(time.time() - t_pre)*1000:.1f}ms")
 
-        # Initialize living environment engine (waves, caustic glimmer, smoke plumes)
-        living_env = LivingEnvironmentEngine(img, out_w, out_h)
+        # Initialize living environment engine (waves, caustic glimmer, smoke plumes, selective object removal)
+        living_env = LivingEnvironmentEngine(img, out_w, out_h, remove_objects=remove_objects, remove_object_list=remove_object_list)
 
         # Initialize rain engine if requested
         rain_engine = None
         if rain:
             rain_engine = CinematicRainEngine(out_w, out_h, intensity=rain_intensity, source_img=img)
+
+        # Initialize snow engine if requested
+        snow_engine = None
+        if snow:
+            snow_engine = CinematicSnowEngine(out_w, out_h, intensity=snow_intensity, source_img=img)
 
         ffmpeg_proc = get_ffmpeg_writer(output_path, out_w, out_h, fps)
         video_writer = None
@@ -1185,6 +1406,8 @@ def process_drone_flyovers(
 
             if rain_engine is not None:
                 frame = rain_engine.render(frame)
+            elif snow_engine is not None:
+                frame = snow_engine.render(frame, i)
 
             if ffmpeg_proc is not None:
                 ffmpeg_proc.stdin.write(frame.tobytes())
@@ -1197,9 +1420,11 @@ def process_drone_flyovers(
         else:
             video_writer.release()
 
-        elapsed = time.time() - t_start
+        elapsed = time.time() - t_image_start
+        mins, secs = divmod(int(elapsed), 60)
         render_fps = total_frames / max(0.001, elapsed)
-        print(f"[Done] Rendered {total_frames} frames in {elapsed:.1f}s ({render_fps:.1f} FPS) -> {output_path}")
+        time_str = f"{mins}m {secs}s" if mins > 0 else f"{elapsed:.1f}s"
+        print(f"[Done] Total Production Time: {time_str} ({elapsed:.1f}s | {render_fps:.1f} FPS) -> {output_path}")
 
 
 if __name__ == "__main__":
@@ -1225,11 +1450,18 @@ if __name__ == "__main__":
     parser.add_argument("--rain", action="store_true", help="Add authentic procedural cinematic rainfall & atmospheric mist")
     parser.add_argument("--rain-intensity", choices=["light", "medium", "heavy"], default="light", 
                         help="Rain intensity: light (default), medium, heavy")
+    parser.add_argument("--snow", action="store_true", help="Add authentic procedural cinematic snowfall & winter atmosphere")
+    parser.add_argument("--snow-intensity", choices=["light", "medium", "heavy"], default="medium", 
+                        help="Snow intensity: light, medium (default), heavy")
     parser.add_argument("--fps", type=float, default=30.0, help="Frames per second (default: 30.0)")
     parser.add_argument("--res", choices=["4k", "1080p"], default="4k", help="Output resolution: 4k (default: 3840x2160) or 1080p")
     parser.add_argument("--lanczos", action="store_true", help="High-precision Lanczos4 interpolation (slower)")
     parser.add_argument("--cubic", action="store_true", help="Bicubic interpolation")
     parser.add_argument("--fast", action="store_true", help="Bilinear interpolation (default: fast and smooth)")
+    parser.add_argument("--remove-objects", action="store_true",
+                        help="Completely detect and inpaint away all movable objects (birds, vehicles, boats) leaving a pure uninhabited nature landscape")
+    parser.add_argument("--remove-object-list", type=str, default=None,
+                        help="Comma-separated list of specific objects to remove (e.g. --remove-object-list bird,boat)")
 
     args, unknown = parser.parse_known_args()
 
@@ -1250,6 +1482,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     interp = "lanczos" if args.lanczos else ("cubic" if args.cubic else "linear")
+    remove_list = [x.strip() for x in args.remove_object_list.split(",")] if args.remove_object_list else None
 
     process_drone_flyovers(
         input_dir=args.input,
@@ -1264,7 +1497,11 @@ if __name__ == "__main__":
         curve=args.curve,
         rain=args.rain,
         rain_intensity=args.rain_intensity,
+        snow=args.snow,
+        snow_intensity=args.snow_intensity,
         res_mode=args.res,
         interp_mode=interp,
         target_duration=args.duration,
+        remove_objects=args.remove_objects,
+        remove_object_list=remove_list,
     )
