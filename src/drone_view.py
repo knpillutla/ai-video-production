@@ -15,94 +15,158 @@ except Exception:
 
 
 class CinematicRainEngine:
-    """Procedural multi-layer cinematic rain engine with motion-blurred streaks, wind tilt, and atmospheric mist."""
+    """Procedural multi-layer natural rain engine: organic translucent drizzle, stochastic respawn, and soft mist."""
 
-    def __init__(self, width: int, height: int, intensity: str = "medium", wind_tilt: float = 8.0):
+    def __init__(self, width: int, height: int, intensity: str = "light", wind_tilt: float = 4.0):
         self.w = width
         self.h = height
         self.wind_tilt = wind_tilt
+        self.intensity = intensity.lower()
 
         scale_factor = width / 1920.0
         self.scale = scale_factor
 
-        intensity_map = {
-            "light": 1200,
-            "medium": 2400,
-            "heavy": 4200,
+        # Tiered physical presets calibrated to natural organic rain:
+        # - Balanced length (moderate height, avoiding tall stripes) + dense pouring curtain
+        configs = {
+            "light": {
+                "drops": 450,
+                "bg_len": (6, 11),   "bg_spd": (14, 20),
+                "mg_len": (11, 18),  "mg_spd": (18, 26),
+                "fg_len": (18, 28),  "fg_spd": (24, 34),
+                "mist_alpha": 0.02,  "rain_alpha": 0.18,
+                "splash_prob": 0.01, "wind": 2.5,
+            },
+            "medium": {
+                "drops": 1100,
+                "bg_len": (8, 14),   "bg_spd": (18, 26),
+                "mg_len": (15, 24),  "mg_spd": (24, 34),
+                "fg_len": (24, 34),  "fg_spd": (30, 40),
+                "mist_alpha": 0.04,  "rain_alpha": 0.26,
+                "splash_prob": 0.03, "wind": 4.0,
+            },
+            "heavy": {
+                "drops": 5800,       # Rich continuous torrential curtain
+                "bg_len": (20, 32),  "bg_spd": (28, 38),
+                "mg_len": (42, 64),  "mg_spd": (44, 58),
+                "fg_len": (68, 96),  "fg_spd": (58, 76),
+                "mist_alpha": 0.09,  "rain_alpha": 0.42,
+                "splash_prob": 0.10, "wind": 6.5,
+            },
         }
-        total_drops = intensity_map.get(intensity.lower(), 2400)
+        cfg = configs.get(self.intensity, configs["medium"])
+        self.cfg = cfg
+        self.wind_tilt = cfg["wind"]
+        total_drops = cfg["drops"]
 
-        # 1. High-Velocity Foreground Layer
-        self.fg_drops = []
-        for _ in range(int(total_drops * 0.35)):
-            x = random.uniform(-100 * scale_factor, width + 100 * scale_factor)
-            y = random.uniform(-300 * scale_factor, height)
-            length = random.uniform(160, 280) * scale_factor
-            speed = random.uniform(95, 155) * scale_factor
-            thick = random.choice([1, 2])
-            self.fg_drops.append([x, y, length, speed, thick])
+        # Layer 1: Background Micro-Drizzle / Atmospheric Mist Droplets (60% of drops)
+        self.bg_drops = []
+        for _ in range(int(total_drops * 0.60)):
+            x = random.uniform(0, width)
+            y = random.uniform(-100 * scale_factor, height)
+            length = random.uniform(*cfg["bg_len"]) * scale_factor
+            speed = random.uniform(*cfg["bg_spd"]) * scale_factor
+            self.bg_drops.append([x, y, length, speed])
 
-        # 2. Dense Midground Downpour Layer
+        # Layer 2: Midground Natural Rain (30% of drops)
         self.mg_drops = []
-        for _ in range(int(total_drops * 0.65)):
-            x = random.uniform(-100 * scale_factor, width + 100 * scale_factor)
-            y = random.uniform(-300 * scale_factor, height)
-            length = random.uniform(90, 170) * scale_factor
-            speed = random.uniform(70, 115) * scale_factor
-            thick = 1
-            self.mg_drops.append([x, y, length, speed, thick])
+        for _ in range(int(total_drops * 0.30)):
+            x = random.uniform(0, width)
+            y = random.uniform(-100 * scale_factor, height)
+            length = random.uniform(*cfg["mg_len"]) * scale_factor
+            speed = random.uniform(*cfg["mg_spd"]) * scale_factor
+            self.mg_drops.append([x, y, length, speed])
 
-        # 3. Ground Micro-Splashes
+        # Layer 3: Occasional Foreground Droplets (10% of drops)
+        self.fg_drops = []
+        for _ in range(int(total_drops * 0.10)):
+            x = random.uniform(0, width)
+            y = random.uniform(-100 * scale_factor, height)
+            length = random.uniform(*cfg["fg_len"]) * scale_factor
+            speed = random.uniform(*cfg["fg_spd"]) * scale_factor
+            self.fg_drops.append([x, y, length, speed])
+
+        # Ground micro-ripples
         self.splashes = []
-        self.ground_y = int(height * 0.55)
+        self.ground_y = int(height * 0.60)
 
-        # 4. Soft Alpine Mist Veil
-        self.mist_layer = np.full((height, width, 3), (175, 185, 195), dtype=np.uint8)
+        # Atmospheric overcast mist veil
+        self.mist_layer = np.full((height, width, 3), (170, 180, 190), dtype=np.uint8)
+
+    def _draw_feathered_drop(self, canvas: np.ndarray, x: float, y: float, length: float, tilt: float, base_bgr: tuple):
+        """Renders an organic raindrop with soft tapered tail and natural droplet head brightness."""
+        # Tail (top 50%): faint, wispy
+        p_top = (int(x), int(y))
+        p_mid = (int(x + tilt * 0.5), int(y + length * 0.5))
+        tail_bgr = (int(base_bgr[0] * 0.55), int(base_bgr[1] * 0.55), int(base_bgr[2] * 0.55))
+        cv2.line(canvas, p_top, p_mid, tail_bgr, 1, cv2.LINE_AA)
+
+        # Head (bottom 50%): primary droplet mass
+        p_bot = (int(x + tilt), int(y + length))
+        cv2.line(canvas, p_mid, p_bot, base_bgr, 1, cv2.LINE_AA)
 
     def render(self, frame: np.ndarray) -> np.ndarray:
         h, w = self.h, self.w
         rain_canvas = np.zeros((h, w, 3), dtype=np.uint8)
         tilt = self.wind_tilt * self.scale
+        cfg = self.cfg
 
-        # Midground streaks
+        # 1. Background Micro-Drizzle
+        for d in self.bg_drops:
+            x, y, length, speed = d
+            pt1 = (int(x), int(y))
+            pt2 = (int(x + tilt * 0.5), int(y + length))
+            cv2.line(rain_canvas, pt1, pt2, (130, 145, 160), 1, cv2.LINE_AA)
+            d[1] += speed
+            d[0] += tilt * 0.5
+            if d[1] > h:
+                d[1] = random.uniform(-length * 2, -length)
+                d[0] = random.uniform(0, w)
+
+        # 2. Midground Rain (Feathered)
         for d in self.mg_drops:
-            x, y, length, speed, thick = d
-            pt1 = (int(x), int(y))
-            pt2 = (int(x + tilt * 0.8), int(y + length))
-            cv2.line(rain_canvas, pt1, pt2, (180, 195, 210), thick)
-            d[0] = (x + tilt * 0.8) % (w + 100) - 50
-            d[1] = (y + speed) % (h + length) - length
+            x, y, length, speed = d
+            self._draw_feathered_drop(rain_canvas, x, y, length, tilt * 0.85, (185, 200, 215))
+            d[1] += speed
+            d[0] += tilt * 0.85
+            if d[1] > h:
+                d[1] = random.uniform(-length * 2, -length)
+                d[0] = random.uniform(0, w)
+                if random.random() < cfg["splash_prob"]:
+                    self.splashes.append([int(d[0]), int(self.ground_y + random.uniform(0, h - self.ground_y)), 1.0, 0.35])
 
-            if y > self.ground_y and random.random() < 0.02:
-                self.splashes.append([int(x), int(y), 1.0, 0.6])
-
-        # Foreground high-speed streaks
+        # 3. Foreground Droplets (Feathered)
         for d in self.fg_drops:
-            x, y, length, speed, thick = d
-            pt1 = (int(x), int(y))
-            pt2 = (int(x + tilt), int(y + length))
-            cv2.line(rain_canvas, pt1, pt2, (205, 220, 235), thick)
-            d[0] = (x + tilt) % (w + 100) - 50
-            d[1] = (y + speed) % (h + length) - length
+            x, y, length, speed = d
+            self._draw_feathered_drop(rain_canvas, x, y, length, tilt, (215, 228, 240))
+            d[1] += speed
+            d[0] += tilt
+            if d[1] > h:
+                d[1] = random.uniform(-length * 2, -length)
+                d[0] = random.uniform(0, w)
 
-        # Micro-splashes
+        # 4. Subtle Ground Ripples
         active_splashes = []
         for s in self.splashes:
             sx, sy, radius, s_alpha = s
-            if radius < (8.0 * self.scale) and s_alpha > 0.05:
+            if radius < (5.0 * self.scale) and s_alpha > 0.05:
                 cv2.ellipse(
                     rain_canvas,
                     (sx, sy),
                     (int(radius), int(radius * 0.28)),
                     0, 0, 360,
-                    (190, 205, 220),
+                    (160, 175, 190),
                     1,
+                    cv2.LINE_AA,
                 )
-                active_splashes.append([sx, sy, radius + 1.4 * self.scale, s_alpha - 0.15])
+                active_splashes.append([sx, sy, radius + 0.6 * self.scale, s_alpha - 0.09])
         self.splashes = active_splashes
 
-        misted_frame = cv2.addWeighted(frame, 0.96, self.mist_layer, 0.04, 0)
-        return cv2.addWeighted(misted_frame, 1.0, rain_canvas, 0.65, 0)
+        # 5. Composite: soft mist overlay + delicate translucent water blend
+        mist_a = cfg["mist_alpha"]
+        rain_a = cfg["rain_alpha"]
+        misted_frame = cv2.addWeighted(frame, 1.0 - mist_a, self.mist_layer, mist_a, 0)
+        return cv2.addWeighted(misted_frame, 1.0, rain_canvas, rain_a, 0)
 
 
 def get_ffmpeg_writer(output_path: str, width: int, height: int, fps: float):
@@ -504,7 +568,7 @@ def process_drone_flyovers(
     start_tilt: str = "center",
     curve: str = "cosine",
     rain: bool = False,
-    rain_intensity: str = "medium",
+    rain_intensity: str = "light",
     res_mode: str = "4k",
     interp_mode: str = "lanczos",
     target_duration: float = None,
@@ -689,8 +753,8 @@ if __name__ == "__main__":
     parser.add_argument("--curve", choices=["cosine", "cubic", "linear", "ramp-up", "ramp-down", "whip"], default="cosine", 
                         help="Motion curve: cosine (default), cubic, linear, ramp-up (speed up), ramp-down (slow down), whip (fast mid-sweep)")
     parser.add_argument("--rain", action="store_true", help="Add authentic procedural cinematic rainfall & atmospheric mist")
-    parser.add_argument("--rain-intensity", choices=["light", "medium", "heavy"], default="medium", 
-                        help="Rain intensity: light, medium, heavy")
+    parser.add_argument("--rain-intensity", choices=["light", "medium", "heavy"], default="light", 
+                        help="Rain intensity: light (default), medium, heavy")
     parser.add_argument("--fps", type=float, default=30.0, help="Frames per second (default: 30.0)")
     parser.add_argument("--res", choices=["4k", "1080p"], default="4k", help="Output resolution: 4k (default: 3840x2160) or 1080p")
     parser.add_argument("--lanczos", action="store_true", help="High-precision Lanczos4 interpolation (slower)")
