@@ -606,7 +606,16 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
     fetch(`/api/production/episodes/${targetId}/approve?channel_id=${chSlug}&user_id=${encodeURIComponent(uEmail)}`, { method: "POST" }).catch(() => {});
   } catch (e) {}
 
-  // Resumes pipeline respecting user Gate setting (Manual: Stage 1 only; Auto: end-to-end)
-  startStudioLiveStageProgress(ep, activeStrat);
+  // Resumes pipeline respecting user Gate setting (Manual: resumes current pending phase; Auto: end-to-end)
+  let targetPhase = null;
+  if (activeStrat === "manual") {
+    const rawMot = (ep.motion_clips && ep.motion_clips.length > 0) ? ep.motion_clips : (ep.artifacts?.motion_clips || []);
+    const rawKfs = (ep.keyframes && ep.keyframes.length > 0) ? ep.keyframes : (ep.artifacts?.keyframes || []);
+    if (rawMot.length > 0) targetPhase = "audio";
+    else if (rawKfs.length > 0) targetPhase = "motion";
+    else if (ep.script) targetPhase = "photos";
+    else targetPhase = "script";
+  }
+  startStudioLiveStageProgress(ep, activeStrat, targetPhase);
 }
 

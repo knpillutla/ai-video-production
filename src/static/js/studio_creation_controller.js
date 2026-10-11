@@ -388,10 +388,12 @@ function filterChannelArchive() {
   const allMap = new Map();
   if (typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) {
     studioVideos.forEach(v => {
-      const cId = v.channelId || v.channel_id || "earth_serenade";
-      const eId = v.id || v.episode_id;
-      allMap.set(`${cId}_${eId}`, {
-        episode_id: eId, channel_id: cId,
+      const cId = (v.channelId || v.channel_id || "earth_serenade").toLowerCase().trim();
+      const rawEId = (v.id || v.episode_id || "").trim();
+      const normEId = rawEId ? rawEId.toUpperCase() : "EP-001";
+      const key = `${cId}_${normEId}`;
+      allMap.set(key, {
+        episode_id: normEId, channel_id: cId,
         title: v.title, story_topic: v.concept || v.story_topic || v.title,
         cost_usd: v.cost || v.cost_usd || 0.14, status: v.status || "completed",
         is_approved: Boolean(v.is_approved || v.approved),
@@ -402,12 +404,19 @@ function filterChannelArchive() {
   }
 
   channelArchiveEpisodes.forEach(ep => {
-    const key = `${ep.channel_id || "earth_serenade"}_${ep.episode_id}`;
+    const cId = (ep.channel_id || "earth_serenade").toLowerCase().trim();
+    const rawEId = (ep.episode_id || ep.id || "").trim();
+    const normEId = rawEId ? rawEId.toUpperCase() : "EP-001";
+    const key = `${cId}_${normEId}`;
     if (!allMap.has(key)) {
-      allMap.set(key, { ...ep, is_approved: Boolean(ep.is_approved || ep.approved), status: "completed", progress: 100 });
+      allMap.set(key, { ...ep, episode_id: normEId, channel_id: cId, is_approved: Boolean(ep.is_approved || ep.approved), status: "completed", progress: 100 });
     } else {
       const ex = allMap.get(key);
       if (ep.is_approved || ep.approved) ex.is_approved = true;
+      if (ep.keyframes && ep.keyframes.length > 0 && (!ex.keyframes || ex.keyframes.length === 0)) ex.keyframes = ep.keyframes;
+      if (ep.motion_clips && ep.motion_clips.length > 0 && (!ex.motion_clips || ex.motion_clips.length === 0)) ex.motion_clips = ep.motion_clips;
+      if (ep.audio_stems && ep.audio_stems.length > 0 && (!ex.audio_stems || ex.audio_stems.length === 0)) ex.audio_stems = ep.audio_stems;
+      if (ep.video_url && !ex.videoUrl) ex.videoUrl = ep.video_url;
     }
   });
 
@@ -429,11 +438,13 @@ function filterChannelArchive() {
   }
 
   const activeEpisode = (typeof currentActiveInspectorEpisode !== "undefined") ? currentActiveInspectorEpisode : null;
-  const activeEpId = activeEpisode ? (activeEpisode.id || activeEpisode.episode_id) : null;
-  const activeChannelId = activeEpisode ? (activeEpisode.channelId || activeEpisode.channel_id) : null;
+  const activeEpId = activeEpisode ? String(activeEpisode.id || activeEpisode.episode_id || "").trim().toUpperCase() : null;
+  const activeChannelId = activeEpisode ? String(activeEpisode.channelId || activeEpisode.channel_id || "").trim().toLowerCase() : null;
 
   container.innerHTML = filtered.map(ep => {
-    const isSel = activeEpId === ep.episode_id && activeChannelId === ep.channel_id;
+    const curEpId = String(ep.episode_id || ep.id || "").trim().toUpperCase();
+    const curChId = String(ep.channel_id || ep.channelId || "").trim().toLowerCase();
+    const isSel = Boolean(activeEpId && curEpId === activeEpId && (!activeChannelId || curChId === activeChannelId));
     const isProc = (ep.status === "processing" || ep.status === "queued");
     const isApp = Boolean(ep.is_approved || ep.approved);
     const bCls = isSel ? "border-2 border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/40 ring-1 ring-indigo-500/30" : "border border-slate-200 dark:border-slate-800 hover:border-indigo-400 bg-slate-50 dark:bg-slate-950/80";
@@ -480,11 +491,35 @@ async function approveCurrentEpisode() {
 }
 
 function selectArchiveEpisode(epId, chId) {
-  const ch = chId || (typeof selectedStudioChannel !== "undefined" ? selectedStudioChannel : "earth_serenade");
-  if (ch && ch !== "all" && typeof selectStudioChannel === "function" && selectedStudioChannel !== ch) selectStudioChannel(ch);
-  let ep = (typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) ? studioVideos.find(x => (x.id === epId || x.episode_id === epId) && (ch === "all" || (x.channelId || x.channel_id) === ch)) : null;
-  if (!ep) ep = channelArchiveEpisodes.find(x => x.episode_id === epId && (ch === "all" || x.channel_id === ch));
+  const normEpId = String(epId || "").trim().toUpperCase();
+  const ch = chId || (typeof selectedStudioChannel !== "undefined" ? selectedStudioChannel : "all");
+  const normCh = String(ch || "").trim().toLowerCase();
+
+  // Look in studioVideos first, then channelArchiveEpisodes
+  let ep = (typeof studioVideos !== "undefined" && Array.isArray(studioVideos))
+    ? studioVideos.find(x => String(x.id || x.episode_id || "").trim().toUpperCase() === normEpId && (normCh === "all" || String(x.channelId || x.channel_id || "").trim().toLowerCase() === normCh))
+    : null;
+  if (!ep && typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) {
+    ep = channelArchiveEpisodes.find(x => String(x.episode_id || x.id || "").trim().toUpperCase() === normEpId && (normCh === "all" || String(x.channel_id || x.channelId || "").trim().toLowerCase() === normCh));
+  }
+  if (!ep && typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) {
+    ep = studioVideos.find(x => String(x.id || x.episode_id || "").trim().toUpperCase() === normEpId);
+  }
+  if (!ep && typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) {
+    ep = channelArchiveEpisodes.find(x => String(x.episode_id || x.id || "").trim().toUpperCase() === normEpId);
+  }
   if (!ep) return;
+
+  // Set active inspector episode immediately
+  currentActiveInspectorEpisode = ep;
+
+  // Switch channel quietly if different without triggering destructive form resets
+  const targetChannel = ep.channelId || ep.channel_id;
+  if (targetChannel && typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all" && selectedStudioChannel !== targetChannel) {
+    selectedStudioChannel = targetChannel;
+    if (typeof updateStudioChannelBadge === "function") updateStudioChannelBadge();
+  }
+
   if (typeof renderInspectorFromVideo === "function") renderInspectorFromVideo(ep);
   if (window.StudioBus) window.StudioBus.emit("episode:selected", ep);
   filterChannelArchive();

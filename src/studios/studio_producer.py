@@ -169,30 +169,37 @@ class StudioProducer:
                 logger.warning(f"tts_voiceover_failed: {tts_err}")
 
         # Stage 4: Motion Diffusion Gate (Parallel AI Video Diffusion with In-Flight Token Resumption)
-        valid_keyframes = [p for p in image_results if p.is_file() and p.stat().st_size > 1000]
-        if not valid_keyframes:
-            raise RuntimeError("visual_diffusion_aborted: Zero valid keyframes were produced.")
+        existing_vids = [ep_dir / f"motion_p{idx}.mp4" for idx in range(1, len(sb.scenes) + 1)]
+        all_motion_exist = all(p.is_file() and p.stat().st_size > 1000 for p in existing_vids)
 
-        motion_tasks = []
-        for idx, (s, kf) in enumerate(zip(sb.scenes, valid_keyframes), 1):
-            custom_model_cfg = getattr(s, "model_configs", None) if isinstance(getattr(s, "model_configs", None), dict) else None
-            chosen_model, m_allow_fallback, m_rationale = resolve_scene_motion_model(
-                scene=s, tier=tier, requested_motion_model=motion_model,
-                scene_index=idx - 1, total_scenes=len(valid_keyframes), genre=getattr(sb, "cluster", "relax/nature"),
-            )
-            motion_tasks.append(
-                MotionClipTask(
-                    image_path=kf, motion_prompt=s.motion_prompt, visual_prompt=s.visual_prompt,
-                    output_path=ep_dir / f"motion_p{idx}.mp4", duration_seconds=s.duration_seconds,
-                    model=chosen_model, domain=s.domain, req_file=ep_dir / f"fal_motion_req_p{idx}.json",
-                    allow_fallback=allow_fallback or m_allow_fallback, force_rerun=force_rerun,
-                    negative_prompt=_resolve_scene_negative_prompt(s), model_configs=custom_model_cfg,
-                    camera_waypoints=getattr(s, "camera_waypoints", None), kinetic_micro_zones=getattr(s, "kinetic_micro_zones", None),
-                    camera_movement=getattr(s, "camera_movement", None),
+        if (audio_only or master_only) and all_motion_exist and not (force_rerun and motion_only):
+            logger.info(f"downstream_stage_reuse_motion: episode='{ep_dir.name}' reusing {len(existing_vids)} existing motion clips ($0 spend)")
+            video_clips = existing_vids
+        else:
+            valid_keyframes = [p for p in image_results if p.is_file() and p.stat().st_size > 1000]
+            if not valid_keyframes:
+                raise RuntimeError("visual_diffusion_aborted: Zero valid keyframes were produced.")
+
+            motion_tasks = []
+            for idx, (s, kf) in enumerate(zip(sb.scenes, valid_keyframes), 1):
+                custom_model_cfg = getattr(s, "model_configs", None) if isinstance(getattr(s, "model_configs", None), dict) else None
+                chosen_model, m_allow_fallback, m_rationale = resolve_scene_motion_model(
+                    scene=s, tier=tier, requested_motion_model=motion_model,
+                    scene_index=idx - 1, total_scenes=len(valid_keyframes), genre=getattr(sb, "cluster", "relax/nature"),
                 )
-            )
+                motion_tasks.append(
+                    MotionClipTask(
+                        image_path=kf, motion_prompt=s.motion_prompt, visual_prompt=s.visual_prompt,
+                        output_path=ep_dir / f"motion_p{idx}.mp4", duration_seconds=s.duration_seconds,
+                        model=chosen_model, domain=s.domain, req_file=ep_dir / f"fal_motion_req_p{idx}.json",
+                        allow_fallback=allow_fallback or m_allow_fallback, force_rerun=force_rerun,
+                        negative_prompt=_resolve_scene_negative_prompt(s), model_configs=custom_model_cfg,
+                        camera_waypoints=getattr(s, "camera_waypoints", None), kinetic_micro_zones=getattr(s, "kinetic_micro_zones", None),
+                        camera_movement=getattr(s, "camera_movement", None),
+                    )
+                )
 
-        video_clips = await visual_batch_service.render_motion_batch(tasks=motion_tasks)
+            video_clips = await visual_batch_service.render_motion_batch(tasks=motion_tasks)
 
         if motion_only:
             return {

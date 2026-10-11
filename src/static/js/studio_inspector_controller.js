@@ -65,18 +65,37 @@ function renderInspectorFromVideo(vid) {
   setT("panel-header-meta", `${vid.format || vid.formatType || "4K UHD"} • ${vid.fps || "24 FPS"}${cost}`);
   setT("panel-header-title", vid.title || "4K Master Inspector"); setT("panel-header-story", `Story: ${vid.story_topic || vid.concept || vid.theme || "Master Artifacts"}`);
 
-  // Fetch disk artifacts if keyframes or screenplay are missing or empty
-  if (epId && epId !== "NEW" && (!vid.keyframes || vid.keyframes.length === 0)) {
+  // Fetch disk artifacts if keyframes, motion clips, or audio stems are missing
+  if (epId && epId !== "NEW" && (!vid.keyframes || vid.keyframes.length === 0 || !vid.motion_clips || vid.motion_clips.length === 0 || !vid.audio_stems || vid.audio_stems.length === 0)) {
     const chSlug = vid.channelId || vid.channel_id || (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all" ? selectedStudioChannel : "nature_rhythms");
     const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
     fetch(`/api/production/poll-artifacts?channel_id=${chSlug}&episode_id=${epId}&user_id=${encodeURIComponent(uEmail)}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (data && data.keyframes && data.keyframes.length > 0 && currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id === epId || currentActiveInspectorEpisode.episode_id === epId)) {
-          currentActiveInspectorEpisode.keyframes = data.keyframes;
-          if (data.screenplay && !currentActiveInspectorEpisode.screenplay) currentActiveInspectorEpisode.screenplay = data.screenplay;
-          if (typeof renderKeyframesList === "function") renderKeyframesList(currentActiveInspectorEpisode);
-          if (typeof updateStageGateDock === "function") updateStageGateDock(currentActiveInspectorEpisode);
+        if (data && currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id === epId || currentActiveInspectorEpisode.episode_id === epId)) {
+          let updated = false;
+          if (data.keyframes && data.keyframes.length > 0 && (!currentActiveInspectorEpisode.keyframes || currentActiveInspectorEpisode.keyframes.length === 0)) {
+            currentActiveInspectorEpisode.keyframes = data.keyframes;
+            updated = true;
+          }
+          if (data.motion_clips && data.motion_clips.length > 0 && (!currentActiveInspectorEpisode.motion_clips || currentActiveInspectorEpisode.motion_clips.length === 0)) {
+            currentActiveInspectorEpisode.motion_clips = data.motion_clips;
+            updated = true;
+          }
+          if (data.audio_stems && data.audio_stems.length > 0 && (!currentActiveInspectorEpisode.audio_stems || currentActiveInspectorEpisode.audio_stems.length === 0)) {
+            currentActiveInspectorEpisode.audio_stems = data.audio_stems;
+            updated = true;
+          }
+          if (data.screenplay && !currentActiveInspectorEpisode.screenplay) {
+            currentActiveInspectorEpisode.screenplay = data.screenplay;
+            updated = true;
+          }
+          if (updated) {
+            if (typeof renderKeyframesList === "function") renderKeyframesList(currentActiveInspectorEpisode);
+            if (typeof renderMotionClipsList === "function") renderMotionClipsList(currentActiveInspectorEpisode);
+            if (typeof renderAudioStemsList === "function") renderAudioStemsList(currentActiveInspectorEpisode);
+            if (typeof updateStageGateDock === "function") updateStageGateDock(currentActiveInspectorEpisode);
+          }
         }
       })
       .catch(() => {});

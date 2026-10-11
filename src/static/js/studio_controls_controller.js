@@ -1,9 +1,9 @@
 // CineAI Studio: Panel 2 Controls & Engine Controller (Execution Mode, Cadence & Cost Math)
 let activeExecutionMode = "test"; // "test" | "prod"
 let activePipelineStrategy = "manual"; // "auto" | "manual"
-let activeTestDuration = 5;
-let activeShotsCount = 1;
-let activeBroadcastHours = 0.0;
+let activeTestDuration = 60;
+let activeShotsCount = -1;
+let activeBroadcastHours = 0.0167; // 1 min preview default
 let currentNicheGroup = "relaxation";
 
 function setExecutionMode(mode) {
@@ -17,13 +17,14 @@ function setExecutionMode(mode) {
   if (btnTest) btnTest.classList.toggle("active", mode === "test");
   if (btnProd) btnProd.classList.toggle("active", mode === "prod");
 
+  const shotsLabel = activeShotsCount === -1 ? "Auto" : `${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''}`;
   if (mode === "test") {
     if (optTest) optTest.classList.remove("hidden");
     if (optProd) optProd.classList.add("hidden");
     if (btnProduceText) {
       btnProduceText.textContent = activePipelineStrategy === "manual" 
-        ? `Run Test (${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''})` 
-        : `Run Draft (${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''})`;
+        ? `Run Test (${shotsLabel})` 
+        : `Run Draft (${shotsLabel})`;
     }
   } else {
     if (optTest) optTest.classList.add("hidden");
@@ -61,7 +62,8 @@ function setPipelineExecutionMode(strat) {
 }
 
 function setTestShots(val) {
-  activeShotsCount = parseInt(val, 10) || 1;
+  const parsedInt = parseInt(val, 10);
+  activeShotsCount = (isNaN(parsedInt) || parsedInt === -1) ? -1 : parsedInt;
   const testStretchSel = document.getElementById("studio-test-stretch");
   if (activeShotsCount === 1 && testStretchSel) {
     testStretchSel.value = "0.0083"; // 30s Preview
@@ -73,14 +75,15 @@ function setTestShots(val) {
     activeBroadcastHours = parsed.lpHours;
     activeTestDuration = parsed.durSec;
   } else {
-    activeTestDuration = activeShotsCount * 5;
+    activeTestDuration = activeShotsCount === -1 ? 60.0 : (activeShotsCount * 5.0);
   }
 
   const btnProduceText = document.getElementById("btn-produce-text");
   if (activeExecutionMode === "test" && btnProduceText) {
+    const shotsLabel = activeShotsCount === -1 ? "Auto" : `${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''}`;
     btnProduceText.textContent = activePipelineStrategy === "manual"
-      ? `TEST (MANUAL ${activeShotsCount} Shots)`
-      : `TEST DRAFT (${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''})`;
+      ? `TEST (MANUAL ${shotsLabel})`
+      : `TEST DRAFT (${shotsLabel})`;
   }
   calculateLiveCostEstimate();
 }

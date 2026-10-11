@@ -87,14 +87,15 @@ async function syncChannelEpisodesFromBackend() {
         const curStage = hasMaster ? 5 : ((ep.motion_clips && ep.motion_clips.length > 0) ? 3 : ((ep.keyframes && ep.keyframes.length > 0) ? 2 : 1));
         const sceneCount = ep.screenplay?.scenes?.length || ep.script?.scenes?.length || ep.scenes?.length || ep.user_inputs?.num_shots || 1;
 
+        const normEpId = (ep.episode_id || "").toUpperCase() || "EP-001";
         return {
-          id: ep.episode_id, jobId: `job_${ep.episode_id}`, title: ep.title || ep.story_topic,
+          id: normEpId, episode_id: normEpId, jobId: `job_${normEpId.toLowerCase()}`, title: ep.title || ep.story_topic,
           concept: ep.story_topic || ep.title, videoType: ep.category === "Music" ? "Relaxation & ASMR" : "Nature Soundscape",
           genre: ep.genre || ep.screenplay?.genre || ep.user_inputs?.genre || ep.manifest?.genre || "relax/nature",
           sub_genre: ep.sub_genre || ep.screenplay?.sub_genre || ep.user_inputs?.sub_genre || ep.manifest?.sub_genre || null,
           primary_archetype: ep.primary_archetype || ep.screenplay?.primary_archetype || ep.user_inputs?.primary_archetype || ep.manifest?.primary_archetype || null,
           formatType: "Long (16:9)", styleType: "Cinematic 4K", productionType: "Theme",
-          channelId: ep.channel_id,
+          channelId: ep.channel_id, channel_id: ep.channel_id,
           numShots: sceneCount, num_shots: sceneCount,
           status: hasMaster ? "completed" : "ready",
           currentStage: curStage,

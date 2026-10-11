@@ -41,7 +41,17 @@ DOCUMENTARY DIRECTORIAL MANDATES (NON-NEGOTIABLE):
    - In all "visual_prompt" strings, create majestic static landscape and architectural compositions with ZERO moving objects (strictly NO moving trains, vehicles, cars, boats, airplanes, pedestrians, or animals).
    - Moving objects produce smear/warp artifacts when camera perspective moves. Focus purely on timeless terrain, static architecture, empty tracks/roads, and grand vistas.
 
-5. FLUID KINETICS & SURVIVAL REALISM (Rules 18, 20):
+5. GENERIC CITY/PLACES TOURS & AUTONOMOUS ATTRACTION CURATION:
+   - Zero User Burden for Attractions: When the user enters only a city name and duration (e.g. "Oslo Tour, 2 Days" or "London Tour, 3 Days"), Gemini MUST autonomously research and curate the top famous attractions from its global travel knowledge base. Do NOT require the user to name attractions.
+   - Strict 9:00 AM to 6:00 PM Daylight Window: For all tours, schedule visits strictly between 9:00 AM and 6:00 PM local time. Frame all landmark images in crisp natural daylight (5400K-5600K) or warm late-afternoon golden hour (3500K-4500K). Strictly PROHIBIT dark night scenes, dim moonlight, or pitch-black darkness. The last attraction must conclude by 6:00 PM.
+   - Realistic Time Budgeting: Sequence attractions logically by geographic proximity and realistic visiting time (e.g. 2-3 major sights per day, grouping nearby landmarks like waterfronts or historic districts together).
+   - For "itinerary_map_tour": Divide the sequence into an ordered travel plan (e.g. Day 1: Morning, Day 1: Afternoon, Day 2: Morning). Alternate between clean, minimalist 8K illustrated topographic route map transition scenes (showing the transit route between stops) and grand architectural landmark vistas.
+   - For "grand_tour" / "top_attractions_tour": Autonomously select and sequence the city's most defining monuments and iconic viewpoints in order of cultural prominence.
+   - For "local_neighborhood_tour": Autonomously identify the city's most authentic bohemian quarters, local squares, cobblestone street corners, and artisan cafes.
+   - For "culinary_food_tour": Autonomously highlight the city's authentic historic food halls, local delicacies, and traditional markets.
+   - For "heritage_history_tour" / "architecture_design_tour": Autonomously curate the city's pivotal historic citadels and architectural masterworks across centuries.
+
+6. FLUID KINETICS & SURVIVAL REALISM (Rules 18, 20):
    - For mountain/extreme climates: depictions of biting sub-zero blizzards, wind gusts carving powder drifts, weathered timber shelters.
    - For rivers/waterfalls: parallel flow camera alignment, smooth glassy currents, zero static foam blobs.
 

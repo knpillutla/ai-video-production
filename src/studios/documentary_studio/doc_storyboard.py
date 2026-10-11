@@ -256,7 +256,13 @@ async def generate_documentary_storyboard_gemini(
             "- MOTION CURVES: 'cosine' (smooth S-curve), 'linear', 'ramp-up' (slow build), 'ramp-down'.\n"
             "- ATMOSPHERIC WEATHER: 'weather' can be 'none', 'rain' (light/medium), or 'snow' (medium/heavy).\n"
             "- ANTI-FATIGUE ACOUSTIC SCORE: Warm cinematic orchestral textures, gentle natural environmental foley, deterministic sidechain ducking (-18dB) under narration, velvet -14 LUFS mastering.\n"
-            "For narration: Measured, poetic, authoritative cadence (~120 wpm) rich in geographic, ecological, and evolutionary lore.\n"
+            "- ITINERARY & GENERIC TOUR DIRECTIVES:\n"
+            "  * Autonomous Attraction Selection: The user only provides the city and duration (e.g. 'Oslo Tour, 2 Days' or 'London Tour, 3 Days'). "
+            "You MUST autonomously curate the top famous attractions from your global knowledge base and allocate them logically across days based on geographic proximity and realistic visiting time (e.g. 2-3 major stops per day). Do NOT expect the user to name attractions.\n"
+            "  * Strict 9:00 AM to 6:00 PM Daylight Window: For all tours, schedule visits strictly between 9:00 AM and 6:00 PM local time. Frame all landmark images in crisp natural daylight (5400K-5600K) or warm late-afternoon golden hour (3500K-4500K). Strictly PROHIBIT dark night scenes, dim moonlight, or pitch-black darkness. The last attraction must conclude by 6:00 PM.\n"
+            "  * For 'itinerary_map_tour', alternate between illustrated topographic route map transition scenes (showing the travel route between stops) and iconic landmark vistas.\n"
+            "  * For 'grand_tour', 'top_attractions_tour', 'local_neighborhood_tour', 'culinary_food_tour', 'heritage_history_tour', or 'architecture_design_tour', curate the defining sights in ordered narrative sequence.\n"
+            "For narration: Measured, poetic, authoritative cadence (~120 wpm) rich in geographic, ecological, architectural, and cultural lore.\n"
             "Return valid JSON matching the schema."
         )
 

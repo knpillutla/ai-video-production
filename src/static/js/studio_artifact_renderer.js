@@ -320,7 +320,7 @@ function renderKeyframesList(vid) {
     const isSel = vid.selectedKeyframeIds.includes(i);
 
     const isThisKeyframeGenerating = Boolean(
-      isGeneratingPhotos && (vid.force_rerun || !hasImage || i === activeGenIdx || (numShots === 1 && isProc && stage === 2))
+      isGeneratingPhotos && !hasImage && (i === activeGenIdx || (numShots === 1 && isProc && stage === 2))
     );
 
     const activeImgLabel = (vid.imageModel && (vid.imageModel.includes("imagen") || vid.imageModel.includes("gemini"))) ? "Gemini Imagen 3" : ((vid.imageModel && (vid.imageModel.includes("pro") || vid.imageModel.includes("ultra"))) ? "FLUX Pro" : ((vid.imageModel && vid.imageModel.includes("zimage")) ? "Z-Image" : "FLUX Dev"));
@@ -455,7 +455,7 @@ function renderMotionClipsList(vid) {
     const isShotLocalDrone = shotMotionType.includes("ken_burns") || shotMotionType.includes("local") || shotMotionType.includes("drone") || shotMotionType.includes("zoompan");
 
     const isThisClipGenerating = Boolean(
-      isGeneratingMotion && (vid.force_rerun || !hasVid || i === activeGenIdx || (numClips === 1 && isProc && stage === 3))
+      isGeneratingMotion && !hasVid && (i === activeGenIdx || (numClips === 1 && isProc && stage === 3))
     );
 
     if (isThisClipGenerating) {
@@ -549,27 +549,28 @@ function renderAudioStemsList(vid) {
   const velvetStem = rawStems.find(s => (s.filename && s.filename.includes("velvet")) || (s.name && (s.name.toLowerCase().includes("velvet") || s.name.toLowerCase().includes("binaural") || s.name.toLowerCase().includes("432hz"))));
   const narrStem = rawStems.find(s => (s.filename && (s.filename.includes("spoken_narration") || s.filename.includes("narration"))) || (s.name && (s.name.toLowerCase().includes("narration") || s.name.toLowerCase().includes("voiceover"))));
 
+  const isAudioActive = Boolean(isProc && stage === 4);
   const items = [
     {
       name: "Suno Soundtrack",
       stem: sunoStem,
       color: "cyan",
       model: "Suno v3.5",
-      isGenerating: Boolean(isProc && stage >= 4 && !sunoStem),
+      isGenerating: Boolean(isAudioActive && !sunoStem),
     },
     {
       name: "Velvet 432Hz Master",
       stem: velvetStem,
       color: "emerald",
       model: "Spatial DSP",
-      isGenerating: Boolean(isProc && stage >= 4 && !velvetStem),
+      isGenerating: Boolean(isAudioActive && sunoStem && !velvetStem),
     },
     {
       name: "Spoken Narration",
       stem: narrStem,
       color: "indigo",
       model: "TTS Voice",
-      isGenerating: Boolean(isProc && stage >= 4 && !narrStem && (vid.enableVoiceOver || vid.enable_voiceover)),
+      isGenerating: Boolean(isAudioActive && (vid.enableVoiceOver || vid.enable_voiceover) && !narrStem),
     }
   ];
 
