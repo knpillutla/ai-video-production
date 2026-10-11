@@ -103,13 +103,37 @@ class StudioProducer:
             )
             for idx, s in enumerate(sb.scenes, 1)
         ]
-        kf_force_rerun = force_rerun and photos_only
-        image_results = await visual_batch_service.render_keyframes_batch(
-            tasks=keyframe_tasks,
-            aspect_ratio="16:9",
-            force_rerun=kf_force_rerun,
-            image_model=image_model,
-        )
+        existing_kfs = [ep_dir / f"keyframe_p{idx}.jpg" for idx in range(1, len(sb.scenes) + 1)]
+        all_kfs_exist = all(p.is_file() and p.stat().st_size > 1000 for p in existing_kfs)
+
+        if (motion_only or audio_only or master_only) and all_kfs_exist:
+            logger.info(f"downstream_stage_reuse_keyframes: episode='{ep_dir.name}' reusing {len(existing_kfs)} existing keyframes ($0 spend)")
+            image_results = existing_kfs
+        else:
+            # If downstream stage was invoked but keyframe not yet in ep_dir, look for existing keyframes in sibling directories
+            if (motion_only or audio_only or master_only) and not all_kfs_exist:
+                for kf_idx, target_kf in enumerate(existing_kfs, 1):
+                    if not (target_kf.is_file() and target_kf.stat().st_size > 1000):
+                        # Search under user container or parent
+                        for cand in ep_dir.parent.rglob(f"keyframe_p{kf_idx}.jpg"):
+                            if cand.is_file() and cand.stat().st_size > 1000 and cand != target_kf:
+                                import shutil
+                                shutil.copy2(cand, target_kf)
+                                break
+                all_kfs_exist = all(p.is_file() and p.stat().st_size > 1000 for p in existing_kfs)
+                if all_kfs_exist:
+                    logger.info(f"downstream_stage_recovered_keyframes: episode='{ep_dir.name}' recovered {len(existing_kfs)} keyframes ($0 spend)")
+                    image_results = existing_kfs
+            if not ((motion_only or audio_only or master_only) and all_kfs_exist):
+                kf_force_rerun = force_rerun and photos_only
+                # If motion_only or downstream, default missing image generation to cheapest model (Gemini)
+                eff_img_model = "google_imagen3" if (motion_only or audio_only or master_only) and (not image_model or "flux" in image_model) else image_model
+                image_results = await visual_batch_service.render_keyframes_batch(
+                    tasks=keyframe_tasks,
+                    aspect_ratio="16:9",
+                    force_rerun=kf_force_rerun,
+                    image_model=eff_img_model,
+                )
 
         if photos_only:
             return {
@@ -120,11 +144,11 @@ class StudioProducer:
                 "episode_dir": str(ep_dir),
             }
 
-        # Stage 3: Shot-Aligned Narration Gate (Narration First Timing Architecture)
+        # Stage 3: Shot-Aligned Narration Gate (Synthesized during Audio Stage or full auto pipeline)
         voice_path = ep_dir / "spoken_narration.mp3"
         spoken_text = getattr(sb, "spoken_narration_script", None)
         has_narr = any(bool(getattr(s, "narration_text", None)) for s in sb.scenes) if hasattr(sb, "scenes") else False
-        if enable_voiceover and (spoken_text or has_narr):
+        if not motion_only and not photos_only and enable_voiceover and (spoken_text or has_narr):
             log_pipeline_step("checking audio", "Spoken Narration Voiceover", "started", metadata={"file": voice_path.name})
             try:
                 from src.services.shot_narration_service import synthesize_shot_aligned_narration
@@ -164,6 +188,7 @@ class StudioProducer:
                     allow_fallback=allow_fallback or m_allow_fallback, force_rerun=force_rerun,
                     negative_prompt=_resolve_scene_negative_prompt(s), model_configs=custom_model_cfg,
                     camera_waypoints=getattr(s, "camera_waypoints", None), kinetic_micro_zones=getattr(s, "kinetic_micro_zones", None),
+                    camera_movement=getattr(s, "camera_movement", None),
                 )
             )
 
@@ -196,6 +221,21 @@ class StudioProducer:
                 log_pipeline_step("checking audio", "BGM Soundtrack", "completed", "soundtrack synthesized", {"file": bgm_path.name})
             if bgm_path and bgm_path.is_file():
                 audio_stems.append(bgm_path)
+
+        if enable_voiceover and (spoken_text or has_narr):
+            if not voice_path.is_file() or voice_path.stat().st_size < 1000 or (force_rerun and audio_only):
+                log_pipeline_step("checking audio", "Spoken Narration Voiceover", "started", metadata={"file": voice_path.name})
+                try:
+                    from src.services.shot_narration_service import synthesize_shot_aligned_narration
+                    narr_res = await synthesize_shot_aligned_narration(
+                        scenes=sb.scenes, ep_dir=ep_dir, fallback_script=spoken_text,
+                        total_target_sec=float(sb.total_duration or 60.0), force_rerun=force_rerun and audio_only,
+                    )
+                    if narr_res.get("narration_path") and Path(narr_res["narration_path"]).is_file():
+                        voice_path = Path(narr_res["narration_path"])
+                    log_pipeline_step("checking audio", "Spoken Narration Voiceover", "completed", "narration synthesized", {"file": voice_path.name})
+                except Exception as tts_err:
+                    logger.warning(f"tts_voiceover_failed: {tts_err}")
 
         if voice_path.is_file() and voice_path.stat().st_size > 1000:
             audio_stems.append(voice_path)

@@ -249,6 +249,7 @@ async def generate_ambient_storyboard_gemini(
                     motion_prompt=sc.get("motion_prompt", ""),
                     duration_seconds=shot_dur,
                     domain=sc.get("domain", "landscape_solid" if "rain" not in theme_seed.lower() else "water_fluid"),
+                    camera_movement=sc.get("camera_movement", "slow_zoom_in"),
                 ))
             
             sb = AmbientStoryboard(

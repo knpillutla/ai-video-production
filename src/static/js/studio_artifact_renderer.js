@@ -294,6 +294,7 @@ function renderKeyframesList(vid) {
       c.innerHTML = `<div class="col-span-4 p-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-300 dark:border-blue-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
         <div class="flex items-center gap-1.5"><i class="fa-solid fa-images text-blue-600 dark:text-blue-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-blue-950 dark:text-white">Stage 1 Script Ready</span><span class="text-[7px] text-blue-700 dark:text-blue-300">Choose image engine:</span></div></div>
         <div class="flex items-center gap-1">
+          <button type="button" onclick="advanceToKeyframesStage(currentActiveInspectorEpisode, 'gemini', true)" class="px-1.5 py-1 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow-sm active:scale-95" title="Generate with Google Imagen 3 (Gemini)"><i class="fa-solid fa-sparkles text-[7px]"></i><span>Gemini (Imagen 3)</span></button>
           <button type="button" onclick="advanceToKeyframesStage(currentActiveInspectorEpisode, 'flux_dev', true)" class="px-1.5 py-1 bg-white dark:bg-slate-900 hover:bg-slate-100 text-slate-800 dark:text-gray-200 rounded-lg text-[8px] font-bold border border-slate-300 dark:border-slate-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Generate with FLUX.1-dev (Test Mode)"><i class="fa-solid fa-vial text-blue-500 text-[7px]"></i><span>Test (FLUX Dev)</span></button>
           <button type="button" onclick="advanceToKeyframesStage(currentActiveInspectorEpisode, 'zimage', true)" class="px-1.5 py-1 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 text-amber-900 dark:text-amber-200 rounded-lg text-[8px] font-bold border border-amber-300 dark:border-amber-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Generate with Z-Image Turbo (Sub-second)"><i class="fa-solid fa-bolt text-amber-500 text-[7px]"></i><span>Z-Image Turbo</span></button>
           <button type="button" onclick="advanceToKeyframesStage(currentActiveInspectorEpisode, 'flux_pro', true)" class="px-2 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Render with FLUX 1.1 Pro Ultra"><i class="fa-solid fa-wand-magic-sparkles text-[7px]"></i><span>Render with FLUX Pro (Prod) ➔</span></button>
@@ -322,7 +323,7 @@ function renderKeyframesList(vid) {
       isGeneratingPhotos && (vid.force_rerun || !hasImage || i === activeGenIdx || (numShots === 1 && isProc && stage === 2))
     );
 
-    const activeImgLabel = (vid.imageModel && (vid.imageModel.includes("pro") || vid.imageModel.includes("ultra"))) ? "FLUX Pro" : ((vid.imageModel && vid.imageModel.includes("zimage")) ? "Z-Image" : "FLUX Dev");
+    const activeImgLabel = (vid.imageModel && (vid.imageModel.includes("imagen") || vid.imageModel.includes("gemini"))) ? "Gemini Imagen 3" : ((vid.imageModel && (vid.imageModel.includes("pro") || vid.imageModel.includes("ultra"))) ? "FLUX Pro" : ((vid.imageModel && vid.imageModel.includes("zimage")) ? "Z-Image" : "FLUX Dev"));
 
     if (isThisKeyframeGenerating) {
       return `<div class="flex flex-col items-center gap-0.5 w-full"><div class="relative w-full h-12 rounded-lg bg-blue-50/80 dark:bg-slate-900 border-2 border-blue-500 shadow-sm flex flex-col justify-between p-1.5 ring-2 ring-blue-500/20"><div class="flex items-center justify-between w-full"><span class="text-[8px] font-mono font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[7px]"></i> ${activeImgLabel}</span><span class="text-[7px] font-mono text-blue-600 dark:text-blue-400 font-bold">${pVal}%</span></div><div class="w-full bg-blue-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full animate-pulse" style="width: ${pVal}%"></div></div></div><span class="text-[8px] font-bold text-blue-600 dark:text-blue-400 truncate w-full text-center">${name}</span></div>`;
@@ -332,7 +333,7 @@ function renderKeyframesList(vid) {
       const liveUrl = url;
       const borderCls = isSel ? "border-2 border-emerald-500 ring-1 ring-emerald-500/50" : "border border-slate-300 dark:border-slate-800 opacity-40 grayscale";
       const clickAction = `openImagePopup('${liveUrl}', '${epId}: ${name}', '${activeImgLabel} • 4K UHD Keyframe Photo')`;
-      return `<div class="flex flex-col items-center gap-0.5 w-full relative group"><div class="relative w-full h-12 rounded-lg overflow-hidden bg-white dark:bg-slate-900 ${borderCls} cursor-pointer transition shadow-sm" onclick="${clickAction}" title="Click to view photo in popup"><img src="${liveUrl}" alt="${name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300"><div class="absolute top-0.5 right-0.5 flex items-center gap-0.5 z-10"><button type="button" onclick="event.stopPropagation(); advanceToKeyframesStage(currentActiveInspectorEpisode, 'flux_pro', true);" class="px-1 py-0.2 rounded bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with FLUX 1.1 Pro Ultra">⚡ Pro</button><button type="button" onclick="event.stopPropagation(); advanceToKeyframesStage(currentActiveInspectorEpisode, 'zimage', true);" class="px-1 py-0.2 rounded bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Z-Image Turbo">⚡ Z-Img</button><button type="button" onclick="event.stopPropagation(); promptDeleteArtifact('Keyframe', ${i}, '${name}', 'Keyframe Shot');" class="w-3.5 h-3.5 rounded bg-rose-600/90 hover:bg-rose-500 text-white flex items-center justify-center text-[7px] font-bold" title="Delete Keyframe">✕</button><button type="button" onclick="event.stopPropagation(); toggleKeyframeSelection(${i});" class="px-1 py-0.2 rounded bg-black/80 text-[7px] font-mono hover:bg-emerald-600 ${isSel ? 'text-emerald-300' : 'text-gray-400'}">${isSel ? '✓' : 'Off'}</button></div></div><span class="text-[8px] font-bold text-slate-800 dark:text-gray-300 truncate cursor-pointer" onclick="${clickAction}">${name}</span></div>`;
+      return `<div class="flex flex-col items-center gap-0.5 w-full relative group"><div class="relative w-full h-12 rounded-lg overflow-hidden bg-white dark:bg-slate-900 ${borderCls} cursor-pointer transition shadow-sm" onclick="${clickAction}" title="Click to view photo in popup"><img src="${liveUrl}" alt="${name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300"><div class="absolute top-0.5 right-0.5 flex items-center gap-0.5 z-10"><button type="button" onclick="event.stopPropagation(); advanceToKeyframesStage(currentActiveInspectorEpisode, 'gemini', true);" class="px-1 py-0.2 rounded bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Google Imagen 3 (Gemini)">⚡ Gemini</button><button type="button" onclick="event.stopPropagation(); advanceToKeyframesStage(currentActiveInspectorEpisode, 'flux_pro', true);" class="px-1 py-0.2 rounded bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with FLUX 1.1 Pro Ultra">⚡ Pro</button><button type="button" onclick="event.stopPropagation(); advanceToKeyframesStage(currentActiveInspectorEpisode, 'zimage', true);" class="px-1 py-0.2 rounded bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Z-Image Turbo">⚡ Z-Img</button><button type="button" onclick="event.stopPropagation(); promptDeleteArtifact('Keyframe', ${i}, '${name}', 'Keyframe Shot');" class="w-3.5 h-3.5 rounded bg-rose-600/90 hover:bg-rose-500 text-white flex items-center justify-center text-[7px] font-bold" title="Delete Keyframe">✕</button><button type="button" onclick="event.stopPropagation(); toggleKeyframeSelection(${i});" class="px-1 py-0.2 rounded bg-black/80 text-[7px] font-mono hover:bg-emerald-600 ${isSel ? 'text-emerald-300' : 'text-gray-400'}">${isSel ? '✓' : 'Off'}</button></div></div><span class="text-[8px] font-bold text-slate-800 dark:text-gray-300 truncate cursor-pointer" onclick="${clickAction}">${name}</span></div>`;
     }
 
     return `<div class="flex flex-col items-center gap-0.5 w-full opacity-60"><div class="relative w-full h-12 rounded-lg bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-300 dark:border-slate-800 flex flex-col items-center justify-center p-1"><span class="text-[8px] font-mono text-slate-400 dark:text-slate-500 flex items-center gap-1"><i class="fa-solid fa-hourglass text-[7px]"></i> Queued</span></div><span class="text-[8px] text-slate-400 dark:text-slate-500 truncate w-full text-center">${name}</span></div>`;
@@ -357,8 +358,8 @@ function renderMotionClipsList(vid) {
       <div class="flex items-center justify-between flex-wrap gap-1">
         <span class="text-xs font-black text-red-700 dark:text-red-400 flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-red-600"></i> Video Motion Status / Timeout</span>
         <div class="flex items-center gap-1">
-          <button type="button" onclick="reprocessActiveEpisodeId('${vid.id || vid.episode_id}')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1 shadow-sm active:scale-95" title="Re-Synthesize (--id) — Resumes pipeline from where it stopped">⚡ Re-Synthesize</button>
-          <button type="button" onclick="retryEpisodeWithFallback('${vid.id || vid.episode_id}')" class="px-2 py-1 text-[9px] font-medium rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-gray-200 transition">Fallback</button>
+          <button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'ken_burns', true)" class="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1 shadow-sm active:scale-95" title="Retry with Local 4K Perspective Drone ($0.00)"><i class="fa-solid fa-plane-up text-[8px]"></i> ⚡ Local Drone ($0)</button>
+          <button type="button" onclick="reprocessActiveEpisodeId('${vid.id || vid.episode_id}', 'ken_burns', true)" class="px-2 py-1 text-[9px] font-bold rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition flex items-center gap-1 shadow-sm active:scale-95" title="Re-Synthesize (--id) — Resumes pipeline with Local Motion">Resume</button>
         </div>
       </div>
       <div class="text-[11px] font-mono font-semibold text-red-600 dark:text-red-400 leading-normal break-words">${vid.errorMessage || 'Video Diffusion in-progress or timed out.'}</div>
@@ -383,14 +384,37 @@ function renderMotionClipsList(vid) {
   if (!isProc && completedClips.length === 0 && rawClips.length === 0) {
     const hasKfs = Boolean((vid.keyframes && vid.keyframes.length > 0) || (vid.artifacts?.keyframes && vid.artifacts.keyframes.length > 0));
     if (hasKfs) {
+      const scenes = vid.screenplay?.scenes || vid.script?.scenes || vid.scenes || [];
+      const shot1 = scenes[0] || {};
+      const mType = (shot1.motion_type || shot1.motion || "").toLowerCase();
+      const isLocalDroneShot = mType.includes("ken_burns") || mType.includes("local") || mType.includes("drone") || mType.includes("zoompan");
+
+      const localBtn = `<button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'ken_burns', true)" class="px-1.5 py-1 ${isLocalDroneShot ? 'bg-emerald-600 text-white font-black shadow-md ring-2 ring-emerald-400/50' : 'bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700'} rounded-lg text-[8px] font-bold transition flex items-center gap-1 active:scale-95" title="Render with Local 4K Perspective Drone & Micro-Kinetics ($0.00)"><i class="fa-solid fa-plane-up ${isLocalDroneShot ? 'text-white' : 'text-emerald-600'} text-[7px]"></i><span>Local Drone ($0)</span></button>`;
+
+      const wanBtn = isLocalDroneShot
+        ? `<button type="button" disabled class="px-1.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 rounded-lg text-[8px] font-medium border border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50 flex items-center gap-1" title="Disabled: Script specifies Local Drone / Ken Burns for this shot"><i class="fa-solid fa-lock text-[7px]"></i><span>Wan 2.1</span></button>`
+        : `<button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'wan', true)" class="px-1.5 py-1 bg-white dark:bg-slate-900 hover:bg-slate-100 text-slate-800 dark:text-gray-200 rounded-lg text-[8px] font-bold border border-slate-300 dark:border-slate-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Test with Wan 2.1 1080p ($0.40)"><i class="fa-solid fa-vial text-amber-500 text-[7px]"></i><span>Wan 2.1</span></button>`;
+
+      const wan4kBtn = isLocalDroneShot
+        ? `<button type="button" disabled class="px-1.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 rounded-lg text-[8px] font-medium border border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50 flex items-center gap-1" title="Disabled: Script specifies Local Drone / Ken Burns for this shot"><i class="fa-solid fa-lock text-[7px]"></i><span>Wan 4K</span></button>`
+        : `<button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'wan_4k', true)" class="px-1.5 py-1 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 text-amber-900 dark:text-amber-200 rounded-lg text-[8px] font-bold border border-amber-300 dark:border-amber-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Wan 2.1 + AI 4K Super-Resolution ($0.55)"><i class="fa-solid fa-wand-magic-sparkles text-amber-600 text-[7px]"></i><span>Wan 4K</span></button>`;
+
+      const klingProBtn = isLocalDroneShot
+        ? `<button type="button" disabled class="px-1.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 rounded-lg text-[8px] font-medium border border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50 flex items-center gap-1" title="Disabled: Script specifies Local Drone / Ken Burns for this shot"><i class="fa-solid fa-lock text-[7px]"></i><span>Kling Pro</span></button>`
+        : `<button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'kling_pro', true)" class="px-1.5 py-1 bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 text-purple-900 dark:text-purple-200 rounded-lg text-[8px] font-bold border border-purple-300 dark:border-purple-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Render with Kling 1.6 Pro ($0.95)"><i class="fa-solid fa-gem text-purple-600 text-[7px]"></i><span>Kling Pro</span></button>`;
+
+      const kling4kBtn = isLocalDroneShot
+        ? `<button type="button" disabled class="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 rounded-lg text-[8px] font-medium cursor-not-allowed opacity-50 flex items-center gap-1" title="Disabled: Script specifies Local Drone / Ken Burns for this shot"><i class="fa-solid fa-lock text-[7px]"></i><span>Kling v3 4K</span></button>`
+        : `<button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'kling_v3', true)" class="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Render with Kling v3 4K Native ($1.40)"><i class="fa-solid fa-crown text-[7px]"></i><span>Kling v3 4K (Prod) ➔</span></button>`;
+
       c.innerHTML = `<div class="col-span-3 p-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/40 dark:to-indigo-950/40 border border-purple-300 dark:border-purple-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
-        <div class="flex items-center gap-1.5"><i class="fa-solid fa-film text-purple-600 dark:text-purple-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-purple-950 dark:text-white">Stage 2 Photos Ready</span><span class="text-[7px] text-purple-700 dark:text-purple-300">Choose motion engine:</span></div></div>
+        <div class="flex items-center gap-1.5"><i class="fa-solid fa-film text-purple-600 dark:text-purple-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-purple-950 dark:text-white">Stage 2 Photos Ready</span><span class="text-[7px] text-purple-700 dark:text-purple-300">${isLocalDroneShot ? '🎬 Director locked to Local Drone' : 'Choose motion engine:'}</span></div></div>
         <div class="flex items-center gap-1 flex-wrap">
-          <button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'ken_burns', true)" class="px-1.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-900 dark:text-emerald-200 rounded-lg text-[8px] font-bold border border-emerald-300 dark:border-emerald-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Render with Local 4K Perspective Drone & Micro-Kinetics ($0.00)"><i class="fa-solid fa-plane-up text-emerald-600 text-[7px]"></i><span>Local Drone ($0)</span></button>
-          <button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'wan', true)" class="px-1.5 py-1 bg-white dark:bg-slate-900 hover:bg-slate-100 text-slate-800 dark:text-gray-200 rounded-lg text-[8px] font-bold border border-slate-300 dark:border-slate-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Test with Wan 2.1 1080p ($0.40)"><i class="fa-solid fa-vial text-amber-500 text-[7px]"></i><span>Wan 2.1</span></button>
-          <button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'wan_4k', true)" class="px-1.5 py-1 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 text-amber-900 dark:text-amber-200 rounded-lg text-[8px] font-bold border border-amber-300 dark:border-amber-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Wan 2.1 + AI 4K Super-Resolution ($0.55)"><i class="fa-solid fa-wand-magic-sparkles text-amber-600 text-[7px]"></i><span>Wan 4K</span></button>
-          <button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'kling_pro', true)" class="px-1.5 py-1 bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 text-purple-900 dark:text-purple-200 rounded-lg text-[8px] font-bold border border-purple-300 dark:border-purple-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Render with Kling 1.6 Pro ($0.95)"><i class="fa-solid fa-gem text-purple-600 text-[7px]"></i><span>Kling Pro</span></button>
-          <button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'kling_v3', true)" class="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Render with Kling v3 4K Native ($1.40)"><i class="fa-solid fa-crown text-[7px]"></i><span>Kling v3 4K (Prod) ➔</span></button>
+          ${localBtn}
+          ${wanBtn}
+          ${wan4kBtn}
+          ${klingProBtn}
+          ${kling4kBtn}
         </div>
       </div>`;
     } else {
@@ -409,6 +433,8 @@ function renderMotionClipsList(vid) {
   const activeGenIdx = isGeneratingMotion ? completedClips.length : -1;
   const pVal = Math.min(95, vid.progress || 50);
 
+  const scenes = vid.screenplay?.scenes || vid.script?.scenes || vid.scenes || [];
+
   c.innerHTML = Array.from({ length: numClips }, (_, i) => {
     const existing = rawClips[i];
     const url = existing ? ((typeof existing === "object") ? existing.url : existing) : null;
@@ -416,19 +442,24 @@ function renderMotionClipsList(vid) {
     const name = (existing && typeof existing === "object" && existing.name) ? existing.name : `Motion ${i + 1}`;
     let model = (existing && typeof existing === "object" && existing.model) ? existing.model : defModel;
     if (vid.motionModel) {
-      if (vid.motionModel === "kling_v3" || vid.motionModel === "kling_4k") model = "Kling v3 4K";
+      if (vid.motionModel === "ken_burns" || vid.motionModel === "local_drone") model = "Local Drone";
+      else if (vid.motionModel === "kling_v3" || vid.motionModel === "kling_4k") model = "Kling v3 4K";
       else if (vid.motionModel === "kling_pro" || vid.motionModel === "kling") model = "Kling Pro";
       else if (vid.motionModel === "wan_4k") model = "Wan 2.1 + 4K AI";
       else if (vid.motionModel.includes("wan")) model = "Wan 2.1";
     }
     const isSel = vid.selectedMotionClipIds.includes(i);
 
+    const shotScene = scenes[i] || {};
+    const shotMotionType = (shotScene.motion_type || shotScene.motion || "").toLowerCase();
+    const isShotLocalDrone = shotMotionType.includes("ken_burns") || shotMotionType.includes("local") || shotMotionType.includes("drone") || shotMotionType.includes("zoompan");
+
     const isThisClipGenerating = Boolean(
       isGeneratingMotion && (vid.force_rerun || !hasVid || i === activeGenIdx || (numClips === 1 && isProc && stage === 3))
     );
 
     if (isThisClipGenerating) {
-      const activeModelLabel = (vid.motionModel === "kling_v3" || vid.motionModel === "kling_4k") ? "Kling v3 4K" : ((vid.motionModel === "kling_pro" || vid.motionModel === "kling") ? "Kling Pro" : ((vid.motionModel === "wan_4k") ? "Wan 2.1 + 4K AI" : ((vid.motionModel && vid.motionModel.includes("wan")) ? "Wan 2.1" : model)));
+      const activeModelLabel = (vid.motionModel === "ken_burns" || vid.motionModel === "local_drone") ? "Local Drone ($0)" : ((vid.motionModel === "kling_v3" || vid.motionModel === "kling_4k") ? "Kling v3 4K" : ((vid.motionModel === "kling_pro" || vid.motionModel === "kling") ? "Kling Pro" : ((vid.motionModel === "wan_4k") ? "Wan 2.1 + 4K AI" : ((vid.motionModel && vid.motionModel.includes("wan")) ? "Wan 2.1" : model))));
       return `<div class="flex flex-col items-center gap-0.5 w-full"><div class="relative w-full h-11 rounded-lg bg-purple-50/80 dark:bg-slate-900 border-2 border-purple-500 shadow-sm flex flex-col justify-between p-1 ring-2 ring-purple-500/20"><div class="flex items-center justify-between w-full"><span class="text-[8px] font-mono font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[7px]"></i> ${activeModelLabel}</span><span class="text-[7px] font-mono text-purple-600 dark:text-purple-400 font-bold">${pVal}%</span></div><div class="w-full bg-purple-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-purple-600 to-pink-500 rounded-full animate-pulse" style="width: ${pVal}%"></div></div></div><span class="text-[8px] font-bold text-purple-600 dark:text-purple-400 truncate w-full text-center">${name}</span></div>`;
     }
 
@@ -440,16 +471,27 @@ function renderMotionClipsList(vid) {
       const bgStyle = posterUrl ? `background-image: url('${posterUrl}'); background-size: cover; background-position: center;` : "";
       const playAction = `selectMasterVideoRender('${url}', '${name} (${model})', this); if (typeof openVideoPopup === 'function') openVideoPopup('${url}', '${epId}: ${name}', '${model} • Raw Video Motion Clip');`;
 
+      const cardLocalBtn = `<button type="button" onclick="event.stopPropagation(); advanceToMotionStage(currentActiveInspectorEpisode, 'ken_burns', true);" class="px-1 py-0.2 rounded ${isShotLocalDrone ? 'bg-emerald-600 font-bold ring-1 ring-emerald-300' : 'bg-emerald-700/80'} hover:bg-emerald-500 text-white flex items-center justify-center text-[7px] font-mono transition shadow" title="Re-render with Local 4K Perspective Drone ($0.00)">⚡ Local</button>`;
+      const cardWanBtn = isShotLocalDrone
+        ? `<button type="button" disabled class="px-1 py-0.2 rounded bg-slate-800/80 text-slate-500 flex items-center justify-center text-[7px] font-mono cursor-not-allowed opacity-40" title="Disabled: Script locks shot to Local Drone">Wan4K</button>`
+        : `<button type="button" onclick="event.stopPropagation(); advanceToMotionStage(currentActiveInspectorEpisode, 'wan_4k', true);" class="px-1 py-0.2 rounded bg-amber-600 hover:bg-amber-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Wan 2.1 + 4K AI ($0.55)">⚡ Wan4K</button>`;
+      const cardProBtn = isShotLocalDrone
+        ? `<button type="button" disabled class="px-1 py-0.2 rounded bg-slate-800/80 text-slate-500 flex items-center justify-center text-[7px] font-mono cursor-not-allowed opacity-40" title="Disabled: Script locks shot to Local Drone">Pro</button>`
+        : `<button type="button" onclick="event.stopPropagation(); advanceToMotionStage(currentActiveInspectorEpisode, 'kling_pro', true);" class="px-1 py-0.2 rounded bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Kling 1.6 Pro ($0.95)">⚡ Pro</button>`;
+      const cardKlingBtn = isShotLocalDrone
+        ? `<button type="button" disabled class="px-1 py-0.2 rounded bg-slate-800/80 text-slate-500 flex items-center justify-center text-[7px] font-mono cursor-not-allowed opacity-40" title="Disabled: Script locks shot to Local Drone">4K</button>`
+        : `<button type="button" onclick="event.stopPropagation(); advanceToMotionStage(currentActiveInspectorEpisode, 'kling_v3', true);" class="px-1 py-0.2 rounded bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Kling v3 4K Native ($1.40)">⚡ 4K</button>`;
+
       return `<div class="flex flex-col items-center gap-0.5 cursor-pointer w-full group" onclick="${playAction}" title="Click to play in Full Screen modal & master preview">
         <div class="relative w-full h-11 rounded-lg overflow-hidden bg-gradient-to-br from-purple-950 to-slate-900 ${borderCls} hover:border-purple-400 transition shadow flex flex-col justify-between p-1" style="${bgStyle}">
           ${posterUrl ? '<div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition pointer-events-none"></div>' : ''}
           <div class="relative z-10 flex items-center justify-between">
             <span class="px-1 py-0.2 rounded bg-purple-900/90 text-[7px] font-mono text-purple-200 border border-purple-500/30">${model}</span>
             <div class="flex items-center gap-0.5">
-              <button type="button" onclick="event.stopPropagation(); advanceToMotionStage(currentActiveInspectorEpisode, 'ken_burns', true);" class="px-1 py-0.2 rounded bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Local 4K Perspective Drone ($0.00)">⚡ Local</button>
-              <button type="button" onclick="event.stopPropagation(); advanceToMotionStage(currentActiveInspectorEpisode, 'wan_4k', true);" class="px-1 py-0.2 rounded bg-amber-600 hover:bg-amber-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Wan 2.1 + 4K AI ($0.55)">⚡ Wan4K</button>
-              <button type="button" onclick="event.stopPropagation(); advanceToMotionStage(currentActiveInspectorEpisode, 'kling_pro', true);" class="px-1 py-0.2 rounded bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Kling 1.6 Pro ($0.95)">⚡ Pro</button>
-              <button type="button" onclick="event.stopPropagation(); advanceToMotionStage(currentActiveInspectorEpisode, 'kling_v3', true);" class="px-1 py-0.2 rounded bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white flex items-center justify-center text-[7px] font-mono font-bold transition shadow" title="Re-render with Kling v3 4K Native ($1.40)">⚡ 4K</button>
+              ${cardLocalBtn}
+              ${cardWanBtn}
+              ${cardProBtn}
+              ${cardKlingBtn}
               <span class="px-1 py-0.2 rounded bg-black/70 text-[7px] font-mono text-purple-300">${dur}</span>
               <button type="button" onclick="event.stopPropagation(); promptDeleteArtifact('Motion', ${i}, '${name}', 'Motion Clip');" class="w-3.5 h-3.5 rounded bg-rose-600/90 hover:bg-rose-500 text-white flex items-center justify-center text-[7px] transition shadow font-bold" title="Delete Motion Clip">✕</button>
             </div>
@@ -502,9 +544,10 @@ function renderAudioStemsList(vid) {
     return;
   }
 
-  // Find Suno stem and Velvet stem
+  // Find Suno stem, Velvet stem, and Spoken Narration stem
   const sunoStem = rawStems.find(s => (s.filename && s.filename.includes("raw_soundtrack")) || (s.name && (s.name.toLowerCase().includes("suno") || s.name.toLowerCase().includes("soundtrack"))));
   const velvetStem = rawStems.find(s => (s.filename && s.filename.includes("velvet")) || (s.name && (s.name.toLowerCase().includes("velvet") || s.name.toLowerCase().includes("binaural") || s.name.toLowerCase().includes("432hz"))));
+  const narrStem = rawStems.find(s => (s.filename && (s.filename.includes("spoken_narration") || s.filename.includes("narration"))) || (s.name && (s.name.toLowerCase().includes("narration") || s.name.toLowerCase().includes("voiceover"))));
 
   const items = [
     {
@@ -520,6 +563,13 @@ function renderAudioStemsList(vid) {
       color: "emerald",
       model: "Spatial DSP",
       isGenerating: Boolean(isProc && stage >= 4 && !velvetStem),
+    },
+    {
+      name: "Spoken Narration",
+      stem: narrStem,
+      color: "indigo",
+      model: "TTS Voice",
+      isGenerating: Boolean(isProc && stage >= 4 && !narrStem && (vid.enableVoiceOver || vid.enable_voiceover)),
     }
   ];
 

@@ -236,12 +236,17 @@ function quickTestProduceFromPrompt() {
   const selArchLabel = archEl?.selectedOptions?.[0]?.textContent?.trim() || "";
   const dualEditionsChecked = Boolean(document.getElementById("studio-toggle-dual-editions")?.checked);
 
+  const selProdName = document.getElementById("studio-production-name")?.value?.trim() || null;
+  const selFormatVal = document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "documentary");
+  const selAspect = document.getElementById("studio-selected-format")?.value || "16:9";
+
   const newId = nextEpisodeIdForChannel(chId);
   const uniqueJobId = `job_${newId.toLowerCase()}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
   const newVid = {
     id: newId, episode_id: newId, jobId: uniqueJobId, title, concept, story_topic: concept,
     channel_id: chId, channelId: chId, genre: selGenreVal,
     videoType: selGenreVal, formatType: fmtType, styleType: styType, productionType: prodType,
+    production_name: selProdName, format_slug: selFormatVal, format: selFormatVal, aspect_ratio: selAspect,
     sub_genre: selSubgenreVal, subGenre: selSubgenreVal,
     primary_archetype: selArchVal, primaryArchetype: selArchVal,
     genre_label: selGenreLabel, genreLabel: selGenreLabel,

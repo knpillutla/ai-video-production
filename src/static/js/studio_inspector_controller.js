@@ -65,6 +65,23 @@ function renderInspectorFromVideo(vid) {
   setT("panel-header-meta", `${vid.format || vid.formatType || "4K UHD"} • ${vid.fps || "24 FPS"}${cost}`);
   setT("panel-header-title", vid.title || "4K Master Inspector"); setT("panel-header-story", `Story: ${vid.story_topic || vid.concept || vid.theme || "Master Artifacts"}`);
 
+  // Fetch disk artifacts if keyframes or screenplay are missing or empty
+  if (epId && epId !== "NEW" && (!vid.keyframes || vid.keyframes.length === 0)) {
+    const chSlug = vid.channelId || vid.channel_id || (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all" ? selectedStudioChannel : "nature_rhythms");
+    const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
+    fetch(`/api/production/poll-artifacts?channel_id=${chSlug}&episode_id=${epId}&user_id=${encodeURIComponent(uEmail)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && data.keyframes && data.keyframes.length > 0 && currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id === epId || currentActiveInspectorEpisode.episode_id === epId)) {
+          currentActiveInspectorEpisode.keyframes = data.keyframes;
+          if (data.screenplay && !currentActiveInspectorEpisode.screenplay) currentActiveInspectorEpisode.screenplay = data.screenplay;
+          if (typeof renderKeyframesList === "function") renderKeyframesList(currentActiveInspectorEpisode);
+          if (typeof updateStageGateDock === "function") updateStageGateDock(currentActiveInspectorEpisode);
+        }
+      })
+      .catch(() => {});
+  }
+
   if (vid.genre) {
     const gSel = document.getElementById("studio-genre-selector");
     if (gSel && gSel.value !== vid.genre) {

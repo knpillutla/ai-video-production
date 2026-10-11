@@ -6,7 +6,7 @@ ocean havens, and zen relaxation living wallpapers.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from pydantic import AliasChoices, BaseModel, Field, field_validator
 from src.services.audio_tag_service import normalize_audio_tags
 
@@ -72,6 +72,13 @@ class RelaxAudioMasterSpec(BaseModel):
         return normalize_audio_tags(value)
 
 
+class CameraStageSpec(BaseModel):
+    """Camera movement stage with duration and parallel actions."""
+    stage: int = 1
+    duration: float = 5.0
+    movements: List[str] = Field(default_factory=lambda: ["stay"])
+
+
 class RelaxSceneDirective(BaseModel):
     """Single Scene / Shot Directorial Specification for Living Wallpapers."""
     scene_index: int = 1
@@ -86,8 +93,12 @@ class RelaxSceneDirective(BaseModel):
     image_model_configs: Dict[str, Any] = Field(default_factory=dict)
     domain: str = "landscape_solid"  # landscape_solid, water_fluid
     motion_type: str = "ai_diffusion"  # ai_diffusion, ken_burns, static
-    camera_movement: str = "slow_zoom_in"  # slow_zoom_in, slow_zoom_out, pan_left, pan_right, tilt_up, locked_tripod
+    camera_movement: Union[List[CameraStageSpec], List[Any], str] = Field(
+        default="slow_zoom_in",
+        description="Array of movement stages or single movement"
+    )
     motion_rationale: Optional[str] = None  # Directorial reasoning for choosing AI diffusion vs local Ken Burns
+    narration_text: Optional[str] = None  # Educational or poetic spoken narration line for this shot
     duration_seconds: float = 30.0
 
 
@@ -145,3 +156,7 @@ class RelaxScreenplay(BaseModel):
         if isinstance(v, str):
             return RelaxAudioMasterSpec(suno_musical_tags=v)
         return v or RelaxAudioMasterSpec()
+
+
+# Backward compatibility alias
+RelaxScene = RelaxSceneDirective

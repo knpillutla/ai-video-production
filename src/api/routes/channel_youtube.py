@@ -1,9 +1,7 @@
 """Channel YouTube Credentials, OAuth Authorization & Publishing API routes."""
 
-from __future__ import annotations
-
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
@@ -35,6 +33,8 @@ class PublishRequest(BaseModel):
     short_description: Optional[str] = None
     upload_short: bool = True
     upload_broadcast: bool = True
+
+PublishRequest.model_rebuild()
 
 
 @router.get("/{channel_slug}/youtube/auth-status")

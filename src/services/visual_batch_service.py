@@ -17,6 +17,7 @@ from src.providers.visual.fal_flux_pro_ultra import FalFluxProUltraAdapter
 from src.providers.visual.fal_kling_v3 import FalKlingV3Adapter
 from src.providers.visual.fal_wan21 import FalWan21Adapter
 from src.providers.visual.fal_zimage import FalZImageAdapter
+from src.providers.visual.google_imagen3 import GoogleImagen3Adapter
 
 
 @dataclass
@@ -36,6 +37,8 @@ class MotionClipTask:
     model_configs: Optional[dict[str, Any]] = None
     camera_waypoints: Optional[list] = None
     kinetic_micro_zones: Optional[dict] = None
+    camera_movement: Optional[Any] = None
+    interpolation: str = "cubic"
 
 
 from src.core.step_logger import log_pipeline_step
@@ -111,7 +114,10 @@ class VisualBatchService:
                     req_file.unlink(missing_ok=True)
 
             model_str = (image_model or "flux_dev").lower()
-            if "zimage" in model_str or "z_image" in model_str:
+            if "imagen" in model_str or "gemini" in model_str:
+                adapter = GoogleImagen3Adapter()
+                model_display = "Gemini 2.5 Flash Image"
+            elif "zimage" in model_str or "z_image" in model_str:
                 adapter = FalZImageAdapter(api_key=self.fal_key)
                 model_display = "Z-Image Turbo"
             elif "pro" in model_str or "ultra" in model_str:
@@ -156,15 +162,8 @@ class VisualBatchService:
             logger.info(f"decision_motion_routing: {task.output_path.name} -> {chosen_model.upper()} ({rationale})")
             log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "started", f"motion clip missing, synthesizing via {chosen_model.upper()}", {"file": task.output_path.name, "rationale": rationale})
             if chosen_model in ("lanczos", "local_zoompan", "ken_burns", "zoompan"):
-                p_text = f"{task.visual_prompt} {task.motion_prompt}".lower()
-                mov = "crane_ascend" if any(k in p_text for k in ("crane", "tilt_up", "ascend", "vertical")) else (
-                    "drone_sweep_left" if any(k in p_text for k in ("left", "sweep_left", "pan_left")) else (
-                        "drone_sweep_right" if any(k in p_text for k in ("right", "sweep_right", "pan_right")) else (
-                            "dolly_pullback" if any(k in p_text for k in ("pull_back", "reveal", "zoom_out")) else "slow_drone_forward"
-                        )
-                    )
-                )
-                res_f = await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds, movement=mov, waypoints=task.camera_waypoints, kinetic_micro_zones=task.kinetic_micro_zones)
+                mov = task.camera_movement or task.camera_waypoints or "dollyin"
+                res_f = await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds, movement=mov, waypoints=task.camera_waypoints, kinetic_micro_zones=task.kinetic_micro_zones, interpolation=task.interpolation)
                 log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip created via local perspective drone", {"file": task.output_path.name, "cost": "$0.00"})
                 return res_f
 
@@ -263,9 +262,10 @@ class VisualBatchService:
 
         return list(await asyncio.gather(*[_process_single_motion(t) for t in tasks]))
 
-    async def _render_local_fallback(self, img_path: Path, out_path: Path, duration_sec: float, movement: str = "slow_drone_forward", waypoints: Optional[list] = None, kinetic_micro_zones: Optional[dict] = None) -> Path:
+    async def _render_local_fallback(self, img_path: Path, out_path: Path, duration_sec: float, movement: Any = "slow_drone_forward", waypoints: Optional[list] = None, kinetic_micro_zones: Optional[dict] = None, interpolation: str = "cubic") -> Path:
         """Deterministic 4K CPU motion engine ($0.00 spend): calm steady drone default, multi-angle on demand."""
-        m_lower = (movement or "").lower()
+        m_str = str(movement) if isinstance(movement, (list, dict)) else (movement or "")
+        m_lower = m_str.lower()
         if any(k in m_lower for k in ("multi_angle", "skyline", "mission", "fpv_drone", "dynamic_drone")):
             logger.info(f"decision_motion_fallback: 4K CPU multi-angle skyline drone for {out_path.name}")
             from src.scripts.local_perspective_multiangle_drone import render_multiangle_drone_clip
@@ -274,12 +274,12 @@ class VisualBatchService:
                 fps=30, target_res=(3840, 2160), force_rerun=True, kinetic_micro_zones=kinetic_micro_zones,
             )
 
-        logger.info(f"decision_motion_fallback: 4K CPU calm perspective drone for {out_path.name} (movement: {movement})")
+        logger.info(f"decision_motion_fallback: 4K CPU calm perspective drone for {out_path.name} (movement: {movement}, inter: {interpolation})")
         from src.scripts.local_perspective_drone import render_perspective_drone_clip
         return await render_perspective_drone_clip(
             image_path=img_path, output_path=out_path, duration_seconds=duration_sec,
             fps=24, target_res=(3840, 2160), camera_movement=movement, speed_factor=1.0, force_rerun=True, camera_waypoints=waypoints,
-            kinetic_micro_zones=kinetic_micro_zones,
+            kinetic_micro_zones=kinetic_micro_zones, interpolation=interpolation,
         )
 
 

@@ -10,9 +10,9 @@ from src.api.routes import (
     approvals,
     auth,
     billing,
-    channel_analytics,
+    network_analytics,
     channel_youtube,
-    channels,
+    networks,
     dashboard,
     local_production,
     long_play_routes,
@@ -82,9 +82,10 @@ def create_app() -> FastAPI:
     app.include_router(projects.router)
     app.include_router(production.router)
     app.include_router(trending.router)
-    app.include_router(channels.router)
+    app.include_router(networks.router)
+    app.include_router(networks.router, prefix="/api/networks", tags=["Audience Networks"])
     app.include_router(channel_youtube.router)
-    app.include_router(channel_analytics.router)
+    app.include_router(network_analytics.router)
     app.include_router(schedules.router)
     app.include_router(analytics.router)
     app.include_router(local_production.router)

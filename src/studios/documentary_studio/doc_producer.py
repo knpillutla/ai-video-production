@@ -37,6 +37,7 @@ class DocumentaryProducer:
         include_bgm: bool = False,
         photos_only: bool = False,
         allow_fallback: bool = False,
+        force_local_drone: bool = True,
     ) -> Dict[str, Any]:
         """Execute 4-Stage Progressive Quality Gate with 100% Artifact Idempotency."""
         t_start = time.time()
@@ -102,24 +103,49 @@ class DocumentaryProducer:
         srt_path = ep_dir / "subtitles.srt"
         generate_documentary_subtitles(scenes_narr, scenes_dur, srt_path)
 
-        # Stage 4: AI Video Diffusion Motion Synthesis (Dynamic Model Routing per Scene)
-        motion_tasks = []
+        # Stage 4: 4K Perspective Drone Motion Synthesis (Gemini Directed Choreography)
+        video_clip_paths = []
+        from src.scripts.local_perspective_drone import render_perspective_drone_clip
+
         for scene, kf_path in zip(sb.scenes, keyframe_paths):
-            eff_model = motion_model if motion_model != "auto" else scene.recommended_model
-            motion_tasks.append(
-                MotionClipTask(
+            out_clip = ep_dir / f"motion_p{scene.scene_index}.mp4"
+            use_local = force_local_drone or (getattr(scene, "motion_engine", "local_drone") == "local_drone")
+
+            if use_local:
+                logger.info(f"doc_motion_dispatch: Scene {scene.scene_index} -> 4K Local Perspective Drone (duration: {scene.duration_seconds}s)")
+                framing = scene.start_framing or {}
+                clip_p = await render_perspective_drone_clip(
+                    image_path=kf_path,
+                    output_path=out_clip,
+                    duration_seconds=scene.duration_seconds,
+                    fps=24,
+                    target_res=(3840, 2160),
+                    choreography=scene.drone_choreography or scene.motion_prompt,
+                    start_pan=framing.get("pan", "center"),
+                    start_zoom=framing.get("zoom", "normal"),
+                    start_tilt=framing.get("tilt", "center"),
+                    curve=getattr(scene, "motion_curve", "cosine"),
+                    rain=(getattr(scene, "weather", "none") == "rain"),
+                    snow=(getattr(scene, "weather", "none") == "snow"),
+                )
+                video_clip_paths.append(clip_p)
+            else:
+                # Dispatched to external AI video diffusion only when explicitly directed and force_local_drone is False
+                eff_model = motion_model if motion_model != "auto" else scene.recommended_model
+                logger.info(f"doc_motion_dispatch: Scene {scene.scene_index} -> AI Video {eff_model}")
+                task = MotionClipTask(
                     image_path=kf_path,
                     motion_prompt=scene.motion_prompt,
                     visual_prompt=scene.visual_prompt,
-                    output_path=ep_dir / f"motion_p{scene.scene_index}.mp4",
+                    output_path=out_clip,
                     duration_seconds=scene.duration_seconds,
                     model=eff_model,
                     domain=scene.motion_domain,
                     req_file=ep_dir / f"fal_diff_req_p{scene.scene_index}.json",
                     allow_fallback=allow_fallback,
                 )
-            )
-        video_clip_paths = await visual_batch_service.render_motion_batch(motion_tasks)
+                res_clip = await visual_batch_service.render_motion_clip(task)
+                video_clip_paths.append(res_clip)
 
         # Stage 5: Master Assembly & Packaging
         master_path = ep_dir / "master_4k_documentary.mp4"

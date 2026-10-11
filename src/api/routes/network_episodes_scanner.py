@@ -51,8 +51,11 @@ def scan_all_channel_episodes(storage_dir: Path, user_id: str | None = None) -> 
     candidate_roots: list[Path] = []
     if user_id:
         c_name = sanitize_container_name(user_id)
+        candidate_roots.append(storage_dir / c_name / "networks")
         candidate_roots.append(storage_dir / c_name / "channels")
+    candidate_roots.append(storage_dir / "user-knpillutla-gmail-com" / "networks")
     candidate_roots.append(storage_dir / "user-knpillutla-gmail-com" / "channels")
+    candidate_roots.append(storage_dir / "networks")
     candidate_roots.append(storage_dir / "channels")
 
     for channels_dir in candidate_roots:
@@ -73,17 +76,88 @@ def scan_all_channel_episodes(storage_dir: Path, user_id: str | None = None) -> 
                     "color": "indigo",
                 },
             )
-            for ep_path in ch_path.iterdir():
-                ep_lower = ep_path.name.lower()
-                if not ep_path.is_dir() or not (ep_lower.startswith("ep_") or ep_lower.startswith("ep-") or ep_lower.startswith("ep")):
+            # 1. Check legacy flat episodes: channels/{ch_key}/{ep_path}
+            for sub_path in ch_path.iterdir():
+                if not sub_path.is_dir():
                     continue
-                dedup_key = f"{ch_key}_{ep_path.name}"
-                if dedup_key in seen_eps:
+                sub_lower = sub_path.name.lower()
+                if sub_lower == "assets":
                     continue
-                seen_eps.add(dedup_key)
-                ep_dict = _build_episode_record(ep_path, ch_meta, storage_dir)
-                if ep_dict:
-                    episodes.append(ep_dict)
+                # If direct episode folder:
+                if sub_lower.startswith("ep_") or sub_lower.startswith("ep-") or sub_lower.startswith("ep"):
+                    dedup_key = f"{ch_key}_{sub_path.name}"
+                    if dedup_key not in seen_eps:
+                        seen_eps.add(dedup_key)
+                        ep_dict = _build_episode_record(sub_path, ch_meta, storage_dir)
+                        if ep_dict:
+                            episodes.append(ep_dict)
+                else:
+                    # Hierarchical format folder: channels/{ch_key}/{format_dir}/{prod_dir}/{ep_dir}
+                    fmt_name = sub_path.name
+                    for prod_path in sub_path.iterdir():
+                        if not prod_path.is_dir():
+                            continue
+                        # If format directory directly contains episodes
+                        if prod_path.name.lower().startswith("ep_") or prod_path.name.lower().startswith("ep-"):
+                            dedup_key = f"{ch_key}_{fmt_name}_{prod_path.name}"
+                            if dedup_key not in seen_eps:
+                                seen_eps.add(dedup_key)
+                                ep_dict = _build_episode_record(prod_path, ch_meta, storage_dir)
+                                if ep_dict:
+                                    ep_dict["format"] = fmt_name
+                                    episodes.append(ep_dict)
+                        else:
+                            # Production / Web Series folder
+                            p_name = prod_path.name
+                            for ep_path in prod_path.iterdir():
+                                if not ep_path.is_dir():
+                                    continue
+                                dedup_key = f"{ch_key}_{fmt_name}_{p_name}_{ep_path.name}"
+                                if dedup_key not in seen_eps:
+                                    seen_eps.add(dedup_key)
+                                    ep_dict = _build_episode_record(ep_path, ch_meta, storage_dir)
+                                    if ep_dict:
+                                        ep_dict["format"] = fmt_name
+                                        ep_dict["production_name"] = p_name
+                                        episodes.append(ep_dict)
+
+    # Also scan global productions: storage_dir / user / productions / {format} / {production_name} / {episode}
+    prod_roots = []
+    if user_id:
+        prod_roots.append(storage_dir / sanitize_container_name(user_id) / "productions")
+    prod_roots.append(storage_dir / "user-knpillutla-gmail-com" / "productions")
+
+    for p_root in prod_roots:
+        if not p_root.exists():
+            continue
+        for fmt_dir in p_root.iterdir():
+            if not fmt_dir.is_dir():
+                continue
+            fmt_name = fmt_dir.name
+            for p_dir in fmt_dir.iterdir():
+                if not p_dir.is_dir():
+                    continue
+                p_name = p_dir.name
+                p_meta = {
+                    "id": f"prod_{fmt_name}_{p_name}",
+                    "name": p_name.replace("_", " ").title(),
+                    "handle": f"@{p_name}",
+                    "category": fmt_name.replace("_", " ").title(),
+                    "icon": "fa-film",
+                    "color": "indigo",
+                }
+                for ep_path in p_dir.iterdir():
+                    if not ep_path.is_dir():
+                        continue
+                    dedup_key = f"{fmt_name}_{p_name}_{ep_path.name}"
+                    if dedup_key in seen_eps:
+                        continue
+                    seen_eps.add(dedup_key)
+                    ep_dict = _build_episode_record(ep_path, p_meta, storage_dir)
+                    if ep_dict:
+                        ep_dict["production_name"] = p_name
+                        ep_dict["format"] = fmt_name
+                        episodes.append(ep_dict)
 
     episodes.sort(key=lambda x: x.get("created_timestamp", 0), reverse=True)
     return episodes

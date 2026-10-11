@@ -45,6 +45,7 @@ class ChannelProfile(BaseModel):
     target_audience: str
     tag: str = ""
     comments: str = ""
+    allowed_formats: List[str] = Field(default_factory=lambda: ["documentary", "relaxation", "walking_tour", "music_video", "short"])
     allowed_genres: List[str] = Field(default_factory=list)
     audio_profile: AudioProfile = Field(default_factory=AudioProfile)
     visual_lighting_guardrails: VisualLightingGuardrails = Field(
@@ -87,8 +88,22 @@ def load_channel_profiles(force_reload: bool = False, user_email: str = "knpillu
         return _CACHE
 
     profiles: Dict[str, ChannelProfile] = {}
+    # 1. Load baseline seed/template channels from CHANNELS_DIR
+    if CHANNELS_DIR.exists():
+        for json_file in CHANNELS_DIR.glob("*.json"):
+            try:
+                data = json.loads(json_file.read_text(encoding="utf-8"))
+                profile = ChannelProfile(**data)
+                profiles[profile.channel_id.lower()] = profile
+            except Exception:
+                pass
+
+    # 2. Overlay user-configured channels from networks (or channels) storage
     from src.core.storage import storage_service
-    user_chan_dir = storage_service.get_user_container_path(user_email) / "channels"
+    user_container = storage_service.get_user_container_path(user_email)
+    user_chan_dir = user_container / "networks"
+    if not user_chan_dir.exists():
+        user_chan_dir = user_container / "channels"
     if user_chan_dir.exists():
         for prof_file in user_chan_dir.glob("*/channel_profile.json"):
             try:
@@ -97,15 +112,6 @@ def load_channel_profiles(force_reload: bool = False, user_email: str = "knpillu
                 profiles[profile.channel_id.lower()] = profile
             except Exception as exc:
                 logger.warning(f"Failed to load channel profile {prof_file}: {exc}")
-
-    if not profiles and CHANNELS_DIR.exists():
-        for json_file in CHANNELS_DIR.glob("*.json"):
-            try:
-                data = json.loads(json_file.read_text(encoding="utf-8"))
-                profile = ChannelProfile(**data)
-                profiles[profile.channel_id.lower()] = profile
-            except Exception:
-                pass
 
     _CACHE = profiles
     return _CACHE
@@ -123,10 +129,17 @@ def get_channel_profile(channel_id: Optional[str], user_email: str = "knpillutla
 def save_channel_profile(profile: ChannelProfile, user_email: str = "knpillutla@gmail.com") -> Path:
     """Save or update an individual channel profile JSON file in user storage."""
     from src.core.storage import storage_service
-    user_chan_dir = storage_service.get_user_container_path(user_email) / "channels" / profile.channel_id.lower().strip()
+    user_chan_dir = storage_service.get_network_path(user_email, profile.channel_id.lower().strip())
     user_chan_dir.mkdir(parents=True, exist_ok=True)
     target_file = user_chan_dir / "channel_profile.json"
     target_file.write_text(profile.model_dump_json(indent=2), encoding="utf-8")
     load_channel_profiles(force_reload=True, user_email=user_email)
     logger.info(f"Saved channel profile: {target_file}")
     return target_file
+
+
+# Network alias exports
+NetworkProfile = ChannelProfile
+load_network_profiles = load_channel_profiles
+get_network_profile = get_channel_profile
+save_network_profile = save_channel_profile

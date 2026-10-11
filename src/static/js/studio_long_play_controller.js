@@ -18,8 +18,12 @@ function renderLongPlayStretchSection(vid) {
     vid.status !== "processing" &&
     (vid.currentStage >= 4 || vid.status === "completed") &&
     (vid.videoUrl || vid.video_url || (vid.editions && vid.editions.length > 0))
-  const isRelax = Boolean(vid.genre?.includes("relax") || vid.cluster === "nature" || (vid.long_play_hours && parseFloat(vid.long_play_hours) > 0));
-  if (!hasMaster || !isRelax) {
+  );
+
+  const activeFmt = (vid?.format_slug || vid?.format || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : (document.getElementById("studio-active-format-val")?.value || "relaxation"))).toLowerCase();
+  const isRelaxFormat = (activeFmt === "relaxation" || activeFmt === "relax");
+
+  if (!hasMaster || !isRelaxFormat) {
     container.classList.add("hidden");
     if (approvalCard) approvalCard.classList.add("hidden");
     dualGrid.innerHTML = "";

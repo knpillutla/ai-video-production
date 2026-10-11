@@ -7,7 +7,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/css/styles.css?v=3.1">
+  <link rel="stylesheet" href="/static/css/styles.css?v=3.2">
 </head>
 <body class="h-screen flex flex-col overflow-hidden text-base">
 
@@ -25,7 +25,7 @@
       {% include "components/tabs/studio_pro.html" %}
       {% include "components/tabs/ledger.html" %}
       {% include "components/tabs/dashboard.html" %}
-      {% include "components/tabs/channels.html" %}
+      {% include "components/tabs/networks.html" %}
       {% include "components/tabs/analytics.html" %}
     </main>
   </div>
@@ -36,9 +36,10 @@
   {% include "components/modals/settings_modal.html" %}
   {% include "components/modals/wizard_modal.html" %}
   {% include "components/modals/guide_modal.html" %}
+  {% include "components/modals/hierarchy_guide_modal.html" %}
   {% include "components/modals/player_modal.html" %}
   {% include "components/modals/artifacts_modal.html" %}
-  {% include "components/modals/channel_inspector_modal.html" %}
+  {% include "components/modals/network_inspector_modal.html" %}
   {% include "components/modals/script_modal.html" %}
   {% include "components/modals/preference_modal.html" %}
   {% include "components/modals/delete_confirm_modal.html" %}
@@ -53,32 +54,32 @@
   <script src="/static/js/preview_panel.js?v=8.1"></script>
   <script src="/static/js/studio_videos.js?v=8.3"></script>
   <script src="/static/js/preferences_controller.js?v=8.0"></script>
-  <script src="/static/js/channel_shelf_renderer.js?v=8.1"></script>
-  <script src="/static/js/channel_hub_table_renderer.js?v=8.1"></script>
-  <script src="/static/js/channel_hub_controller.js?v=8.1"></script>
-  <script src="/static/js/channel_hub_inspector.js?v=8.0"></script>
+  <script src="/static/js/network_shelf_renderer.js?v=8.2"></script>
+  <script src="/static/js/network_hub_table_renderer.js?v=8.2"></script>
+  <script src="/static/js/network_hub_controller.js?v=8.2"></script>
+  <script src="/static/js/network_hub_inspector.js?v=8.0"></script>
   <script src="/static/js/studio_modal.js?v=8.0"></script>
   <script src="/static/js/player_controller.js?v=8.1"></script>
   <script src="/static/js/artifacts_controller.js?v=8.2"></script>
   <script src="/static/js/studio_presets_data.js?v=8.0"></script>
-  <script src="/static/js/prompt_generator.js?v=8.2"></script>
+  <script src="/static/js/prompt_generator.js?v=8.3"></script>
   <script src="/static/js/guided_wizard.js?v=8.1"></script>
   <script src="/static/js/dashboard_stats.js?v=8.0"></script>
   <script src="/static/js/studio_bus.js?v=8.0"></script>
-  <script src="/static/js/studio_channel_bar.js?v=8.0"></script>
-  <script src="/static/js/studio_creation_controller.js?v=8.2"></script>
+  <script src="/static/js/studio_network_bar.js?v=8.6"></script>
+  <script src="/static/js/studio_creation_controller.js?v=9.0"></script>
   <script src="/static/js/studio_controls_controller.js?v=8.0"></script>
-  <script src="/static/js/studio_stage_engine.js?v=8.6"></script>
-  <script src="/static/js/studio_artifact_renderer.js?v=8.2"></script>
+  <script src="/static/js/studio_stage_engine.js?v=8.9"></script>
+  <script src="/static/js/studio_artifact_renderer.js?v=8.5"></script>
   <script src="/static/js/studio_script_drawer.js?v=8.0"></script>
   <script src="/static/js/studio_long_play_controller.js?v=8.0"></script>
-  <script src="/static/js/studio_inspector_controller.js?v=8.0"></script>
+  <script src="/static/js/studio_inspector_controller.js?v=8.1"></script>
   <script src="/static/js/studio_pro_controller.js?v=8.0"></script>
   <script src="/static/js/studio_format_controller.js?v=8.0"></script>
   <script src="/static/js/studio_episode_loader.js?v=1.0"></script>
   <script src="/static/js/log_console_controller.js?v=8.0"></script>
   <script src="/static/js/studio_distribution_controller.js?v=1.0"></script>
   <script src="/static/js/youtube_publisher_controller.js?v=1.0"></script>
-  <script src="/static/js/app_init.js?v=8.0"></script>
+  <script src="/static/js/app_init.js?v=8.3"></script>
 </body>
 </html>

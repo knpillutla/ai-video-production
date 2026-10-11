@@ -40,11 +40,14 @@ def _to_storage_url(p: Path | str) -> str:
 
 
 def _find_episode_dir(episode_id: str, channel_id: Optional[str], user_id: str) -> Optional[Path]:
-    user_chan_dir = storage_service.get_user_container_path(user_id) / "channels"
-    if channel_id and (user_chan_dir / channel_id / episode_id).exists():
-        return user_chan_dir / channel_id / episode_id
-    if user_chan_dir.exists():
-        for ch_dir in user_chan_dir.iterdir():
+    user_container = storage_service.get_user_container_path(user_id)
+    scan_roots = [user_container / "networks", user_container / "channels"]
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        if channel_id and (root / channel_id / episode_id).exists():
+            return root / channel_id / episode_id
+        for ch_dir in root.iterdir():
             if ch_dir.is_dir() and (ch_dir / episode_id).exists():
                 return ch_dir / episode_id
     return None
@@ -65,6 +68,19 @@ async def generate_long_play_for_episode(episode_id: str, req: LongPlayStretchRe
     nature_src = target_dir / "master_4k_ambient_nature_only.mp4"
     if not ambient_src or not ambient_src.is_file():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No 4K master video found on disk to stretch.")
+
+    # Verify format: Long-play multi-hour broadcasts (3h/8h) are strictly for relaxation format
+    user_inputs_file = target_dir / "user_inputs.json"
+    if user_inputs_file.is_file():
+        try:
+            u_data = json.loads(user_inputs_file.read_text("utf-8"))
+            ep_fmt = str(u_data.get("format", "")).lower()
+            if ep_fmt and ep_fmt not in ("relaxation", "relax", "16:9"):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Long-play 3h/8h broadcast is only supported for relaxation format (current: '{ep_fmt}').")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
 
     # Mark episode as approved in manifest
     manifest_file = target_dir / "episode_manifest.json"

@@ -1,0 +1,339 @@
+<!-- TAB: AUDIENCE NETWORKS & MULTI-OUTLET PRODUCTION HUB -->
+<div id="tab-channels" class="space-y-3 hidden">
+  <!-- Screen Header & Top Action Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-3 shadow-sm">
+    <div class="flex items-center gap-2.5">
+      <div class="w-7 h-7 rounded-lg bg-[var(--accent)] flex items-center justify-center text-white text-xs shadow-sm">
+        <i class="fa-solid fa-tower-broadcast"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-[var(--text)] tracking-tight leading-none flex items-center gap-2">
+          <span>Audience Networks &amp; Production Hub</span>
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold bg-[var(--card-subtle)] text-[var(--text-muted)] border border-[var(--border)]">knpillutla@gmail.com</span>
+        </h1>
+        <p class="text-[10px] text-[var(--text-muted)] mt-0.5">Manage audience brands, allowed formats, web series, and linked distribution outlets.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <button onclick="openCreateChannelModal()" class="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition active:scale-95">
+        <i class="fa-solid fa-plus text-[10px]"></i>
+        <span>Create Network</span>
+      </button>
+      <button onclick="fetchChannelHubVideos()" class="px-2.5 py-1.5 bg-[var(--card-subtle)] hover:bg-[var(--card-hover)] border border-[var(--border)] text-[var(--text)] font-semibold rounded-lg text-xs flex items-center gap-1 transition active:scale-95 shadow-sm" title="Refresh Networks &amp; Videos">
+        <i id="channel-hub-refresh-icon" class="fa-solid fa-arrows-rotate text-[10px] text-[var(--accent)]"></i>
+        <span>Refresh</span>
+      </button>
+      <button onclick="switchTab('studio')" class="px-3 py-1.5 bg-[var(--card-subtle)] hover:bg-[var(--card-hover)] border border-[var(--border)] text-[var(--text)] font-semibold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition active:scale-95">
+        <i class="fa-solid fa-wand-magic-sparkles text-[10px] text-[var(--accent)]"></i>
+        <span>Production Studio</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Dynamic Network Management Shelf -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2.5" id="channel-selector-cards">
+    <!-- Rendered dynamically by channel_hub_controller.js -->
+  </div>
+
+  <!-- Network Filter Bar -->
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+    <div class="relative flex-1 min-w-[200px]">
+      <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-[var(--text-muted)] text-[10px]"></i>
+      <input type="text" id="channel-table-search" onkeyup="filterChannelManagementTable()" placeholder="Search networks by name, tag, category, genre..." class="w-full pl-7 pr-2.5 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-[11px] outline-none focus:border-[var(--accent)]">
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-[10px] text-[var(--text-muted)] font-mono" id="channel-table-count">4 networks configured</span>
+    </div>
+  </div>
+
+  <!-- Dedicated Network Strategy & Metadata Table -->
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-[11px]">
+        <thead class="bg-[var(--card-subtle)] text-[var(--text-muted)] font-semibold border-b border-[var(--border)] text-[10px] uppercase">
+          <tr>
+            <th class="px-3 py-2">Network Brand</th>
+            <th class="px-3 py-2">Display Tag Badge</th>
+            <th class="px-3 py-2">Audience Niche</th>
+            <th class="px-3 py-2">Allowed Formats &amp; Genres</th>
+            <th class="px-3 py-2">Acoustic Policy</th>
+            <th class="px-3 py-2">Visual Style</th>
+            <th class="px-3 py-2">Internal Notes</th>
+            <th class="px-2.5 py-2 text-center">Episodes</th>
+            <th class="px-3 py-2 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="channel-hub-tbody" class="divide-y divide-[var(--border)] text-[11px]">
+          <!-- Populated dynamically via channel_hub_table_renderer.js -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE / EDIT NETWORK MODAL -->
+<div id="channel-crud-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+      <div class="flex items-center gap-2">
+        <div id="crud-modal-icon-badge" class="w-8 h-8 rounded-lg bg-[var(--card-subtle)] text-[var(--text)] flex items-center justify-center text-sm border border-[var(--border)]">
+          <i class="fa-solid fa-tower-broadcast"></i>
+        </div>
+        <div>
+          <h2 id="crud-modal-title" class="text-sm font-bold text-[var(--text)]">Create Audience Network</h2>
+          <p class="text-[10px] text-[var(--text-muted)]">Define an audience brand, allowed formats, and linked distribution channels.</p>
+        </div>
+      </div>
+      <button onclick="closeModal('channel-crud-modal')" class="text-[var(--text-muted)] hover:text-[var(--text)] text-base">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form id="channel-crud-form" onsubmit="saveChannelForm(event)" class="space-y-3 text-xs">
+      <input type="hidden" id="crud-is-edit" value="false">
+      <input type="hidden" id="crud-channel-id" value="">
+      <input type="hidden" id="crud-channel-tags" value="">
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Network Brand Name *</label>
+          <input type="text" id="crud-channel-name" required placeholder="e.g. Earth Serenade" oninput="autoPopulateSlug(this.value)" class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none focus:border-[var(--accent)]">
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Network Slug *</label>
+          <input type="text" id="crud-channel-slug" required placeholder="e.g. earth_serenade" class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] font-mono text-xs outline-none focus:border-[var(--accent)]">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1 flex items-center gap-1">
+            <i class="fa-solid fa-share-nodes text-indigo-400 text-xs"></i>
+            <span>Primary Brand Handle *</span>
+          </label>
+          <div class="relative">
+            <span class="absolute left-2.5 top-1.5 text-[var(--text-muted)] font-mono text-xs">@</span>
+            <input type="text" id="crud-channel-handle" required placeholder="EarthSerenade" class="w-full pl-6 pr-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] font-mono text-xs outline-none focus:border-[var(--accent)]">
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Audience Niche / Category</label>
+          <select id="crud-channel-category" class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none">
+            <option value="Travel & Events">Travel &amp; Nature Relaxation</option>
+            <option value="Music">Cozy Fireplace &amp; ASMR Sleep</option>
+            <option value="Education">Blue-Chip Documentaries</option>
+            <option value="Entertainment">Comedy &amp; Satire Shorts</option>
+            <option value="Howto & Style">Meditation &amp; Mindfulness</option>
+            <option value="General">Custom / General</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 1. Formats Allowed (Licensing & Output Capabilities) -->
+      <div class="p-2.5 rounded-xl border border-indigo-500/30 bg-indigo-500/5 space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-[11px] font-bold text-indigo-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-film text-xs"></i>
+            <span>1. Allowed Formats (Licensing Capabilities) *</span>
+          </label>
+          <span class="text-[9px] text-indigo-300/80 font-mono">Future Licensing Ready</span>
+        </div>
+        <p class="text-[10px] text-[var(--text-muted)] leading-tight">Select which video mediums and production engines this channel is authorized to produce.</p>
+        <div id="crud-formats-container" class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[10px] pt-0.5">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] cursor-pointer hover:border-indigo-400 transition">
+            <input type="checkbox" name="crud_format" value="documentary" class="accent-indigo-500 rounded" checked>
+            <span>🦅 Documentary</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] cursor-pointer hover:border-indigo-400 transition">
+            <input type="checkbox" name="crud_format" value="relaxation" class="accent-indigo-500 rounded" checked>
+            <span>🧘 Relaxation &amp; Ambient</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] cursor-pointer hover:border-indigo-400 transition">
+            <input type="checkbox" name="crud_format" value="walking_tour" class="accent-indigo-500 rounded" checked>
+            <span>🚶 4K Walking Tour</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] cursor-pointer hover:border-indigo-400 transition">
+            <input type="checkbox" name="crud_format" value="music_video" class="accent-indigo-500 rounded" checked>
+            <span>💃 Music &amp; Dance Video</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] cursor-pointer hover:border-indigo-400 transition">
+            <input type="checkbox" name="crud_format" value="short" class="accent-indigo-500 rounded" checked>
+            <span>📱 9:16 Shorts &amp; Reels</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] cursor-pointer hover:border-indigo-400 transition">
+            <input type="checkbox" name="crud_format" value="movie" class="accent-indigo-500 rounded">
+            <span>🎬 Movie / Drama</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 2. Sub-Genres & Biomes Multi-Selection Chips -->
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-[11px] font-semibold text-[var(--text-muted)] flex items-center gap-1">
+            <i class="fa-solid fa-shapes text-[var(--accent)]"></i>
+            <span>2. Allowed Sub-Genres &amp; Biomes *</span>
+          </label>
+          <span class="text-[9px] text-[var(--text-muted)] font-medium">Select all that apply</span>
+        </div>
+        <div id="crud-genres-container" class="grid grid-cols-3 gap-1.5 text-[10px]">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/nature" class="accent-[var(--accent)] rounded" checked><span>🏔️ Alpine Nature</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="travel/scenic" class="accent-[var(--accent)] rounded" checked><span>✈️ Travel Scenic</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/art" class="accent-[var(--accent)] rounded"><span>🎨 Living Art</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/healing" class="accent-[var(--accent)] rounded"><span>✨ 528Hz Healing</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/zen" class="accent-[var(--accent)] rounded"><span>🪷 Kyoto Zen</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/waterfall" class="accent-[var(--accent)] rounded"><span>🌊 Waterfalls</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/hearth" class="accent-[var(--accent)] rounded"><span>🔥 Beach Hearth</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/rain" class="accent-[var(--accent)] rounded"><span>🌧️ Rain ASMR</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/cozy" class="accent-[var(--accent)] rounded"><span>🪵 Cozy Living</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="relax/ambient" class="accent-[var(--accent)] rounded"><span>🌌 Velvet Ambient</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="documentary" class="accent-[var(--accent)] rounded"><span>🦅 BBC Wildlife</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="travel_walking" class="accent-[var(--accent)] rounded"><span>🚶 Walking Tours</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="dance/folk" class="accent-[var(--accent)] rounded"><span>💃 Folk Dance</span></label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-subtle)] cursor-pointer hover:border-[var(--accent)] transition"><input type="checkbox" name="crud_genre" value="comedy/satire" class="accent-[var(--accent)] rounded"><span>🎭 Comedy Satire</span></label>
+        </div>
+      </div>
+
+      <!-- User Intent & Target Audience Prompt -->
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="text-[11px] font-semibold text-[var(--text-muted)] flex items-center gap-1">
+            <i class="fa-solid fa-bullseye text-[var(--accent)]"></i>
+            <span>Network Vision &amp; Audience Vibe</span>
+          </label>
+          <button type="button" onclick="triggerGeminiChannelEnrichment()" id="btn-ai-enrich-channel" class="px-2.5 py-0.5 bg-[var(--card-subtle)] hover:bg-[var(--card-hover)] border border-[var(--border)] text-[var(--text)] rounded-md text-[10px] font-semibold shadow-sm flex items-center gap-1 transition">
+            <i class="fa-solid fa-wand-magic-sparkles text-[9px] text-[var(--accent)]"></i>
+            <span>✨ Auto-Enrich with Gemini</span>
+          </button>
+        </div>
+        <textarea id="crud-channel-intent" rows="2" placeholder="e.g. 4K nature relaxation with 432Hz soundscapes for daytime meditation..." class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none focus:border-[var(--accent)] resize-none"></textarea>
+      </div>
+
+      <!-- AI Enriched Directorial Guardrails Preview Accordion -->
+      <div id="crud-enriched-preview" class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-2 hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold text-[var(--text)] flex items-center gap-1">
+            <i class="fa-solid fa-sparkles text-amber-500 text-[9px]"></i>
+            <span>Gemini Synthesized Directorial Guardrails:</span>
+          </span>
+          <span id="crud-enriched-badge" class="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded text-[9px] font-mono">✅ Profile Ready</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[10px] text-[var(--text-muted)]">
+          <div class="space-y-1">
+            <div class="font-semibold text-[var(--text)]">🎵 Audio Policy:</div>
+            <div id="preview-audio-style" class="text-[9px]"></div>
+            <div id="preview-suno-tags" class="text-[9px] font-mono text-[var(--accent)] truncate"></div>
+          </div>
+          <div class="space-y-1">
+            <div class="font-semibold text-[var(--text)]">💡 Lighting &amp; Purity:</div>
+            <div id="preview-lighting" class="text-[9px]"></div>
+            <div id="preview-purity" class="text-[9px] truncate"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Audio Language</label>
+          <select id="crud-channel-lang" class="w-full px-2.5 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none">
+            <option value="en">English (en)</option><option value="te">Telugu (te)</option><option value="hi">Hindi (hi)</option><option value="ta">Tamil (ta)</option><option value="es">Spanish (es)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Icon Style</label>
+          <select id="crud-channel-icon" class="w-full px-2.5 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none">
+            <option value="fa-palette">🎨 Palette / Art &amp; Gallery</option>
+            <option value="fa-plane-departure">✈️ Plane / Travel</option>
+            <option value="fa-earth-americas">🌍 World / Global Travel</option>
+            <option value="fa-mountain-sun">🏔️ Mountain / Nature</option>
+            <option value="fa-tree">🌲 Tree / Nature</option>
+            <option value="fa-city">🏙️ City / Skylines</option>
+            <option value="fa-landmark">🏛️ Landmark / Heritage</option>
+            <option value="fa-leaf">🍃 Leaf / Forest</option>
+            <option value="fa-fire">🔥 Fire / Hearth</option>
+            <option value="fa-film">🎬 Film / Cinema</option>
+            <option value="fa-compass">🧭 Compass / Wildlife</option>
+            <option value="fa-masks-theater">🎭 Masks / Comedy</option>
+            <option value="fa-spa">🪷 Spa / Zen</option>
+            <option value="fa-tower-broadcast">📡 Broadcast</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Accent Color</label>
+          <select id="crud-channel-color" class="w-full px-2.5 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none">
+            <option value="emerald">Emerald</option><option value="amber">Amber</option><option value="blue">Blue</option><option value="indigo">Indigo</option><option value="purple">Purple</option><option value="pink">Pink</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Display Tag Badge *</label>
+          <input type="text" id="crud-channel-tag" placeholder="e.g. 🌿 432Hz Nature &amp; Meditation" class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none focus:border-[var(--accent)]">
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Description</label>
+          <input type="text" id="crud-channel-desc" placeholder="e.g. 4K Nature Soundscapes" class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none focus:border-[var(--accent)]">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-semibold text-[var(--text-muted)] mb-1">Internal Comments &amp; Guidelines</label>
+        <textarea id="crud-channel-comments" rows="2" placeholder="e.g. Daytime relaxation network, avoid dark lighting..." class="w-full px-3 py-1.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs outline-none focus:border-[var(--accent)] resize-none"></textarea>
+      </div>
+
+      <!-- Linked Distribution Outlets & Broadcasters (YouTube, Instagram, TikTok) -->
+      <div class="p-2.5 rounded-xl border border-[var(--border)] bg-[var(--card-subtle)] space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <i class="fa-solid fa-tower-broadcast text-indigo-400 text-xs"></i>
+            <span class="font-bold text-[var(--text)] text-[11px]">Linked Distribution Outlets</span>
+          </div>
+          <span class="text-[9px] text-[var(--text-muted)] font-mono">Multi-Platform Ready</span>
+        </div>
+        <p class="text-[10px] text-[var(--text-muted)] leading-tight">Syndicate this Network's productions to multiple external channels and accounts.</p>
+        
+        <div class="space-y-1.5 pt-1">
+          <!-- Outlet 1: YouTube -->
+          <div class="flex items-center justify-between p-2 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+            <div class="flex items-center gap-2">
+              <i class="fa-brands fa-youtube text-red-500 text-sm"></i>
+              <div>
+                <div class="font-bold text-[var(--text)] text-[10px]">YouTube Channels (Long-Form &amp; Shorts)</div>
+                <div class="text-[9px] text-[var(--text-muted)]">Upload client_secret.json &amp; authorize OAuth</div>
+              </div>
+            </div>
+            <button type="button" onclick="openYouTubeCredentialsModal(document.getElementById('crud-channel-slug').value, document.getElementById('crud-channel-name').value)" class="px-2.5 py-1 bg-red-600/15 hover:bg-red-600/25 text-red-500 rounded-lg text-[10px] font-bold border border-red-500/30 transition shadow-sm">
+              Connect YouTube
+            </button>
+          </div>
+
+          <!-- Outlet 2: Instagram / TikTok (Multi-Platform Syndication) -->
+          <div class="flex items-center justify-between p-2 rounded-lg bg-[var(--card)] border border-[var(--border)] opacity-80">
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1 text-xs">
+                <i class="fa-brands fa-instagram text-pink-500"></i>
+                <i class="fa-brands fa-tiktok text-cyan-400"></i>
+              </div>
+              <div>
+                <div class="font-bold text-[var(--text)] text-[10px]">Instagram Reels &amp; TikTok</div>
+                <div class="text-[9px] text-[var(--text-muted)]">Auto-syndicate 9:16 vertical shorts</div>
+              </div>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[9px] font-mono bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 font-semibold">Configured</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border)]">
+        <button type="button" onclick="closeModal('channel-crud-modal')" class="px-3.5 py-1.5 bg-[var(--card-subtle)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] rounded-lg text-xs font-semibold">
+          Cancel
+        </button>
+        <button type="submit" id="crud-submit-btn" class="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white font-bold rounded-lg text-xs shadow-sm flex items-center gap-1.5">
+          <i class="fa-solid fa-floppy-disk text-[10px]"></i>
+          <span>Save Network</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

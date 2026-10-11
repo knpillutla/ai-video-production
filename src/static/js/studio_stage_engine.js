@@ -69,7 +69,8 @@ async function resumeStudioProduction(episodeId) {
 async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
   if (!vid) return;
   currentActiveInspectorEpisode = vid;
-  vid.pipelineStrategy = (strategy === "autonomous" || vid.pipelineStrategy === "autonomous") ? "autonomous" : (strategy || (typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "manual"));
+  const currentGateUi = (typeof activePipelineStrategy !== "undefined" && activePipelineStrategy) ? activePipelineStrategy : "manual";
+  vid.pipelineStrategy = (strategy === "autonomous") ? "autonomous" : ((strategy === "manual") ? "manual" : currentGateUi);
   vid.status = "processing";
   studioAbortController = new AbortController();
   const resynthStartTime = new Date().toISOString();
@@ -245,7 +246,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           return "balanced";
         })(),
         motion_model: vid.motionModel || (durSec <= 10 ? "wan" : "auto"),
-        image_model: vid.imageModel || "flux_dev",
+        image_model: vid.imageModel || "google_imagen3",
         enable_bgm: vid.enableBgm !== false,
         enable_voiceover: Boolean(vid.enableVoiceOver),
         dual_editions: Boolean(vid.dual_editions ?? document.getElementById("studio-toggle-dual-editions")?.checked),
@@ -255,6 +256,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         photos_only: isPhotosOnly,
         motion_only: isMotionOnly,
         audio_only: isAudioOnly,
+        master_only: isMasterOnly,
         num_shots: (function() {
           const g = ((document.getElementById("studio-genre-selector")?.value) || vid.genre || "").toLowerCase();
           const ch = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : (vid.channelId || vid.channel_id || "");
@@ -293,6 +295,11 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         primary_archetype_label: (!isPhotosOnly && !isMotionOnly && !isAudioOnly && !isMasterOnly && document.getElementById("studio-archetype-selector")?.selectedOptions?.[0]?.textContent?.trim())
           ? document.getElementById("studio-archetype-selector").selectedOptions[0].textContent.trim()
           : (vid.primaryArchetypeLabel || vid.primary_archetype_label || document.getElementById("studio-archetype-selector")?.selectedOptions?.[0]?.textContent?.trim() || ""),
+        weather: (document.querySelector('input[name="studio_weather"]:checked')?.value || "normal"),
+        production_name: (document.getElementById("studio-production-name")?.value?.trim() || vid.production_name || null),
+        format: (document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "relaxation")),
+        format_slug: (document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "relaxation")),
+        aspect_ratio: (document.getElementById("studio-selected-format")?.value || "16:9"),
         force_rerun: Boolean(vid.force_rerun)
       })
     });
@@ -589,7 +596,9 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
   const chSlug = ep.channelId || ep.channel_id || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : "skylinediariesindia4k");
   ep.channelId = chSlug;
   ep.channel_id = chSlug;
-  console.log(`[REPROCESS] Reprocessing episode ${targetId} for channel ${chSlug} (autonomous resumption)`);
+  const activeStrat = (typeof activePipelineStrategy !== "undefined" && activePipelineStrategy) ? activePipelineStrategy : "manual";
+  ep.pipelineStrategy = activeStrat;
+  console.log(`[REPROCESS] Reprocessing episode ${targetId} for channel ${chSlug} (${activeStrat} mode)`);
 
   // Persist disk approval
   try {
@@ -597,7 +606,7 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
     fetch(`/api/production/episodes/${targetId}/approve?channel_id=${chSlug}&user_id=${encodeURIComponent(uEmail)}`, { method: "POST" }).catch(() => {});
   } catch (e) {}
 
-  // Approve and Rerender (--id xxxx): Resumes pipeline from where it stopped, reusing all existing artifacts
-  startStudioLiveStageProgress(ep, "autonomous");
+  // Resumes pipeline respecting user Gate setting (Manual: Stage 1 only; Auto: end-to-end)
+  startStudioLiveStageProgress(ep, activeStrat);
 }
 

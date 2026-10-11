@@ -18,17 +18,20 @@ from typing import Any, Dict, List, Optional
 
 
 class DocGenre(str, Enum):
-    WILDLIFE = "wildlife"
-    OCEAN = "ocean"
-    NATURE = "nature"
+    PLACES = "places"
+    BEACHES = "beaches"
     MOUNTAINS = "mountains"
+    NATURE = "nature"
+    OCEAN = "ocean"
+    DESERT = "desert"
+    WILDLIFE = "wildlife"
     ART = "art"
     ANCIENT_STRUCTURES = "ancient_structures"
 
 
 @dataclass
 class DocScene:
-    """A single documentary visual scene with matched narration and model routing."""
+    """A single documentary visual scene with matched narration, camera choreography, and model routing."""
     scene_index: int
     duration_seconds: float
     shot_type: str
@@ -37,6 +40,11 @@ class DocScene:
     visual_prompt: str
     motion_prompt: str
     narration_text: str
+    motion_engine: str = "local_drone"
+    drone_choreography: Optional[List[Dict[str, Any]]] = None
+    start_framing: Optional[Dict[str, str]] = None
+    motion_curve: str = "cosine"
+    weather: str = "none"
 
 
 @dataclass
@@ -51,10 +59,13 @@ class DocStoryboard:
 
 
 GENRE_MODEL_DEFAULTS = {
-    DocGenre.WILDLIFE: ("wildlife_animal", "kling_v3"),
-    DocGenre.OCEAN: ("water_fluid", "wan"),
-    DocGenre.NATURE: ("landscape_solid", "kling_v3"),
+    DocGenre.PLACES: ("landscape_solid", "hunyuan"),
+    DocGenre.BEACHES: ("water_fluid", "wan"),
     DocGenre.MOUNTAINS: ("landscape_solid", "hunyuan"),
+    DocGenre.NATURE: ("landscape_solid", "kling_v3"),
+    DocGenre.OCEAN: ("water_fluid", "wan"),
+    DocGenre.DESERT: ("landscape_solid", "hunyuan"),
+    DocGenre.WILDLIFE: ("wildlife_animal", "kling_v3"),
     DocGenre.ART: ("art_macro", "hunyuan"),
     DocGenre.ANCIENT_STRUCTURES: ("architecture_solid", "hunyuan"),
 }
@@ -109,6 +120,36 @@ DOC_TEMPLATES: Dict[DocGenre, Dict[str, Any]] = {
             ("Ultra-high detail 35mm macro pan across oil canvas brushstrokes and tempera pigments", "Smooth slow macro tracking along layered oil textures, lapis lazuli and gold leaf glints", "Layer upon layer of ground minerals, egg tempera, and oil captured divine emotion with unprecedented realism."),
             ("Dramatic chiaroscuro side-profile close-up of a sculpted Carrara marble statue", "Slow arc orbit around finely chiselled marble drapery and expressive marble face", "From cold blocks of Carrara marble, sculptors unlocked breathing human form and dynamic movement."),
             ("Atmospheric wide shot of sunlight streaming across museum gallery paintings", "Tranquil slow forward camera float down the gallery hall, warm ambient gallery illumination", "Centuries later, these timeless masterpieces continue to speak across the boundaries of human history."),
+        ]
+    },
+    DocGenre.PLACES: {
+        "title": "Earth's Geographic Sanctuaries: Wonders of the World",
+        "audio_tags": "sweeping world documentary score, noble horns, gentle cultural strings, expansive acoustic pads",
+        "scenes": [
+            ("Panoramic wide aerial vista revealing the monumental geographic expanse of the landscape", "Slow cinematic drone forward glide over scenic terrain, soft morning haze", "Across the globe, distinct geographical wonders shape the landscapes and cultures that inhabit them."),
+            ("Medium architectural and cultural detail perspective of local historic dwellings and stone paths", "Smooth gentle camera drift along timeless regional buildings and natural pathways", "For centuries, human communities have carved their traditions in harmony with the unique topography of their homeland."),
+            ("Striking medium landscape perspective of geological features and pure flowing waters", "Slow pedestal rise revealing majestic natural contours and pristine light glints", "Every contour tells a story of millions of years of continental drift, erosion, and atmospheric transformation."),
+            ("Dramatic twilight panoramic pull-back over the entire geographic region", "Majestic slow pull-back revealing the vast valley and distant horizons under pastel sunset", "As dusk settles over this sacred landscape, the eternal balance between earth and sky endures."),
+        ]
+    },
+    DocGenre.BEACHES: {
+        "title": "Untamed Shorelines: Coastal Wonders of the World",
+        "audio_tags": "coastal documentary score, gentle rolling swells, acoustic harp and warm cello resonance",
+        "scenes": [
+            ("Panoramic aerial glide over pristine coastal shoreline and turquoise waters", "Slow monumental flight parallel to the breaking shoreline, sunlight dancing on crests", "Where the continent yields to the open sea, dynamic coastal ecosystems showcase nature's raw beauty."),
+            ("Medium eye-level shot of crystalline turquoise waves washing over pristine sands", "Slow locked tracking of laminar wave wash across smooth sandbars and coastal shells", "Each tidal rhythm sculpts the coastline, breathing life into a delicate littoral sanctuary."),
+            ("Dramatic low-angle view of rugged coastal rock formations and sea stacks", "Slow crane ascent revealing sheer sea stacks carved by eternal ocean swells", "Relentless ocean forces continually sculpt the edge of the world into dramatic geological sculptures."),
+            ("Golden sunset vista across the vast shoreline horizon", "Tranquil slow forward camera drift into golden hour horizon reflection across wet sands", "As the sun dips below the ocean horizon, the shoreline enters its quiet, timeless serenity."),
+        ]
+    },
+    DocGenre.DESERT: {
+        "title": "Silent Dunes: Mysteries of the Arid Frontiers",
+        "audio_tags": "desert documentary score, atmospheric desert wind whisper, low strings, deep resonant drone",
+        "scenes": [
+            ("Panoramic golden dawn vista of monumental sand dunes stretching to infinity", "Slow aerial flight over sharp razor-edge dune crests, warm morning shadows", "Across the arid expanses of our planet, silence reigns over colossal oceans of shifting sand."),
+            ("Macro close-up of intricate wind-rippled sand grains shifting in the breeze", "Locked tripod macro view of fine sand ripples with delicate micro-particles drifting in wind", "Every grain tells a story of eroded mountain ranges and millions of years of desert winds."),
+            ("Medium perspective of a desert oasis and resilient acacia trees against stark dunes", "Smooth slow pedestal rise revealing hidden green oasis nestled beneath towering dunes", "Against impossible odds, resilient life carves out ingenious sanctuaries within this extreme environment."),
+            ("Dramatic twilight perspective under the emerging canopy of the Milky Way galaxy", "Slow tranquil locked tripod framing of starry night sky glittering over silent dark dunes", "Under the infinite desert night sky, the timeless stillness of the sands connects us to the cosmos."),
         ]
     },
     DocGenre.ANCIENT_STRUCTURES: {
@@ -179,16 +220,19 @@ async def generate_documentary_storyboard_gemini(
     duration_seconds: float = 60.0,
     language: str = "en",
     user_id: str = "user_krishna_01",
+    theme_seed: Optional[str] = None,
+    num_shots: int = 1,
+    raw_output_path: Optional[Any] = None,
 ) -> DocStoryboard:
     """Dynamically generate authoritative BBC/NatGeo documentary script and storyboard via Gemini."""
-    theme_seed = custom_prompt or genre.value
-    num_scenes = 4
+    effective_theme = theme_seed or custom_prompt or genre.value
+    num_scenes = max(1, num_shots if (num_shots is not None and num_shots > 0 and num_shots != -1) else max(2, round(duration_seconds / 12.0)))
     dur_per_scene = round(duration_seconds / num_scenes, 2)
     domain_tag, default_model = GENRE_MODEL_DEFAULTS.get(genre, ("landscape_solid", "kling_v3"))
 
     print(f"\n[GEMINI DOCUMENTARY AGENT INVOKED]")
-    print(f"   * Genre / Theme:      {genre.value.upper()} ~ \"{theme_seed}\"")
-    print(f"   * Duration:           {duration_seconds}s (4 Scenes @ {dur_per_scene}s each)")
+    print(f"   * Genre / Theme:      {genre.value.upper()} ~ \"{effective_theme}\"")
+    print(f"   * Duration:           {duration_seconds}s ({num_scenes} Scene(s) @ ~{dur_per_scene}s each)")
     print(f"   * Language:           {language.upper()}")
 
     try:
@@ -198,33 +242,60 @@ async def generate_documentary_storyboard_gemini(
         llm = GeminiLLMAdapter()
 
         system_prompt = (
-            "You are a world-renowned BBC / National Geographic documentary showrunner and authoritative science communicator. "
-            "Your task is to write a compelling, educational, and visually majestic 8K UHD 4-scene documentary script and storyboard. "
-            "CRITICAL ANTI-FATIGUE DIRECTIVES:\n"
-            "- ANTI-FATIGUE CAMERA MOTION: Slow, sweeping, majestic 24fps documentary movements. Strictly prohibit aggressive zooms, rapid pans, jerky handheld shake, or disorienting camera speed.\n"
-            "- ANTI-FATIGUE ACOUSTIC SCORE: Warm cinematic orchestral textures, gentle natural environmental foley, zero harsh high-frequency spikes, deterministic sidechain ducking (-18dB) under narration, velvet -14 LUFS mastering.\n"
-            "For narration: Measured, poetic, authoritative cadence (~120 wpm) rich in geographic, ecological, and evolutionary lore. "
-            "For visual prompts: Arri Alexa 35mm Master Prime specifications, 8K UHD master resolution, exact focal lengths, f-stops (f/2.8, f/4.0), natural balanced lighting, zero CGI sheen. "
-            "For motion prompts: Majestic 24fps documentary camera motion, steady forward glides, natural animal behaviors or environmental physics. "
+            "You are a world-renowned BBC / National Geographic documentary showrunner, master cinematographer, and authoritative science communicator. "
+            "Your task is to write a compelling, educational, and visually majestic 8K UHD documentary script and storyboard. "
+            "CRITICAL CAMERA & MOTION DIRECTIVES:\n"
+            "- 100% TIER-0 LOCAL PERSPECTIVE DRONE & KEN BURNS MOTION ($0.00 COMPUTE):\n"
+            "By default for all documentaries, camera motion MUST be handled by our Tier-0 local perspective drone and Ken Burns engine. "
+            "Set 'motion_type': 'ken_burns' and 'motion_engine': 'local_drone' for all scenes. "
+            "Unlike fixed 5-second generative AI models, each scene's duration is completely flexible matching the requested narration beat.\n"
+            "- PERMITTED DRONE MOVEMENTS: 'stay' (calm hold), 'dollyin' (optical push-in), 'dollyout' (pull-back), 'pan-left', 'pan-right', "
+            "'tilt-up', 'tilt-down', 'drift-up-right', 'drift-up-left', 'drift-down-right', 'drift-down-left', 'orbit-left', 'orbit-right'.\n"
+            "- SEQUENTIAL & PARALLEL STAGES: Structure 'drone_choreography' as a sequence of stages. Within each stage, 'movements' can contain a single action or multiple simultaneous actions running in parallel (e.g. ['dollyin', 'pan-left']).\n"
+            "- START FRAMING: 'start_framing' can specify {'pan': 'center'|'left'|'right', 'zoom': 'normal'|'in', 'tilt': 'center'|'up'|'down'}.\n"
+            "- MOTION CURVES: 'cosine' (smooth S-curve), 'linear', 'ramp-up' (slow build), 'ramp-down'.\n"
+            "- ATMOSPHERIC WEATHER: 'weather' can be 'none', 'rain' (light/medium), or 'snow' (medium/heavy).\n"
+            "- ANTI-FATIGUE ACOUSTIC SCORE: Warm cinematic orchestral textures, gentle natural environmental foley, deterministic sidechain ducking (-18dB) under narration, velvet -14 LUFS mastering.\n"
+            "For narration: Measured, poetic, authoritative cadence (~120 wpm) rich in geographic, ecological, and evolutionary lore.\n"
             "Return valid JSON matching the schema."
         )
 
         user_msg = (
-            f"Write a 4-scene 8K UHD anti-fatigue documentary storyboard on: '{theme_seed}'.\n"
-            f"Genre: {genre.value}. Duration: {duration_seconds}s ({dur_per_scene}s per scene). Language: {language}.\n\n"
+            f"Write a {num_scenes}-scene 8K UHD anti-fatigue documentary storyboard on: '{effective_theme}'.\n"
+            f"Genre: {genre.value}. Duration: {duration_seconds}s (exactly {num_scenes} scene(s), ~{dur_per_scene}s per scene). Language: {language}.\n\n"
             f"Output JSON with fields:\n"
             f"- 'title': Evocative, high-CTR NatGeo documentary title\n"
             f"- 'story_topic': Educational overview and scientific/lore thesis\n"
             f"- 'audio_tags': Sweeping anti-fatigue orchestral score and natural foley tags\n"
-            f"- 'scenes': Array of 4 scenes each containing:\n"
-            f"    - 'scene_index': int (1..4)\n"
+            f"- 'scenes': Array of exactly {num_scenes} scenes each containing:\n"
+            f"    - 'scene_index': int (1..{num_scenes})\n"
+            f"    - 'duration_seconds': float ({dur_per_scene})\n"
             f"    - 'shot_type': 'wide', 'medium', or 'close_up'\n"
+            f"    - 'motion_type': 'ken_burns'\n"
+            f"    - 'motion_engine': 'local_drone'\n"
+            f"    - 'camera_movement': array of stage dicts, each with:\n"
+            f"        - 'stage': int\n"
+            f"        - 'duration': float (seconds, sum of stage durations MUST equal {dur_per_scene}s)\n"
+            f"        - 'movements': array of supported movement strings executed in parallel (e.g. ['dollyin', 'pan-left'] or ['stay'])\n"
+            f"    - 'start_framing': {{'pan': 'center'|'left'|'right', 'zoom': 'normal'|'in', 'tilt': 'center'|'up'|'down'}}\n"
+            f"    - 'motion_curve': 'cosine' | 'linear' | 'ramp-up' | 'ramp-down'\n"
+            f"    - 'weather': 'none' | 'rain' | 'snow'\n"
             f"    - 'visual_prompt': 35mm Arri 8K photoreal prompt for Fal FLUX 1.1 Pro\n"
-            f"    - 'motion_prompt': smooth 24fps cinematic camera motion prompt for Kling v3 Pro / Wan 2.1\n"
+            f"    - 'motion_prompt': cinematic camera and atmospheric motion prompt\n"
             f"    - 'narration_text': authoritative voiceover narration lines in {language}\n"
         )
 
         full_prompt = f"{system_prompt}\n\n{user_msg}"
+        if raw_output_path:
+            try:
+                from pathlib import Path
+                p_out = Path(raw_output_path)
+                prompt_file = p_out.parent / "gemini_input_prompt.txt" if p_out.is_file() or p_out.suffix else p_out / "gemini_input_prompt.txt"
+                prompt_file.parent.mkdir(parents=True, exist_ok=True)
+                prompt_file.write_text(full_prompt, encoding="utf-8")
+                logger.info(f"gemini_input_prompt_saved: {prompt_file}")
+            except Exception as e_p:
+                logger.warning(f"failed_to_save_gemini_input_prompt: {e_p}")
         logger.info(f"gemini_doc_request_sent: genre='{genre.value}' theme='{theme_seed}'\n--- PROMPT SENT TO GEMINI ---\n{full_prompt}\n-----------------------------")
         print(f"\n[GEMINI DOC DIRECTORIAL REQUEST DISPATCHED]")
         print(f"--- PROMPT SENT TO GEMINI ---\n{full_prompt}\n-----------------------------")
@@ -233,24 +304,32 @@ async def generate_documentary_storyboard_gemini(
         logger.info(f"gemini_doc_response_received:\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}")
         print(f"\n[GEMINI DOC DIRECTORIAL RESPONSE RECEIVED]\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}\n")
 
-        if data and isinstance(data, dict) and data.get("scenes") and len(data["scenes"]) >= 4:
+        if data and isinstance(data, dict) and data.get("scenes") and len(data["scenes"]) >= 1:
+            raw_scenes = data["scenes"][:num_scenes]
             doc_scenes = []
-            for idx, sc in enumerate(data["scenes"][:4]):
+            for idx, sc in enumerate(raw_scenes):
+                sc_dur = float(sc.get("duration_seconds", dur_per_scene))
+                sc_dur = max(2.0, sc_dur)
                 doc_scenes.append(
                     DocScene(
                         scene_index=idx + 1,
-                        duration_seconds=dur_per_scene,
-                        shot_type=sc.get("shot_type", "wide" if idx in (0, 3) else "medium"),
+                        duration_seconds=sc_dur,
+                        shot_type=sc.get("shot_type", "wide" if idx == 0 else "medium"),
                         motion_domain=domain_tag,
                         recommended_model=default_model,
                         visual_prompt=sc.get("visual_prompt", ""),
                         motion_prompt=sc.get("motion_prompt", ""),
                         narration_text=sc.get("narration_text", ""),
+                        motion_engine=sc.get("motion_engine", "local_drone"),
+                        drone_choreography=sc.get("camera_movement") or sc.get("drone_choreography"),
+                        start_framing=sc.get("start_framing"),
+                        motion_curve=sc.get("motion_curve", "cosine"),
+                        weather=sc.get("weather", "none"),
                     )
                 )
 
             sb = DocStoryboard(
-                title=data.get("title") or theme_seed.title(),
+                title=data.get("title") or (theme_seed.title() if theme_seed else "Documentary"),
                 genre=genre,
                 total_duration=duration_seconds,
                 scenes=doc_scenes,

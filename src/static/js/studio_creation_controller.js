@@ -22,7 +22,161 @@ function switchCreationTab(tabKey) {
   }
 }
 
-function syncGenreDropdownForChannel(channelSlug) {
+function openHierarchyGuideModal() {
+  const modal = document.getElementById("hierarchy-guide-modal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeHierarchyGuideModal() {
+  const modal = document.getElementById("hierarchy-guide-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+const STUDIO_FORMAT_DEFINITIONS = {
+  relaxation: { label: "🧘 Relaxation & Ambient", icon: "fa-spa", defaultGenre: "relax/nature" },
+  documentary: { label: "🦅 Documentary", icon: "fa-compass", defaultGenre: "documentary" },
+  walking_tour: { label: "🚶 4K Walking Tour", icon: "fa-person-walking", defaultGenre: "travel_walking" },
+  music_video: { label: "💃 Music & Dance", icon: "fa-music", defaultGenre: "dance/folk" },
+  short: { label: "📱 Shorts & Reels", icon: "fa-mobile-screen", defaultGenre: "comedy/satire" },
+  movie: { label: "🎬 Movie & Drama", icon: "fa-film", defaultGenre: "documentary" }
+};
+
+let activeStudioFormat = "relaxation";
+let activeSeriesMode = "existing";
+let cachedExistingSeries = [];
+
+function setSeriesMode(mode) {
+  activeSeriesMode = mode;
+  const existBtn = document.getElementById("series-mode-existing-btn");
+  const newBtn = document.getElementById("series-mode-new-btn");
+  const existCont = document.getElementById("series-existing-container");
+  const newCont = document.getElementById("series-new-container");
+
+  if (existBtn) existBtn.classList.toggle("active", mode === "existing");
+  if (newBtn) newBtn.classList.toggle("active", mode === "new");
+  if (existCont) existCont.classList.toggle("hidden", mode !== "existing");
+  if (newCont) newCont.classList.toggle("hidden", mode !== "new");
+
+  if (mode === "existing") {
+    const sel = document.getElementById("studio-existing-series-select");
+    if (sel && sel.value) {
+      onExistingSeriesSelect(sel.value);
+    } else {
+      const epCode = document.getElementById("studio-episode-code");
+      if (epCode && !epCode.value) epCode.value = "EP-001";
+    }
+  } else {
+    const epCode = document.getElementById("studio-episode-code");
+    if (epCode) epCode.value = "EP-001";
+  }
+}
+
+function onNewSeriesNameInput(val) {
+  const epCode = document.getElementById("studio-episode-code");
+  if (epCode && !epCode.value.trim()) epCode.value = "EP-001";
+}
+
+async function fetchAndPopulateExistingSeries(channelSlug, formatKey) {
+  const sel = document.getElementById("studio-existing-series-select");
+  if (!sel) return;
+
+  if (!channelSlug || channelSlug === "all") {
+    sel.innerHTML = '<option value="">(Select a specific Network)</option>';
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/channels/${channelSlug}/productions?format=${encodeURIComponent(formatKey)}`);
+    const data = await res.json();
+    if (data.status === "ok" && Array.isArray(data.productions) && data.productions.length > 0) {
+      cachedExistingSeries = data.productions;
+      sel.innerHTML = data.productions.map(p => `
+        <option value="${p.slug}" data-next="${p.next_episode_code}">
+          ${p.name} (${p.episodes_count} ep${p.episodes_count === 1 ? '' : 's'} • Next: ${p.next_episode_code})
+        </option>
+      `).join("");
+      onExistingSeriesSelect(data.productions[0].slug);
+    } else {
+      cachedExistingSeries = [];
+      sel.innerHTML = '<option value="">(No existing series • Click + New)</option>';
+      const epCode = document.getElementById("studio-episode-code");
+      if (epCode) epCode.value = "EP-001";
+    }
+  } catch (err) {
+    console.warn("fetchAndPopulateExistingSeries notice:", err);
+    sel.innerHTML = '<option value="">(No series found • Click + New)</option>';
+  }
+}
+
+function onExistingSeriesSelect(seriesSlug) {
+  const p = cachedExistingSeries.find(x => x.slug === seriesSlug);
+  const epCode = document.getElementById("studio-episode-code");
+  const pInput = document.getElementById("studio-production-name");
+  if (p) {
+    if (epCode) epCode.value = p.next_episode_code || "EP-001";
+    if (pInput) pInput.value = p.name;
+  } else if (seriesSlug) {
+    if (pInput) pInput.value = seriesSlug.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+    if (epCode && !epCode.value) epCode.value = "EP-001";
+  }
+}
+
+function renderFormatChipsForActiveNetwork(channelSlug) {
+  const container = document.getElementById("studio-format-chips-container");
+  const countBadge = document.getElementById("studio-format-count-badge");
+  if (!container) return;
+
+  const p = (typeof cachedChannelProfiles !== "undefined" ? cachedChannelProfiles[channelSlug] : null) || (typeof studioChannelMetas !== "undefined" ? studioChannelMetas[channelSlug] : null);
+  const allowed = p?.allowed_formats || p?.raw?.allowed_formats || ["relaxation", "documentary", "walking_tour", "music_video", "short"];
+
+  if (countBadge) countBadge.textContent = `${allowed.length} Licensed Format${allowed.length === 1 ? '' : 's'}`;
+
+  // If currently active format is not allowed, switch to first allowed
+  if (!allowed.includes(activeStudioFormat)) {
+    activeStudioFormat = allowed[0] || "relaxation";
+  }
+
+  container.innerHTML = allowed.map(fmtKey => {
+    const meta = STUDIO_FORMAT_DEFINITIONS[fmtKey] || { label: fmtKey.replace(/_/g, " ").toUpperCase(), icon: "fa-film" };
+    const isActive = (fmtKey === activeStudioFormat);
+    return `
+      <button type="button" onclick="selectStudioFormat('${fmtKey}')" id="fmt-pill-${fmtKey}" 
+        class="format-chip-btn ${isActive ? 'active' : ''}">
+        <i class="fa-solid ${meta.icon} text-[10px]"></i>
+        <span>${meta.label}</span>
+      </button>
+    `;
+  }).join("");
+
+  const hiddenInput = document.getElementById("studio-active-format-val");
+  if (hiddenInput) hiddenInput.value = activeStudioFormat;
+
+  fetchAndPopulateExistingSeries(channelSlug, activeStudioFormat);
+}
+
+function selectStudioFormat(fmtKey) {
+  activeStudioFormat = fmtKey;
+  const hiddenInput = document.getElementById("studio-active-format-val");
+  if (hiddenInput) hiddenInput.value = fmtKey;
+
+  // Update pills visual state
+  document.querySelectorAll("#studio-format-chips-container button").forEach(btn => {
+    btn.classList.remove("active");
+  });
+  const activeBtn = document.getElementById(`fmt-pill-${fmtKey}`);
+  if (activeBtn) {
+    activeBtn.classList.add("active");
+  }
+
+  const chSlug = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : "nature_rhythms";
+  if (fmtKey === "documentary" && typeof selectProductionTier === "function") {
+    selectProductionTier("balanced");
+  }
+  fetchAndPopulateExistingSeries(chSlug, fmtKey);
+  syncGenreDropdownOnly(chSlug);
+}
+
+function syncGenreDropdownOnly(channelSlug) {
   const gSelector = document.getElementById("studio-genre-selector");
   if (!gSelector) return;
 
@@ -32,15 +186,35 @@ function syncGenreDropdownForChannel(channelSlug) {
   const p = (typeof cachedChannelProfiles !== "undefined" ? cachedChannelProfiles[channelSlug] : null) || (typeof studioChannelMetas !== "undefined" ? studioChannelMetas[channelSlug] : null);
   const allowed = p?.allowed_genres || p?.raw?.allowed_genres || (p?.raw?.primary_genre ? [p.raw.primary_genre] : channelGenres[channelSlug]);
 
-  const normalized = (allowed && allowed.length > 0 && channelSlug !== "all")
+  // Filter genres strictly matching the active format selected in Step 1
+  let normalized = (allowed && allowed.length > 0 && channelSlug !== "all")
     ? allowed.map(g => g === "relax/scenic" ? "travel/scenic" : g).filter(g => Boolean(genresDict[g]))
     : Object.keys(genresDict);
-  const genresToShow = normalized.length > 0 ? normalized : Object.keys(genresDict);
+
+  if (activeStudioFormat === "relaxation") {
+    normalized = normalized.filter(g => g.startsWith("relax/") || g === "travel/scenic");
+  } else if (activeStudioFormat === "documentary") {
+    normalized = normalized.filter(g => g === "documentary" || g.includes("doc"));
+  } else if (activeStudioFormat === "walking_tour") {
+    normalized = normalized.filter(g => g === "travel_walking");
+  } else if (activeStudioFormat === "music_video") {
+    normalized = normalized.filter(g => g.startsWith("dance/"));
+  } else if (activeStudioFormat === "short" || activeStudioFormat === "movie") {
+    normalized = normalized.filter(g => g.startsWith("comedy/") || g === "documentary" || g === "travel/scenic");
+  }
+
+  // Fallback if no specific format matches
+  const genresToShow = normalized.length > 0 ? normalized : (activeStudioFormat === "documentary" ? ["documentary"] : ["relax/nature"]);
 
   gSelector.innerHTML = genresToShow.map(k => `<option value="${k}">${genresDict[k] || k}</option>`).join("");
-  const first = genresToShow[0] || "travel/scenic";
+  const first = genresToShow[0] || "relax/nature";
   gSelector.value = first;
   onGenreChange(first);
+}
+
+function syncGenreDropdownForChannel(channelSlug) {
+  renderFormatChipsForActiveNetwork(channelSlug);
+  syncGenreDropdownOnly(channelSlug);
 }
 
 function onGenreChange(genreVal) {
@@ -54,11 +228,38 @@ function onGenreChange(genreVal) {
   updateArchetypeOptions(genreVal, subSelector.value);
   onSubGenreChange(subSelector.value);
 
-  // Sync active channel BGM default
+  // Sync active channel audio defaults
   const bgmToggle = document.getElementById("studio-toggle-bgm");
-  if (bgmToggle) {
-    bgmToggle.checked = (genreVal !== "relax/hearth" && genreVal !== "documentary");
+  const voiceToggle = document.getElementById("studio-toggle-voice-over");
+  const dualToggle = document.getElementById("studio-toggle-dual-editions");
+
+  const isDoc = (activeStudioFormat === "documentary" || genreVal === "documentary" || genreVal.includes("doc"));
+  if (isDoc) {
+    if (bgmToggle) {
+      bgmToggle.checked = true;
+      bgmToggle.disabled = true;
+    }
+    if (voiceToggle) {
+      voiceToggle.checked = true;
+      voiceToggle.disabled = true;
+    }
+    if (dualToggle) {
+      dualToggle.checked = true;
+      dualToggle.disabled = true;
+    }
+  } else {
+    if (bgmToggle) {
+      bgmToggle.disabled = false;
+      bgmToggle.checked = (genreVal !== "relax/hearth");
+    }
+    if (voiceToggle) {
+      voiceToggle.disabled = false;
+    }
+    if (dualToggle) {
+      dualToggle.disabled = false;
+    }
   }
+
   syncDualMastersVisibility();
   if (typeof syncTravelShotUI === "function") {
     syncTravelShotUI();
@@ -73,7 +274,8 @@ function syncDualMastersVisibility() {
   if (!row) return;
   const g = (document.getElementById("studio-genre-selector")?.value || "").toLowerCase();
   const vo = Boolean(document.getElementById("studio-toggle-voice-over")?.checked);
-  const isRelevant = g.includes("travel") || g.includes("doc") || vo;
+  const isDoc = (activeStudioFormat === "documentary" || g.includes("doc"));
+  const isRelevant = isDoc || g.includes("travel") || vo;
   row.classList.toggle("hidden", !isRelevant);
 }
 
@@ -106,11 +308,39 @@ function onSubGenreChange(val) {
 
   updateArchetypeOptions(genreVal, val);
 
-  if (val === "cozy_hearth") {
-    if (typeof selectStudioChannel === "function") selectStudioChannel("silent_hearth");
-  } else if (val === "cinematic_doc" || val === "volcano_arctic" || val === "ocean_depths") {
-    if (bgmToggle) bgmToggle.checked = false;
-    if (typeof selectStudioChannel === "function") selectStudioChannel("cineai_docs");
+  // Audio configuration defaults based on sub-genre without overriding selected channel
+  if (val === "cozy_hearth" || val === "stone_hearth") {
+    if (bgmToggle && !bgmToggle.disabled) bgmToggle.checked = false;
+  }
+}
+
+function onWeatherChange(weatherVal) {
+  const labels = ["normal", "rain", "snow", "fog", "sunset", "night"];
+  labels.forEach(w => {
+    const lbl = document.getElementById(`weather-lbl-${w}`);
+    if (lbl) {
+      if (w === weatherVal) {
+        lbl.className = "flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border-2 border-[var(--accent)] cursor-pointer text-[var(--text)]";
+      } else {
+        lbl.className = "flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]";
+      }
+    }
+  });
+
+  const promptInput = document.getElementById("youtube-prompt-input");
+  if (promptInput && !promptInput.value.trim()) {
+    const weatherPhrases = {
+      rain: " (with gentle cinematic rainfall, mist plumes & petrichor ASMR)",
+      snow: " (with serene snowfall, frosted evergreens & winter wind)",
+      fog: " (with morning valley mist, volumetric god rays & soft haze)",
+      sunset: " (at golden hour sunset, warm alpenglow & long purple shadows)",
+      night: " (under starlit midnight sky, brilliant Milky Way & celestial peace)",
+      normal: ""
+    };
+    if (weatherPhrases[weatherVal]) {
+      const origPlaceholder = promptInput.placeholder.replace(/ \(with.*?\)/, "").replace(/ \(at.*?\)/, "").replace(/ \(under.*?\)/, "");
+      promptInput.placeholder = origPlaceholder + weatherPhrases[weatherVal];
+    }
   }
 }
 

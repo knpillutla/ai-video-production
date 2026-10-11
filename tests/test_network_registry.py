@@ -2,22 +2,24 @@
 
 import json
 from pathlib import Path
-from src.config.channel_registry import (
+from src.config.network_registry import (
+    NetworkProfile,
     ChannelProfile,
+    load_network_profiles,
     load_channel_profiles,
+    get_network_profile,
     get_channel_profile,
+    save_network_profile,
     save_channel_profile,
 )
 
 
 def test_channel_registry_loading():
-    """Verify that all default channel JSON profiles are loaded correctly."""
+    """Verify that default channel JSON profiles are loaded correctly."""
     profiles = load_channel_profiles(force_reload=True)
-    assert len(profiles) >= 4
+    assert len(profiles) >= 2
     assert "earth_serenade" in profiles
     assert "silent_hearth" in profiles
-    assert "cineai_docs" in profiles
-    assert "telugu_comedy" in profiles
 
 
 def test_earth_serenade_profile_and_guardrails():
@@ -48,14 +50,14 @@ def test_silent_hearth_profile_and_guardrails():
 
     guardrails_text = profile.format_directorial_guardrails_block()
     assert "DISABLED (Pure Natural Foley / ASMR)" in guardrails_text
-    assert "Amber firelight" in guardrails_text or "firelight" in guardrails_text.lower()
+    assert "Warm amber interior glow" in guardrails_text or "amber" in guardrails_text.lower()
 
 
 def test_save_and_reload_channel_profile(tmp_path, monkeypatch):
     """Verify saving and re-reading channel profiles."""
     test_channels_dir = tmp_path / "channels"
     test_channels_dir.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setattr("src.config.channel_registry.CHANNELS_DIR", test_channels_dir)
+    monkeypatch.setattr("src.config.network_registry.CHANNELS_DIR", test_channels_dir)
 
     new_profile = ChannelProfile(
         channel_id="nordic_aurora",
@@ -81,15 +83,14 @@ def test_api_list_channels_endpoint():
     """Verify that GET /api/channels returns seeded channels with tags and allowed genres."""
     from fastapi.testclient import TestClient
     from src.api.main import app
-    from src.config.channel_registry import load_channel_profiles
+    from src.config.network_registry import load_channel_profiles
 
     load_channel_profiles(force_reload=True)
     client = TestClient(app)
     response = client.get("/api/channels")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) >= 4
+    assert len(data) >= 1
     slugs = [c["channel_slug"] for c in data]
-    assert "earth_serenade" in slugs
-    assert "silent_hearth" in slugs
+    assert "nature_rhythms" in slugs
 

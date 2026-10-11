@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
-from src.config.channel_registry import get_channel_profile
+from src.config.network_registry import get_channel_profile
 from src.studios.directorial_configs import (
     build_default_image_model_configs,
     build_default_video_model_configs,
@@ -57,19 +57,26 @@ def build_base_directorial_prompt(
         or num_shots == -1
     )
 
-    # User choice for 4K master mode: if user explicitly sets fixed shots for nature relaxing, respect it.
+    is_documentary = (
+        "doc" in g_lower
+        or "documentary" in ch_lower
+        or "doc" in (sub_genre or "").lower()
+        or "documentary" in a_lower
+    )
+
+    # User choice for shot count: ALWAYS respect explicit user shot selection across all tiers and genres
     user_chose_fixed_shots = (num_shots is not None and num_shots > 0 and num_shots != -1)
-    if user_chose_fixed_shots and is_nature_relax and clean_tier != "balanced":
+    if user_chose_fixed_shots:
         eff_shots = num_shots
         per_shot_dur = round(duration_seconds / max(1, eff_shots), 1)
         cadence_spec = (
             f"- Total Duration: {duration_seconds} seconds\n"
-            f"- Shot Count: {eff_shots} shots ({per_shot_dur}s per shot)\n"
-            f"- 4K Master Living Wallpaper Contract: Exactly {eff_shots} scene(s) matching user selection."
+            f"- Explicit Shot Count: Exactly {eff_shots} shot(s) requested by user ({per_shot_dur}s per shot).\n"
+            f"- Shot Count Mandate: You MUST generate an array of exactly {eff_shots} scene(s) inside 'scenes', each approximately {per_shot_dur}s."
         )
-        schema_mandate = f"\n- Generate exactly {eff_shots} scenes matching the requested shot count inside 'scenes'."
+        schema_mandate = f"\n- Generate exactly {eff_shots} scene(s) matching the requested shot count inside 'scenes'."
     else:
-        # Balanced mode / autonomous cadence: Dynamic 2s to 12s range across all genres
+        # Autonomous cadence (-1 or unspecified): Dynamic 2s to 12s range
         eff_shots = max(2, round(duration_seconds / 12.0)) if (is_urban_or_travel or duration_seconds > 18.0) else max(1, round(duration_seconds / 6.0))
         per_shot_dur = round(duration_seconds / max(1, eff_shots), 1)
         cadence_spec = (
@@ -100,31 +107,34 @@ def build_base_directorial_prompt(
         if profile:
             channel_block = "\n" + profile.format_directorial_guardrails_block() + "\n"
 
-    if is_urban_or_travel:
-        d1 = """1. 4K CINEMATIC DRONE ARCHITECTURAL & SCENIC SHOWCASE:
-   - Dynamic Scenic Cadence (2s-12s per Vista): Curate distinct world-class architectural landmarks across scenes with 2s to 12s dynamic range.
-   - For Cities & Skylines: Show magnificent architectural skylines, gleaming glass towers reflecting sky, suspension bridges, and historic monuments from sweeping 4K aerial drone perspectives in crisp natural daytime.
-   - For Heritage & Citadels: Show monumental ancient architecture, grand stone ramparts, temples, and palaces.
-   - Zero Tourist Crowd Clutter: Keep focus on breathtaking architectural monuments, skylines, and landscape geometry."""
+    if is_documentary or is_urban_or_travel or clean_tier in ("tier_0", "local", "ken_burns"):
+        d1 = """1. 4K CINEMATIC BLUE-CHIP DOCUMENTARY & DRONE SHOWCASE:
+   - Dynamic Scenic Cadence: Curate distinct world-class natural landmarks, architecture, and habitats across scenes.
+   - NO MOVING OBJECTS DIRECTIVE (MANDATORY FOR DOCUMENTARY IMAGES): Always compose still, timeless landscape, architectural, and vista keyframe images with ZERO moving objects (strictly NO moving trains, vehicles, cars, buses, boats, ferries, airplanes, walking pedestrians, crowds, or darting animals). Moving objects cause perspective warping and smearing during drone flight. Focus exclusively on monumental terrain, majestic vistas, tranquil valleys, tracks/roads empty of traffic, and pristine architecture.
+   - Authoritative Measured Narration: Measured, poetic, educational voiceover (~120 WPM) rich in geological, ecological, and cultural lore.
+   - 100% Crisp Natural Lighting: Balanced daylight or dramatic authentic golden/blue hour, zero artificial CGI gloss."""
         ex_motion_type = "ken_burns"
-        ex_rationale = "100% local 4K perspective drone flight with 2.5D depth parallax and micro-kinetics ($0.00 compute)."
-        motion_rule = """3. 100% TIER-0 LOCAL PERSPECTIVE DRONE & MICRO-KINETICS CONTRACT ($0.00 COMPUTE):
-   - MANDATORY 100% LOCAL MOTION: Set "motion_type": "ken_burns" for 100% OF SCENES. STRICTLY PROHIBIT "ai_diffusion".
-   - Zero AI diffusion calls ($0.00 API expenditure). All 4K motion is handled by the local perspective homography drone engine with multi-waypoint flight choreography ('camera_waypoints') and 2.5D parallax.
-   - For all water, trees, and traffic, direct local deterministic kinetics in 'kinetic_micro_zones' (harmonic water ripples via 'water_zones', canopy sway via 'tree_sway_zones', and sprite drifts via 'sprites')."""
+        ex_rationale = "100% local 4K perspective drone flight with compound choreography and zero AI diffusion artifacts ($0.00 compute)."
+        motion_rule = """3. 100% TIER-0 LOCAL PERSPECTIVE DRONE & KEN BURNS MOTION CONTRACT ($0.00 COMPUTE):
+   - MANDATORY 100% LOCAL MOTION: Set "motion_type": "ken_burns" for scenes. By default for all documentaries and landscapes, use local drone motion.
+   - Direct camera choreography using local perspective drone flight stages and compound movements:
+     * Allowed movements: 'stay', 'dollyin', 'dollyout', 'pan-left', 'pan-right', 'tilt-up', 'tilt-down', 'drift-up-right', 'drift-up-left', 'orbit-left', 'orbit-right'.
+     * Compound actions: specify parallel compound movements (e.g. ['dollyin', 'pan-left']).
+     * Weather overlay: specify 'weather': 'none', 'rain', or 'snow'.
+     * Motion easing: 'cosine' (smooth S-curve), 'ramp-up', 'linear'.
+   - Multi-waypoint kinetic choreography: In "camera_waypoints", provide sub-movements summing to duration_seconds."""
     else:
         d1 = """1. PURE PRISTINE UNINHABITED NATURE (ZERO HUMANS, ZERO STRUCTURES):
    - Every scene MUST be 100% uninhabited, wild, raw, primordial nature.
    - Absolutely zero humans, tourists, swimmers, hikers, guides, voices, or faces.
    - Strictly zero modern structures, buildings, cabins, paved roads, vehicles, fences, power lines, boats, or railings."""
-        ex_motion_type = "ai_diffusion"
-        ex_rationale = "Fluid water surface requires live AI diffusion for natural ripples"
+        ex_motion_type = "ken_burns"
+        ex_rationale = "Local 4K perspective drone glide with smooth compound vector trajectory."
         motion_rule = f"""3. HYBRID MOTION DIRECTORIAL SCRIPT CONTRACT (TIER: {clean_tier.upper()}):
-   - SCRIPT IS THE MANDATORY FOUNDATION FOR PRODUCTION. Every scene MUST explicitly specify "motion_type" ("ai_diffusion" | "ken_burns") and "motion_rationale".
-   - Balanced Tier: "ai_diffusion" for living subjects & fluid dynamics (rivers, waves, falls, rain, embers, steam); "ken_burns" for rigid monumental terrain (distant peaks, cliffs) to preserve 100% geometry at $0.00 compute.
-   - Anti-Motion-Fatigue Clear Sky Standard: Skies MUST be crystal-clear, cloudless azure skies. STRICTLY PROHIBIT drifting clouds.
-   - Multi-Waypoint Kinetic Choreography: In "camera_waypoints", provide sub-movements summing to duration_seconds.
-   - Wide-Scale Micro-Kinetics: In "kinetic_micro_zones", specify optional normalized bboxes [ymin, ymax, xmin, xmax] (0.0-1.0) for "sprites", "tree_sway_zones", and "water_zones"."""
+   - SCRIPT IS THE MANDATORY FOUNDATION FOR PRODUCTION. Every scene MUST explicitly specify "motion_type" ("ken_burns" | "ai_diffusion") and "motion_rationale".
+   - Default for static & rigid landscapes: "ken_burns" to guarantee 100% geometry at $0.00 compute.
+   - Only select "ai_diffusion" if complex organic kinematics (running animals, violent splashing rapids) strictly require neural diffusion.
+   - Direct local drone flight in "camera_waypoints" with sub-movements ('dollyin', 'dollyout', 'pan-left', 'pan-right', 'orbit-left', 'orbit-right')."""
 
     return f"""You are the Master Visual Director and Senior Cinematic Storyboard Artist for CineAI Studio.
 Your role is to author a complete, production-ready, broadcast-grade Screenplay for the "{genre}" channel genre.
@@ -176,6 +186,10 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
 7. MANDATORY NEGATIVE PROMPT:
    - For Pure Wilderness: "clouds, cloudy, overcast sky, moving clouds, timelapse clouds, camera shake, jitter, rapid motion, flickering, temporal jump, parched, frozen ice, stagnant water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings".
    - For Architectural & Travel: "clouds, overcast sky, moving clouds, camera shake, jitter, rapid motion, morphing architecture, changing furniture, structural drift, flickering, temporal jump, gelatinous water, artifacts, humans, tourist, clutter, plastic junk, modern electronics".
+
+8. UNIVERSAL AUDIO & SPOKEN VOICEOVER DIRECTORIAL CONTRACT (MANDATORY):
+   - "spoken_narration_script" & "narration_text": Whenever voiceover is enabled or documentary/educational storytelling is requested, you MUST provide authoritative, continuous, broadcast-grade narration (~{target_words} words, ~120-125 WPM) in 'audio_master.spoken_narration_script', and divide it smoothly across every scene in 'scenes[].narration_text'. NEVER leave narration blank.
+   - "suno_musical_tags" & "suno_prompt": Autonomously compose bespoke cultural acoustic tags and mood descriptions matching the geographic location, instruments, and time-of-day. Never leave music tags blank.
 
 {specific_rules}
 {landmarks_block}

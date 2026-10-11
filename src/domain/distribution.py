@@ -21,6 +21,7 @@ class ChannelBase(BaseModel):
     tag: str = ""
     comments: str = ""
     avatar_url: str | None = None
+    allowed_formats: list[str] = Field(default_factory=lambda: ["documentary", "relaxation", "walking_tour", "music_video", "short"])
     allowed_genres: list[str] = Field(default_factory=list)
     default_tags: list[str] = Field(default_factory=list)
 
@@ -41,6 +42,7 @@ class ChannelUpdate(BaseModel):
     channel_handle: str | None = None
     channel_slug: str | None = None
     primary_genre: str | None = None
+    allowed_formats: list[str] | None = None
     allowed_genres: list[str] | None = None
     primary_language: str | None = None
     category: str | None = None

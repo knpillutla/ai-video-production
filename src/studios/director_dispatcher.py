@@ -50,6 +50,69 @@ async def dispatch_studio_director(
         tier=tier,
     )
 
+    # 0. Dedicated Blue-Chip Documentary Studio Dispatch
+    if "doc" in genre_lower or "documentary" in ch_lower or "doc" in sub_lower:
+        from src.studios.documentary_studio.doc_storyboard import generate_documentary_storyboard_gemini, DocGenre
+        from src.studios.ambient_world.relax_models import RelaxScene
+        doc_genre_map = {
+            "places": DocGenre.PLACES, "doc_places": DocGenre.PLACES,
+            "beaches": DocGenre.BEACHES, "doc_beaches": DocGenre.BEACHES,
+            "mountains": DocGenre.MOUNTAINS, "doc_mountains": DocGenre.MOUNTAINS,
+            "nature": DocGenre.NATURE, "doc_nature": DocGenre.NATURE,
+            "ocean": DocGenre.OCEAN, "doc_ocean": DocGenre.OCEAN,
+            "desert": DocGenre.DESERT, "doc_desert": DocGenre.DESERT,
+            "wildlife": DocGenre.WILDLIFE, "doc_wildlife": DocGenre.WILDLIFE,
+            "art": DocGenre.ART, "doc_art": DocGenre.ART,
+            "ancient_structures": DocGenre.ANCIENT_STRUCTURES, "doc_architecture": DocGenre.ANCIENT_STRUCTURES,
+        }
+        eff_doc_genre = doc_genre_map.get(sub_lower, doc_genre_map.get(arch_lower, DocGenre.MOUNTAINS))
+        sb = await generate_documentary_storyboard_gemini(
+            genre=eff_doc_genre,
+            theme_seed=custom_prompt or "Swiss Alps: Majestic Glaciers & Granite Titans",
+            duration_seconds=duration_seconds,
+            language="en",
+            num_shots=num_shots,
+            raw_output_path=raw_output_path,
+        )
+        # Convert DocStoryboard to RelaxScreenplay container for pipeline compatibility
+        full_narration = " ".join(s.narration_text.strip() for s in sb.scenes if getattr(s, "narration_text", None))
+        from src.studios.ambient_world.relax_models import RelaxAudioMasterSpec
+        relax_scenes = [
+            RelaxScene(
+                scene_index=s.scene_index,
+                visual_prompt=s.visual_prompt,
+                motion_prompt=s.motion_prompt,
+                motion_negative_prompt="rapid cuts, chaotic movement, jerky shake, disorienting pans",
+                recommended_model=s.recommended_model,
+                motion_domain=s.motion_domain,
+                motion_type="ken_burns",
+                camera_motion="perspective_drone",
+                camera_movement=s.drone_choreography or "dollyin",
+                duration_seconds=s.duration_seconds,
+                shot_type=s.shot_type,
+                narration_text=getattr(s, "narration_text", "") or "",
+            )
+            for s in sb.scenes
+        ]
+        return RelaxScreenplay(
+            title=sb.title,
+            story_topic=sb.title,
+            recommended_fps=24,
+            audio_master=RelaxAudioMasterSpec(
+                audio_mode="documentary_voiceover",
+                spoken_narration_script=full_narration,
+                suno_musical_tags=sb.audio_tags or "cinematic orchestral documentary, sparse ambient foley, 48kHz broadcast master",
+                target_lufs=-14.0,
+                ducking_db=-18.0,
+            ),
+            scenes=relax_scenes,
+            total_duration_seconds=sb.total_duration,
+            cluster="documentary",
+            genre="documentary",
+            sub_genre=sub_genre or "doc_mountains",
+            primary_archetype=primary_archetype or "swiss_alps_valleys",
+        )
+
     # 0. Dedicated Ocean Studio Dispatch (All 6 Diurnal Timings under genre 'relax/ocean')
     if genre_lower in {"relax/ocean", "ocean"} or "ocean" in arch_lower or "ocean" in sub_lower or "bioluminescent" in arch_lower or any(w in p_lower for w in ["ocean retreat", "ocean villa", "overwater villa", "turquoise lagoon"]):
         from src.studios.ocean_studio.ocean_director import generate_ocean_screenplay_gemini

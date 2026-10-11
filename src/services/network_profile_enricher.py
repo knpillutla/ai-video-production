@@ -11,7 +11,7 @@ import logging
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
-from src.config.channel_registry import ChannelProfile
+from src.config.network_registry import ChannelProfile
 from src.providers.llm.gemini_adapter import GeminiLLMAdapter
 
 logger = logging.getLogger("ChannelProfileEnricher")

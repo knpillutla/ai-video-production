@@ -13,6 +13,10 @@ function updateStudioChannelMetas(channelsList) {
         (defaultGenres || (ch.primary_genre ? [ch.primary_genre] : null));
       const allowed = rawAllowed ? rawAllowed.map(g => g === "relax/scenic" ? "travel/scenic" : g) : null;
 
+      const channelFormats = (ch.allowed_formats && ch.allowed_formats.length > 0) ? ch.allowed_formats :
+        (cachedProf?.allowed_formats && cachedProf.allowed_formats.length > 0) ? cachedProf.allowed_formats :
+        ["documentary", "relaxation", "walking_tour", "music_video", "short"];
+
       studioChannelMetas[slug] = {
         id: ch.id,
         slug: slug,
@@ -25,6 +29,7 @@ function updateStudioChannelMetas(channelsList) {
         tag: ch.tag || ch.raw?.tag || "",
         comments: ch.comments || ch.raw?.comments || "",
         allowed_genres: allowed,
+        allowed_formats: channelFormats,
         raw: ch
       };
     });
@@ -47,8 +52,11 @@ function renderStudioChannelChips() {
     return;
   }
 
-  if (!selectedStudioChannel || !studioChannelMetas[selectedStudioChannel]) {
-    selectedStudioChannel = slugs[0];
+  const savedChannel = localStorage.getItem("cineai_selected_channel");
+  if (savedChannel && studioChannelMetas[savedChannel]) {
+    selectedStudioChannel = savedChannel;
+  } else if (!selectedStudioChannel || !studioChannelMetas[selectedStudioChannel]) {
+    selectedStudioChannel = slugs.includes("nature_rhythms") ? "nature_rhythms" : slugs[0];
   }
 
   // Populate Dropdown
@@ -71,7 +79,7 @@ function renderStudioChannelChips() {
     const allChip = `
       <button type="button" onclick="selectStudioChannel('all')" id="ledger-ch-all" class="${isAll ? activeCls : inactiveCls}">
         <i class="fa-solid fa-network-wired text-[11px] text-indigo-400"></i>
-        <span>All Channels</span>
+        <span>All Networks</span>
       </button>
     `;
     const ledgerChips = slugs.map(slug => {
@@ -107,6 +115,9 @@ function selectStudioChannel(channelId) {
     channelId = slugs[0];
   }
   selectedStudioChannel = channelId;
+  if (channelId && channelId !== "all") {
+    localStorage.setItem("cineai_selected_channel", channelId);
+  }
   const meta = (channelId !== "all") ? studioChannelMetas[channelId] : null;
 
   const selectEl = document.getElementById("studio-channel-select");
@@ -152,9 +163,9 @@ function updateStudioChannelBadge() {
     const meta = studioChannelMetas[selectedStudioChannel];
     badge.textContent = `${meta.name} (${meta.handle})`;
   } else if (selectedStudioChannel === "all") {
-    badge.textContent = "All Channels";
+    badge.textContent = "All Networks";
   } else {
-    badge.textContent = "No Active Channel";
+    badge.textContent = "No Active Network";
   }
 }
 

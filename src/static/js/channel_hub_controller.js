@@ -10,7 +10,13 @@ async function fetchUserChannels() {
     const res = await fetch("/api/channels");
     const data = await res.json();
     if (Array.isArray(data)) {
-      userChannels = data;
+      const seen = new Set();
+      userChannels = data.filter(c => {
+        const key = (c.channel_slug || c.channel_name || String(c.id)).toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
       if (typeof updateStudioChannelMetas === "function") updateStudioChannelMetas(userChannels);
       if (typeof renderChannelManagementShelf === "function") renderChannelManagementShelf();
       if (typeof renderChannelHubTable === "function") renderChannelHubTable();
@@ -35,10 +41,15 @@ function openCreateChannelModal() {
   activeEnrichedProfile = null;
   document.getElementById("crud-is-edit").value = "false";
   document.getElementById("crud-channel-id").value = "";
-  document.getElementById("crud-modal-title").textContent = "Create Distribution Channel";
+  document.getElementById("crud-modal-title").textContent = "Create Audience Network";
   document.getElementById("crud-channel-slug").disabled = false;
-  document.getElementById("crud-submit-btn").innerHTML = '<i class="fa-solid fa-plus text-[10px]"></i><span>Create Channel</span>';
+  document.getElementById("crud-submit-btn").innerHTML = '<i class="fa-solid fa-plus text-[10px]"></i><span>Create Network</span>';
   document.getElementById("channel-crud-form").reset();
+  // Default format selections
+  const defaultFormats = ["documentary", "relaxation", "walking_tour", "music_video", "short"];
+  document.querySelectorAll('input[name="crud_format"]').forEach(cb => {
+    cb.checked = defaultFormats.includes(cb.value);
+  });
   const preview = document.getElementById("crud-enriched-preview");
   if (preview) preview.classList.add("hidden");
   openModal("channel-crud-modal");
@@ -51,7 +62,7 @@ async function openEditChannelModal(channelId) {
   const slug = ch.channel_slug || ch.channel_name.toLowerCase().replace(/[^a-z0-9]/g, "_");
   document.getElementById("crud-is-edit").value = "true";
   document.getElementById("crud-channel-id").value = ch.id;
-  document.getElementById("crud-modal-title").textContent = `Channel Strategy: ${ch.channel_name}`;
+  document.getElementById("crud-modal-title").textContent = `Network Strategy: ${ch.channel_name}`;
   document.getElementById("crud-channel-slug").value = slug;
   document.getElementById("crud-channel-slug").disabled = true;
   document.getElementById("crud-channel-name").value = ch.channel_name || "";
@@ -65,6 +76,14 @@ async function openEditChannelModal(channelId) {
   const tagsInput = document.getElementById("crud-channel-tags");
   if (tagsInput) tagsInput.value = (ch.default_tags || []).join(", ");
   document.getElementById("crud-submit-btn").innerHTML = '<i class="fa-solid fa-floppy-disk text-[10px]"></i><span>Save Changes</span>';
+
+  // Populate allowed formats
+  const channelFormats = (cachedChannelProfiles && cachedChannelProfiles[slug]?.allowed_formats?.length)
+    ? cachedChannelProfiles[slug].allowed_formats
+    : (ch.allowed_formats?.length ? ch.allowed_formats : ["documentary", "relaxation", "walking_tour", "music_video", "short"]);
+  document.querySelectorAll('input[name="crud_format"]').forEach(cb => {
+    cb.checked = channelFormats.includes(cb.value);
+  });
 
   const allowed = (cachedChannelProfiles && cachedChannelProfiles[slug]?.allowed_genres?.length) 
     ? cachedChannelProfiles[slug].allowed_genres 
@@ -168,6 +187,7 @@ async function saveChannelForm(event) {
     .slice(0, 36) || `channel_${Date.now()}`;
 
   const cleanHandle = handleRaw.replace(/^@+/, "");
+  const selectedFormats = Array.from(document.querySelectorAll('input[name="crud_format"]:checked')).map(cb => cb.value);
   const selectedGenres = Array.from(document.querySelectorAll('input[name="crud_genre"]:checked')).map(cb => cb.value);
 
   const payload = {
@@ -176,6 +196,7 @@ async function saveChannelForm(event) {
     channel_handle: cleanHandle ? `@${cleanHandle}` : `@${cleanSlug}`,
     category: document.getElementById("crud-channel-category")?.value || "General",
     primary_genre: selectedGenres[0] || "travel/scenic",
+    allowed_formats: selectedFormats.length > 0 ? selectedFormats : ["documentary", "relaxation", "walking_tour", "music_video", "short"],
     allowed_genres: selectedGenres,
     primary_language: document.getElementById("crud-channel-lang")?.value || "en",
     icon: document.getElementById("crud-channel-icon")?.value || "fa-clapperboard",
@@ -208,7 +229,9 @@ async function saveChannelForm(event) {
     const profileToSave = activeEnrichedProfile || {
       channel_id: cleanSlug, channel_name: payload.channel_name, handle: payload.channel_handle,
       tag: payload.tag, comments: payload.comments, niche_category: payload.category,
-      target_audience: payload.description, allowed_genres: selectedGenres.length > 0 ? selectedGenres : ["relax/nature"],
+      target_audience: payload.description,
+      allowed_formats: payload.allowed_formats,
+      allowed_genres: selectedGenres.length > 0 ? selectedGenres : ["relax/nature"],
       audio_profile: { bgm_enabled_by_default: !cleanSlug.includes("hearth"), style: "Harmonic Soundscape", target_lufs: -14.0 },
       visual_lighting_guardrails: { lighting_temperature: "Natural (5400K)", purity_rule: "Pure Scenery" },
       youtube_seo_defaults: { primary_tags: payload.default_tags, category_id: "10" }

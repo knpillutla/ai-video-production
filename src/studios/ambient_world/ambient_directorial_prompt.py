@@ -140,6 +140,10 @@ STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
    - SCRIPT IS THE MANDATORY FOUNDATION FOR PRODUCTION. Every scene MUST explicitly specify "motion_type" ("ai_diffusion" | "ken_burns") and "motion_rationale". Zero fallbacks allowed.
    - MANDATORY "ai_diffusion": living subjects (people, animals), fluid dynamics (rivers, waves, falls, rain, embers, steam), macro kinetics (swaying flower petals, rustling leaves), or moving vehicles.
    - MANDATORY "ken_burns": rigid monumental terrain (distant mountain peaks, granite cliffs, dunes) and architecture (stone temples, palaces, room walls) to preserve 100% geometry at $0.00 compute.
+   - When motion_type is "ken_burns", "camera_movement" MUST BE AN ARRAY of stage objects specifying exact durations and parallel/sequential movements:
+     * Actions supported: 'stay', 'dollyin', 'dollyout', 'pan-left', 'pan-right', 'tilt-up', 'tilt-down', 'drift-up-right', 'drift-up-left', 'drift-down-right', 'drift-down-left', 'orbit-left', 'orbit-right'.
+     * Structure: [ {{ "stage": 1, "duration": <float_seconds>, "movements": ["<action1>", "<action2>"] }}, ... ]
+     * Sum of all stage durations MUST equal the scene duration ({per_shot_dur}s).
    - Anti-Motion-Fatigue Clear Sky Standard: The sky MUST be a crystal-clear cloudless azure sky. STRICTLY PROHIBIT drifting clouds.
    - Domain Specification: Set "water_fluid" for water/rain/falls, "landscape_solid" for mountain/forest, or "cozy_hearth" for campfires.
 
@@ -212,7 +216,7 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
   "cast": [],
   "audio_master": {{
     "audio_mode": "ambient_nature",
-    "spoken_narration_script": "Optional one-sentence poetic environmental lore",
+    "spoken_narration_script": "Mandatory authoritative, poetic documentary voiceover sentence describing the timeless geological wonder and geographic lore of this landmark (never leave blank).",
     "singing_lyrics_spec": "",
     "suno_musical_tags": "Autonomously author fresh tags: 432Hz Solfeggio, authentic solo cultural instrument (e.g. airy wooden ney flute, bansuri, handpan), warm velvet pads, 50 BPM slow heartbeat rhythm, deep stress relief, sleep drone, -21 LUFS",
     "suno_prompt": "Autonomously compose bespoke hummable motif prompt: e.g. [Instrumental Meditative Landscape]\\n[Tempo: 50 BPM - Slow Resting Heartbeat Rhythm]\\n[Tuning: 432Hz Solfeggio Velvet Bed]\\n[Lead Motif: Gentle hummable 5-note melodic motif on <Solo Cultural Instrument> with soft breathing pauses]\\n[Accompaniment: Plucked <Secondary Texture> & resonant drone]\\n[Atmosphere: Warm velvet ambient pads, tranquil, zero guitars, zero fast arpeggios]\\n[Emotion: Joyful, enlightened, lovely, deep stress and anxiety reduction, peaceful sleep]\\n[Outro: Infinite peaceful dissolve]",
@@ -275,6 +279,13 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
         "loop_validation": true
       }},
       "domain": "water_fluid",
+      "motion_type": "ken_burns",
+      "motion_engine": "local_drone",
+      "narration_text": "Poetic, educational sentence narrating this specific vista or geological feature.",
+      "camera_movement": [
+        {{ "stage": 1, "duration": 5.0, "movements": ["pan-right", "dollyout"] }},
+        {{ "stage": 2, "duration": 5.0, "movements": ["stay"] }}
+      ],
       "duration_seconds": {per_shot_dur}
     }}
   ],

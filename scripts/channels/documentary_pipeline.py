@@ -31,6 +31,7 @@ async def run_documentary_production(
     motion_model: str = "auto",
     duration: float = 60.0,
     allow_fallback: bool = False,
+    local_drone: bool = True,
 ):
     """Run full documentary production workflow."""
     doc_genre = DocGenre(genre)
@@ -59,6 +60,7 @@ async def run_documentary_production(
         include_bgm=include_bgm,
         photos_only=photos_only,
         allow_fallback=allow_fallback,
+        force_local_drone=local_drone,
     )
 
     ep_id = result["episode_id"]
@@ -86,7 +88,7 @@ async def run_documentary_production(
 
 async def main():
     parser = argparse.ArgumentParser(description="Documentary Studio Production Pipeline")
-    parser.add_argument("--genre", type=str, default="wildlife", choices=["wildlife", "ocean", "nature", "mountains", "art", "ancient_structures"], help="Documentary archetype")
+    parser.add_argument("--genre", type=str, default="mountains", choices=["places", "beaches", "mountains", "nature", "ocean", "desert", "wildlife", "art", "ancient_structures"], help="Documentary category")
     parser.add_argument("--id", type=str, default=None, help="Episode ID to resume or reuse cached artifacts")
     parser.add_argument("--prompt", "-p", type=str, default=None, help="Custom documentary subject/location (e.g. 'Galapagos Marine Iguanas', 'Gothic Cathedrals')")
     parser.add_argument("--female-voice", action="store_true", help="Use female natural history narrator (defaults to Western male)")
@@ -96,7 +98,11 @@ async def main():
     parser.add_argument("--motion-model", type=str, default="auto", choices=["auto", "kling_v3", "wan", "hunyuan", "kling"], help="Motion model override (default: auto -> best scene routing)")
     parser.add_argument("--duration", type=float, default=60.0, choices=[60.0, 90.0, 120.0], help="Master documentary duration in seconds")
     parser.add_argument("--allow-fallback", action="store_true", help="Allow zoom-pan fallback if live diffusion fails")
+    parser.add_argument("--local-drone", action="store_true", default=True, help="Force 100% 4K local perspective drone motion (default: True for $0 cost)")
+    parser.add_argument("--ai-motion", action="store_true", help="Allow Gemini to route to external generative AI video models (incurs API cost)")
     args = parser.parse_args()
+
+    use_local = not args.ai_motion if args.ai_motion else args.local_drone
 
     await run_documentary_production(
         genre=args.genre,
@@ -109,6 +115,7 @@ async def main():
         motion_model=args.motion_model,
         duration=args.duration,
         allow_fallback=args.allow_fallback,
+        local_drone=use_local,
     )
 
 

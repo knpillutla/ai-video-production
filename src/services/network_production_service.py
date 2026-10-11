@@ -11,7 +11,7 @@ from src.core.storage import storage_service
 from src.core.step_logger import log_pipeline_step
 from src.core.telemetry import logger
 from src.domain.repo import repo
-from src.services.base_channel_pipeline import BaseChannelPipeline, ChannelPipelineConfig
+from src.services.base_network_pipeline import BaseChannelPipeline, ChannelPipelineConfig
 from src.studios.ambient_world.ambient_storyboard import (
     generate_ambient_storyboard,
     generate_ambient_storyboard_gemini,
@@ -88,10 +88,13 @@ async def produce_channel_video(
     selection_labels: Optional[dict[str, str]] = None,
     dual_editions: bool = False,
     tier: Optional[str] = "balanced",
+    weather: Optional[str] = "normal",
+    production_name: Optional[str] = None,
+    format_slug: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Execute live channel pipeline script for selected channel inside isolated user channel folder."""
     effective_user = user_id or "user_krishna_01"
-    user_chan_dir = storage_service.get_user_container_path(effective_user) / "channels" / channel_id
+    user_chan_dir = storage_service.get_network_path(effective_user, channel_id)
     user_chan_dir.mkdir(parents=True, exist_ok=True)
 
     t_resynth_start = time.time()
@@ -162,7 +165,22 @@ async def produce_channel_video(
         },
     }
 
-    ep_dir = (user_chan_dir / episode_id) if episode_id else None
+    # Resolve episode directory under channel audience brand:
+    # channels/{channel_slug}/{format_slug}/{production_name}/{episode_id}
+    if episode_id:
+        eff_fmt = format_slug or ("documentaries" if "documentary" in eff_genre.lower() else ("walking_tours" if "walking" in eff_genre.lower() else "relaxation"))
+        # First, search if the episode already exists in user channel network directory:
+        found_existing_ep_dir = storage_service.find_episode_path(user_id=effective_user, channel_id=channel_id, episode_id=episode_id)
+
+        if found_existing_ep_dir:
+            ep_dir = found_existing_ep_dir
+        else:
+            eff_prod = production_name or "standalone"
+            ep_dir = storage_service.get_channel_format_production_episode_path(
+                effective_user, channel_id, eff_fmt, eff_prod, episode_id
+            )
+    else:
+        ep_dir = None
     screenplay_file = (ep_dir / "screenplay.json") if ep_dir else None
     pipeline_state_file = (ep_dir / "pipeline_state.json") if ep_dir else None
     manifest_file = (ep_dir / "episode_manifest.json") if ep_dir else None
@@ -243,7 +261,10 @@ async def produce_channel_video(
     user_inputs_payload = {
         "input_schema_version": 1,
         "prompt": prompt_final,
+        "network_id": channel_id,
         "channel_id": channel_id,
+        "production_name": production_name or "standalone",
+        "format": format_slug or "16:9",
         "genre": eff_genre_final,
         "sub_genre": sub_genre_final,
         "primary_archetype": primary_archetype_final,
@@ -313,7 +334,7 @@ async def produce_channel_video(
                 if not raw_target.exists():
                     try:
                         raw_target.parent.mkdir(parents=True, exist_ok=True)
-                        raw_target.write_text(json.dumps(universal_sp.model_dump(), indent=2), encoding="utf-8")
+                        raw_target.write_text(json.dumps(universal_sp.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8")
                         logger.info(f"raw_gemini_screenplay_guaranteed: {raw_target}")
                     except Exception as raw_g_err:
                         logger.warning(f"failed_to_guarantee_raw_gemini_screenplay: {raw_g_err}")
@@ -332,7 +353,7 @@ async def produce_channel_video(
     if screenplay_file:
         try:
             screenplay_file.parent.mkdir(parents=True, exist_ok=True)
-            screenplay_file.write_text(json.dumps(universal_sp.model_dump(), indent=2), encoding="utf-8")
+            screenplay_file.write_text(json.dumps(universal_sp.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8")
         except Exception as ex:
             logger.warning(f"failed_to_write_screenplay_file: {ex}")
 
@@ -377,7 +398,7 @@ async def produce_channel_video(
     if pipeline_state_file:
         try:
             pipeline_state_file.parent.mkdir(parents=True, exist_ok=True)
-            pipeline_state_file.write_text(json.dumps(pipeline_state_payload, indent=2), encoding="utf-8")
+            pipeline_state_file.write_text(json.dumps(pipeline_state_payload, indent=2, ensure_ascii=False), encoding="utf-8")
         except Exception as ex:
             logger.warning(f"failed_to_write_pipeline_state: {ex}")
 
@@ -402,7 +423,7 @@ async def produce_channel_video(
     if manifest_file:
         try:
             manifest_file.parent.mkdir(parents=True, exist_ok=True)
-            manifest_file.write_text(json.dumps(manifest_payload, indent=2), encoding="utf-8")
+            manifest_file.write_text(json.dumps(manifest_payload, indent=2, ensure_ascii=False), encoding="utf-8")
         except Exception as ex:
             logger.warning(f"failed_to_write_manifest: {ex}")
 
@@ -437,7 +458,7 @@ async def produce_channel_video(
             "nature_video_url": None,
             "editions": [],
             "long_play_hours": long_play_hours,
-            "storage_path": str(user_chan_dir / (episode_id or "EP-001")),
+            "storage_path": str(ep_dir) if ep_dir else str(user_chan_dir / (episode_id or "EP-001")),
             "file_size_bytes": 0,
             "duration_seconds": duration_seconds,
             "render_time_seconds": 0.5,
@@ -450,6 +471,9 @@ async def produce_channel_video(
     eff_motion = motion_model
     if not eff_motion or eff_motion == "auto":
         eff_motion = "wan" if duration_seconds <= 10.0 else "auto"
+
+    if ep_dir and hasattr(pipeline, "producer") and hasattr(pipeline.producer, "output_base"):
+        pipeline.producer.output_base = ep_dir.parent
 
     result = await pipeline.execute(
         sb=sb,
@@ -788,7 +812,7 @@ async def produce_channel_video(
         "nature_video_url": nature_video_url if not photos_only and not motion_only and not audio_only else None,
         "editions": editions if not photos_only and not motion_only and not audio_only else [],
         "long_play_hours": long_play_hours,
-        "storage_path": str(master_v) if master_v else str(cfg.output_dir / ep_id),
+        "storage_path": str(ep_dir) if ep_dir else (str(master_v) if master_v else str(cfg.output_dir / ep_id)),
         "file_size_bytes": Path(master_v).stat().st_size if master_v and Path(master_v).exists() else 1048576,
         "duration_seconds": duration_seconds,
         "render_time_seconds": 1.5,

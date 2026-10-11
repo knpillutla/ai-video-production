@@ -1,0 +1,141 @@
+<!-- Modal: Production Hierarchy & Field Reference Guide -->
+<div id="hierarchy-guide-modal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-2xl w-full p-5 space-y-4 shadow-2xl overflow-y-auto max-h-[85vh] custom-scrollbar text-[var(--text)]">
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-bold border border-indigo-500/30">
+          <i class="fa-solid fa-book-open"></i>
+        </div>
+        <div>
+          <h3 class="text-sm font-black text-[var(--text)]">CineAI Studio Production Guide</h3>
+          <p class="text-[11px] text-[var(--text-muted)]">Understanding Formats, Genres, Biomes, and Weather Controls</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeHierarchyGuideModal()" class="p-1.5 text-[var(--text-muted)] hover:text-[var(--text)] rounded-lg hover:bg-[var(--card-subtle)] transition">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+
+    <!-- Tier 1: Format -->
+    <div class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
+      <div class="flex items-center gap-2 text-xs font-black text-indigo-500">
+        <i class="fa-solid fa-film"></i>
+        <span>Level 1: Format (The Content Medium)</span>
+      </div>
+      <p class="text-[11px] text-[var(--text-muted)] leading-relaxed">
+        Defines the production engine, pacing contract, audio mastering, and camera cadence:
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] pt-1">
+        <div class="p-2 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+          <strong class="text-[var(--text)]">🦅 Documentary:</strong>
+          <span class="text-[var(--text-muted)]"> BBC/NatGeo style with authoritative voiceover, 4-scene narrative arc, 24fps cinema cadence, and active 4K perspective drone choreography (2s–14s).</span>
+        </div>
+        <div class="p-2 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+          <strong class="text-[var(--text)]">🧘 Relaxation & Ambient:</strong>
+          <span class="text-[var(--text-muted)]"> Living wallpaper soundscape, single locked perspective (zero drift), 432Hz acoustic pads, ASMR natural audio, and 0% voiceover.</span>
+        </div>
+        <div class="p-2 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+          <strong class="text-[var(--text)]">🚶 4K Walking Tour:</strong>
+          <span class="text-[var(--text-muted)]"> First-person POV steadycam at human walking pace (~1.5–2.0 km/h) with natural footstep sway and binaural street audio.</span>
+        </div>
+        <div class="p-2 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+          <strong class="text-[var(--text)]">💃 Musical Dance & Folk:</strong>
+          <span class="text-[var(--text-muted)]"> Beat-driven choreographic progression, Suno vocal arrangement, synchronized lip-sync, and 30fps dynamic footwork.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tier 2: Sub-Genre / Biome -->
+    <div class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
+      <div class="flex items-center gap-2 text-xs font-black text-emerald-500">
+        <i class="fa-solid fa-mountain-sun"></i>
+        <span>Level 2: Sub-Genre (Subject Matter &amp; Biome)</span>
+      </div>
+      <p class="text-[11px] text-[var(--text-muted)] leading-relaxed">
+        Specifies the environmental domain, physical materials, and lighting characteristics:
+      </p>
+      <div class="grid grid-cols-2 gap-2 text-[11px] pt-1">
+        <div class="p-1.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+          <strong class="text-[var(--text)]">🏔️ Mountains & Alpines:</strong>
+          <span class="text-[var(--text-muted)]"> Glacial peaks, granite faces, alpine meadows, and valleys.</span>
+        </div>
+        <div class="p-1.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+          <strong class="text-[var(--text)]">🌊 Oceans & Marine:</strong>
+          <span class="text-[var(--text-muted)]"> Coral reefs, crystalline lagoons, abyssal midnight trenches.</span>
+        </div>
+        <div class="p-1.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+          <strong class="text-[var(--text)]">🏖️ Coastal & Beaches:</strong>
+          <span class="text-[var(--text-muted)]"> Tropical white sand, volcanic black sand, sea stacks, cabanas.</span>
+        </div>
+        <div class="p-1.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+          <strong class="text-[var(--text)]">🌲 Forests & Canopies:</strong>
+          <span class="text-[var(--text-muted)]"> Redwood giants, mossy temperate rainforests, bamboo groves.</span>
+        </div>
+        <div class="p-1.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+          <strong class="text-[var(--text)]">🏜️ Deserts & Dunes:</strong>
+          <span class="text-[var(--text-muted)]"> Colossal star dunes, canyon chasms, Bedouin desert hearths.</span>
+        </div>
+        <div class="p-1.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+          <strong class="text-[var(--text)]">🏛️ Cities & Heritage:</strong>
+          <span class="text-[var(--text-muted)]"> Historic old towns, ancient Egyptian pyramids, stone fortresses.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tier 3: Archetype -->
+    <div class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
+      <div class="flex items-center gap-2 text-xs font-black text-amber-500">
+        <i class="fa-solid fa-map-location-dot"></i>
+        <span>Level 3: Archetype (Setting Template &amp; Landmark)</span>
+      </div>
+      <p class="text-[11px] text-[var(--text-muted)] leading-relaxed">
+        Picks a curated real-world location template (e.g. <em>Swiss Alps - Lauterbrunnen Valley</em>, <em>Whitsundays - Whitehaven Beach</em>, <em>Sahara Grand Erg Dunes</em>), pre-populating historical lore and visual prompts.
+      </p>
+    </div>
+
+    <!-- Tier 4: Weather & Atmosphere -->
+    <div class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
+      <div class="flex items-center gap-2 text-xs font-black text-sky-500">
+        <i class="fa-solid fa-cloud-sun-rain"></i>
+        <span>Level 4: Weather &amp; Atmosphere (Procedural Dynamic FX)</span>
+      </div>
+      <p class="text-[11px] text-[var(--text-muted)] leading-relaxed">
+        Explicit physical weather engine applied to the scene without changing the underlying biome:
+      </p>
+      <div class="grid grid-cols-3 gap-1.5 text-[10px] pt-1">
+        <div class="p-1.5 bg-[var(--card)] rounded border border-[var(--border)]">
+          <strong class="text-[var(--text)]">☀️ Normal:</strong>
+          <span class="text-[var(--text-muted)]"> Crisp 5400K natural daylight, clean air, balanced skin/rock tones.</span>
+        </div>
+        <div class="p-1.5 bg-[var(--card)] rounded border border-[var(--border)]">
+          <strong class="text-[var(--text)]">🌧️ Rain:</strong>
+          <span class="text-[var(--text-muted)]"> 3-layer translucent rain, water ripples, mist layer & petrichor ASMR.</span>
+        </div>
+        <div class="p-1.5 bg-[var(--card)] rounded border border-[var(--border)]">
+          <strong class="text-[var(--text)]">❄️ Snow:</strong>
+          <span class="text-[var(--text-muted)]"> Aerodynamic drifting flakes, wind tilt, frosted pines & winter breeze.</span>
+        </div>
+        <div class="p-1.5 bg-[var(--card)] rounded border border-[var(--border)]">
+          <strong class="text-[var(--text)]">🌫️ Mist/Fog:</strong>
+          <span class="text-[var(--text-muted)]"> Soft volumetric god rays, morning mountain cloud layers.</span>
+        </div>
+        <div class="p-1.5 bg-[var(--card)] rounded border border-[var(--border)]">
+          <strong class="text-[var(--text)]">🌅 Sunset:</strong>
+          <span class="text-[var(--text-muted)]"> Warm 3200K amber alpenglow, long purple shadows across terrain.</span>
+        </div>
+        <div class="p-1.5 bg-[var(--card)] rounded border border-[var(--border)]">
+          <strong class="text-[var(--text)]">🌌 Starlit:</strong>
+          <span class="text-[var(--text-muted)]"> Deep indigo sky, glittering Milky Way galaxy & night stillness.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="pt-2 flex justify-end">
+      <button type="button" onclick="closeHierarchyGuideModal()" class="btn-runway-primary py-1.5 px-4 text-xs font-bold">
+        Got It
+      </button>
+    </div>
+  </div>
+</div>

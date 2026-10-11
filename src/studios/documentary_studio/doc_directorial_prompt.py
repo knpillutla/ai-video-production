@@ -37,7 +37,11 @@ DOCUMENTARY DIRECTORIAL MANDATES (NON-NEGOTIABLE):
    - Grand orchestral elements (swelling strings, French horn fanfares, cello drone) layered with natural environmental foley.
    - Target -14.0 LUFS broadcast loudness with -18.0 dB ducking during voiceover narration.
 
-4. FLUID KINETICS & SURVIVAL REALISM (Rules 18, 20):
+4. NO MOVING OBJECTS IN KEYFRAMES (Rule 23):
+   - In all "visual_prompt" strings, create majestic static landscape and architectural compositions with ZERO moving objects (strictly NO moving trains, vehicles, cars, boats, airplanes, pedestrians, or animals).
+   - Moving objects produce smear/warp artifacts when camera perspective moves. Focus purely on timeless terrain, static architecture, empty tracks/roads, and grand vistas.
+
+5. FLUID KINETICS & SURVIVAL REALISM (Rules 18, 20):
    - For mountain/extreme climates: depictions of biting sub-zero blizzards, wind gusts carving powder drifts, weathered timber shelters.
    - For rivers/waterfalls: parallel flow camera alignment, smooth glassy currents, zero static foam blobs.
 

@@ -27,30 +27,38 @@ def _slugify(text: str) -> str:
 @router.get("", response_model=list[Channel])
 async def list_channels(current_user: User = Depends(get_current_user)):
     """List all distribution channels stored in user storage directory."""
+    user_net_dir = storage_service.get_user_container_path(current_user.email) / "networks"
     user_chan_dir = storage_service.get_user_container_path(current_user.email) / "channels"
-    user_chan_dir.mkdir(parents=True, exist_ok=True)
+    scan_dirs = []
+    if user_net_dir.exists():
+        scan_dirs.append(user_net_dir)
+    if user_chan_dir.exists():
+        scan_dirs.append(user_chan_dir)
     import json
-    for c_dir in user_chan_dir.iterdir():
-        if c_dir.is_dir():
-            slug = c_dir.name
-            prof_file = c_dir / "channel_profile.json"
-            existing = repo.get_channel(current_user.id, slug)
-            if prof_file.exists():
-                try:
-                    data = json.loads(prof_file.read_text(encoding="utf-8"))
-                    ch = Channel(
-                        user_id=current_user.id,
-                        channel_name=data.get("channel_name") or slug.replace("_", " ").title(),
-                        channel_slug=slug,
-                        channel_handle=data.get("handle") or f"@{slug}",
-                        category=data.get("niche_category", "General"),
-                        primary_genre=(data.get("allowed_genres") or ["travel/scenic"])[0],
-                        allowed_genres=data.get("allowed_genres", []),
-                        description=data.get("comments") or data.get("description", ""),
-                    )
-                    repo.save_channel(ch)
-                except Exception:
-                    pass
+    for target_dir in scan_dirs:
+        for c_dir in target_dir.iterdir():
+            if c_dir.is_dir():
+                slug = c_dir.name
+                prof_file = c_dir / "channel_profile.json"
+                existing = repo.get_channel(current_user.id, slug)
+                if prof_file.exists():
+                    try:
+                        data = json.loads(prof_file.read_text(encoding="utf-8"))
+                        ch = Channel(
+                            id=existing.id if existing else uuid4(),
+                            user_id=current_user.id,
+                            channel_name=data.get("channel_name") or slug.replace("_", " ").title(),
+                            channel_slug=slug,
+                            channel_handle=data.get("handle") or f"@{slug}",
+                            category=data.get("niche_category", "General"),
+                            primary_genre=(data.get("allowed_genres") or ["travel/scenic"])[0],
+                            allowed_formats=data.get("allowed_formats") or ["documentary", "relaxation", "walking_tour", "music_video", "short"],
+                            allowed_genres=data.get("allowed_genres", []),
+                            description=data.get("comments") or data.get("description", ""),
+                        )
+                        repo.save_channel(ch)
+                    except Exception:
+                        pass
             elif not existing:
                 ch = Channel(
                     user_id=current_user.id,
@@ -59,11 +67,22 @@ async def list_channels(current_user: User = Depends(get_current_user)):
                     channel_handle=f"@{slug}",
                     category="General",
                     primary_genre="travel/scenic",
+                    allowed_formats=["documentary", "relaxation", "walking_tour", "music_video", "short"],
                     allowed_genres=["travel/scenic"],
                     description="",
                 )
                 repo.save_channel(ch)
-    return repo.list_channels(current_user.id)
+
+    # Return deduplicated channels by slug
+    all_channels = repo.list_channels(current_user.id)
+    seen_slugs = set()
+    deduped = []
+    for c in all_channels:
+        key = (c.channel_slug or c.channel_name or str(c.id)).lower()
+        if key not in seen_slugs:
+            seen_slugs.add(key)
+            deduped.append(c)
+    return deduped
 
 
 @router.get("/episodes")
@@ -72,7 +91,7 @@ async def list_channel_episodes(
     current_user: User = Depends(get_current_user),
 ):
     """Scan and list all channel episodes with full metadata, stages, models, and artifacts."""
-    from src.api.routes.channel_episodes_scanner import scan_all_channel_episodes
+    from src.api.routes.network_episodes_scanner import scan_all_channel_episodes
 
     storage_dir = Path(__file__).resolve().parent.parent.parent.parent / "storage"
     episodes = scan_all_channel_episodes(storage_dir, user_id=current_user.email)
@@ -107,6 +126,7 @@ async def create_channel(
         channel_handle=clean_handle,
         category=req.category or "General",
         primary_genre=req.primary_genre or (req.allowed_genres[0] if req.allowed_genres else None),
+        allowed_formats=req.allowed_formats or ["documentary", "relaxation", "walking_tour", "music_video", "short"],
         allowed_genres=req.allowed_genres,
         primary_language=req.primary_language or "en",
         icon=req.icon or "fa-clapperboard",
@@ -117,7 +137,7 @@ async def create_channel(
         default_tags=req.default_tags,
     )
     saved = repo.save_channel(channel)
-    user_chan_dir = storage_service.get_user_container_path(current_user.email) / "channels" / slug
+    user_chan_dir = storage_service.get_network_path(current_user.email, slug)
     user_chan_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"channel_created: id={saved.id} slug='{slug}' user='{current_user.email}'")
     return saved
@@ -138,6 +158,7 @@ async def update_channel(
     if req.channel_handle is not None: channel.channel_handle = req.channel_handle
     if req.category is not None: channel.category = req.category
     if req.primary_genre is not None: channel.primary_genre = req.primary_genre
+    if req.allowed_formats is not None: channel.allowed_formats = req.allowed_formats
     if req.allowed_genres is not None: channel.allowed_genres = req.allowed_genres
     if req.primary_language is not None: channel.primary_language = req.primary_language
     if req.icon is not None: channel.icon = req.icon
@@ -163,7 +184,7 @@ async def delete_channel(
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found")
     logger.info(f"channel_deleted: id={channel_id} user='{current_user.email}'")
-    return {"status": "ok", "deleted": channel_id}
+    return {"status": "deleted", "deleted": channel_id}
 
 
 class ChannelPublishRequest(BaseModel):
@@ -251,7 +272,7 @@ async def list_publications(
 @router.get("/profiles")
 async def get_all_channel_profiles():
     """Retrieve global channel profiles, audience definitions, and guardrails."""
-    from src.config.channel_registry import load_channel_profiles
+    from src.config.network_registry import load_channel_profiles
     profiles = load_channel_profiles(force_reload=True)
     return {"status": "ok", "profiles": {k: v.model_dump() for k, v in profiles.items()}}
 
@@ -262,7 +283,7 @@ async def ai_enrich_channel_profile(
     current_user: User = Depends(get_current_user),
 ):
     """Call Gemini to autonomously synthesize enriched channel profile guardrails."""
-    from src.services.channel_profile_enricher import ChannelEnrichRequest, enrich_channel_profile_with_gemini
+    from src.services.network_profile_enricher import ChannelEnrichRequest, enrich_channel_profile_with_gemini
     req = ChannelEnrichRequest(**req_data)
     profile = await enrich_channel_profile_with_gemini(req)
     return {"status": "ok", "profile": profile.model_dump()}
@@ -274,12 +295,73 @@ async def save_profile(
     current_user: User = Depends(get_current_user),
 ):
     """Persist an individual channel profile JSON file into user storage."""
-    from src.config.channel_registry import ChannelProfile
+    from src.config.network_registry import ChannelProfile
     profile = ChannelProfile(**profile_data)
-    user_chan_dir = storage_service.get_user_container_path(current_user.email) / "channels" / profile.channel_id.lower().strip()
+    user_chan_dir = storage_service.get_network_path(current_user.email, profile.channel_id.lower().strip())
     user_chan_dir.mkdir(parents=True, exist_ok=True)
     target_file = user_chan_dir / "channel_profile.json"
     target_file.write_text(profile.model_dump_json(indent=2), encoding="utf-8")
     return {"status": "ok", "saved_file": str(target_file), "channel_id": profile.channel_id}
+
+
+@router.get("/{channel_slug}/productions")
+async def list_channel_productions(
+    channel_slug: str,
+    format: str | None = None,
+    current_user: User = Depends(get_current_user),
+):
+    """Discover existing web series / productions under a network and format with next episode number."""
+    user_chan_dir = storage_service.get_network_path(current_user.email, channel_slug)
+    productions_map: dict[str, dict[str, Any]] = {}
+
+    if user_chan_dir.exists() and user_chan_dir.is_dir():
+        fmt_dirs = [user_chan_dir / format] if (format and (user_chan_dir / format).is_dir()) else [d for d in user_chan_dir.iterdir() if d.is_dir() and d.name.lower() != "assets"]
+
+        for f_dir in fmt_dirs:
+            if not f_dir.is_dir():
+                continue
+            fmt_name = f_dir.name
+            for p_dir in f_dir.iterdir():
+                if not p_dir.is_dir():
+                    continue
+                # If directory name starts with EP-, it is a flat standalone episode directly under format
+                if p_dir.name.upper().startswith("EP-") or p_dir.name.upper().startswith("EP_"):
+                    p_slug = "standalone"
+                    p_name = "Standalone Episodes"
+                    ep_dir_item = p_dir
+                    p_key = f"{fmt_name}_{p_slug}"
+                    if p_key not in productions_map:
+                        productions_map[p_key] = {"slug": p_slug, "name": p_name, "format": fmt_name, "highest_ep": 0, "episodes_count": 0}
+                    productions_map[p_key]["episodes_count"] += 1
+                    ep_suffix = ep_dir_item.name.replace("EP-", "").replace("EP_", "").replace("ep-", "").replace("ep_", "")
+                    if ep_suffix.isdigit():
+                        productions_map[p_key]["highest_ep"] = max(productions_map[p_key]["highest_ep"], int(ep_suffix))
+                else:
+                    p_slug = p_dir.name
+                    p_name = p_slug.replace("_", " ").title()
+                    p_key = f"{fmt_name}_{p_slug}"
+                    if p_key not in productions_map:
+                        productions_map[p_key] = {"slug": p_slug, "name": p_name, "format": fmt_name, "highest_ep": 0, "episodes_count": 0}
+                    for ep_item in p_dir.iterdir():
+                        if ep_item.is_dir() and (ep_item.name.upper().startswith("EP-") or ep_item.name.upper().startswith("EP_")):
+                            productions_map[p_key]["episodes_count"] += 1
+                            ep_suffix = ep_item.name.replace("EP-", "").replace("EP_", "").replace("ep-", "").replace("ep_", "")
+                            if ep_suffix.isdigit():
+                                productions_map[p_key]["highest_ep"] = max(productions_map[p_key]["highest_ep"], int(ep_suffix))
+
+    results = []
+    for p in productions_map.values():
+        next_code = f"EP-{(p['highest_ep'] + 1):03d}"
+        results.append({
+            "slug": p["slug"],
+            "name": p["name"],
+            "format": p["format"],
+            "episodes_count": p["episodes_count"],
+            "highest_ep": p["highest_ep"],
+            "next_episode_code": next_code,
+        })
+    results.sort(key=lambda x: x["name"])
+    return {"status": "ok", "channel_slug": channel_slug, "format": format, "productions": results}
+
 
 

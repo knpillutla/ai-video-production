@@ -24,11 +24,12 @@ async def synthesize_shot_aligned_narration(
     ep_dir: Path,
     fallback_script: Optional[str] = None,
     total_target_sec: Optional[float] = None,
-    voice_id: str = "en-US-JennyNeural",
+    voice_id: Optional[str] = None,
     lead_in_sec: float = 0.8,
     min_tail_pause_sec: float = 2.8,
     speech_rate: str = "-16%",
     force_rerun: bool = False,
+    is_documentary: bool = False,
 ) -> Dict[str, Any]:
     """Synthesize shot-aligned voiceover with anti-fatigue pauses and dynamic duration extension.
     
@@ -41,6 +42,26 @@ async def synthesize_shot_aligned_narration(
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     out_master = ep_dir / "spoken_narration.mp3"
     tts_adapter = AzureSpeechTTSAdapter()
+
+    # Default voice selection: Documentaries default to authoritative male voice (Ryan / Christopher)
+    if not voice_id:
+        # Check ep_dir path or user_inputs.json to detect documentary format if not passed explicitly
+        if not is_documentary:
+            p_str = str(ep_dir).lower()
+            if "documentary" in p_str or "doc" in p_str:
+                is_documentary = True
+            else:
+                ui_file = ep_dir / "user_inputs.json"
+                if ui_file.is_file():
+                    try:
+                        u_d = json.loads(ui_file.read_text("utf-8"))
+                        fmt = str(u_d.get("format", "")).lower()
+                        gnr = str(u_d.get("genre", "")).lower()
+                        if "documentary" in fmt or "documentary" in gnr or "doc" in fmt or "doc" in gnr:
+                            is_documentary = True
+                    except Exception:
+                        pass
+        voice_id = "en-GB-RyanNeural" if is_documentary else "en-US-JennyNeural"
 
     # Collect texts per scene
     scene_texts: List[str] = []

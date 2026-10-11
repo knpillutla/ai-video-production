@@ -59,19 +59,137 @@ class MultiTenantStorageService:
         ep_path.mkdir(parents=True, exist_ok=True)
         return ep_path
 
-    def get_channel_path(self, user_id: str, channel_id: str) -> Path:
-        """Return path for a user's channel."""
-        clean_chan = re.sub(r"[^a-zA-Z0-9_-]", "_", str(channel_id).lower()).strip("_") or "default_channel"
+    def get_network_path(self, user_id: str, network_id: str) -> Path:
+        """Return path for a user's network under networks/{network} with fallback to channels/{network}."""
+        clean_net = re.sub(r"[^a-zA-Z0-9_-]", "_", str(network_id).lower()).strip("_") or "default_network"
         base = self.get_user_container_path(user_id)
-        chan_path = base / "channels" / clean_chan
-        chan_path.mkdir(parents=True, exist_ok=True)
-        return chan_path
+        net_path = base / "networks" / clean_net
+        if not net_path.exists():
+            legacy_chan = base / "channels" / clean_net
+            if legacy_chan.exists():
+                return legacy_chan
+        net_path.mkdir(parents=True, exist_ok=True)
+        return net_path
+
+    def get_channel_path(self, user_id: str, channel_id: str) -> Path:
+        """Alias for get_network_path."""
+        return self.get_network_path(user_id, channel_id)
 
     def get_channel_episode_path(self, user_id: str, channel_id: str, episode_id: str) -> Path:
-        """Return path for an episode within a user's channel."""
+        """Return path for an episode within a user's network."""
         clean_ep = re.sub(r"[^a-zA-Z0-9_-]", "_", str(episode_id).lower()).strip("_") or "ep_001"
-        chan_path = self.get_channel_path(user_id, channel_id)
+        chan_path = self.get_network_path(user_id, channel_id)
         ep_path = chan_path / clean_ep
+        ep_path.mkdir(parents=True, exist_ok=True)
+        return ep_path
+
+    def get_global_assets_path(self, user_id: str, category: str | None = None) -> Path:
+        """Return path for universal global assets shared across all channels (storage/user/assets/{category})."""
+        base = self.get_user_container_path(user_id) / "assets"
+        if category:
+            clean_cat = re.sub(r"[^a-zA-Z0-9_-]", "_", str(category).lower()).strip("_")
+            base = base / clean_cat
+        base.mkdir(parents=True, exist_ok=True)
+        return base
+
+    def get_channel_assets_path(self, user_id: str, channel_id: str, category: str | None = None) -> Path:
+        """Return path for channel-specific branding and assets (channels/{channel}/assets/{category})."""
+        chan_path = self.get_channel_path(user_id, channel_id)
+        base = chan_path / "assets"
+        if category:
+            clean_cat = re.sub(r"[^a-zA-Z0-9_-]", "_", str(category).lower()).strip("_")
+            base = base / clean_cat
+        base.mkdir(parents=True, exist_ok=True)
+        return base
+
+    def get_channel_format_production_episode_path(
+        self,
+        user_id: str,
+        channel_id: str,
+        format_slug: str,
+        production_name: str | None,
+        episode_id: str,
+    ) -> Path:
+        """Return path for an episode organized under channel/{channel}/{format}/{production}/{episode}."""
+        clean_format = re.sub(r"[^a-zA-Z0-9_-]", "_", str(format_slug).lower()).strip("_") or "documentary"
+        clean_prod = re.sub(r"[^a-zA-Z0-9_-]", "_", str(production_name or 'standalone').lower()).strip("_") or "standalone"
+        clean_ep = re.sub(r"[^a-zA-Z0-9_-]", "_", str(episode_id).lower()).strip("_") or "ep_001"
+
+        chan_path = self.get_channel_path(user_id, channel_id)
+        ep_path = chan_path / clean_format / clean_prod / clean_ep
+        ep_path.mkdir(parents=True, exist_ok=True)
+        return ep_path
+
+    def find_episode_path(
+        self,
+        user_id: str,
+        channel_id: str | None,
+        episode_id: str,
+        format_slug: str | None = None,
+        production_name: str | None = None,
+    ) -> Path | None:
+        """Find an episode's folder whether stored in channels/ or networks/, flat or in {format}/{prod}/{ep}."""
+        clean_ep = re.sub(r"[^a-zA-Z0-9_-]", "_", str(episode_id).lower()).strip("_")
+        user_root = self.get_user_container_path(user_id)
+        search_roots = []
+        if channel_id:
+            search_roots.append(self.get_network_path(user_id, channel_id))
+            search_roots.append(user_root / "channels" / channel_id)
+        else:
+            search_roots.extend([user_root / "networks", user_root / "channels"])
+
+        matches = []
+        for root in search_roots:
+            if not root.exists():
+                continue
+            flat_candidate = root / episode_id
+            if flat_candidate.exists() and flat_candidate.is_dir():
+                matches.append(flat_candidate)
+            flat_candidate_clean = root / clean_ep
+            if flat_candidate_clean.exists() and flat_candidate_clean.is_dir() and flat_candidate_clean != flat_candidate:
+                matches.append(flat_candidate_clean)
+            try:
+                for sub in root.rglob("*"):
+                    if sub.is_dir() and sub.name.lower() in (episode_id.lower(), clean_ep):
+                        if sub not in matches:
+                            matches.append(sub)
+            except Exception:
+                pass
+
+        if not matches:
+            return None
+
+        # Score matches: prefer directory with keyframes, screenplay.json, episode_manifest.json, or non-empty
+        def _score(p: Path) -> int:
+            score = 0
+            if any(p.glob("keyframe_p*.jpg")): score += 50
+            if any(p.glob("motion_p*.mp4")): score += 40
+            if (p / "screenplay.json").exists(): score += 10
+            if (p / "episode_manifest.json").exists(): score += 5
+            if (p / "user_inputs.json").exists(): score += 2
+            try:
+                if any(p.iterdir()): score += 1
+            except Exception:
+                pass
+            return score
+
+        matches.sort(key=_score, reverse=True)
+        return matches[0]
+
+    def get_production_path(self, user_id: str, format_slug: str, production_name: str) -> Path:
+        """Return global path for a production project or web series: productions/{format}/{production_name}/."""
+        clean_format = re.sub(r"[^a-zA-Z0-9_-]", "_", str(format_slug).lower()).strip("_") or "documentary"
+        clean_prod = re.sub(r"[^a-zA-Z0-9_-]", "_", str(production_name).lower()).strip("_") or "standalone"
+        base = self.get_user_container_path(user_id)
+        prod_path = base / "productions" / clean_format / clean_prod
+        prod_path.mkdir(parents=True, exist_ok=True)
+        return prod_path
+
+    def get_production_episode_path(self, user_id: str, format_slug: str, production_name: str, episode_id: str) -> Path:
+        """Return global path for an episode: productions/{format}/{production_name}/{episode_id}/."""
+        clean_ep = re.sub(r"[^a-zA-Z0-9_-]", "_", str(episode_id).lower()).strip("_") or "ep_001"
+        prod_path = self.get_production_path(user_id, format_slug, production_name)
+        ep_path = prod_path / clean_ep
         ep_path.mkdir(parents=True, exist_ok=True)
         return ep_path
 

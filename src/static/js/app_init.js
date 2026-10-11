@@ -49,6 +49,12 @@ document.addEventListener("DOMContentLoaded", () => {
     updateDurationOptionsForNiche("relaxation");
   }
 
+  // Ensure format chips and cascading dropdowns are rendered on boot
+  if (typeof syncGenreDropdownForChannel === "function") {
+    const ch = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : "nature_rhythms";
+    syncGenreDropdownForChannel(ch);
+  }
+
   // Default to studio tab
   switchTab("studio");
 });

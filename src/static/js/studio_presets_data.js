@@ -148,8 +148,16 @@ const STUDIO_SUBOPTIONS_MAP = {
   "relax/cozy": [{ val: "cabin_bedroom", label: "🛏️ Cozy Glass Cabin Bedroom & Rain on Window" }, { val: "biophilic_living", label: "🪵 Biophilic Living Space & Terraces" }, { val: "rainy_patio", label: "☕ Rainy Garden Patio & Warm Hearth" }],
   "relax/healing": [{ val: "global_healing", label: "✨ Global Sacred Sanctuaries & 528Hz Solfeggio" }, { val: "himalayan_valley", label: "🏔️ Himalayan Singing Bowl Valley & Mist" }, { val: "geothermal_springs", label: "♨️ Geothermal Hot Springs & Travertine Pools" }, { val: "redwood_cathedral", label: "🌲 Ancient Redwood Grove Sanctuary" }],
   "relax/zen": [{ val: "zen_garden", label: "🪷 Kyoto Zen Temple & Raked Rock Garden" }, { val: "bamboo_grove", label: "🎋 Sagano Bamboo Grove & Tsukubai Basin" }, { val: "lotus_pond", label: "🪷 Sacred Lotus Pond & Water Basin Flow" }],
-  "relax/ambient": [{ val: "ambient_soundscape", label: "🌌 Velvet Ambient World (14 Ecosystems)" }, { val: "twilight_sanctuary", label: "✨ Twilight Aurora & Velvet Night Sky" }],
-  "documentary": [{ val: "cinematic_doc", label: "🦅 BBC-Style 24fps Wildlife & Climate Expedition" }, { val: "volcano_arctic", label: "🌋 Volcanic Landscapes & Glacial Ice" }, { val: "ocean_depths", label: "🐋 Deep Marine Life & Coral Reefs" }],
+  "documentary": [
+    { val: "doc_places", label: "🌍 Countries, Places & Geographic Valleys (Swiss Alps, Iceland, Scotland)" },
+    { val: "doc_beaches", label: "🏖️ Coastal Wonders, Beaches & Shorelines (Whitehaven, Seychelles, Amalfi)" },
+    { val: "doc_mountains", label: "🏔️ Mountains, Glaciers & Alpine Sanctuaries (Matterhorn, Dolomites, Rockies)" },
+    { val: "doc_nature", label: "🌲 Ancient Canopies, Rainforests & Ecology (Redwoods, Amazon, Olympic)" },
+    { val: "doc_ocean", label: "🌊 Oceans, Coral Reefs & Deep Abyssal Life (Coral Sea, Midnight Trench)" },
+    { val: "doc_desert", label: "🏜️ Deserts, Canyons & Arid Dunes (Sahara, Grand Canyon, Atacama)" },
+    { val: "doc_wildlife", label: "🦁 Wildlife, Predators & Animal Migrations (Serengeti, Arctic, Galápagos)" },
+    { val: "doc_architecture", label: "🏛️ Ancient Civilizations, Megaliths & Heritage (Pyramids, Dravidian, Petra)" }
+  ],
   "travel_walking": [{ val: "alpine_village_walk", label: "🏡 Swiss Alpine Countryside Walk (1.5 km/h)" }, { val: "rain_walking_tour", label: "🌧️ 4K Rain Walking Tour (Puddles & Wet Street Reflections)" }, { val: "city_walk_pov", label: "🏙️ 4K 60fps Historic City & Night Walk" }, { val: "coastal_promenade", label: "🏖️ Secluded Ocean Bluff Walk" }],
   "dance/folk": [{ val: "mass_folk_dance", label: "💃 High-Energy Mass Folk Dance (30fps)" }, { val: "classical_dance", label: "🪘 Cultural Classical Choreography" }],
   "comedy/satire": [{ val: "satirical_short", label: "🎭 Modern Satire & Relatable Comedy Short" }]
@@ -193,6 +201,14 @@ const STUDIO_SUBGENRE_PLACEHOLDERS = {
   redwood_cathedral: "e.g. Ancient giant California Redwood grove cathedral with sunbeams piercing morning mist...",
   ambient_soundscape: "e.g. Majestic 4K nature living wallpaper with tranquil mountain valley morning glow...",
   twilight_sanctuary: "e.g. Ethereal twilight mountain sanctuary under soft purple skies and velvet stars...",
+  doc_places: "e.g. Lauterbrunnen Valley, Swiss Alps: The Valley of 72 Waterfalls & towering sheer limestone cliffs...",
+  doc_beaches: "e.g. Whitehaven Beach, Whitsunday Islands: 98% pure silica sands, shifting turquoise tides, and pristine barrier reefs...",
+  doc_mountains: "e.g. Matterhorn & Zermatt, Swiss Alps: Titanic granite pyramid, glacial seracs, and high alpine weather frontiers...",
+  doc_nature: "e.g. Ancient Olympic Temperate Rainforest: 300ft Sitka spruce canopies, velvet moss cathedrals, and glacial river ecology...",
+  doc_ocean: "e.g. Great Barrier Reef & Coral Sea: Vast coral atolls, humpback whale nursing grounds, and caustic sunbeams dancing on reef shelves...",
+  doc_desert: "e.g. Grand Erg Oriental, Sahara: Monumental 500ft star dunes, wind-carved ripples, and extreme nocturnal desert survival...",
+  doc_wildlife: "e.g. Serengeti Great Migration: Golden savannah predators, cheetah hunting kinematics, and wildebeest river crossings...",
+  doc_architecture: "e.g. Giza Necropolis: The Great Pyramid & Sphinx, astronomical cardinal alignments, and megalithic quarrying secrets...",
   cinematic_doc: "e.g. BBC-style 24fps cinematic wildlife documentary across rugged alpine peaks...",
   volcano_arctic: "e.g. Dramatic volcanic black sand coast meets glacial blue ice caves...",
   ocean_depths: "e.g. Deep marine coral reefs with schools of luminous fish in crystal blue waters...",
@@ -220,7 +236,17 @@ const STUDIO_ARCHETYPES_MAP = {
   "relax/healing": [{ val: "himalayan_valley", label: "🏔️ Himalayan Valley & Bowls" }, { val: "geothermal_mineral_pool", label: "♨️ Geothermal Mineral Pools" }, { val: "redwood_cathedral", label: "🌲 Redwood Grove Cathedral" }, { val: "bali_sacred_water", label: "✨ Bali Sacred Water Temple" }],
   "relax/zen": [{ val: "karesansui_temple", label: "🪷 Kyoto Raked Stone Garden" }, { val: "sagano_bamboo_basin", label: "🎋 Bamboo Grove & Basin" }, { val: "sacred_lotus_pond", label: "🪷 Sacred Lotus Pond & Koi" }],
   "relax/ambient": [{ val: "nordic_aurora_fjord", label: "🌌 Nordic Aurora Borealis" }, { val: "twilight_alpine_valley", label: "✨ Velvet Twilight Cabin" }, { val: "desert_oasis_starlight", label: "🏜️ Desert Oasis & Milky Way" }, { val: "biophilic_greenhouse", label: "🌿 Greenhouse & Velvet Rain" }],
-  "documentary": [{ val: "alpine_tundra_wildlife", label: "🦅 High Alpine Glacial Ridge" }, { val: "arctic_ice_shelf", label: "🧊 Arctic Sea Ice Shelf" }, { val: "volcanic_geothermal", label: "🌋 Volcanic Black Sand Dunes" }, { val: "deep_ocean_trench", label: "🐋 Deep Sea Coral Abyss" }],
+  "documentary": [
+    { val: "swiss_alps_valleys", label: "🏔️ Swiss Alps & Glacial Valleys (Lauterbrunnen / Zermatt)" },
+    { val: "iceland_volcanic_coasts", label: "🌋 Iceland: Land of Fire & Glacial Ice" },
+    { val: "scotland_highlands_isles", label: "🏰 Scottish Highlands & Isle of Skye" },
+    { val: "whitehaven_barrier_reef", label: "🏖️ Great Barrier Reef & Whitehaven Beach" },
+    { val: "amalfi_cliffside_mediterranean", label: "🌊 Amalfi Coast & Azure Sea Cliffs" },
+    { val: "serengeti_savannah_predators", label: "🦁 Serengeti Great Migration & Savannah" },
+    { val: "pacific_northwest_redwoods", label: "🌲 Olympic Rainforest & Redwood Giants" },
+    { val: "sahara_dunes_canyons", label: "🏜️ Sahara Monumental Star Dunes" },
+    { val: "giza_megalithic_pyramids", label: "🏛️ Ancient Giza & Megalithic Egypt" }
+  ],
   "travel_walking": [{ val: "rain_city_walk", label: "🌧️ 4K Rain Walking Tour" }, { val: "swiss_village_walk", label: "🏡 Swiss Alpine Village Lane" }, { val: "historic_old_town", label: "🏙️ Historic Old Town Street" }, { val: "coastal_bluff_trail", label: "🏖️ Coastline Cliffside Trail" }, { val: "bamboo_forest_path", label: "🎋 Bamboo Grove Walking Path" }],
   "dance/folk": [{ val: "village_jathara_square", label: "🎪 Village Fairground Stage" }, { val: "lush_paddy_fields", label: "🌾 Verdant Paddy Fields" }, { val: "historic_fort_courtyard", label: "🏛️ Ancient Stone Fort" }, { val: "modern_city_rooftop", label: "🌆 Neon City Rooftop Stage" }],
   "comedy/satire": [{ val: "it_wfh_apartment", label: "💻 Modern Apartment WFH Office" }, { val: "street_chai_stall", label: "☕ Bustling Street Chai Stall" }, { val: "village_panchayat_tree", label: "🌳 Village Banyan Tree Chhavadi" }, { val: "corporate_meeting_room", label: "🏢 Corporate Conference Room" }]
@@ -279,6 +305,15 @@ const STUDIO_ARCHETYPE_HINTS = {
   pebble_beach_shore: "e.g. Gentle rain falling on warm driftwood campfire burning on wet pebble shoreline by ocean surf...",
   glacial_mirror_lake: "e.g. Mirror-still turquoise glacial lake reflecting towering pine-covered granite cliffs...",
   karesansui_temple: "e.g. Peaceful Kyoto dry raked stone garden, bamboo water fountain, and cedar veranda...",
-  himalayan_valley: "e.g. Sacred Himalayan valley with singing bowls, crystal dawn sunbeams, and restorative 528Hz serenity..."
+  himalayan_valley: "e.g. Sacred Himalayan valley with singing bowls, crystal dawn sunbeams, and restorative 528Hz serenity...",
+  swiss_alps_valleys: "e.g. Lauterbrunnen Valley & Jungfrau, Swiss Alps: Sheer 1,000ft limestone rock walls, Staubbach waterfall mist, emerald meadows, and traditional timber chalets...",
+  iceland_volcanic_coasts: "e.g. South Coast of Iceland: Basalt sea stacks of Reynisfjara, roaring Skógafoss cataract plumes, and vast black volcanic sands meeting Arctic white surf...",
+  scotland_highlands_isles: "e.g. Isle of Skye & Glen Coe: Jagged volcanic pinnacle of the Old Man of Storr, purple heather moorlands, and moody mist rolling over Scottish lochs...",
+  whitehaven_barrier_reef: "e.g. Whitsunday Islands & Whitehaven Beach: Swirling turquoise tidal estuaries over pure silica sandbars, aerial drone perspective over the Great Barrier Reef...",
+  amalfi_cliffside_mediterranean: "e.g. Amalfi Coast, Italy: Pastel-hued cliffside villas perched over azure Tyrrhenian waters, terraced lemon orchards, and dramatic Mediterranean sea caves...",
+  serengeti_savannah_predators: "e.g. Serengeti Plains at Dawn: Golden grass whispering in morning breeze, lioness stalking acacia shadows, and dust billowing from the Great Migration...",
+  pacific_northwest_redwoods: "e.g. Hoh Rainforest & Redwood Coast: 300ft ancient conifers draped in velvet club moss, crystal glacial riverbeds, and soft volumetric god rays piercing fog...",
+  sahara_dunes_canyons: "e.g. Erg Chebbi & Grand Canyon: Monumental 500ft terracotta sand crests carved by desert wind, sharp razor-edge shadows, and infinite arid horizon...",
+  giza_megalithic_pyramids: "e.g. Giza Plateau at Golden Dawn: Khufu's Great Pyramid towering against desert sky, weathering limestone courses, and low desert wind sweeping golden sands..."
 };
 

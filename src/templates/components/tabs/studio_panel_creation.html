@@ -15,6 +15,10 @@
     </div>
     
     <div class="flex items-center gap-1 shrink-0">
+      <button type="button" onclick="openHierarchyGuideModal()" class="btn-runway-secondary py-1 px-2.5 text-xs text-indigo-400 hover:text-indigo-300" title="Production Hierarchy & Reference Guide">
+        <i class="fa-solid fa-circle-question text-[10px]"></i>
+        <span>Guide</span>
+      </button>
       <button type="button" onclick="applyGenreNichePreset()" class="btn-runway-secondary py-1 px-2.5 text-xs" title="Restore Studio Recommended Presets">
         <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
         <span>Presets</span>
@@ -49,11 +53,67 @@
         </button>
       </div>
 
-      <!-- Format Switcher -->
+      <!-- Aspect Ratio Switcher -->
       <div class="segmented-track">
         <button type="button" onclick="setStudioFormat('16:9')" id="format-btn-landscape" class="segmented-btn active" title="16:9 4K Video">16:9</button>
         <button type="button" onclick="setStudioFormat('9:16')" id="format-btn-portrait" class="segmented-btn" title="9:16 Short">9:16</button>
         <input type="hidden" id="studio-selected-format" value="16:9">
+      </div>
+    </div>
+
+    <!-- 1. PRODUCTION FORMAT SELECTOR (Segmented Pill Chips filtered by active Network) -->
+    <div class="space-y-1 p-2 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl">
+      <div class="flex items-center justify-between">
+        <label class="text-[11px] font-bold text-[var(--text)] flex items-center gap-1.5">
+          <i class="fa-solid fa-film text-[10px] text-[var(--accent)]"></i>
+          <span>1. Format:</span>
+        </label>
+        <span id="studio-format-count-badge" class="text-[9px] font-mono text-[var(--text-muted)]">Licensed Formats</span>
+      </div>
+      <!-- Dynamically rendered segmented pill chips container -->
+      <div id="studio-format-chips-container" class="flex items-center gap-1 flex-wrap">
+        <!-- Rendered by studio_creation_controller.js -->
+      </div>
+      <input type="hidden" id="studio-active-format-val" value="relaxation">
+    </div>
+
+    <!-- 2. PRODUCTION / WEB SERIES (Existing vs New Series) & EPISODE NUMBER -->
+    <div class="p-2 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold text-[var(--text)] flex items-center gap-1">
+          <i class="fa-solid fa-clapperboard text-[10px] text-[var(--accent)]"></i>
+          <span>2. Production / Web Series:</span>
+        </span>
+        <!-- Existing vs New Toggle -->
+        <div class="segmented-track text-[10px]">
+          <button type="button" onclick="setSeriesMode('existing')" id="series-mode-existing-btn" class="segmented-btn py-0.5 px-2 active" title="Select from Existing Web Series">
+            <i class="fa-solid fa-folder-open text-[9px]"></i>
+            <span>Existing</span>
+          </button>
+          <button type="button" onclick="setSeriesMode('new')" id="series-mode-new-btn" class="segmented-btn py-0.5 px-2" title="Create a New Web Series">
+            <i class="fa-solid fa-plus text-[9px]"></i>
+            <span>+ New</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-[1fr_90px] gap-1.5">
+        <!-- Existing Series Dropdown Container -->
+        <div id="series-existing-container">
+          <select id="studio-existing-series-select" onchange="onExistingSeriesSelect(this.value)" class="w-full px-2.5 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]">
+            <option value="">(No existing series found - start new)</option>
+          </select>
+        </div>
+
+        <!-- New Series Input Container -->
+        <div id="series-new-container" class="hidden">
+          <input type="text" id="studio-production-name" oninput="onNewSeriesNameInput(this.value)" placeholder="e.g. Swiss Alpine Diaries" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
+        </div>
+
+        <!-- Sequential Episode Box -->
+        <div>
+          <input type="text" id="studio-episode-code" placeholder="EP-001" title="Episode Identifier" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-mono font-bold text-center placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
+        </div>
       </div>
     </div>
 
@@ -68,27 +128,14 @@
 
     <!-- GENRE, SUB-GENRE & ECOSYSTEM ARCHETYPE SELECTOR SHELF -->
     <div id="theme-genre-shelf" class="p-2 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
-      <!-- 1. Genre Selector (Broad Category) -->
+      <!-- 3. Genre Selector (Filtered strictly to active format) -->
       <div class="space-y-0.5">
         <label for="studio-genre-selector" class="text-xs font-bold text-[var(--text)] flex items-center gap-1">
           <i class="fa-solid fa-shapes text-[var(--text-muted)] text-[10px]"></i>
-          <span>1. Genre (Category):</span>
+          <span>3. Genre (Category):</span>
         </label>
         <select id="studio-genre-selector" onchange="onGenreChange(this.value)" class="w-full px-2.5 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]">
-          <option value="travel/scenic">✈️ Travel &amp; Nature Scenic Wonders (travel/scenic)</option>
-          <option value="relax/art">🎨 Living Art, Museum Galleries &amp; Ateliers (relax/art)</option>
           <option value="relax/nature" selected>🏔️ Nature &amp; Alpine Sanctuaries (relax/nature)</option>
-          <option value="relax/rain">🌧️ Rain Retreat &amp; River ASMR (relax/rain)</option>
-          <option value="relax/waterfall">🌊 Monumental Waterfall &amp; Cataracts (relax/waterfall)</option>
-          <option value="relax/hearth">🔥 Beach Campfire &amp; Shoreline Hearth (relax/hearth)</option>
-          <option value="relax/cozy">🪵 Cozy Living Spaces &amp; Fireplace (relax/cozy)</option>
-          <option value="relax/zen">🪷 Japanese Zen Gardens &amp; Engawa (relax/zen)</option>
-          <option value="relax/healing">✨ Global Healing Sanctuaries &amp; 528Hz (relax/healing)</option>
-          <option value="relax/ambient">🌌 Velvet Ambient World 14 Archetypes (relax/ambient)</option>
-          <option value="documentary">🦅 BBC-Style 24fps Wildlife &amp; Documentary (documentary)</option>
-          <option value="travel_walking">🚶 Travel &amp; 4K 60fps Walking Tours (travel_walking)</option>
-          <option value="dance/folk">💃 Dance, Folk &amp; Music Videos (dance/folk)</option>
-          <option value="comedy/satire">🎭 Telugu Comedy &amp; Satire Shorts (comedy/satire)</option>
         </select>
       </div>
 
@@ -121,6 +168,43 @@
         </select>
       </div>
 
+
+      <!-- 4. Weather & Atmosphere Selector (Explicit User Control) -->
+      <div class="space-y-0.5 pt-1 border-t border-[var(--border)]">
+        <label for="studio-weather-selector" class="text-xs font-bold text-[var(--text)] flex items-center justify-between">
+          <span class="flex items-center gap-1">
+            <i class="fa-solid fa-cloud-sun-rain text-[var(--text-muted)] text-[10px]"></i>
+            <span>4. Weather &amp; Atmosphere:</span>
+          </span>
+          <span class="text-[9px] font-mono text-[var(--text-muted)]">Procedural Dynamic FX</span>
+        </label>
+        <div class="grid grid-cols-3 gap-1 text-[11px] font-semibold">
+          <label class="flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border-2 border-[var(--accent)] cursor-pointer text-[var(--text)]" id="weather-lbl-normal">
+            <input type="radio" name="studio_weather" value="normal" checked onchange="onWeatherChange(this.value)" class="hidden">
+            <span>☀️ Normal</span>
+          </label>
+          <label class="flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-rain">
+            <input type="radio" name="studio_weather" value="rain" onchange="onWeatherChange(this.value)" class="hidden">
+            <span>🌧️ Rain</span>
+          </label>
+          <label class="flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-snow">
+            <input type="radio" name="studio_weather" value="snow" onchange="onWeatherChange(this.value)" class="hidden">
+            <span>❄️ Snow</span>
+          </label>
+          <label class="flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-fog">
+            <input type="radio" name="studio_weather" value="fog" onchange="onWeatherChange(this.value)" class="hidden">
+            <span>🌫️ Mist/Fog</span>
+          </label>
+          <label class="flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-sunset">
+            <input type="radio" name="studio_weather" value="sunset" onchange="onWeatherChange(this.value)" class="hidden">
+            <span>🌅 Sunset</span>
+          </label>
+          <label class="flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-night">
+            <input type="radio" name="studio_weather" value="night" onchange="onWeatherChange(this.value)" class="hidden">
+            <span>🌌 Starlit</span>
+          </label>
+        </div>
+      </div>
 
       <!-- Relaxation Shot Hold Cadence Radio Group -->
       <div id="relaxation-cadence-container" class="pt-1 border-t border-[var(--border)] space-y-0.5">

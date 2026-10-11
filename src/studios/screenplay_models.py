@@ -5,7 +5,7 @@ Self-contained contract for living wallpapers, soundscapes, and cinematic scenes
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from pydantic import AliasChoices, BaseModel, Field, field_validator
 from src.services.audio_tag_service import normalize_audio_tags
 
@@ -79,7 +79,10 @@ class RelaxSceneDirective(BaseModel):
     image_model_configs: Dict[str, Any] = Field(default_factory=dict)
     domain: str = "landscape_solid"
     motion_type: str = "ai_diffusion"
-    camera_movement: str = "slow_zoom_in"
+    camera_movement: Union[List[Dict[str, Any]], List[Any], str] = Field(
+        default="slow_zoom_in",
+        description="Array of movement stages with durations or single movement"
+    )
     motion_rationale: Optional[str] = None
     duration_seconds: float = 30.0
     narration_text: Optional[str] = None
@@ -174,7 +177,7 @@ class BaseScenePrompt(BaseModel):
     domain: str = "landscape_solid"
     motion_type: str = "ai_diffusion"
     camera_rig: str = "locked_tripod"
-    camera_movement: str = "slow_zoom_in"
+    camera_movement: Union[List[Dict[str, Any]], List[Any], str] = "slow_zoom_in"
     motion_rationale: Optional[str] = None
     narration_text: Optional[str] = None
     camera_waypoints: List[CameraWaypointDirective] = Field(default_factory=list)

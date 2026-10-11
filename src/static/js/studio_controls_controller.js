@@ -62,7 +62,20 @@ function setPipelineExecutionMode(strat) {
 
 function setTestShots(val) {
   activeShotsCount = parseInt(val, 10) || 1;
-  activeTestDuration = activeShotsCount * 5;
+  const testStretchSel = document.getElementById("studio-test-stretch");
+  if (activeShotsCount === 1 && testStretchSel) {
+    testStretchSel.value = "0.0083"; // 30s Preview
+    activeBroadcastHours = 0.0083;
+    activeTestDuration = 30.0;
+  } else if (testStretchSel) {
+    const isTravel = (typeof isTravelOrSkylineChannel === "function") && isTravelOrSkylineChannel();
+    const parsed = parseTestDuration(testStretchSel.value, isTravel);
+    activeBroadcastHours = parsed.lpHours;
+    activeTestDuration = parsed.durSec;
+  } else {
+    activeTestDuration = activeShotsCount * 5;
+  }
+
   const btnProduceText = document.getElementById("btn-produce-text");
   if (activeExecutionMode === "test" && btnProduceText) {
     btnProduceText.textContent = activePipelineStrategy === "manual"

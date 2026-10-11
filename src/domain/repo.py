@@ -140,6 +140,14 @@ class MemoryRepository:
         )
 
     def save_channel(self, channel: Channel) -> Channel:
+        # Prevent duplicates: If a channel with the same user_id and slug already exists, reuse its ID
+        if channel.channel_slug:
+            existing = next(
+                (c for c in self.channels.values() if c.user_id == channel.user_id and c.channel_slug.lower() == channel.channel_slug.lower()),
+                None,
+            )
+            if existing:
+                channel.id = existing.id
         self.channels[channel.id] = channel
         self._save()
         return channel

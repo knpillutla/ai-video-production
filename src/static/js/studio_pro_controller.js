@@ -126,6 +126,13 @@ function renderProStage6LongPlay(ep) {
     c.innerHTML = `<div class="w-full text-center text-[8px] text-slate-500 font-mono py-4">Awaiting Master</div>`;
     return;
   }
+  const activeFmt = (ep?.format_slug || ep?.format || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : (document.getElementById("studio-active-format-val")?.value || "relaxation"))).toLowerCase();
+  const isRelaxFormat = (activeFmt === "relaxation" || activeFmt === "relax");
+  if (!isRelaxFormat) {
+    c.innerHTML = `<div class="w-full text-center text-[8px] text-slate-500 font-mono py-4">N/A (Relaxation Only)</div>`;
+    return;
+  }
+
   const lpEds = (ep.long_play_editions && ep.long_play_editions.length > 0)
     ? ep.long_play_editions
     : (ep.all_editions || ep.editions || []).filter(e => e.format?.includes("Long-Play") || e.edition_id?.includes("h_") || e.name?.includes("Hour"));

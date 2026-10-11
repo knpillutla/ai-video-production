@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from src.services.channel_production_service import produce_channel_video
+from src.services.network_production_service import produce_channel_video
 from src.services.job_manager import job_manager
 from src.core.storage import storage_service
 from src.core.telemetry import logger
@@ -73,6 +73,11 @@ class LocalProduceRequest(BaseModel):
     force_rerun: Optional[bool] = False
     enable_voiceover: Optional[bool] = False
     dual_editions: Optional[bool] = False
+    weather: Optional[str] = "normal"
+    production_name: Optional[str] = None
+    format: Optional[str] = None
+    format_slug: Optional[str] = None
+    aspect_ratio: Optional[str] = None
 
 
 class LocalProduceResponse(BaseModel):
@@ -99,25 +104,16 @@ class LocalProduceResponse(BaseModel):
 
 
 def _reserve_next_episode_id(user_id: str, channel_id: str) -> str:
-    """Atomically reserve the next sequential episode ID within one channel."""
-    channel_dir = storage_service.get_user_container_path(user_id) / "channels" / channel_id
-    channel_dir.mkdir(parents=True, exist_ok=True)
+    """Reserve next sequential episode ID code without creating premature empty directories on disk."""
+    channel_dir = storage_service.get_network_path(user_id, channel_id)
     highest = 0
-    for path in channel_dir.iterdir():
-        if not path.is_dir() or not path.name.upper().startswith("EP-"):
-            continue
-        suffix = path.name[3:]
-        if suffix.isdigit():
-            highest = max(highest, int(suffix))
-
-    next_number = highest + 1
-    while True:
-        episode_id = f"EP-{next_number:03d}"
-        try:
-            (channel_dir / episode_id).mkdir()
-            return episode_id
-        except FileExistsError:
-            next_number += 1
+    if channel_dir.exists():
+        for path in channel_dir.rglob("*"):
+            if path.is_dir() and path.name.upper().startswith("EP-"):
+                suffix = path.name[3:]
+                if suffix.isdigit():
+                    highest = max(highest, int(suffix))
+    return f"EP-{highest + 1:03d}"
 
 
 @router.post("/local-produce", response_model=LocalProduceResponse, status_code=status.HTTP_200_OK)
@@ -134,12 +130,11 @@ async def produce_video_locally(req: LocalProduceRequest):
     eff_audio_only = bool(req.audio_only)
     eff_master_only = bool(req.master_only)
 
-    has_target_ep = bool(req.episode_id)
-    if has_target_ep:
+    # In manual Stage-Gate mode: if no downstream stage (photos/motion/audio/master) is explicitly requested,
+    # it MUST run Stage 1 only and pause for approval.
+    if strat == "manual":
         if not (eff_photos_only or eff_motion_only or eff_audio_only or eff_master_only):
-            eff_script_only = False
-    elif strat == "manual" and not (eff_script_only or eff_photos_only or eff_motion_only or eff_audio_only or eff_master_only):
-        eff_script_only = True
+            eff_script_only = True
 
     eff_channel_id = req.channel_id
     if not eff_channel_id:
@@ -221,6 +216,9 @@ async def produce_video_locally(req: LocalProduceRequest):
             image_model=req.image_model or "flux_dev",
             dual_editions=bool(req.dual_editions),
             tier=req.tier or "balanced",
+            weather=req.weather or "normal",
+            production_name=req.production_name,
+            format_slug=req.format_slug or (req.format if req.format and req.format not in ("16:9", "9:16") else None),
         )
         eff_job_id = result.get("job_id") or job_id
         if eff_script_only:
@@ -275,8 +273,8 @@ async def produce_video_locally(req: LocalProduceRequest):
 @router.get("/poll-artifacts")
 async def poll_production_artifacts(channel_id: str, episode_id: str, user_id: str = "knpillutla@gmail.com"):
     """Real-time disk scanner returning synthesized keyframes, motion clips, and audio as they finish."""
-    c_dir = storage_service.get_user_container_path(user_id) / "channels" / channel_id / episode_id
-    if not c_dir.exists():
+    c_dir = storage_service.find_episode_path(user_id=user_id, channel_id=channel_id, episode_id=episode_id)
+    if not c_dir or not c_dir.exists():
         return {"keyframes": [], "motion_clips": [], "audio_stems": [], "video_url": None, "stage": 1}
 
     files = {f.name: f for f in c_dir.iterdir() if f.is_file()}
@@ -296,7 +294,13 @@ async def poll_production_artifacts(channel_id: str, episode_id: str, user_id: s
 
     manifest_file = c_dir / "episode_manifest.json"
     m_data = json.loads(manifest_file.read_text("utf-8")) if manifest_file.exists() else {}
-    m_model = "Wan 2.1" if (m_data.get("motion_model") in ("wan", "wan_2_1") or m_data.get("duration_seconds", 5.0) <= 10.0) else "Kling v3 Pro"
+    m_mot_type = m_data.get("motion_model", "")
+    if m_mot_type in ("ken_burns", "local", "local_drone", "local_zoompan"):
+        m_model = "Local Drone"
+    elif m_mot_type in ("wan", "wan_2_1") or m_data.get("duration_seconds", 5.0) <= 10.0:
+        m_model = "Wan 2.1"
+    else:
+        m_model = "Kling v3 Pro"
     vids = [{"name": f"Motion {m.replace('motion_p','').replace('.mp4','')}", "url": _file_url(files[m]), "model": m_model} for m in sorted(files) if m.startswith("motion_p") and m.endswith(".mp4") and not m.endswith("_fwd_seamless.mp4") and files[m].stat().st_size > 1000]
 
     stems = []
@@ -355,14 +359,18 @@ async def poll_production_artifacts(channel_id: str, episode_id: str, user_id: s
 @router.post("/episodes/{episode_id}/approve")
 async def approve_episode(episode_id: str, channel_id: Optional[str] = None, user_id: str = "knpillutla@gmail.com"):
     """Mark an episode as approved in its disk manifest."""
-    user_chan_dir = storage_service.get_user_container_path(user_id) / "channels"
+    user_container = storage_service.get_user_container_path(user_id)
+    scan_roots = [user_container / "networks", user_container / "channels"]
     target_dirs = []
-    if channel_id and (user_chan_dir / channel_id / episode_id).exists():
-        target_dirs.append(user_chan_dir / channel_id / episode_id)
-    elif user_chan_dir.exists():
-        for ch_dir in user_chan_dir.iterdir():
-            if ch_dir.is_dir() and (ch_dir / episode_id).exists():
-                target_dirs.append(ch_dir / episode_id)
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        if channel_id and (root / channel_id / episode_id).exists():
+            target_dirs.append(root / channel_id / episode_id)
+        else:
+            for ch_dir in root.iterdir():
+                if ch_dir.is_dir() and (ch_dir / episode_id).exists():
+                    target_dirs.append(ch_dir / episode_id)
 
     if not target_dirs:
         return {"success": True, "episode_id": episode_id, "is_approved": True, "persisted_disk": False}
@@ -385,18 +393,22 @@ async def approve_episode(episode_id: str, channel_id: Optional[str] = None, use
 @router.delete("/episodes/{episode_id}")
 async def delete_episode_artifacts(episode_id: str, channel_id: Optional[str] = None, user_id: str = "knpillutla@gmail.com"):
     """Delete all synthesized artifacts and folders for a specific episode from disk."""
-    user_chan_dir = storage_service.get_user_container_path(user_id) / "channels"
+    user_container = storage_service.get_user_container_path(user_id)
+    scan_roots = [user_container / "networks", user_container / "channels"]
     deleted_paths = []
-    if channel_id and (user_chan_dir / channel_id / episode_id).exists():
-        ep_dir = user_chan_dir / channel_id / episode_id
-        shutil.rmtree(ep_dir, ignore_errors=True)
-        deleted_paths.append(str(ep_dir))
-    elif user_chan_dir.exists():
-        for ch_dir in user_chan_dir.iterdir():
-            if ch_dir.is_dir() and (ch_dir / episode_id).exists():
-                ep_dir = ch_dir / episode_id
-                shutil.rmtree(ep_dir, ignore_errors=True)
-                deleted_paths.append(str(ep_dir))
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        if channel_id and (root / channel_id / episode_id).exists():
+            ep_dir = root / channel_id / episode_id
+            shutil.rmtree(ep_dir, ignore_errors=True)
+            deleted_paths.append(str(ep_dir))
+        else:
+            for ch_dir in root.iterdir():
+                if ch_dir.is_dir() and (ch_dir / episode_id).exists():
+                    ep_dir = ch_dir / episode_id
+                    shutil.rmtree(ep_dir, ignore_errors=True)
+                    deleted_paths.append(str(ep_dir))
     return {"success": True, "episode_id": episode_id, "deleted_paths": deleted_paths, "message": f"Episode {episode_id} deleted."}
 
 
