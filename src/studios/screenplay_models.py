@@ -86,6 +86,21 @@ class RelaxSceneDirective(BaseModel):
     motion_rationale: Optional[str] = None
     duration_seconds: float = 30.0
     narration_text: Optional[str] = None
+    day_number: Optional[int] = 1
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    visit_duration: Optional[str] = None
+    transit_duration: Optional[str] = None
+    is_map_transition: bool = False
+    is_itinerary_summary: bool = False
+    is_vacation_scope: bool = False
+    attraction_name: Optional[str] = None
+    origin_name: Optional[str] = None
+    destination_name: Optional[str] = None
+    origin_coords: Optional[List[float]] = None
+    destination_coords: Optional[List[float]] = None
+    distance_local: Optional[str] = None
+    transit_mode: Optional[str] = "walk"
     camera_waypoints: List[CameraWaypointDirective] = Field(default_factory=list)
     kinetic_micro_zones: Optional[KineticMicroSpec] = None
 
@@ -154,6 +169,7 @@ class RelaxScreenplay(BaseModel):
     travel_tourism: Optional[RelaxTravelTourismSpec] = None
     cast: List[Any] = Field(default_factory=list)
     audio_master: RelaxAudioMasterSpec = Field(default_factory=RelaxAudioMasterSpec)
+    itinerary_summary: Optional[List[Dict[str, Any]]] = None
     scenes: List[RelaxSceneDirective] = Field(default_factory=list)
     publishing: Optional[RelaxPublishingPackage] = None
 
@@ -184,6 +200,21 @@ class BaseScenePrompt(BaseModel):
     kinetic_micro_zones: Optional[KineticMicroSpec] = None
     image_model_configs: dict = Field(default_factory=dict)
     model_configs: dict = Field(default_factory=dict)
+    # Tour & Itinerary Metadata
+    is_itinerary_overview: bool = False
+    is_map_transition: bool = False
+    is_itinerary_summary: bool = False
+    day_number: Optional[int] = 1
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    visit_duration: Optional[str] = None
+    transit_duration: Optional[str] = None
+    origin_name: Optional[str] = None
+    destination_name: Optional[str] = None
+    origin_coords: Optional[List[float]] = None
+    destination_coords: Optional[List[float]] = None
+    distance_local: Optional[str] = None
+    transit_mode: Optional[str] = "walk"
 
 
 class BaseStoryboard(BaseModel):
@@ -199,6 +230,7 @@ class BaseStoryboard(BaseModel):
     audio_tags: str = ""
     audio_prompt: Optional[str] = ""
     spoken_narration_script: Optional[str] = ""
+    itinerary_summary: Optional[List[Dict[str, Any]]] = None
     scenes: List[BaseScenePrompt] = Field(default_factory=list)
 
     @field_validator("audio_tags", mode="before")
@@ -239,6 +271,20 @@ def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> BaseStoryboard:
                 kinetic_micro_zones=getattr(s, "kinetic_micro_zones", None),
                 image_model_configs=s.image_model_configs,
                 model_configs={k: v.model_dump() for k, v in s.model_configs.items()} if s.model_configs else {},
+                is_itinerary_overview=getattr(s, "is_itinerary_overview", False),
+                is_map_transition=getattr(s, "is_map_transition", False),
+                is_itinerary_summary=getattr(s, "is_itinerary_summary", False),
+                day_number=getattr(s, "day_number", 1),
+                start_time=getattr(s, "start_time", None),
+                end_time=getattr(s, "end_time", None),
+                visit_duration=getattr(s, "visit_duration", None),
+                transit_duration=getattr(s, "transit_duration", None),
+                origin_name=getattr(s, "origin_name", None),
+                destination_name=getattr(s, "destination_name", None),
+                origin_coords=getattr(s, "origin_coords", None),
+                destination_coords=getattr(s, "destination_coords", None),
+                distance_local=getattr(s, "distance_local", None),
+                transit_mode=getattr(s, "transit_mode", "walk"),
             )
         )
     return BaseStoryboard(
@@ -252,6 +298,7 @@ def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> BaseStoryboard:
         recommended_fps=sp.recommended_fps or 24,
         audio_tags=sp.audio_master.suno_musical_tags if sp.audio_master else "",
         spoken_narration_script=getattr(sp.audio_master, "spoken_narration_script", "") if sp.audio_master else "",
+        itinerary_summary=getattr(sp, "itinerary_summary", None),
         scenes=scenes,
     )
 

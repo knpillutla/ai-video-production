@@ -11,7 +11,10 @@ from src.core.config import settings
 
 def sanitize_container_name(user_id: str) -> str:
     """Sanitize user ID into a valid Azure Blob container name (lowercase, alphanumeric, hyphens)."""
-    clean_id = re.sub(r"[^a-zA-Z0-9-]", "-", str(user_id)).lower()
+    raw_str = str(user_id).lower().strip()
+    if raw_str.startswith("user-"):
+        raw_str = raw_str[5:]
+    clean_id = re.sub(r"[^a-zA-Z0-9-]", "-", raw_str).lower()
     clean_id = re.sub(r"-+", "-", clean_id).strip("-")
     container = f"user-{clean_id}"
     return container[:63]
@@ -60,14 +63,10 @@ class MultiTenantStorageService:
         return ep_path
 
     def get_network_path(self, user_id: str, network_id: str) -> Path:
-        """Return path for a user's network under networks/{network} with fallback to channels/{network}."""
+        """Return path for a user's network under networks/{network}."""
         clean_net = re.sub(r"[^a-zA-Z0-9_-]", "_", str(network_id).lower()).strip("_") or "default_network"
         base = self.get_user_container_path(user_id)
         net_path = base / "networks" / clean_net
-        if not net_path.exists():
-            legacy_chan = base / "channels" / clean_net
-            if legacy_chan.exists():
-                return legacy_chan
         net_path.mkdir(parents=True, exist_ok=True)
         return net_path
 

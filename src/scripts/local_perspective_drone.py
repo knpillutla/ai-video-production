@@ -259,35 +259,64 @@ class LivingEnvironmentEngine:
         self.clean_base_plate = None
 
         resized = cv2.resize(img, (width, height), interpolation=cv2.INTER_LINEAR)
+        self.img_orig = resized
         hsv = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
         gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 
-        # Autonomous Water Body Detection
+        # Autonomous Precision Water Body Detection (Zero Land/Structure Bleed)
         lower_hsv = hsv[int(height * 0.35):, :]
         water_px = ((lower_hsv[:, :, 0] >= 90) & (lower_hsv[:, :, 0] <= 130) &
                     (lower_hsv[:, :, 1] >= 40) & (lower_hsv[:, :, 2] >= 35)).astype(np.uint8) * 255
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (int(width * 0.03), int(height * 0.03)))
-        closed = cv2.morphologyEx(water_px, cv2.MORPH_CLOSE, kernel)
-        water_ratio = float(np.mean(closed > 0))
+        # Clean isolated noise and erode boundary so ripples never bleed into docks/buildings/shoreline
+        k_open = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+        water_clean = cv2.morphologyEx(water_px, cv2.MORPH_OPEN, k_open)
+        k_erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
+        water_inner = cv2.erode(water_clean, k_erode)
+        water_ratio = float(np.mean(water_inner > 0))
 
         self.water_mask = None
-        self.inv_water_mask = None
-        if water_ratio > 0.12:
+        self.cycle_plates: Optional[List[np.ndarray]] = None
+        self.num_cycle_frames = 36
+
+        if water_ratio > 0.08:
             full_w = np.zeros((height, width), dtype=np.float32)
-            full_w[int(height * 0.35):, :] = (closed > 0).astype(np.float32)
-            self.water_mask = cv2.GaussianBlur(full_w, (41, 41), 12)
-            self.inv_water_mask = 1.0 - self.water_mask
+            full_w[int(height * 0.35):, :] = (water_inner > 0).astype(np.float32)
+            self.water_mask = cv2.GaussianBlur(full_w, (21, 21), 6)
 
             ys = np.where(self.water_mask > 0.005)[0]
-            self.water_y_min = int(ys.min())
-            self.water_y_max = int(ys.max()) + 1
-            roi_h = self.water_y_max - self.water_y_min
+            if len(ys) > 0:
+                self.water_y_min = int(ys.min())
+                self.water_y_max = int(ys.max()) + 1
+                roi_h = self.water_y_max - self.water_y_min
+                water_weight_roi = self.water_mask[self.water_y_min:self.water_y_max, :]
+                inv_water_weight_roi = 1.0 - water_weight_roi
 
-            self.water_x = np.arange(width, dtype=np.float32)
-            self.water_y_rel = np.arange(roi_h, dtype=np.float32)
-            self.water_gx, self.water_gy = np.meshgrid(self.water_x, self.water_y_rel)
-            self.water_weight_roi = self.water_mask[self.water_y_min:self.water_y_max, :]
-            self.inv_water_weight_roi = self.inv_water_mask[self.water_y_min:self.water_y_max, :]
+                base_plate = self.clean_base_plate if self.clean_base_plate is not None else resized
+                roi_in = base_plate[self.water_y_min:self.water_y_max, :]
+
+                # Downsample ROI grid for lightning-fast 4K precomputation
+                sm_w = 1920
+                sm_h = max(16, int(round(roi_h * (1920.0 / width))))
+                roi_sm = cv2.resize(roi_in, (sm_w, sm_h), interpolation=cv2.INTER_LINEAR)
+                x_sm = np.arange(sm_w, dtype=np.float32)
+                y_sm = np.arange(sm_h, dtype=np.float32)
+                gx_sm, gy_sm = np.meshgrid(x_sm, y_sm)
+
+                self.cycle_plates = []
+                for k in range(self.num_cycle_frames):
+                    t = k * (2.0 * np.pi / self.num_cycle_frames)
+                    dx = (0.5 * self.scale * np.sin(gx_sm * 0.03 + t)).astype(np.float32)
+                    dy = (0.6 * self.scale * np.cos(gy_sm * 0.04 - t)).astype(np.float32)
+                    map_x = gx_sm + dx
+                    map_y = gy_sm + dy
+                    wave_sm = cv2.remap(roi_sm, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+                    glimmer_sm = 1.0 + (0.035 * np.sin(gx_sm * 0.05 + gy_sm * 0.08 + t * 2.0))
+                    wave_sm = np.clip(wave_sm.astype(np.float32) * glimmer_sm[:, :, None], 0, 255).astype(np.uint8)
+                    wave_roi = cv2.resize(wave_sm, (width, roi_h), interpolation=cv2.INTER_LINEAR)
+                    blended = cv2.blendLinear(roi_in, wave_roi, inv_water_weight_roi, water_weight_roi)
+                    plate_k = base_plate.copy()
+                    plate_k[self.water_y_min:self.water_y_max, :] = blended
+                    self.cycle_plates.append(plate_k)
 
         # Autonomous Smoke Detection
         upper_hsv = hsv[:int(height * 0.40), :]
@@ -305,34 +334,27 @@ class LivingEnvironmentEngine:
             self.inv_smoke_mask = 1.0 - self.smoke_mask
 
             ys_s = np.where(self.smoke_mask > 0.005)[0]
-            self.smoke_y_min = int(ys_s.min())
-            self.smoke_y_max = int(ys_s.max()) + 1
-            s_roi_h = self.smoke_y_max - self.smoke_y_min
-            self.smoke_x = np.arange(width, dtype=np.float32)
-            self.smoke_y_rel = np.arange(s_roi_h, dtype=np.float32)
-            self.smoke_gx, self.smoke_gy = np.meshgrid(self.smoke_x, self.smoke_y_rel)
-            self.smoke_weight_roi = self.smoke_mask[self.smoke_y_min:self.smoke_y_max, :]
-            self.inv_smoke_weight_roi = self.inv_smoke_mask[self.smoke_y_min:self.smoke_y_max, :]
+            if len(ys_s) > 0:
+                self.smoke_y_min = int(ys_s.min())
+                self.smoke_y_max = int(ys_s.max()) + 1
+                s_roi_h = self.smoke_y_max - self.smoke_y_min
+                self.smoke_x = np.arange(width, dtype=np.float32)
+                self.smoke_y_rel = np.arange(s_roi_h, dtype=np.float32)
+                self.smoke_gx, self.smoke_gy = np.meshgrid(self.smoke_x, self.smoke_y_rel)
+                self.smoke_weight_roi = self.smoke_mask[self.smoke_y_min:self.smoke_y_max, :]
+                self.inv_smoke_weight_roi = self.inv_smoke_mask[self.smoke_y_min:self.smoke_y_max, :]
+            else:
+                self.has_smoke = False
+
+    def get_source_plate(self, frame_idx: int) -> np.ndarray:
+        """Returns source plate animated with natural fluid dynamics aligned with 3D camera space."""
+        if self.cycle_plates:
+            return self.cycle_plates[frame_idx % len(self.cycle_plates)]
+        return self.clean_base_plate if self.clean_base_plate is not None else self.img_orig
 
     def apply(self, frame: np.ndarray, frame_idx: int) -> np.ndarray:
         out = frame
-        if self.water_mask is not None:
-            t = frame_idx * 0.08
-            dx = (1.5 * self.scale * np.sin(self.water_gx * 0.02 + t)).astype(np.float32)
-            dy = (2.2 * self.scale * np.cos(self.water_gy * 0.03 - t * 1.3)).astype(np.float32)
-            map_x = self.water_gx + dx
-            map_y = self.water_gy + dy
-
-            roi_in = out[self.water_y_min:self.water_y_max, :]
-            wave_roi = cv2.remap(roi_in, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-            glimmer = 1.0 + 0.05 * np.sin(self.water_gx * 0.05 + self.water_gy * 0.08 + t * 2.0)
-            wave_roi = np.clip(wave_roi.astype(np.float32) * glimmer[:, :, None], 0, 255).astype(np.uint8)
-
-            out[self.water_y_min:self.water_y_max, :] = cv2.blendLinear(
-                roi_in, wave_roi, self.inv_water_weight_roi, self.water_weight_roi
-            )
-
-        if self.smoke_mask is not None:
+        if getattr(self, "has_smoke", False) and self.smoke_mask is not None:
             t_s = frame_idx * 0.15
             s_dx = (2.0 * self.scale * np.sin((self.smoke_y_rel + self.smoke_y_min) * 0.04 + t_s * 1.1)).astype(np.float32)
             s_dy = (-3.2 * self.scale - 1.5 * self.scale * np.sin(self.smoke_x * 0.05 + t_s * 0.7)).astype(np.float32)
@@ -692,6 +714,7 @@ def render_perspective_drone_clip_sync(
     remove_objects: bool = False,
     remove_object_list: Optional[List[str]] = None,
     interpolation: str = "cubic",
+    lower_third_hud: Optional[dict] = None,
 ) -> Path:
     """Render calm, cinematic 4K perspective drone shot on CPU via subpixel homography and procedural dynamics."""
     out = Path(output_path)
@@ -761,16 +784,51 @@ def render_perspective_drone_clip_sync(
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         video_writer = cv2.VideoWriter(str(temp_raw), fourcc, fps, output_size)
 
-    source_plate = living_env.clean_base_plate if living_env.clean_base_plate is not None else img_enhanced
+    hud_bgr = None
+    hud_alpha = None
+    if lower_third_hud and isinstance(lower_third_hud, dict):
+        try:
+            from src.services.map_route_engine import create_lower_third_hud_overlay
+            rgba = create_lower_third_hud_overlay(
+                attraction_name=lower_third_hud.get("attraction_name", "Landmark"),
+                timing_text=lower_third_hud.get("timing_text", "09:00 AM – 11:30 AM"),
+                day_badge=lower_third_hud.get("day_badge", "DAY 1"),
+                target_res=output_size,
+                cost_text=lower_third_hud.get("cost_text"),
+                transit_text=lower_third_hud.get("transit_text"),
+            )
+            hud_bgr = cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGR)
+            hud_alpha = (rgba[:, :, 3] / 255.0).astype(np.float32)
+        except Exception:
+            hud_bgr = None
 
     try:
         for i in range(total_frames):
+            source_plate = living_env.get_source_plate(i)
             frame = cv2.warpPerspective(source_plate, matrices[i], output_size, flags=warp_flag, borderMode=cv2.BORDER_REPLICATE)
             frame = living_env.apply(frame, i)
             if rain_engine:
                 frame = rain_engine.render(frame)
             elif snow_engine:
                 frame = snow_engine.render(frame, i)
+
+            # Smooth cinematic fade-in (0.6s to 1.4s) and fade-out (after 6s)
+            if hud_bgr is not None and hud_alpha is not None:
+                # Fade in between frames 15 and 35
+                if i < 15:
+                    fade = 0.0
+                elif i < 35:
+                    fade = (i - 15) / 20.0
+                elif i < 145:
+                    fade = 1.0
+                elif i < 170:
+                    fade = max(0.0, 1.0 - (i - 145) / 25.0)
+                else:
+                    fade = 0.0
+
+                if fade > 0.001:
+                    eff_alpha = (hud_alpha * fade)[:, :, None]
+                    frame = (frame.astype(np.float32) * (1.0 - eff_alpha) + hud_bgr.astype(np.float32) * eff_alpha).astype(np.uint8)
 
             if ffmpeg_proc:
                 ffmpeg_proc.stdin.write(frame.tobytes())
@@ -814,6 +872,7 @@ async def render_perspective_drone_clip(
     remove_objects: bool = False,
     remove_object_list: Optional[List[str]] = None,
     interpolation: str = "cubic",
+    lower_third_hud: Optional[dict] = None,
 ) -> Path:
     """Asynchronously render calm 4K perspective drone shot on a worker thread."""
     return await asyncio.to_thread(
@@ -840,6 +899,7 @@ async def render_perspective_drone_clip(
         remove_objects=remove_objects,
         remove_object_list=remove_object_list,
         interpolation=interpolation,
+        lower_third_hud=lower_third_hud,
     )
 
 

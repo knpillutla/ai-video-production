@@ -94,15 +94,39 @@ class StudioProducer:
                     return str(cfgs[k]["prompt"]).strip()
             return s.visual_prompt.strip()
 
-        keyframe_tasks = [
-            (
-                _resolve_scene_image_prompt(s),
-                ep_dir / f"keyframe_p{idx}.jpg",
-                ep_dir / f"fal_req_p{idx}.json",
-                idx,
-            )
-            for idx, s in enumerate(sb.scenes, 1)
-        ]
+        keyframe_tasks = []
+        map_rendered_paths = {}
+        from src.services.map_route_engine import render_4k_itinerary_summary_card, render_4k_route_map
+
+        for idx, s in enumerate(sb.scenes, 1):
+            target_kf = ep_dir / f"keyframe_p{idx}.jpg"
+            is_summary = getattr(s, "is_itinerary_summary", False) or getattr(s, "is_itinerary_overview", False)
+            if is_summary and getattr(sb, "itinerary_summary", None):
+                render_4k_itinerary_summary_card(
+                    tour_title=sb.title,
+                    day_summaries=sb.itinerary_summary,
+                    output_path=target_kf,
+                )
+                map_rendered_paths[idx] = target_kf
+            elif getattr(s, "is_map_transition", False) and getattr(s, "origin_coords", None) and getattr(s, "destination_coords", None):
+                render_4k_route_map(
+                    origin_name=s.origin_name or "Origin",
+                    dest_name=s.destination_name or "Destination",
+                    origin_coords=(s.origin_coords[0], s.origin_coords[1]),
+                    dest_coords=(s.destination_coords[0], s.destination_coords[1]),
+                    distance_badge=s.distance_local or "1.5 km",
+                    transit_mode=s.transit_mode or "walk",
+                    output_path=target_kf,
+                )
+                map_rendered_paths[idx] = target_kf
+            else:
+                keyframe_tasks.append((
+                    _resolve_scene_image_prompt(s),
+                    target_kf,
+                    ep_dir / f"fal_req_p{idx}.json",
+                    idx,
+                ))
+
         existing_kfs = [ep_dir / f"keyframe_p{idx}.jpg" for idx in range(1, len(sb.scenes) + 1)]
         all_kfs_exist = all(p.is_file() and p.stat().st_size > 1000 for p in existing_kfs)
 
@@ -110,11 +134,9 @@ class StudioProducer:
             logger.info(f"downstream_stage_reuse_keyframes: episode='{ep_dir.name}' reusing {len(existing_kfs)} existing keyframes ($0 spend)")
             image_results = existing_kfs
         else:
-            # If downstream stage was invoked but keyframe not yet in ep_dir, look for existing keyframes in sibling directories
             if (motion_only or audio_only or master_only) and not all_kfs_exist:
                 for kf_idx, target_kf in enumerate(existing_kfs, 1):
                     if not (target_kf.is_file() and target_kf.stat().st_size > 1000):
-                        # Search under user container or parent
                         for cand in ep_dir.parent.rglob(f"keyframe_p{kf_idx}.jpg"):
                             if cand.is_file() and cand.stat().st_size > 1000 and cand != target_kf:
                                 import shutil
@@ -126,14 +148,15 @@ class StudioProducer:
                     image_results = existing_kfs
             if not ((motion_only or audio_only or master_only) and all_kfs_exist):
                 kf_force_rerun = force_rerun and photos_only
-                # If motion_only or downstream, default missing image generation to cheapest model (Gemini)
                 eff_img_model = "google_imagen3" if (motion_only or audio_only or master_only) and (not image_model or "flux" in image_model) else image_model
-                image_results = await visual_batch_service.render_keyframes_batch(
+                diff_results = await visual_batch_service.render_keyframes_batch(
                     tasks=keyframe_tasks,
                     aspect_ratio="16:9",
                     force_rerun=kf_force_rerun,
                     image_model=eff_img_model,
-                )
+                ) if keyframe_tasks else []
+                diff_map = {idx: p for (_, p, _, idx) in keyframe_tasks}
+                image_results = [map_rendered_paths.get(idx, diff_map.get(idx, ep_dir / f"keyframe_p{idx}.jpg")) for idx in range(1, len(sb.scenes) + 1)]
 
         if photos_only:
             return {
@@ -181,25 +204,109 @@ class StudioProducer:
                 raise RuntimeError("visual_diffusion_aborted: Zero valid keyframes were produced.")
 
             motion_tasks = []
-            for idx, (s, kf) in enumerate(zip(sb.scenes, valid_keyframes), 1):
-                custom_model_cfg = getattr(s, "model_configs", None) if isinstance(getattr(s, "model_configs", None), dict) else None
-                chosen_model, m_allow_fallback, m_rationale = resolve_scene_motion_model(
-                    scene=s, tier=tier, requested_motion_model=motion_model,
-                    scene_index=idx - 1, total_scenes=len(valid_keyframes), genre=getattr(sb, "cluster", "relax/nature"),
-                )
-                motion_tasks.append(
-                    MotionClipTask(
-                        image_path=kf, motion_prompt=s.motion_prompt, visual_prompt=s.visual_prompt,
-                        output_path=ep_dir / f"motion_p{idx}.mp4", duration_seconds=s.duration_seconds,
-                        model=chosen_model, domain=s.domain, req_file=ep_dir / f"fal_motion_req_p{idx}.json",
-                        allow_fallback=allow_fallback or m_allow_fallback, force_rerun=force_rerun,
-                        negative_prompt=_resolve_scene_negative_prompt(s), model_configs=custom_model_cfg,
-                        camera_waypoints=getattr(s, "camera_waypoints", None), kinetic_micro_zones=getattr(s, "kinetic_micro_zones", None),
-                        camera_movement=getattr(s, "camera_movement", None),
-                    )
-                )
+            video_clips = []
+            from src.scripts.local_perspective_drone import render_perspective_drone_clip
 
-            video_clips = await visual_batch_service.render_motion_batch(tasks=motion_tasks)
+            local_coros = []
+            local_indices = []
+
+            for idx, (s, kf) in enumerate(zip(sb.scenes, valid_keyframes), 1):
+                out_clip = ep_dir / f"motion_p{idx}.mp4"
+                is_tour_slide = (
+                    getattr(s, "is_itinerary_summary", False)
+                    or getattr(s, "is_itinerary_overview", False)
+                    or getattr(s, "is_map_transition", False)
+                    or getattr(s, "is_vacation_scope", False)
+                )
+                use_local = is_tour_slide or (motion_model == "locked_tripod") or (getattr(s, "motion_type", "") in ("ken_burns", "static", "local_drone"))
+
+                if use_local:
+                    if is_tour_slide:
+                        # Static map/card hold: skip drone camera movement and HUD overlay
+                        coro = render_perspective_drone_clip(
+                            image_path=kf,
+                            output_path=out_clip,
+                            duration_seconds=s.duration_seconds,
+                            fps=sb.recommended_fps or 24,
+                            target_res=(3840, 2160),
+                            choreography="hold",
+                            start_pan="center",
+                            start_zoom="normal",
+                            start_tilt="center",
+                            curve="linear",
+                            lower_third_hud=None,
+                        )
+                    else:
+                        attraction_name = getattr(s, "attraction_name", None) or getattr(s, "origin_name", None) or getattr(s, "location_hub", None) or f"Stop {idx}"
+                        start_t = getattr(s, "start_time", "09:00 AM") or "09:00 AM"
+                        end_t = getattr(s, "end_time", "11:30 AM") or "11:30 AM"
+                        vis_dur = getattr(s, "visit_duration", "2.0 hrs") or "2.0 hrs"
+                        day_n = getattr(s, "day_number", 1) or 1
+                        cost_t = getattr(s, "attraction_cost", None)
+                        trans_dur = getattr(s, "transit_duration", None)
+                        dest_n = getattr(s, "destination_name", None)
+                        trans_t = f"{trans_dur} to {dest_n}" if (trans_dur and dest_n and dest_n != attraction_name and trans_dur != "concluded") else None
+
+                        hud_data = {
+                            "attraction_name": attraction_name,
+                            "timing_text": f"🕒 {start_t} – {end_t}  ({vis_dur})",
+                            "day_badge": f"DAY {day_n} • STOP {idx}",
+                            "cost_text": cost_t,
+                            "transit_text": trans_t,
+                        }
+
+                        coro = render_perspective_drone_clip(
+                            image_path=kf,
+                            output_path=out_clip,
+                            duration_seconds=s.duration_seconds,
+                            fps=sb.recommended_fps or 24,
+                            target_res=(3840, 2160),
+                            choreography=s.motion_prompt or "slow_pan",
+                            start_pan="center",
+                            start_zoom="normal",
+                            start_tilt="center",
+                            curve="cosine",
+                            lower_third_hud=hud_data,
+                        )
+                    local_coros.append(coro)
+                    local_indices.append(idx)
+                else:
+                    custom_model_cfg = getattr(s, "model_configs", None) if isinstance(getattr(s, "model_configs", None), dict) else None
+                    chosen_model, m_allow_fallback, m_rationale = resolve_scene_motion_model(
+                        scene=s, tier=tier, requested_motion_model=motion_model,
+                        scene_index=idx - 1, total_scenes=len(valid_keyframes), genre=getattr(sb, "cluster", "relax/nature"),
+                    )
+                    motion_tasks.append(
+                        MotionClipTask(
+                            image_path=kf, motion_prompt=s.motion_prompt, visual_prompt=s.visual_prompt,
+                            output_path=out_clip, duration_seconds=s.duration_seconds,
+                            model=chosen_model, domain=s.domain, req_file=ep_dir / f"fal_motion_req_p{idx}.json",
+                            allow_fallback=allow_fallback or m_allow_fallback, force_rerun=force_rerun,
+                            negative_prompt=_resolve_scene_negative_prompt(s), model_configs=custom_model_cfg,
+                            camera_waypoints=getattr(s, "camera_waypoints", None), kinetic_micro_zones=getattr(s, "kinetic_micro_zones", None),
+                            camera_movement=getattr(s, "camera_movement", None),
+                        )
+                    )
+
+            # Synthesize all local drone and static holding clips in parallel
+            rendered_clips_map = {}
+            if local_coros:
+                logger.info(f"parallel_local_motion_dispatch: Launching {len(local_coros)} local drone clips in parallel")
+                local_results = await asyncio.gather(*local_coros)
+                for sc_idx, clip_p in zip(local_indices, local_results):
+                    rendered_clips_map[sc_idx] = clip_p
+
+            if motion_tasks:
+                diff_clips = await visual_batch_service.render_motion_batch(tasks=motion_tasks)
+                for t, c in zip(motion_tasks, diff_clips):
+                    # Extract index from motion_p{idx}.mp4
+                    try:
+                        sc_num = int(t.output_path.stem.split("_p")[-1])
+                        rendered_clips_map[sc_num] = c
+                    except Exception:
+                        pass
+
+            video_clips = [rendered_clips_map.get(idx, ep_dir / f"motion_p{idx}.mp4") for idx in range(1, len(sb.scenes) + 1)]
 
         if motion_only:
             return {

@@ -100,6 +100,21 @@ class RelaxSceneDirective(BaseModel):
     motion_rationale: Optional[str] = None  # Directorial reasoning for choosing AI diffusion vs local Ken Burns
     narration_text: Optional[str] = None  # Educational or poetic spoken narration line for this shot
     duration_seconds: float = 30.0
+    day_number: Optional[int] = 1
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    visit_duration: Optional[str] = None
+    transit_duration: Optional[str] = None
+    is_map_transition: bool = False
+    is_itinerary_summary: bool = False
+    is_vacation_scope: bool = False
+    attraction_name: Optional[str] = None
+    origin_name: Optional[str] = None
+    destination_name: Optional[str] = None
+    origin_coords: Optional[List[float]] = None
+    destination_coords: Optional[List[float]] = None
+    distance_local: Optional[str] = None
+    transit_mode: Optional[str] = "walk"
 
 
 class RelaxPublishingPackage(BaseModel):
@@ -147,6 +162,7 @@ class RelaxScreenplay(BaseModel):
     travel_tourism: Optional[RelaxTravelTourismSpec] = None
     cast: List[Any] = Field(default_factory=list)  # Strictly empty for pure nature
     audio_master: RelaxAudioMasterSpec = Field(default_factory=RelaxAudioMasterSpec)
+    itinerary_summary: Optional[List[Dict[str, Any]]] = None
     scenes: List[RelaxSceneDirective] = Field(default_factory=list)
     publishing: Optional[RelaxPublishingPackage] = None
 

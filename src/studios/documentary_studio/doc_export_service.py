@@ -97,6 +97,39 @@ def assemble_documentary_4k_master(
     return out
 
 
+def _build_google_maps_route_url(scenes: List[Any]) -> Optional[str]:
+    """Builds an official multi-stop Google Maps directions link for the itinerary stops."""
+    import urllib.parse
+    stops = []
+    for sc in scenes:
+        orig = getattr(sc, "origin_name", None)
+        dest = getattr(sc, "destination_name", None)
+        if orig and orig not in stops:
+            stops.append(orig)
+        if dest and dest not in stops:
+            stops.append(dest)
+        # Fallback to location_hub or title if not map transition
+        loc = getattr(sc, "location_hub", None)
+        if loc and loc not in ("Scenic Vista", "Aerial Vista") and loc not in stops:
+            stops.append(loc)
+
+    if len(stops) < 2:
+        return None
+
+    origin = stops[0]
+    destination = stops[-1]
+    waypoints = stops[1:-1]
+    params = {
+        "api": 1,
+        "origin": origin,
+        "destination": destination,
+        "travelmode": "walking",
+    }
+    if waypoints:
+        params["waypoints"] = "|".join(waypoints[:9])
+    return "https://www.google.com/maps/dir/?" + urllib.parse.urlencode(params)
+
+
 def export_documentary_metadata_package(
     sb: DocStoryboard,
     ep_dir: Path,
@@ -108,20 +141,53 @@ def export_documentary_metadata_package(
         if idx > 0:
             m = int(curr_time // 60)
             s = int(curr_time % 60)
-            chapters.append(f"{m:02d}:{s:02d} 🌿 Chapter {idx+1}: {scene.shot_type.title()} Focus")
+            loc_label = getattr(scene, "destination_name", None) or getattr(scene, "location_hub", None) or scene.shot_type.title()
+            chapters.append(f"{m:02d}:{s:02d} 🌿 Chapter {idx+1}: {loc_label}")
         curr_time += scene.duration_seconds
+
+    # Build Google Maps itinerary link
+    gmaps_url = _build_google_maps_route_url(sb.scenes)
+    map_section = ""
+    if gmaps_url:
+        map_section = f"🗺️ Full Interactive Route Map (Google Maps):\n👉 Follow the complete walking/transit route:\n{gmaps_url}\n\n"
+
+    # Build individual direct attraction & venue links (Google Maps + Photos)
+    import urllib.parse
+    featured_stops = []
+    seen = set()
+    for sc in sb.scenes:
+        name = getattr(sc, "origin_name", None) or getattr(sc, "destination_name", None) or getattr(sc, "location_hub", None)
+        if name and name not in ("Scenic Vista", "Aerial Vista") and name.lower() not in seen:
+            seen.add(name.lower())
+            q = urllib.parse.quote_plus(name)
+            map_link = f"https://www.google.com/maps/search/?api=1&query={q}"
+            photos_link = f"https://www.google.com/search?q={q}+photos&tbm=isch"
+            featured_stops.append(f"• {name}:\n  📍 Location: {map_link}\n  📸 Photos: {photos_link}")
+
+    stops_section = ""
+    if featured_stops:
+        stops_section = (
+            "🏛️ Featured Attractions, Neighborhood Squares & Cafes:\n"
+            + "\n".join(featured_stops)
+            + "\n\n"
+        )
 
     description = (
         f"An in-depth 4K cinematic documentary exploring {sb.title}.\n\n"
+        f"{map_section}"
+        f"{stops_section}"
         f"🎙️ Narration: Authoritative Natural History Voiceover\n"
         f"🎞️ Mastered in 4K UHD (24 fps cinematic cadence) with spatial acoustics.\n\n"
         f"⏰ Documentary Chapters:\n" + "\n".join(chapters) + "\n\n"
+        f"⚠️ TRAVEL ADVISORY & SAFETY DISCLAIMER:\n"
+        f"This itinerary, transit fare estimates, and local venue suggestions are provided for informational and editorial entertainment purposes only. Operating hours, admission fees, route conditions, transit rates, and venue safety guidelines are subject to change. Travelers and families should exercise personal discretion and verify current local official advisories before visiting.\n\n"
         f"🌿 100% Commercial Master Rights | CineAI Documentary Studio"
     )
 
     tags = [
         sb.genre.value, "documentary", "4k_documentary", "nature_documentary",
-        "bbc_earth_style", "cinematic", "educational", "history", "science", "4k_uhd"
+        "bbc_earth_style", "cinematic", "educational", "history", "science", "4k_uhd",
+        "travel_itinerary", "walking_tour", "travel_guide"
     ]
 
     pkg = {
@@ -131,6 +197,10 @@ def export_documentary_metadata_package(
         "genre": sb.genre.value,
         "chapters": chapters,
         "language": sb.language,
+        "google_maps_route_url": gmaps_url,
+        "has_synthetic_media": True,
+        "contains_synthetic_media": True,
+        "ypp_monetization_safety": "100% AdSense Advertiser-Friendly (Green Dollar Guarantee)",
     }
 
     (ep_dir / "youtube_packaging.json").write_text(json.dumps(pkg, indent=2), encoding="utf-8")

@@ -45,6 +45,23 @@ class DocScene:
     start_framing: Optional[Dict[str, str]] = None
     motion_curve: str = "cosine"
     weather: str = "none"
+    is_map_transition: bool = False
+    attraction_name: Optional[str] = None
+    origin_name: Optional[str] = None
+    destination_name: Optional[str] = None
+    origin_coords: Optional[List[float]] = None
+    destination_coords: Optional[List[float]] = None
+    distance_local: Optional[str] = None
+    transit_mode: Optional[str] = "walk"
+    day_number: Optional[int] = 1
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    visit_duration: Optional[str] = None
+    transit_duration: Optional[str] = None
+    attraction_cost: Optional[str] = None
+    is_itinerary_overview: bool = False
+    is_itinerary_summary: bool = False
+    is_vacation_scope: bool = False
 
 
 @dataclass
@@ -56,6 +73,7 @@ class DocStoryboard:
     scenes: List[DocScene] = field(default_factory=list)
     language: str = "en"
     audio_tags: str = "cinematic orchestral documentary, sparse ambient foley, 48kHz broadcast master"
+    itinerary_summary: Optional[List[Dict[str, Any]]] = None
 
 
 GENRE_MODEL_DEFAULTS = {
@@ -223,17 +241,32 @@ async def generate_documentary_storyboard_gemini(
     theme_seed: Optional[str] = None,
     num_shots: int = 1,
     raw_output_path: Optional[Any] = None,
+    archetype: Optional[str] = None,
 ) -> DocStoryboard:
-    """Dynamically generate authoritative BBC/NatGeo documentary script and storyboard via Gemini."""
+    """Dynamically generate authoritative BBC/NatGeo documentary or Tour Director script and storyboard via Gemini."""
+    from src.studios.documentary_studio.doc_directorial_prompt import (
+        build_doc_directorial_prompt,
+        build_tour_directorial_prompt,
+        is_tour_archetype,
+    )
+
     effective_theme = theme_seed or custom_prompt or genre.value
+    eff_archetype = (archetype or genre.value).lower().strip()
+    tour_mode = is_tour_archetype(eff_archetype)
+
     num_scenes = max(1, num_shots if (num_shots is not None and num_shots > 0 and num_shots != -1) else max(2, round(duration_seconds / 12.0)))
     dur_per_scene = round(duration_seconds / num_scenes, 2)
     domain_tag, default_model = GENRE_MODEL_DEFAULTS.get(genre, ("landscape_solid", "kling_v3"))
 
-    print(f"\n[GEMINI DOCUMENTARY AGENT INVOKED]")
+    print(f"\n[GEMINI DIRECTORIAL AGENT INVOKED]")
+    print(f"   * Domain / Archetype: {'TOUR DIRECTOR' if tour_mode else 'DOCUMENTARY'} ({eff_archetype})")
     print(f"   * Genre / Theme:      {genre.value.upper()} ~ \"{effective_theme}\"")
     print(f"   * Duration:           {duration_seconds}s ({num_scenes} Scene(s) @ ~{dur_per_scene}s each)")
     print(f"   * Language:           {language.upper()}")
+
+    # Strict word budget calculation (speech cadence ~125 wpm = 2.08 words/sec, minus 2.2s lead-in/breathing space)
+    max_words_per_scene = max(6, int(round(max(1.0, dur_per_scene - 2.2) * 2.08)))
+    total_words_budget = max_words_per_scene * num_scenes
 
     try:
         import json
@@ -241,57 +274,24 @@ async def generate_documentary_storyboard_gemini(
         from src.core.telemetry import logger
         llm = GeminiLLMAdapter()
 
-        system_prompt = (
-            "You are a world-renowned BBC / National Geographic documentary showrunner, master cinematographer, and authoritative science communicator. "
-            "Your task is to write a compelling, educational, and visually majestic 8K UHD documentary script and storyboard. "
-            "CRITICAL CAMERA & MOTION DIRECTIVES:\n"
-            "- 100% TIER-0 LOCAL PERSPECTIVE DRONE & KEN BURNS MOTION ($0.00 COMPUTE):\n"
-            "By default for all documentaries, camera motion MUST be handled by our Tier-0 local perspective drone and Ken Burns engine. "
-            "Set 'motion_type': 'ken_burns' and 'motion_engine': 'local_drone' for all scenes. "
-            "Unlike fixed 5-second generative AI models, each scene's duration is completely flexible matching the requested narration beat.\n"
-            "- PERMITTED DRONE MOVEMENTS: 'stay' (calm hold), 'dollyin' (optical push-in), 'dollyout' (pull-back), 'pan-left', 'pan-right', "
-            "'tilt-up', 'tilt-down', 'drift-up-right', 'drift-up-left', 'drift-down-right', 'drift-down-left', 'orbit-left', 'orbit-right'.\n"
-            "- SEQUENTIAL & PARALLEL STAGES: Structure 'drone_choreography' as a sequence of stages. Within each stage, 'movements' can contain a single action or multiple simultaneous actions running in parallel (e.g. ['dollyin', 'pan-left']).\n"
-            "- START FRAMING: 'start_framing' can specify {'pan': 'center'|'left'|'right', 'zoom': 'normal'|'in', 'tilt': 'center'|'up'|'down'}.\n"
-            "- MOTION CURVES: 'cosine' (smooth S-curve), 'linear', 'ramp-up' (slow build), 'ramp-down'.\n"
-            "- ATMOSPHERIC WEATHER: 'weather' can be 'none', 'rain' (light/medium), or 'snow' (medium/heavy).\n"
-            "- ANTI-FATIGUE ACOUSTIC SCORE: Warm cinematic orchestral textures, gentle natural environmental foley, deterministic sidechain ducking (-18dB) under narration, velvet -14 LUFS mastering.\n"
-            "- ITINERARY & GENERIC TOUR DIRECTIVES:\n"
-            "  * Autonomous Attraction Selection: The user only provides the city and duration (e.g. 'Oslo Tour, 2 Days' or 'London Tour, 3 Days'). "
-            "You MUST autonomously curate the top famous attractions from your global knowledge base and allocate them logically across days based on geographic proximity and realistic visiting time (e.g. 2-3 major stops per day). Do NOT expect the user to name attractions.\n"
-            "  * Strict 9:00 AM to 6:00 PM Daylight Window: For all tours, schedule visits strictly between 9:00 AM and 6:00 PM local time. Frame all landmark images in crisp natural daylight (5400K-5600K) or warm late-afternoon golden hour (3500K-4500K). Strictly PROHIBIT dark night scenes, dim moonlight, or pitch-black darkness. The last attraction must conclude by 6:00 PM.\n"
-            "  * For 'itinerary_map_tour', alternate between illustrated topographic route map transition scenes (showing the travel route between stops) and iconic landmark vistas.\n"
-            "  * For 'grand_tour', 'top_attractions_tour', 'local_neighborhood_tour', 'culinary_food_tour', 'heritage_history_tour', or 'architecture_design_tour', curate the defining sights in ordered narrative sequence.\n"
-            "For narration: Measured, poetic, authoritative cadence (~120 wpm) rich in geographic, ecological, architectural, and cultural lore.\n"
-            "Return valid JSON matching the schema."
-        )
+        if tour_mode:
+            full_prompt = build_tour_directorial_prompt(
+                archetype=eff_archetype,
+                custom_prompt=effective_theme,
+                duration_seconds=duration_seconds,
+                num_shots=num_scenes,
+                camera_motion="perspective_drone",
+            )
+        else:
+            full_prompt = build_doc_directorial_prompt(
+                genre=genre.value,
+                archetype=eff_archetype,
+                custom_prompt=effective_theme,
+                duration_seconds=duration_seconds,
+                num_shots=num_scenes,
+                camera_motion="perspective_drone",
+            )
 
-        user_msg = (
-            f"Write a {num_scenes}-scene 8K UHD anti-fatigue documentary storyboard on: '{effective_theme}'.\n"
-            f"Genre: {genre.value}. Duration: {duration_seconds}s (exactly {num_scenes} scene(s), ~{dur_per_scene}s per scene). Language: {language}.\n\n"
-            f"Output JSON with fields:\n"
-            f"- 'title': Evocative, high-CTR NatGeo documentary title\n"
-            f"- 'story_topic': Educational overview and scientific/lore thesis\n"
-            f"- 'audio_tags': Sweeping anti-fatigue orchestral score and natural foley tags\n"
-            f"- 'scenes': Array of exactly {num_scenes} scenes each containing:\n"
-            f"    - 'scene_index': int (1..{num_scenes})\n"
-            f"    - 'duration_seconds': float ({dur_per_scene})\n"
-            f"    - 'shot_type': 'wide', 'medium', or 'close_up'\n"
-            f"    - 'motion_type': 'ken_burns'\n"
-            f"    - 'motion_engine': 'local_drone'\n"
-            f"    - 'camera_movement': array of stage dicts, each with:\n"
-            f"        - 'stage': int\n"
-            f"        - 'duration': float (seconds, sum of stage durations MUST equal {dur_per_scene}s)\n"
-            f"        - 'movements': array of supported movement strings executed in parallel (e.g. ['dollyin', 'pan-left'] or ['stay'])\n"
-            f"    - 'start_framing': {{'pan': 'center'|'left'|'right', 'zoom': 'normal'|'in', 'tilt': 'center'|'up'|'down'}}\n"
-            f"    - 'motion_curve': 'cosine' | 'linear' | 'ramp-up' | 'ramp-down'\n"
-            f"    - 'weather': 'none' | 'rain' | 'snow'\n"
-            f"    - 'visual_prompt': 35mm Arri 8K photoreal prompt for Fal FLUX 1.1 Pro\n"
-            f"    - 'motion_prompt': cinematic camera and atmospheric motion prompt\n"
-            f"    - 'narration_text': authoritative voiceover narration lines in {language}\n"
-        )
-
-        full_prompt = f"{system_prompt}\n\n{user_msg}"
         if raw_output_path:
             try:
                 from pathlib import Path
@@ -302,20 +302,44 @@ async def generate_documentary_storyboard_gemini(
                 logger.info(f"gemini_input_prompt_saved: {prompt_file}")
             except Exception as e_p:
                 logger.warning(f"failed_to_save_gemini_input_prompt: {e_p}")
-        logger.info(f"gemini_doc_request_sent: genre='{genre.value}' theme='{theme_seed}'\n--- PROMPT SENT TO GEMINI ---\n{full_prompt}\n-----------------------------")
-        print(f"\n[GEMINI DOC DIRECTORIAL REQUEST DISPATCHED]")
+        logger.info(f"gemini_directorial_request_sent: mode={'tour' if tour_mode else 'doc'} archetype='{eff_archetype}'\n--- PROMPT SENT TO GEMINI ---\n{full_prompt}\n-----------------------------")
+        print(f"\n[GEMINI DIRECTORIAL REQUEST DISPATCHED ({'TOUR' if tour_mode else 'DOC'})]")
         print(f"--- PROMPT SENT TO GEMINI ---\n{full_prompt}\n-----------------------------")
 
         data = await llm.generate_structured(full_prompt)
-        logger.info(f"gemini_doc_response_received:\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}")
-        print(f"\n[GEMINI DOC DIRECTORIAL RESPONSE RECEIVED]\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}\n")
+        logger.info(f"gemini_directorial_response_received:\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}")
+        print(f"\n[GEMINI DIRECTORIAL RESPONSE RECEIVED]\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}\n")
 
         if data and isinstance(data, dict) and data.get("scenes") and len(data["scenes"]) >= 1:
-            raw_scenes = data["scenes"][:num_scenes]
+            if raw_output_path:
+                try:
+                    from pathlib import Path
+                    raw_p = Path(raw_output_path)
+                    raw_p.parent.mkdir(parents=True, exist_ok=True)
+                    raw_p.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+                    logger.info(f"raw_gemini_screenplay_saved: {raw_p}")
+                except Exception as e_raw:
+                    logger.warning(f"failed_to_save_raw_gemini_screenplay: {e_raw}")
+
+            raw_scenes = data["scenes"] if tour_mode else data["scenes"][:num_scenes]
+            itinerary_summary = data.get("itinerary_summary")
+
+            # Deterministically ensure attraction names, GPS coordinates, and timings ONLY for tour archetypes
+            if tour_mode:
+                from src.studios.documentary_studio.doc_tour_normalizer import normalize_tour_scenes
+                raw_scenes, default_summary = normalize_tour_scenes(raw_scenes, city_hint=str(effective_theme))
+                if not itinerary_summary:
+                    itinerary_summary = default_summary
+
             doc_scenes = []
             for idx, sc in enumerate(raw_scenes):
                 sc_dur = float(sc.get("duration_seconds", dur_per_scene))
                 sc_dur = max(2.0, sc_dur)
+                v_prompt = sc.get("visual_prompt") or sc.get("visual_description", "")
+                m_prompt = sc.get("motion_prompt") or sc.get("camera_movement_description") or sc.get("camera_movement", "")
+                n_text = sc.get("narration_text") or sc.get("narration") or sc.get("audio_narration") or sc.get("voiceover") or ""
+                loc_hub = sc.get("location_hub") or sc.get("scene_title") or sc.get("landmark_name") or sc.get("title") or "Scenic Vista"
+
                 doc_scenes.append(
                     DocScene(
                         scene_index=idx + 1,
@@ -323,14 +347,31 @@ async def generate_documentary_storyboard_gemini(
                         shot_type=sc.get("shot_type", "wide" if idx == 0 else "medium"),
                         motion_domain=domain_tag,
                         recommended_model=default_model,
-                        visual_prompt=sc.get("visual_prompt", ""),
-                        motion_prompt=sc.get("motion_prompt", ""),
-                        narration_text=sc.get("narration_text", ""),
+                        visual_prompt=v_prompt,
+                        motion_prompt=m_prompt,
+                        narration_text=n_text,
                         motion_engine=sc.get("motion_engine", "local_drone"),
                         drone_choreography=sc.get("camera_movement") or sc.get("drone_choreography"),
                         start_framing=sc.get("start_framing"),
                         motion_curve=sc.get("motion_curve", "cosine"),
                         weather=sc.get("weather", "none"),
+                        is_map_transition=bool(sc.get("is_map_transition", False)),
+                        attraction_name=sc.get("attraction_name") or (sc.get("origin_name") if not sc.get("is_map_transition") and not sc.get("is_itinerary_overview") and not sc.get("is_itinerary_summary") and not sc.get("is_vacation_scope") else None),
+                        origin_name=sc.get("origin_name") or sc.get("scene_title"),
+                        destination_name=sc.get("destination_name"),
+                        origin_coords=sc.get("origin_coords"),
+                        destination_coords=sc.get("destination_coords"),
+                        distance_local=sc.get("distance_local"),
+                        transit_mode=sc.get("transit_mode", "walk"),
+                        day_number=int(sc.get("day_number", 1) or 1),
+                        start_time=sc.get("start_time"),
+                        end_time=sc.get("end_time"),
+                        visit_duration=sc.get("visit_duration"),
+                        transit_duration=sc.get("transit_duration"),
+                        attraction_cost=sc.get("attraction_cost"),
+                        is_itinerary_overview=bool(sc.get("is_itinerary_overview", False) or idx == 0),
+                        is_itinerary_summary=bool(sc.get("is_itinerary_summary", False) or idx == len(raw_scenes) - 1),
+                        is_vacation_scope=bool(sc.get("is_vacation_scope", False)),
                     )
                 )
 
@@ -341,15 +382,17 @@ async def generate_documentary_storyboard_gemini(
                 scenes=doc_scenes,
                 language=language,
                 audio_tags=data.get("audio_tags") or "cinematic orchestral documentary, sparse ambient foley, 48kHz broadcast master",
+                itinerary_summary=itinerary_summary,
             )
             print(f"[GEMINI DOC STORYBOARD SUCCESS] Synthesized '{sb.title}' with {len(sb.scenes)} authoritative documentary scenes.")
             return sb
         raise RuntimeError(f"Gemini LLM returned empty or malformed documentary storyboard data: {data}")
     except Exception as ex:
         from src.core.telemetry import logger
-        logger.error(f"gemini_doc_storyboard_fatal_error: {ex}")
-        print(f"\n[GEMINI FATAL ERROR] Documentary directorial screenplay synthesis failed: {ex}\n")
-        raise RuntimeError(f"Gemini documentary directorial screenplay generation failed: {ex}") from ex
+        err_detail = str(ex).strip() or repr(ex)
+        logger.error(f"gemini_doc_storyboard_fatal_error: {err_detail}")
+        print(f"\n[GEMINI FATAL ERROR] Documentary directorial screenplay synthesis failed: {err_detail}\n")
+        raise RuntimeError(f"Gemini documentary directorial screenplay generation failed: {err_detail}") from ex
 
 
 __all__ = ["DocGenre", "DocScene", "DocStoryboard", "generate_documentary_storyboard", "generate_documentary_storyboard_gemini"]

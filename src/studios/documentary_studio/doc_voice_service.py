@@ -118,6 +118,7 @@ class DocumentaryVoiceService:
         silence_lead = b"\x00" * int(sample_rate * channels * sampwidth * 0.5)
 
         full_frames = bytearray()
+        actual_scene_durations = []
         for stem, target_dur in zip(stems, scene_durations):
             with wave.open(str(stem), "rb") as wf:
                 sample_rate = wf.getframerate()
@@ -128,9 +129,13 @@ class DocumentaryVoiceService:
             scene_bytes = bytearray(silence_lead)
             scene_bytes.extend(frames)
 
-            # Target bytes for this scene duration
             bytes_per_sec = sample_rate * channels * sampwidth
-            target_bytes = int(target_dur * bytes_per_sec)
+            stem_dur = len(scene_bytes) / bytes_per_sec
+            # Allocate at least 1.8s tail pause or requested target duration
+            eff_dur = max(float(target_dur), stem_dur + 1.8)
+            actual_scene_durations.append(round(eff_dur, 2))
+
+            target_bytes = int(eff_dur * bytes_per_sec)
             if len(scene_bytes) < target_bytes:
                 scene_bytes.extend(b"\x00" * (target_bytes - len(scene_bytes)))
 
@@ -142,8 +147,8 @@ class DocumentaryVoiceService:
             wf_out.setframerate(sample_rate)
             wf_out.writeframes(full_frames)
 
-        logger.info(f"documentary_voiceover_assembled: {out.name}")
-        return out
+        logger.info(f"documentary_voiceover_assembled: {out.name} ({len(actual_scene_durations)} scenes, total: {sum(actual_scene_durations)}s)")
+        return out, actual_scene_durations
 
 
 doc_voice_service = DocumentaryVoiceService()

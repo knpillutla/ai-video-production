@@ -65,6 +65,7 @@ async def dispatch_studio_director(
             "heritage_history_tour": DocGenre.ANCIENT_STRUCTURES, "architecture_design_tour": DocGenre.ANCIENT_STRUCTURES,
         }
         eff_doc_genre = doc_genre_map.get(sub_lower, doc_genre_map.get(arch_lower, DocGenre.PLACES))
+        eff_archetype_name = primary_archetype or sub_genre or arch_lower or sub_lower or "grand_tour"
         sb = await generate_documentary_storyboard_gemini(
             genre=eff_doc_genre,
             theme_seed=custom_prompt or "Swiss Alps: Majestic Glaciers & Granite Titans",
@@ -72,6 +73,7 @@ async def dispatch_studio_director(
             language="en",
             num_shots=num_shots,
             raw_output_path=raw_output_path,
+            archetype=eff_archetype_name,
         )
         # Convert DocStoryboard to RelaxScreenplay container for pipeline compatibility
         full_narration = " ".join(s.narration_text.strip() for s in sb.scenes if getattr(s, "narration_text", None))
@@ -90,6 +92,21 @@ async def dispatch_studio_director(
                 duration_seconds=s.duration_seconds,
                 shot_type=s.shot_type,
                 narration_text=getattr(s, "narration_text", "") or "",
+                day_number=getattr(s, "day_number", 1) or 1,
+                start_time=getattr(s, "start_time", None),
+                end_time=getattr(s, "end_time", None),
+                visit_duration=getattr(s, "visit_duration", None),
+                transit_duration=getattr(s, "transit_duration", None),
+                is_map_transition=getattr(s, "is_map_transition", False),
+                is_itinerary_summary=getattr(s, "is_itinerary_summary", False),
+                is_vacation_scope=getattr(s, "is_vacation_scope", False),
+                attraction_name=getattr(s, "attraction_name", None),
+                origin_name=getattr(s, "origin_name", None),
+                destination_name=getattr(s, "destination_name", None),
+                origin_coords=getattr(s, "origin_coords", None),
+                destination_coords=getattr(s, "destination_coords", None),
+                distance_local=getattr(s, "distance_local", None),
+                transit_mode=getattr(s, "transit_mode", "walk") or "walk",
             )
             for s in sb.scenes
         ]
@@ -104,6 +121,7 @@ async def dispatch_studio_director(
                 target_lufs=-14.0,
                 ducking_db=-18.0,
             ),
+            itinerary_summary=sb.itinerary_summary,
             scenes=relax_scenes,
             total_duration_seconds=sb.total_duration,
             cluster="documentary",

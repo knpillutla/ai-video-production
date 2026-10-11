@@ -55,11 +55,45 @@ class DocumentaryProducer:
                 print(f"[DECISION - TOPIC DEDUPLICATION] Title '{sb.title}' is 100% novel. Proceeding.")
 
         # Stage 2: Keyframe Image Gate (Concurrent Idempotent Batch)
-        kf_tasks = [
-            (scene.visual_prompt, ep_dir / f"keyframe_p{scene.scene_index}.jpg", ep_dir / f"fal_req_p{scene.scene_index}.json", scene.scene_index)
-            for scene in sb.scenes
-        ]
-        keyframe_paths = await visual_batch_service.render_keyframes_batch(kf_tasks)
+        from src.services.map_route_engine import render_4k_itinerary_summary_card, render_4k_route_map
+        kf_tasks = []
+        map_rendered_paths = {}
+
+        for scene in sb.scenes:
+            kf_file = ep_dir / f"keyframe_p{scene.scene_index}.jpg"
+            if getattr(scene, "is_vacation_scope", False):
+                from src.services.map_route_engine import render_4k_leisure_vacation_card
+                render_4k_leisure_vacation_card(
+                    tour_title=sb.title,
+                    output_path=kf_file,
+                )
+                map_rendered_paths[scene.scene_index] = kf_file
+            elif getattr(scene, "is_itinerary_summary", False) and sb.itinerary_summary:
+                # Deterministic 4K master itinerary recap card ($0.00 compute)
+                render_4k_itinerary_summary_card(
+                    tour_title=sb.title,
+                    day_summaries=sb.itinerary_summary,
+                    output_path=kf_file,
+                )
+                map_rendered_paths[scene.scene_index] = kf_file
+            elif getattr(scene, "is_map_transition", False) and scene.origin_coords and scene.destination_coords:
+                # Deterministic 4K cartographic map with blue route and HUD distance badges ($0.00 compute)
+                render_4k_route_map(
+                    origin_name=scene.origin_name or "Origin",
+                    dest_name=scene.destination_name or "Destination",
+                    origin_coords=(scene.origin_coords[0], scene.origin_coords[1]),
+                    dest_coords=(scene.destination_coords[0], scene.destination_coords[1]),
+                    distance_badge=scene.distance_local or "1.5 km",
+                    transit_mode=scene.transit_mode or "walk",
+                    output_path=kf_file,
+                )
+                map_rendered_paths[scene.scene_index] = kf_file
+            else:
+                kf_tasks.append((scene.visual_prompt, kf_file, ep_dir / f"fal_req_p{scene.scene_index}.json", scene.scene_index))
+
+        diff_keyframes = await visual_batch_service.render_keyframes_batch(kf_tasks) if kf_tasks else []
+        diff_map = {idx: p for (_, p, _, idx) in kf_tasks}
+        keyframe_paths = [map_rendered_paths.get(s.scene_index, diff_map.get(s.scene_index, ep_dir / f"keyframe_p{s.scene_index}.jpg")) for s in sb.scenes]
 
         if photos_only:
             from src.services.notification import notification_service
@@ -80,13 +114,19 @@ class DocumentaryProducer:
         scenes_narr = [s.narration_text for s in sb.scenes]
         scenes_dur = [s.duration_seconds for s in sb.scenes]
         
-        await doc_voice_service.synthesize_full_documentary_voiceover(
+        voice_res = await doc_voice_service.synthesize_full_documentary_voiceover(
             scenes_narration=scenes_narr,
             output_full_wav=voice_path,
             scene_durations=scenes_dur,
             language=sb.language,
             female=female_voice,
         )
+        if isinstance(voice_res, tuple):
+            voice_path, updated_durs = voice_res
+            for sc, d in zip(sb.scenes, updated_durs):
+                sc.duration_seconds = float(d)
+            scenes_dur = [s.duration_seconds for s in sb.scenes]
+            sb.total_duration = sum(scenes_dur)
 
         # Stage 3B: Optional Subtle BGM Synthesis & Low Ducking (-26dB)
         bgm_path = None
@@ -104,17 +144,64 @@ class DocumentaryProducer:
         generate_documentary_subtitles(scenes_narr, scenes_dur, srt_path)
 
         # Stage 4: 4K Perspective Drone Motion Synthesis (Gemini Directed Choreography)
-        video_clip_paths = []
         from src.scripts.local_perspective_drone import render_perspective_drone_clip
 
-        for scene, kf_path in zip(sb.scenes, keyframe_paths):
+        async def _synthesize_scene_clip(scene, kf_path: Path) -> Path:
             out_clip = ep_dir / f"motion_p{scene.scene_index}.mp4"
-            use_local = force_local_drone or (getattr(scene, "motion_engine", "local_drone") == "local_drone")
+            if out_clip.is_file() and out_clip.stat().st_size > 1000:
+                return out_clip
 
+            # Map transitions, itinerary overviews, summary recaps, and vacation scope cards are static infographics
+            is_graphic_card = (
+                getattr(scene, "is_map_transition", False)
+                or getattr(scene, "is_itinerary_summary", False)
+                or getattr(scene, "is_itinerary_overview", False)
+                or getattr(scene, "is_vacation_scope", False)
+            )
+
+            if is_graphic_card:
+                logger.info(f"doc_motion_dispatch: Scene {scene.scene_index} (Map/Card) -> Static Hold Clip ({scene.duration_seconds}s)")
+                # Generate smooth broadcast hold clip directly via ffmpeg without drone distortion
+                from src.scripts.local_perspective_drone import render_perspective_drone_clip
+                return await render_perspective_drone_clip(
+                    image_path=kf_path,
+                    output_path=out_clip,
+                    duration_seconds=scene.duration_seconds,
+                    fps=24,
+                    target_res=(3840, 2160),
+                    choreography="hold",
+                    start_pan="center",
+                    start_zoom="normal",
+                    start_tilt="center",
+                    curve="linear",
+                    rain=False,
+                    snow=False,
+                    lower_third_hud=None,
+                )
+
+            use_local = force_local_drone or (getattr(scene, "motion_engine", "local_drone") == "local_drone")
             if use_local:
                 logger.info(f"doc_motion_dispatch: Scene {scene.scene_index} -> 4K Local Perspective Drone (duration: {scene.duration_seconds}s)")
                 framing = scene.start_framing or {}
-                clip_p = await render_perspective_drone_clip(
+                attraction_name = getattr(scene, "attraction_name", None) or getattr(scene, "origin_name", None) or getattr(scene, "location_hub", None) or f"Stop {scene.scene_index}"
+                start_t = getattr(scene, "start_time", "09:00 AM") or "09:00 AM"
+                end_t = getattr(scene, "end_time", "11:30 AM") or "11:30 AM"
+                vis_dur = getattr(scene, "visit_duration", "2.0 hrs") or "2.0 hrs"
+                day_n = getattr(scene, "day_number", 1) or 1
+                cost_t = getattr(scene, "attraction_cost", None)
+                trans_dur = getattr(scene, "transit_duration", None)
+                dest_n = getattr(scene, "destination_name", None)
+                trans_t = f"{trans_dur} to {dest_n}" if (trans_dur and dest_n and dest_n != attraction_name and trans_dur != "concluded") else None
+
+                hud_data = {
+                    "attraction_name": attraction_name,
+                    "timing_text": f"🕒 {start_t} – {end_t}  ({vis_dur})",
+                    "day_badge": f"DAY {day_n} • STOP {scene.scene_index}",
+                    "cost_text": cost_t,
+                    "transit_text": trans_t,
+                }
+
+                return await render_perspective_drone_clip(
                     image_path=kf_path,
                     output_path=out_clip,
                     duration_seconds=scene.duration_seconds,
@@ -127,10 +214,9 @@ class DocumentaryProducer:
                     curve=getattr(scene, "motion_curve", "cosine"),
                     rain=(getattr(scene, "weather", "none") == "rain"),
                     snow=(getattr(scene, "weather", "none") == "snow"),
+                    lower_third_hud=hud_data,
                 )
-                video_clip_paths.append(clip_p)
             else:
-                # Dispatched to external AI video diffusion only when explicitly directed and force_local_drone is False
                 eff_model = motion_model if motion_model != "auto" else scene.recommended_model
                 logger.info(f"doc_motion_dispatch: Scene {scene.scene_index} -> AI Video {eff_model}")
                 task = MotionClipTask(
@@ -144,13 +230,26 @@ class DocumentaryProducer:
                     req_file=ep_dir / f"fal_diff_req_p{scene.scene_index}.json",
                     allow_fallback=allow_fallback,
                 )
-                res_clip = await visual_batch_service.render_motion_clip(task)
-                video_clip_paths.append(res_clip)
+                return await visual_batch_service.render_motion_clip(task)
+
+        # Concurrently synthesize all motion clips across worker threads
+        motion_coros = [_synthesize_scene_clip(sc, kp) for sc, kp in zip(sb.scenes, keyframe_paths)]
+        video_clip_paths = await asyncio.gather(*motion_coros)
 
         # Stage 5: Master Assembly & Packaging
         master_path = ep_dir / "master_4k_documentary.mp4"
         assemble_documentary_4k_master(video_clip_paths, mixed_audio, master_path, srt_path)
         yt_pkg = export_documentary_metadata_package(sb, ep_dir)
+
+        # Generate High-CTR Branded 4K YouTube Thumbnails
+        try:
+            from src.studios.documentary_studio.doc_thumbnail_service import generate_documentary_thumbnail_variants
+            thumb_pkg = generate_documentary_thumbnail_variants(sb, ep_dir, keyframe_paths)
+            if thumb_pkg:
+                yt_pkg["thumbnail_packaging"] = thumb_pkg
+                logger.info(f"high_ctr_thumbnails_created: {ep_dir.name}")
+        except Exception as ex_t:
+            logger.warning(f"failed_to_generate_tour_thumbnails: {ex_t}")
 
         await topic_memory.remember_topic(
             topic=sb.title,

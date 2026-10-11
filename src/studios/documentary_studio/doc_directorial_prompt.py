@@ -1,10 +1,26 @@
-"""Directorial Prompt Engineering for Documentary Studio Agent.
+"""Directorial Prompt Engineering for Documentary & Tour Studio Agents.
 
-Enforces 24.0 fps film cadence, authoritative voiceover narration, rich geographical/ecological lore,
-and YPP monetization compliance (Rules 11, 14, 17, 18).
+Defines separate, specialized system instructions:
+1. build_doc_directorial_prompt: Pure BBC/NatGeo wildlife & extreme environment documentaries.
+2. build_tour_directorial_prompt: City/places tour archetypes (itinerary_map_tour, grand_tour, etc.).
 """
 
 from __future__ import annotations
+
+TOUR_ARCHETYPES = {
+    "itinerary_map_tour",
+    "grand_tour",
+    "top_attractions_tour",
+    "local_neighborhood_tour",
+    "culinary_food_tour",
+    "heritage_history_tour",
+    "architecture_design_tour",
+}
+
+
+def is_tour_archetype(archetype: str) -> bool:
+    """Check if an archetype belongs to the dedicated Tour Director domain."""
+    return (archetype or "").lower().strip() in TOUR_ARCHETYPES
 
 
 def build_doc_directorial_prompt(
@@ -38,20 +54,10 @@ DOCUMENTARY DIRECTORIAL MANDATES (NON-NEGOTIABLE):
    - Target -14.0 LUFS broadcast loudness with -18.0 dB ducking during voiceover narration.
 
 4. NO MOVING OBJECTS IN KEYFRAMES (Rule 23):
-   - In all "visual_prompt" strings, create majestic static landscape and architectural compositions with ZERO moving objects (strictly NO moving trains, vehicles, cars, boats, airplanes, pedestrians, or animals).
-   - Moving objects produce smear/warp artifacts when camera perspective moves. Focus purely on timeless terrain, static architecture, empty tracks/roads, and grand vistas.
+   - In all "visual_prompt" strings, create majestic static landscape compositions with ZERO moving objects (strictly NO moving vehicles, pedestrians, or unnatural foreground artifacts).
+   - Focus purely on timeless terrain, static architecture, empty tracks/roads, and grand vistas.
 
-5. GENERIC CITY/PLACES TOURS & AUTONOMOUS ATTRACTION CURATION:
-   - Zero User Burden for Attractions: When the user enters only a city name and duration (e.g. "Oslo Tour, 2 Days" or "London Tour, 3 Days"), Gemini MUST autonomously research and curate the top famous attractions from its global travel knowledge base. Do NOT require the user to name attractions.
-   - Strict 9:00 AM to 6:00 PM Daylight Window: For all tours, schedule visits strictly between 9:00 AM and 6:00 PM local time. Frame all landmark images in crisp natural daylight (5400K-5600K) or warm late-afternoon golden hour (3500K-4500K). Strictly PROHIBIT dark night scenes, dim moonlight, or pitch-black darkness. The last attraction must conclude by 6:00 PM.
-   - Realistic Time Budgeting: Sequence attractions logically by geographic proximity and realistic visiting time (e.g. 2-3 major sights per day, grouping nearby landmarks like waterfronts or historic districts together).
-   - For "itinerary_map_tour": Divide the sequence into an ordered travel plan (e.g. Day 1: Morning, Day 1: Afternoon, Day 2: Morning). Alternate between clean, minimalist 8K illustrated topographic route map transition scenes (showing the transit route between stops) and grand architectural landmark vistas.
-   - For "grand_tour" / "top_attractions_tour": Autonomously select and sequence the city's most defining monuments and iconic viewpoints in order of cultural prominence.
-   - For "local_neighborhood_tour": Autonomously identify the city's most authentic bohemian quarters, local squares, cobblestone street corners, and artisan cafes.
-   - For "culinary_food_tour": Autonomously highlight the city's authentic historic food halls, local delicacies, and traditional markets.
-   - For "heritage_history_tour" / "architecture_design_tour": Autonomously curate the city's pivotal historic citadels and architectural masterworks across centuries.
-
-6. FLUID KINETICS & SURVIVAL REALISM (Rules 18, 20):
+5. FLUID KINETICS & SURVIVAL REALISM (Rules 18, 20):
    - For mountain/extreme climates: depictions of biting sub-zero blizzards, wind gusts carving powder drifts, weathered timber shelters.
    - For rivers/waterfalls: parallel flow camera alignment, smooth glassy currents, zero static foam blobs.
 
@@ -103,12 +109,12 @@ Return ONLY a valid JSON object matching UniversalScreenplay:
   "scenes": [
     {{
       "scene_index": 1,
-      "location_hub": "Specific Wilderness Vista",
+      "location_hub": "Specific Landmark Vista",
       "shot_type": "wide_aerial",
       "camera_rig": "{camera_motion}",
       "color_temp_kelvin": 5500,
-      "visual_prompt": "Ultra-photorealistic 8K UHD shot on RED V-Raptor 8K VV with master prime 35mm lens. Sweeping cinematic vista...",
-      "motion_prompt": "Slow aerial glide forward looking downstream/shoreward. Smooth laminar fluid movement...",
+      "visual_prompt": "Ultra-photorealistic 8K UHD shot on RED V-Raptor 8K VV with master prime 35mm lens...",
+      "motion_prompt": "Slow aerial glide forward looking downstream/shoreward...",
       "domain": "landscape_solid",
       "duration_seconds": {per_shot_dur}
     }}
@@ -123,3 +129,106 @@ Return ONLY a valid JSON object matching UniversalScreenplay:
 }}
 Do NOT output markdown backticks or preamble. Output raw JSON only.
 """
+
+
+def build_tour_directorial_prompt(
+    archetype: str,
+    custom_prompt: str,
+    duration_seconds: float,
+    num_shots: int,
+    camera_motion: str = "slow_pan",
+) -> str:
+    """Build dedicated Tour Director instructions for city/places tour archetypes."""
+    per_shot_dur = round(duration_seconds / max(1, num_shots), 1)
+
+    return f"""You are the Lead City & Travel Tour Director for CineAI Studio (Rick Steves & BBC Travel caliber).
+Synthesize an 8K broadcast-grade master tour screenplay telling an immersive, beautifully paced STORY for "{custom_prompt}".
+Conform strictly to the UniversalScreenplay JSON schema.
+
+STORYTELLING & SCENE SEQUENCE MANDATES:
+1. SCENE 1 — WELCOME & MASTER DAY PLAN INFOGRAPHIC SLIDE:
+   - "shot_type": "itinerary_overview_card", "is_itinerary_overview": true, "is_map_transition": false
+   - Narration: Warm welcome to the destination, setting up the day's story. MUST explicitly state: "We start our first attraction at 9:00 AM sharp and conclude our day at 6:00 PM...", introducing total exploration hours, lunch break, and estimated transit budget.
+   - Visual: 4K clean minimalist day plan infographic card with timetable, stops, and budget stats.
+
+2. SCENE 2 — MASTER CONNECTING ROUTE MAP (THE GEOGRAPHY):
+   - "shot_type": "overhead_cartographic", "is_map_transition": true, "is_itinerary_overview": false
+   - Narration: An aerial perspective tracing the full journey along the city's arteries/riverways from beginning to end.
+   - Visual: 4K 3D cartographic route map connecting all attractions across the city.
+
+3. ATTRACTIONS & INTERMEDIATE LEG MAPS (THE CHAPTERS):
+   - For each curated attraction (ordered geographically):
+     a. Attraction Scene: Photorealistic 8K UHD shot ("shot_type": "wide_architectural" or "monumental_architecture"). Narration delves into history, atmosphere, and architectural lore.
+     b. Intermediate Leg Map (between consecutive attractions): "shot_type": "overhead_cartographic", "is_map_transition": true. Narration tells the transition story: distance, transit mode (walk or drive/cab), duration, and estimated cost.
+
+4. FINAL ATTRACTION / COMMUNITY GEM & FAMILY SAFETY:
+   - Schedule the final stop (e.g. 5:00 PM - 6:00 PM) in a verified safe, pedestrian-only haven (marina, quiet courtyard, family square).
+   - Narration includes family safety & advisory: "Always double-check local operating hours and safety guidelines ahead of your visit."
+
+5. PENULTIMATE SCENE — VACATION SCOPE & EXTENDED HUBS SLIDE:
+   - "shot_type": "leisure_vacation_scope_card", "is_vacation_scope": true, "is_map_transition": false, "is_itinerary_summary": false
+   - Narration logic:
+     * If this is a 1-to-3 day highlight tour: Advise on how many days are ideal for a leisurely pace (e.g. 4–6 days), highlighting the extended landmarks and safest neighborhood squares/cafes viewers should explore next.
+     * If this is already an exhaustive multi-day tour (e.g. 5–7 days covering everything): Celebrate total completion! Narration: "With this comprehensive itinerary, you have covered virtually everything this historic capital has to offer at a relaxed, leisurely rhythm. We hope you enjoy an unforgettable vacation!"
+   - Visual: 4K Magazine-grade infographic slide displaying:
+     * Badge: "Recommended Stay: 4–6 Days" or "Comprehensive Complete Experience (All Major Sights Covered)"
+     * Extended highlights / Day-trip gems (e.g. Windsor Castle, Greenwich, Oxford)
+     * Safest neighborhood pedestrian squares, cafes & tea salons (e.g. Covent Garden Piazza, Neal's Yard, Marylebone High St)
+
+6. FINAL SCENE — MASTER ITINERARY RECAP SLIDE:
+   - "shot_type": "itinerary_summary_card", "is_itinerary_summary": true, "is_map_transition": false, "is_vacation_scope": false
+   - Narration: Warm sign-off summarizing the day's journey, total transit cost, and directing viewers to the interactive map link in the description.
+   - Visual: 4K Master Recap Card with stats and map link reminder.
+
+6. SPECS & MANDATORY JSON SCHEMA KEYS:
+   - "recommended_fps": 24. Paced at ~120 WPM voiceover.
+   - For every scene in "scenes", you MUST use the exact key names:
+     * "narration_text": The complete spoken voiceover text for this scene. (NEVER name it 'voiceover', 'narration', or 'audio_narration').
+     * "visual_prompt": The detailed 4K/8K visual prompt. (NEVER name it 'visual_description').
+     * "shot_type": The scene shot type.
+     * "origin_name": The exact name of the starting attraction/landmark.
+     * "destination_name": The exact name of the destination attraction/landmark.
+     * "attraction_name": Exact name of the landmark for physical stops (e.g. "Westminster Abbey", null on overview/map cards).
+     * "start_time": Scheduled start time (e.g. "09:00 AM").
+     * "end_time": Scheduled end time (e.g. "11:30 AM").
+     * "visit_duration": Planned duration (e.g. "2.5 hrs").
+     * "attraction_cost": Ticket or entry fee (e.g. "£29.00 Ticket" or "Free Entry").
+     * "duration_seconds": Scene video duration in seconds.
+
+Return ONLY valid JSON matching this schema:
+{{
+  "production_id": "TOUR-001",
+  "title": "Evocative Tour Title",
+  "story_topic": "Curated walking and transit guide",
+  "genre": "documentary",
+  "sub_genre": "itinerary_map_tour",
+  "recommended_fps": 24,
+  "aspect_ratio": "16:9",
+  "total_duration_seconds": 60.0,
+  "scenes": [
+    {{
+      "scene_index": 1,
+      "shot_type": "itinerary_overview_card",
+      "visual_prompt": "4K graphic card visual prompt...",
+      "narration_text": "Spoken narration introducing the tour...",
+      "duration_seconds": 18.0,
+      "is_itinerary_overview": true,
+      "origin_name": "Westminster Abbey",
+      "destination_name": "St Katharine Docks",
+      "attraction_name": null,
+      "start_time": "09:00 AM",
+      "end_time": "06:00 PM",
+      "visit_duration": "9.0 hrs"
+    }}
+  ]
+}}
+Do NOT output markdown backticks or preamble. Output raw JSON only.
+"""
+
+
+__all__ = [
+    "TOUR_ARCHETYPES",
+    "is_tour_archetype",
+    "build_doc_directorial_prompt",
+    "build_tour_directorial_prompt",
+]

@@ -71,7 +71,7 @@ class GeminiLLMAdapter(LLMProviderProtocol):
             body["systemInstruction"] = {"parts": [{"text": system_prompt}]}
 
         try:
-            resp = await client.post(self.base_url, headers=headers, params=params, json=body, timeout=45.0)
+            resp = await client.post(self.base_url, headers=headers, params=params, json=body, timeout=90.0)
             if resp.status_code == 200:
                 data = resp.json()
                 return data["candidates"][0]["content"]["parts"][0]["text"]
