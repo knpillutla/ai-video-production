@@ -98,17 +98,53 @@ class StudioProducer:
         map_rendered_paths = {}
         from src.services.map_route_engine import render_4k_itinerary_summary_card, render_4k_route_map
 
+        tour_stops = []
+        for idx, s in enumerate(sb.scenes):
+            if not getattr(s, "origin_coords", None) or getattr(s, "is_map_transition", False) or getattr(s, "is_itinerary_summary", False) or getattr(s, "is_itinerary_overview", False) or getattr(s, "is_vacation_scope", False) or getattr(s, "shot_type", "") in ("itinerary_overview_card", "itinerary_summary_card", "leisure_vacation_scope_card", "overhead_cartographic"):
+                continue
+            nxt_tr = next((nxt for nxt in sb.scenes[idx + 1:] if getattr(nxt, "is_map_transition", False)), None)
+            tour_stops.append({
+                "name": getattr(s, "attraction_name", None) or getattr(s, "origin_name", None) or f"Stop {idx + 1}",
+                "attraction_name": getattr(s, "attraction_name", None) or getattr(s, "origin_name", None),
+                "origin_name": getattr(s, "origin_name", None),
+                "coords": s.origin_coords,
+                "visit_duration": getattr(s, "visit_duration", None),
+                "attraction_cost": getattr(s, "attraction_cost", None),
+                "start_time": getattr(s, "start_time", None),
+                "end_time": getattr(s, "end_time", None),
+                "distance_local": getattr(nxt_tr, "distance_local", None) or getattr(s, "distance_local", None),
+                "transit_duration": getattr(nxt_tr, "transit_duration", None) or getattr(s, "transit_duration", None),
+                "transit_mode": getattr(nxt_tr, "transit_mode", None) or getattr(s, "transit_mode", None),
+                "approx_leg_cost": getattr(nxt_tr, "approx_leg_cost", None) or getattr(s, "approx_leg_cost", None),
+            })
+
         for idx, s in enumerate(sb.scenes, 1):
             target_kf = ep_dir / f"keyframe_p{idx}.jpg"
-            is_summary = getattr(s, "is_itinerary_summary", False) or getattr(s, "is_itinerary_overview", False)
-            if is_summary and getattr(sb, "itinerary_summary", None):
-                render_4k_itinerary_summary_card(
+            if getattr(s, "is_vacation_scope", False):
+                from src.services.map_route_engine import render_4k_leisure_vacation_card
+                render_4k_leisure_vacation_card(
                     tour_title=sb.title,
-                    day_summaries=sb.itinerary_summary,
                     output_path=target_kf,
+                    force_rerun=force_rerun,
+                )
+                map_rendered_paths[idx] = target_kf
+            elif (
+                idx == 1
+                or getattr(s, "is_itinerary_summary", False)
+                or getattr(s, "is_itinerary_overview", False)
+                or getattr(s, "shot_type", "") in ("itinerary_overview_card", "itinerary_summary_card")
+            ) and (getattr(sb, "itinerary_summary", None) or tour_stops):
+                from src.services.itinerary_card_engine import render_4k_itinerary_hierarchy_card
+                render_4k_itinerary_hierarchy_card(
+                    tour_title=sb.title,
+                    stops=tour_stops or [getattr(sc, "__dict__", {}) for sc in sb.scenes],
+                    output_path=target_kf,
+                    summary=sb.itinerary_summary[0] if getattr(sb, "itinerary_summary", None) else None,
+                    force_rerun=force_rerun,
                 )
                 map_rendered_paths[idx] = target_kf
             elif getattr(s, "is_map_transition", False) and getattr(s, "origin_coords", None) and getattr(s, "destination_coords", None):
+                curr_idx = 1 if idx <= 2 else 0
                 render_4k_route_map(
                     origin_name=s.origin_name or "Origin",
                     dest_name=s.destination_name or "Destination",
@@ -117,6 +153,10 @@ class StudioProducer:
                     distance_badge=s.distance_local or "1.5 km",
                     transit_mode=s.transit_mode or "walk",
                     output_path=target_kf,
+                    all_stops=tour_stops or None,
+                    tour_title=sb.title,
+                    current_stop_index=curr_idx,
+                    force_rerun=force_rerun,
                 )
                 map_rendered_paths[idx] = target_kf
             else:

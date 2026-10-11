@@ -103,7 +103,7 @@ class VisualBatchService:
         """Render batch of keyframes concurrently with disk caching and dynamic image model routing."""
         async def _process_single_keyframe(prompt: str, out_path: Path, req_file: Optional[Path], idx: int) -> Path:
             log_pipeline_step("checking keyframes", f"Shot {idx} Keyframe", "started", metadata={"file": out_path.name})
-            if not force_rerun and out_path.is_file() and out_path.stat().st_size > 1000:
+            if not force_rerun and out_path.is_file() and out_path.stat().st_size > 80_000:
                 logger.info(f"decision_keyframe_cache_hit: Shot {idx} reusing {out_path.name} ($0.00 spend)")
                 log_pipeline_step("checking keyframes", f"Shot {idx} Keyframe", "completed", "keyframe exists, keyframe not recreated", {"file": out_path.name, "size_bytes": out_path.stat().st_size, "cost": "$0.00"})
                 return out_path
@@ -113,7 +113,7 @@ class VisualBatchService:
                 if req_file and req_file.exists():
                     req_file.unlink(missing_ok=True)
 
-            model_str = (image_model or "flux_dev").lower()
+            model_str = (image_model or ("flux_dev" if self.fal_key else "gemini")).lower()
             if "imagen" in model_str or "gemini" in model_str:
                 adapter = GoogleImagen3Adapter()
                 model_display = "Gemini 2.5 Flash Image"

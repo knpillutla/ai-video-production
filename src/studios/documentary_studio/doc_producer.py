@@ -38,6 +38,7 @@ class DocumentaryProducer:
         photos_only: bool = False,
         allow_fallback: bool = False,
         force_local_drone: bool = True,
+        force_rerun: bool = False,
     ) -> Dict[str, Any]:
         """Execute 4-Stage Progressive Quality Gate with 100% Artifact Idempotency."""
         t_start = time.time()
@@ -59,6 +60,23 @@ class DocumentaryProducer:
         kf_tasks = []
         map_rendered_paths = {}
 
+        tour_stops = []
+        for i, s in enumerate(sb.scenes):
+            if not getattr(s, "origin_coords", None) or getattr(s, "is_map_transition", False) or getattr(s, "is_itinerary_summary", False) or getattr(s, "is_itinerary_overview", False) or getattr(s, "is_vacation_scope", False) or getattr(s, "shot_type", "") in ("itinerary_overview_card", "itinerary_summary_card", "leisure_vacation_scope_card", "overhead_cartographic"):
+                continue
+            nxt_tr = next((nxt for nxt in sb.scenes[i + 1:] if getattr(nxt, "is_map_transition", False)), None)
+            tour_stops.append({
+                "name": getattr(s, "attraction_name", None) or getattr(s, "origin_name", None) or f"Stop {s.scene_index}",
+                "attraction_name": getattr(s, "attraction_name", None) or getattr(s, "origin_name", None),
+                "origin_name": getattr(s, "origin_name", None), "coords": s.origin_coords,
+                "visit_duration": getattr(s, "visit_duration", None), "attraction_cost": getattr(s, "attraction_cost", None),
+                "start_time": getattr(s, "start_time", None), "end_time": getattr(s, "end_time", None),
+                "distance_local": getattr(nxt_tr, "distance_local", None) or getattr(s, "distance_local", None),
+                "transit_duration": getattr(nxt_tr, "transit_duration", None) or getattr(s, "transit_duration", None),
+                "transit_mode": getattr(nxt_tr, "transit_mode", None) or getattr(s, "transit_mode", None),
+                "approx_leg_cost": getattr(nxt_tr, "approx_leg_cost", None) or getattr(s, "approx_leg_cost", None),
+            })
+
         for scene in sb.scenes:
             kf_file = ep_dir / f"keyframe_p{scene.scene_index}.jpg"
             if getattr(scene, "is_vacation_scope", False):
@@ -66,18 +84,28 @@ class DocumentaryProducer:
                 render_4k_leisure_vacation_card(
                     tour_title=sb.title,
                     output_path=kf_file,
+                    force_rerun=force_rerun,
                 )
                 map_rendered_paths[scene.scene_index] = kf_file
-            elif getattr(scene, "is_itinerary_summary", False) and sb.itinerary_summary:
-                # Deterministic 4K master itinerary recap card ($0.00 compute)
-                render_4k_itinerary_summary_card(
+            elif (
+                scene.scene_index == 1
+                or getattr(scene, "is_itinerary_overview", False)
+                or getattr(scene, "is_itinerary_summary", False)
+                or getattr(scene, "shot_type", "") in ("itinerary_overview_card", "itinerary_summary_card")
+            ) and (sb.itinerary_summary or tour_stops):
+                # 4K Hierarchical Timeline Flowchart (stop timings, walk/drive dist/time, and Uber cost)
+                from src.services.itinerary_card_engine import render_4k_itinerary_hierarchy_card
+                render_4k_itinerary_hierarchy_card(
                     tour_title=sb.title,
-                    day_summaries=sb.itinerary_summary,
+                    stops=tour_stops or [s.__dict__ for s in sb.scenes],
                     output_path=kf_file,
+                    summary=sb.itinerary_summary[0] if sb.itinerary_summary else None,
+                    force_rerun=force_rerun,
                 )
                 map_rendered_paths[scene.scene_index] = kf_file
             elif getattr(scene, "is_map_transition", False) and scene.origin_coords and scene.destination_coords:
-                # Deterministic 4K cartographic map with blue route and HUD distance badges ($0.00 compute)
+                # 4K Google Maps route: complete circuit, green up to current stop, blue upcoming
+                curr_idx = 1 if scene.scene_index <= 2 else 0
                 render_4k_route_map(
                     origin_name=scene.origin_name or "Origin",
                     dest_name=scene.destination_name or "Destination",
@@ -86,12 +114,16 @@ class DocumentaryProducer:
                     distance_badge=scene.distance_local or "1.5 km",
                     transit_mode=scene.transit_mode or "walk",
                     output_path=kf_file,
+                    all_stops=tour_stops or None,
+                    tour_title=sb.title,
+                    current_stop_index=curr_idx,
+                    force_rerun=force_rerun,
                 )
                 map_rendered_paths[scene.scene_index] = kf_file
             else:
                 kf_tasks.append((scene.visual_prompt, kf_file, ep_dir / f"fal_req_p{scene.scene_index}.json", scene.scene_index))
 
-        diff_keyframes = await visual_batch_service.render_keyframes_batch(kf_tasks) if kf_tasks else []
+        diff_keyframes = await visual_batch_service.render_keyframes_batch(kf_tasks, force_rerun=force_rerun) if kf_tasks else []
         diff_map = {idx: p for (_, p, _, idx) in kf_tasks}
         keyframe_paths = [map_rendered_paths.get(s.scene_index, diff_map.get(s.scene_index, ep_dir / f"keyframe_p{s.scene_index}.jpg")) for s in sb.scenes]
 
@@ -252,11 +284,8 @@ class DocumentaryProducer:
             logger.warning(f"failed_to_generate_tour_thumbnails: {ex_t}")
 
         await topic_memory.remember_topic(
-            topic=sb.title,
-            genre=f"doc_{sb.genre.value}",
-            tags=[sb.genre.value, "documentary", sb.language],
-            story_synopsis=f"4K Documentary on {sb.title} ({len(sb.scenes)} scenes)",
-            episode_id=ep_dir.name,
+            topic=sb.title, genre=f"doc_{sb.genre.value}", tags=[sb.genre.value, "documentary", sb.language],
+            story_synopsis=f"4K Documentary on {sb.title} ({len(sb.scenes)} scenes)", episode_id=ep_dir.name,
         )
 
         render_time = round(time.time() - t_start, 2)

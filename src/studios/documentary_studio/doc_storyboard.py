@@ -324,12 +324,12 @@ async def generate_documentary_storyboard_gemini(
             raw_scenes = data["scenes"] if tour_mode else data["scenes"][:num_scenes]
             itinerary_summary = data.get("itinerary_summary")
 
-            # Deterministically ensure attraction names, GPS coordinates, and timings ONLY for tour archetypes
+            # Strict Zero-Fallback Validation ONLY for tour archetypes
             if tour_mode:
-                from src.studios.documentary_studio.doc_tour_normalizer import normalize_tour_scenes
-                raw_scenes, default_summary = normalize_tour_scenes(raw_scenes, city_hint=str(effective_theme))
-                if not itinerary_summary:
-                    itinerary_summary = default_summary
+                from src.studios.documentary_studio.doc_tour_validator import validate_tour_screenplay_contract
+                validate_tour_screenplay_contract(data)
+                raw_scenes = data["scenes"]
+                itinerary_summary = data.get("itinerary_summary")
 
             doc_scenes = []
             for idx, sc in enumerate(raw_scenes):
@@ -339,6 +339,16 @@ async def generate_documentary_storyboard_gemini(
                 m_prompt = sc.get("motion_prompt") or sc.get("camera_movement_description") or sc.get("camera_movement", "")
                 n_text = sc.get("narration_text") or sc.get("narration") or sc.get("audio_narration") or sc.get("voiceover") or ""
                 loc_hub = sc.get("location_hub") or sc.get("scene_title") or sc.get("landmark_name") or sc.get("title") or "Scenic Vista"
+
+                shot_type_val = str(sc.get("shot_type", "")).lower()
+                is_tour_overview = bool(sc.get("is_itinerary_overview", False) or (tour_mode and (idx == 0 and "overview" in shot_type_val)))
+                is_tour_summary = bool(sc.get("is_itinerary_summary", False) or (tour_mode and (idx == len(raw_scenes) - 1 and "summary" in shot_type_val)))
+                is_tour_vacation = bool(sc.get("is_vacation_scope", False) or (tour_mode and "vacation" in shot_type_val))
+                is_map_trans = bool(sc.get("is_map_transition", False) or (tour_mode and any(k in shot_type_val for k in ("map", "transition", "cartographic"))))
+
+                attr_name = sc.get("attraction_name")
+                if not attr_name and not (is_map_trans or is_tour_overview or is_tour_summary or is_tour_vacation):
+                    attr_name = sc.get("origin_name")
 
                 doc_scenes.append(
                     DocScene(
@@ -355,8 +365,8 @@ async def generate_documentary_storyboard_gemini(
                         start_framing=sc.get("start_framing"),
                         motion_curve=sc.get("motion_curve", "cosine"),
                         weather=sc.get("weather", "none"),
-                        is_map_transition=bool(sc.get("is_map_transition", False)),
-                        attraction_name=sc.get("attraction_name") or (sc.get("origin_name") if not sc.get("is_map_transition") and not sc.get("is_itinerary_overview") and not sc.get("is_itinerary_summary") and not sc.get("is_vacation_scope") else None),
+                        is_map_transition=is_map_trans,
+                        attraction_name=attr_name,
                         origin_name=sc.get("origin_name") or sc.get("scene_title"),
                         destination_name=sc.get("destination_name"),
                         origin_coords=sc.get("origin_coords"),
@@ -369,9 +379,9 @@ async def generate_documentary_storyboard_gemini(
                         visit_duration=sc.get("visit_duration"),
                         transit_duration=sc.get("transit_duration"),
                         attraction_cost=sc.get("attraction_cost"),
-                        is_itinerary_overview=bool(sc.get("is_itinerary_overview", False) or idx == 0),
-                        is_itinerary_summary=bool(sc.get("is_itinerary_summary", False) or idx == len(raw_scenes) - 1),
-                        is_vacation_scope=bool(sc.get("is_vacation_scope", False)),
+                        is_itinerary_overview=is_tour_overview,
+                        is_itinerary_summary=is_tour_summary,
+                        is_vacation_scope=is_tour_vacation,
                     )
                 )
 

@@ -495,6 +495,7 @@ def normalize_tour_scenes(
         if att and att not in distinct_physical_attractions:
             distinct_physical_attractions.append(att)
 
+    # Use Gemini's root itinerary_summary directly if provided, preserving the model's exact numbers
     summary_card = [
         {
             "day": 1,
@@ -517,3 +518,71 @@ def normalize_tour_scenes(
     ]
 
     return normalized, summary_card
+
+
+def validate_tour_screenplay_contract(data: Dict[str, Any]) -> None:
+    """Enforces strict, zero-fallback contract validation for Tour Archetype screenplays.
+    
+    Raises ValueError immediately if Gemini failed to output mandatory tour elements
+    (itinerary_summary, GPS coordinates, visit durations, ticket/entry costs, or transit).
+    """
+    if not isinstance(data, dict):
+        raise ValueError(f"Tour Contract Violation: Screenplay payload is not a dictionary (got {type(data)}).")
+
+    scenes = data.get("scenes")
+    if not scenes or not isinstance(scenes, list) or len(scenes) < 2:
+        raise ValueError(f"Tour Contract Violation: Tour must have at least 2 scenes (got {len(scenes) if isinstance(scenes, list) else 0}).")
+
+    # 1. Enforce root itinerary_summary presence
+    summary = data.get("itinerary_summary")
+    if not summary or not isinstance(summary, list) or len(summary) < 1:
+        raise ValueError(
+            "Tour Contract Violation: Root 'itinerary_summary' is missing or empty. "
+            "Gemini must supply the master daily breakdown with total_attraction_time, total_travel_time, "
+            "total_walk_time, total_drive_time, and total_travel_cost."
+        )
+
+    sum_card = summary[0]
+    required_summary_keys = (
+        "total_attraction_time",
+        "total_travel_time",
+        "total_travel_cost",
+    )
+    missing_summary = [k for k in required_summary_keys if not sum_card.get(k)]
+    if missing_summary:
+        raise ValueError(f"Tour Contract Violation: 'itinerary_summary' missing required metrics: {missing_summary}")
+
+    # 2. Enforce Scene-by-Scene Contract for Physical Landmarks
+    for idx, sc in enumerate(scenes, 1):
+        is_card = bool(
+            sc.get("is_map_transition")
+            or sc.get("is_itinerary_overview")
+            or sc.get("is_itinerary_summary")
+            or sc.get("is_vacation_scope")
+            or any(w in str(sc.get("shot_type", "")).lower() for w in ("card", "overview", "map", "transition", "cartographic", "vacation", "summary"))
+        )
+
+        # Basic mandates for ALL scenes
+        if not sc.get("narration_text") and not sc.get("visual_prompt") and not sc.get("visual_description"):
+            raise ValueError(f"Tour Contract Violation in Scene {idx}: Missing narration_text and visual_prompt.")
+
+        # Coordinate checks
+        origin_coords = sc.get("origin_coords")
+        if not origin_coords or not isinstance(origin_coords, (list, tuple)) or len(origin_coords) < 2:
+            raise ValueError(
+                f"Tour Contract Violation in Scene {idx} ('{sc.get('origin_name', 'Unnamed')}'): "
+                f"'origin_coords' is missing or invalid (expected [lat, lon] floats, got {origin_coords}). "
+                "Gemini must supply exact GPS coordinates for all tour stops."
+            )
+
+        # Landmark-specific mandates
+        if not is_card:
+            if not sc.get("attraction_name") and not sc.get("origin_name"):
+                raise ValueError(f"Tour Contract Violation in Scene {idx}: Landmark scene missing 'attraction_name'.")
+            if not sc.get("visit_duration") and not sc.get("duration_seconds"):
+                raise ValueError(f"Tour Contract Violation in Scene {idx}: Landmark scene missing 'visit_duration'.")
+            if not sc.get("attraction_cost"):
+                raise ValueError(
+                    f"Tour Contract Violation in Scene {idx} ('{sc.get('attraction_name') or sc.get('origin_name')}'): "
+                    "Missing 'attraction_cost' (e.g. '£29.00 Ticket', 'Free Entry', or entry fee)."
+                )

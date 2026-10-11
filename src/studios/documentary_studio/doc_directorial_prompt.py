@@ -146,54 +146,68 @@ Synthesize an 8K broadcast-grade master tour screenplay telling an immersive, be
 Conform strictly to the UniversalScreenplay JSON schema.
 
 STORYTELLING & SCENE SEQUENCE MANDATES:
-1. SCENE 1 — WELCOME & MASTER DAY PLAN INFOGRAPHIC SLIDE:
+1. SCENE 1 — WELCOME & MASTER TRIP OVERVIEW (OPTION 1 MULTI-DAY ARCHITECTURE):
    - "shot_type": "itinerary_overview_card", "is_itinerary_overview": true, "is_map_transition": false
-   - Narration: Warm welcome to the destination, setting up the day's story. MUST explicitly state: "We start our first attraction at 9:00 AM sharp and conclude our day at 6:00 PM...", introducing total exploration hours, lunch break, and estimated transit budget.
-   - Visual: 4K clean minimalist day plan infographic card with timetable, stops, and budget stats.
+   - Multi-Day Architecture: If tour spans multiple days, Scene 1 is a Master Multi-Day Trip Overview Card summarizing all days side-by-side. Each subsequent Day chapter then begins with its own dedicated 4K Timeline Flowchart Card. For single-day tours, Scene 1 is the 4K Day Plan Flowchart Card.
+   - Narration: Warm welcome introducing overall exploration hours, lunch breaks, and transit budget.
 
-2. SCENE 2 — MASTER CONNECTING ROUTE MAP (THE GEOGRAPHY):
+2. DAY CONNECTING ROUTE MAP (GOOGLE MAPS CARTOGRAPHY):
    - "shot_type": "overhead_cartographic", "is_map_transition": true, "is_itinerary_overview": false
-   - Narration: An aerial perspective tracing the full journey along the city's arteries/riverways from beginning to end.
-   - Visual: 4K 3D cartographic route map connecting all attractions across the city.
+   - Visual: 4K Google Maps route connecting all attractions across the city with glowing route line, numbered pins, and landmark tags.
 
-3. ATTRACTIONS & INTERMEDIATE LEG MAPS (THE CHAPTERS):
-   - For each curated attraction (ordered geographically):
-     a. Attraction Scene: Photorealistic 8K UHD shot ("shot_type": "wide_architectural" or "monumental_architecture"). Narration delves into history, atmosphere, and architectural lore.
-     b. Intermediate Leg Map (between consecutive attractions): "shot_type": "overhead_cartographic", "is_map_transition": true. Narration tells the transition story: distance, transit mode (walk or drive/cab), duration, and estimated cost.
+3. ATTRACTIONS & CINEMATIC CAMERA CHOREOGRAPHY (HIGH-CTR CAMERA MANDATES):
+   - For each physical attraction ("shot_type": "wide_architectural" or "monumental_architecture"), direct photorealistic 8K cinematic footage:
+     * Center-Locked POI Orbit: Slow 360° circular tracking keeping the landmark center-framed with smooth optical parallax.
+     * Hero Dolly Push-In: Low-angle slow forward dolly toward the main facade emphasizing architectural scale.
+     * Rising Crane Ascent: Vertical pedestal lift revealing the monument against the historic cityscape.
+     * Foreplane Parallax Reveal: Slow tracking past historic archways or trees revealing the vista.
+     * Natural crisp daylight (5500K), zero static locked-off shots.
 
-4. FINAL ATTRACTION / COMMUNITY GEM & FAMILY SAFETY:
-   - Schedule the final stop (e.g. 5:00 PM - 6:00 PM) in a verified safe, pedestrian-only haven (marina, quiet courtyard, family square).
-   - Narration includes family safety & advisory: "Always double-check local operating hours and safety guidelines ahead of your visit."
+4. INTERMEDIATE LEG MAPS & TRANSIT RULES:
+   - Between consecutive stops: "shot_type": "overhead_cartographic", "is_map_transition": true.
+   - Legs <= 10 mins: Transit mode "walk", walk duration & distance, strictly NO Uber/cab cost.
+   - Legs > 10 mins: Transit mode "drive", drive duration & distance, with realistic Uber/cab cost.
 
-5. PENULTIMATE SCENE — VACATION SCOPE & EXTENDED HUBS SLIDE:
-   - "shot_type": "leisure_vacation_scope_card", "is_vacation_scope": true, "is_map_transition": false, "is_itinerary_summary": false
-   - Narration logic:
-     * If this is a 1-to-3 day highlight tour: Advise on how many days are ideal for a leisurely pace (e.g. 4–6 days), highlighting the extended landmarks and safest neighborhood squares/cafes viewers should explore next.
-     * If this is already an exhaustive multi-day tour (e.g. 5–7 days covering everything): Celebrate total completion! Narration: "With this comprehensive itinerary, you have covered virtually everything this historic capital has to offer at a relaxed, leisurely rhythm. We hope you enjoy an unforgettable vacation!"
-   - Visual: 4K Magazine-grade infographic slide displaying:
-     * Badge: "Recommended Stay: 4–6 Days" or "Comprehensive Complete Experience (All Major Sights Covered)"
-     * Extended highlights / Day-trip gems (e.g. Windsor Castle, Greenwich, Oxford)
-     * Safest neighborhood pedestrian squares, cafes & tea salons (e.g. Covent Garden Piazza, Neal's Yard, Marylebone High St)
+5. FINAL ATTRACTION / COMMUNITY GEM & FAMILY SAFETY:
+   - Conclude in a verified pedestrian haven (marina, quiet square). Include family safety advisory.
 
-6. FINAL SCENE — MASTER ITINERARY RECAP SLIDE:
-   - "shot_type": "itinerary_summary_card", "is_itinerary_summary": true, "is_map_transition": false, "is_vacation_scope": false
-   - Narration: Warm sign-off summarizing the day's journey, total transit cost, and directing viewers to the interactive map link in the description.
-   - Visual: 4K Master Recap Card with stats and map link reminder.
+6. PENULTIMATE & FINAL CARDS (RECAP TABLE & LEISURE GUIDE):
+   - Penultimate: "itinerary_summary_card" 4K Master Recap Table summarizing stops, transit specs, and total budget.
+   - Final: "leisure_vacation_scope_card" 4K Leisurely Travel Guide (recommended multi-day leisure pace, regional day trips, safest squares).
 
-6. SPECS & MANDATORY JSON SCHEMA KEYS:
+7. SPECS & MANDATORY JSON SCHEMA KEYS FOR TOURS:
    - "recommended_fps": 24. Paced at ~120 WPM voiceover.
-   - For every scene in "scenes", you MUST use the exact key names:
-     * "narration_text": The complete spoken voiceover text for this scene. (NEVER name it 'voiceover', 'narration', or 'audio_narration').
-     * "visual_prompt": The detailed 4K/8K visual prompt. (NEVER name it 'visual_description').
+   - For any city, town, or village worldwide (major capitals or remote regional gems), you MUST use your comprehensive world knowledge to supply real coordinates, authentic currency, real admission prices, and realistic transit times.
+   - Root-Level "itinerary_summary" is STRICTLY MANDATORY (list with 1 element for 1-day tours):
+     * "day": 1
+     * "day_title": "Day 1: Historic Highlights & Cultural Heritage"
+     * "attractions": List of all physical landmarks visited (ordered)
+     * "total_attraction_time": Sum of hours spent exploring physical landmarks (e.g. "6.5 hrs")
+     * "total_travel_time": Total transit hours (e.g. "1.0 hr")
+     * "total_walk_time": Total walking minutes (e.g. "35 mins")
+     * "total_drive_time": Total cab/transit minutes (e.g. "25 mins")
+     * "transit_distance": Total circuit distance (e.g. "5.2 km circuit")
+     * "total_travel_cost": Total estimated transit cost in local currency with USD approx (e.g. "£24–£34 (~$45 USD)" or "€18–€25 (~$22 USD)")
+     * "meal_break": e.g. "1.0 hr Lunch Break"
+
+   - In "scenes", every scene MUST contain:
+     * "narration_text": The complete spoken voiceover text for this scene.
+     * "visual_prompt": The detailed 4K/8K visual prompt.
      * "shot_type": The scene shot type.
-     * "origin_name": The exact name of the starting attraction/landmark.
-     * "destination_name": The exact name of the destination attraction/landmark.
-     * "attraction_name": Exact name of the landmark for physical stops (e.g. "Westminster Abbey", null on overview/map cards).
+     * "origin_name": Starting location/landmark.
+     * "destination_name": Next destination location/landmark.
+     * "origin_coords": Exact [latitude, longitude] float array for origin (e.g. [51.4994, -0.1273]). NEVER null.
+     * "destination_coords": Exact [latitude, longitude] float array for destination (e.g. [51.5055, -0.0910]). NEVER null.
+     * "distance_local": Realistic distance between origin and destination (e.g. "2.6 km").
+     * "transit_mode": "walk" if <= 1.0 km, otherwise "drive" or transit.
+     * "transit_duration": e.g. "8 min walk" or "12 min cab" (or "concluded" on last stop).
+     * "approx_leg_cost": Estimated transit cost for this leg (e.g. "Free (walk)" or "£8–£12 Uber").
+     * "attraction_name": Name of the landmark on physical landmark stops; null on map/overview cards.
      * "start_time": Scheduled start time (e.g. "09:00 AM").
-     * "end_time": Scheduled end time (e.g. "11:30 AM").
-     * "visit_duration": Planned duration (e.g. "2.5 hrs").
-     * "attraction_cost": Ticket or entry fee (e.g. "£29.00 Ticket" or "Free Entry").
-     * "duration_seconds": Scene video duration in seconds.
+     * "end_time": Scheduled departure time (e.g. "11:30 AM").
+     * "visit_duration": Duration at landmark (e.g. "2.5 hrs").
+     * "attraction_cost": Real ticket/entry fee in local currency (e.g. "£29.00 Ticket", "Free Entry", "€18.00 Ticket").
+     * "duration_seconds": Video duration in seconds.
 
 Return ONLY valid JSON matching this schema:
 {{
@@ -205,6 +219,20 @@ Return ONLY valid JSON matching this schema:
   "recommended_fps": 24,
   "aspect_ratio": "16:9",
   "total_duration_seconds": 60.0,
+  "itinerary_summary": [
+    {{
+      "day": 1,
+      "day_title": "Day 1 Highlights",
+      "attractions": ["Westminster Abbey", "Borough Market", "Tower of London", "St Katharine Docks"],
+      "total_attraction_time": "6.5 hrs",
+      "total_travel_time": "1.0 hr",
+      "total_walk_time": "35 mins",
+      "total_drive_time": "25 mins",
+      "transit_distance": "5.2 km circuit",
+      "total_travel_cost": "£24–£34 (~$45 USD)",
+      "meal_break": "1.0 hr Lunch Break"
+    }}
+  ],
   "scenes": [
     {{
       "scene_index": 1,
@@ -215,10 +243,17 @@ Return ONLY valid JSON matching this schema:
       "is_itinerary_overview": true,
       "origin_name": "Westminster Abbey",
       "destination_name": "St Katharine Docks",
+      "origin_coords": [51.4994, -0.1273],
+      "destination_coords": [51.5068, -0.0715],
+      "distance_local": "5.2 km",
+      "transit_mode": "walk",
+      "transit_duration": "10 min cab",
+      "approx_leg_cost": "£24–£34 (~$45 USD)",
       "attraction_name": null,
       "start_time": "09:00 AM",
       "end_time": "06:00 PM",
-      "visit_duration": "9.0 hrs"
+      "visit_duration": "9.0 hrs",
+      "attraction_cost": null
     }}
   ]
 }}

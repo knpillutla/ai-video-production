@@ -23,6 +23,15 @@ class Settings:
     storage: StorageSettings = field(default_factory=StorageSettings)
     artifacts: ArtifactProfile = field(default_factory=get_artifact_profile)
 
+    @property
+    def GOOGLE_MAPS_API_KEY(self) -> str:
+        """API key for Google Maps Platform Static Maps & Directions."""
+        return self.media.google_maps_api_key or self.llm.google_api_key or self.llm.gemini_api_key
+
+    @property
+    def google_maps_api_key(self) -> str:
+        return self.GOOGLE_MAPS_API_KEY
+
 
 # Authoritative singleton settings instance
 settings = Settings()

@@ -8,6 +8,7 @@ class MediaSettings(BaseSettings):
 
     together_api_key: str = ""
     suno_api_key: str = ""
+    google_maps_api_key: str = ""
 
 
     default_image_model: str = "fal-ai/flux/dev"
