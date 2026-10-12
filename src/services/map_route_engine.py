@@ -38,7 +38,7 @@ def render_4k_route_map(
     ]
     title = tour_title or f"{origin_name} to {dest_name}"
 
-    if current_stop_index <= 1 and all_stops:
+    if (current_stop_index is None or current_stop_index <= 0) and all_stops:
         d_lower = (dest_name or "").lower()
         for idx, s in enumerate(all_stops):
             s_name = (s.get("name") or s.get("attraction_name") or "").lower()
@@ -48,6 +48,7 @@ def render_4k_route_map(
             ):
                 current_stop_index = idx + 1
                 break
+    curr_idx = max(1, current_stop_index if current_stop_index is not None else 1)
 
     return render_4k_google_itinerary_map(
         tour_title=title,
@@ -56,7 +57,7 @@ def render_4k_route_map(
         distance_badge=distance_badge,
         transit_mode=transit_mode,
         target_res=target_res,
-        current_stop_index=current_stop_index,
+        current_stop_index=curr_idx,
         force_rerun=force_rerun,
     )
 

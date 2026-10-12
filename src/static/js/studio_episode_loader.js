@@ -73,23 +73,25 @@ function populateProductionControlsFromEpisode(rawVid) {
   if (typeof setPipelineExecutionMode === "function") setPipelineExecutionMode(effStrategy === "auto" ? "auto" : "manual");
 
   // 8. Shot Count
-  let shotCount = 1;
-  if (inputs.num_shots && inputs.num_shots > 0) shotCount = inputs.num_shots;
-  else if (vid.numShots && vid.numShots > 0) shotCount = vid.numShots;
-  else if (Array.isArray(vid.scenes) && vid.scenes.length > 0) shotCount = vid.scenes.length;
-  else if (Array.isArray(screenplay.scenes) && screenplay.scenes.length > 0) shotCount = screenplay.scenes.length;
-  else if (Array.isArray(vid.keyframes) && vid.keyframes.length > 0) shotCount = vid.keyframes.length;
+  const isDocOrTour = (typeof isTravelOrSkylineChannel === "function" && isTravelOrSkylineChannel()) ||
+                      (vid.genre && (vid.genre === "documentary" || vid.genre.startsWith("travel"))) ||
+                      (vid.primary_archetype && vid.primary_archetype.includes("tour"));
+  let shotCount = -1;
+  if (!isDocOrTour) {
+    if (inputs.num_shots && inputs.num_shots > 0) shotCount = inputs.num_shots;
+    else if (vid.numShots && vid.numShots > 0) shotCount = vid.numShots;
+  }
 
   const testShotsSel = document.getElementById("studio-test-shots");
   if (testShotsSel) {
-    const val = (inputs.num_shots === -1 || vid.num_shots === -1) ? "-1" : String(shotCount);
-    testShotsSel.value = (Array.from(testShotsSel.options).some(o => o.value === val)) ? val : String(Math.min(4, Math.max(1, shotCount)));
+    const val = (isDocOrTour || inputs.num_shots === -1 || vid.num_shots === -1 || vid.numShots === -1) ? "-1" : String(shotCount);
+    testShotsSel.value = (Array.from(testShotsSel.options).some(o => o.value === val)) ? val : "-1";
     if (typeof setTestShots === "function") setTestShots(testShotsSel.value);
   }
   const prodShotsSel = document.getElementById("studio-prod-shots");
   if (prodShotsSel) {
-    const val = (inputs.num_shots === -1 || vid.num_shots === -1) ? "-1" : String(shotCount);
-    prodShotsSel.value = (Array.from(prodShotsSel.options).some(o => o.value === val)) ? val : String(Math.min(4, Math.max(1, shotCount)));
+    const val = (isDocOrTour || inputs.num_shots === -1 || vid.num_shots === -1 || vid.numShots === -1) ? "-1" : String(shotCount);
+    prodShotsSel.value = (Array.from(prodShotsSel.options).some(o => o.value === val)) ? val : "-1";
   }
 
   // 9. Duration & Stretch Hours Selectors (Test & Prod)

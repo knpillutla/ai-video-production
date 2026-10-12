@@ -53,6 +53,20 @@ class DocumentaryVoiceService:
         lang_voices = VOICE_MAP.get(lang_key, VOICE_MAP["en"])
         return lang_voices.get(gender_key, lang_voices["male"])
 
+    def get_speech_cadence(self, language: str = "en", female: bool = False) -> Tuple[int, float, str]:
+        """Returns calibrated (wpm, words_per_second, provider_and_voice_desc)."""
+        voice_id, _ = self.get_voice_details(language=language, female=female)
+        lang_key = language.lower().split("-")[0]
+        cadence_matrix = {
+            "en": (118, 1.96) if not female else (122, 2.03),
+            "en-us": (135, 2.25),
+            "te": (105, 1.75),
+            "hi": (110, 1.83),
+            "es": (125, 2.08),
+        }
+        wpm, wps = cadence_matrix.get(lang_key, (120, 2.0))
+        return wpm, round(wps, 2), f"Azure Speech Neural ({voice_id})"
+
     async def synthesize_scene_narration(
         self,
         text: str,

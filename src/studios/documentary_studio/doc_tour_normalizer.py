@@ -147,15 +147,15 @@ def calculate_geodesic_distance_km(coords1: List[float], coords2: List[float]) -
 
 
 def determine_transit_specs(dist_km: float) -> Tuple[str, str]:
-    """Deterministically decide transit mode and duration. Walk if <= 1.0 km, otherwise drive/taxi."""
+    """Deterministically decide transit mode and duration. Walk if <= 0.8 km (<=10 mins), otherwise drive/taxi."""
     if dist_km <= 0.05:
         return "walk", "adjacent"
-    if dist_km <= 1.0:
-        minutes = max(4, round(dist_km * 12.0))
+    if dist_km <= 0.8:
+        minutes = min(10, max(3, round(dist_km * 12.0)))
         return "walk", f"{minutes} min walk"
     else:
-        # Drive / taxi / rideshare for distances > 1.0 km to save sightseeing time
-        minutes = max(6, round(dist_km * 3.5) + 3)
+        # Drive / taxi / rideshare for distances > 0.8 km (walk > 10 mins) to save sightseeing time
+        minutes = max(5, round(dist_km * 3.5) + 3)
         return "drive", f"{minutes} min cab"
 
 
@@ -552,14 +552,31 @@ def validate_tour_screenplay_contract(data: Dict[str, Any]) -> None:
     if missing_summary:
         raise ValueError(f"Tour Contract Violation: 'itinerary_summary' missing required metrics: {missing_summary}")
 
+    # Pre-scan landmarks for first and last coordinates
+    first_coords, last_coords = None, None
+    for s in scenes:
+        if isinstance(s, dict) and not (s.get("is_itinerary_overview") or s.get("is_itinerary_summary")):
+            c_orig = s.get("origin_coords")
+            c_dest = s.get("destination_coords")
+            if isinstance(c_orig, (list, tuple)) and len(c_orig) >= 2 and first_coords is None:
+                first_coords = c_orig
+            if isinstance(c_dest, (list, tuple)) and len(c_dest) >= 2:
+                last_coords = c_dest
+            elif isinstance(c_orig, (list, tuple)) and len(c_orig) >= 2 and last_coords is None:
+                last_coords = c_orig
+
     # 2. Enforce Scene-by-Scene Contract for Physical Landmarks
     for idx, sc in enumerate(scenes, 1):
-        is_card = bool(
-            sc.get("is_map_transition")
-            or sc.get("is_itinerary_overview")
+        shot_type_str = str(sc.get("shot_type", "")).lower()
+        is_info_slide = bool(
+            sc.get("is_itinerary_overview")
             or sc.get("is_itinerary_summary")
             or sc.get("is_vacation_scope")
-            or any(w in str(sc.get("shot_type", "")).lower() for w in ("card", "overview", "map", "transition", "cartographic", "vacation", "summary"))
+            or any(w in shot_type_str for w in ("overview", "summary", "vacation"))
+        )
+        is_card = is_info_slide or bool(
+            sc.get("is_map_transition")
+            or any(w in shot_type_str for w in ("card", "map", "transition", "cartographic"))
         )
 
         # Basic mandates for ALL scenes
@@ -567,13 +584,21 @@ def validate_tour_screenplay_contract(data: Dict[str, Any]) -> None:
             raise ValueError(f"Tour Contract Violation in Scene {idx}: Missing narration_text and visual_prompt.")
 
         # Coordinate checks
-        origin_coords = sc.get("origin_coords")
-        if not origin_coords or not isinstance(origin_coords, (list, tuple)) or len(origin_coords) < 2:
-            raise ValueError(
-                f"Tour Contract Violation in Scene {idx} ('{sc.get('origin_name', 'Unnamed')}'): "
-                f"'origin_coords' is missing or invalid (expected [lat, lon] floats, got {origin_coords}). "
-                "Gemini must supply exact GPS coordinates for all tour stops."
-            )
+        if is_info_slide:
+            if not sc.get("origin_coords") and first_coords:
+                sc["origin_coords"] = first_coords
+            if not sc.get("destination_coords") and last_coords:
+                sc["destination_coords"] = last_coords
+        else:
+            origin_coords = sc.get("origin_coords")
+            if not origin_coords or not isinstance(origin_coords, (list, tuple)) or len(origin_coords) < 2:
+                raise ValueError(
+                    f"Tour Contract Violation in Scene {idx} ('{sc.get('origin_name', 'Unnamed')}'): "
+                    f"'origin_coords' is missing or invalid (expected [lat, lon] floats, got {origin_coords}). "
+                    "Gemini must supply exact GPS coordinates for all tour stops."
+                )
+            if not sc.get("destination_coords") or not isinstance(sc.get("destination_coords"), (list, tuple)):
+                sc["destination_coords"] = origin_coords
 
         # Landmark-specific mandates
         if not is_card:

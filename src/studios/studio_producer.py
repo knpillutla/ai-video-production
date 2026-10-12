@@ -144,7 +144,7 @@ class StudioProducer:
                 )
                 map_rendered_paths[idx] = target_kf
             elif getattr(s, "is_map_transition", False) and getattr(s, "origin_coords", None) and getattr(s, "destination_coords", None):
-                curr_idx = 1 if idx <= 2 else 0
+                prior_attrs = sum(1 for ps in sb.scenes[:idx - 1] if not (getattr(ps, "is_map_transition", False) or getattr(ps, "is_itinerary_overview", False) or getattr(ps, "is_itinerary_summary", False) or getattr(ps, "is_vacation_scope", False)))
                 render_4k_route_map(
                     origin_name=s.origin_name or "Origin",
                     dest_name=s.destination_name or "Destination",
@@ -155,7 +155,7 @@ class StudioProducer:
                     output_path=target_kf,
                     all_stops=tour_stops or None,
                     tour_title=sb.title,
-                    current_stop_index=curr_idx,
+                    current_stop_index=max(1, prior_attrs),
                     force_rerun=force_rerun,
                 )
                 map_rendered_paths[idx] = target_kf
@@ -233,7 +233,8 @@ class StudioProducer:
 
         # Stage 4: Motion Diffusion Gate (Parallel AI Video Diffusion with In-Flight Token Resumption)
         existing_vids = [ep_dir / f"motion_p{idx}.mp4" for idx in range(1, len(sb.scenes) + 1)]
-        all_motion_exist = all(p.is_file() and p.stat().st_size > 1000 for p in existing_vids)
+        from src.services.ambient_export_service import get_media_duration
+        all_motion_exist = all(p.is_file() and p.stat().st_size > 1000 and abs(get_media_duration(p) - float(getattr(sb.scenes[i - 1], "duration_seconds", 0.0) or 0.0)) <= 1.0 for i, p in enumerate(existing_vids, 1))
 
         if (audio_only or master_only) and all_motion_exist and not (force_rerun and motion_only):
             logger.info(f"downstream_stage_reuse_motion: episode='{ep_dir.name}' reusing {len(existing_vids)} existing motion clips ($0 spend)")
@@ -252,6 +253,9 @@ class StudioProducer:
 
             for idx, (s, kf) in enumerate(zip(sb.scenes, valid_keyframes), 1):
                 out_clip = ep_dir / f"motion_p{idx}.mp4"
+                if not force_rerun and out_clip.is_file() and out_clip.stat().st_size > 1000 and abs(get_media_duration(out_clip) - float(getattr(s, "duration_seconds", 0.0) or 0.0)) <= 1.0:
+                    video_clips.append(out_clip)
+                    continue
                 is_tour_slide = (
                     getattr(s, "is_itinerary_summary", False)
                     or getattr(s, "is_itinerary_overview", False)

@@ -49,7 +49,7 @@ async def execute_directorial_screenplay(
     logger.info(f"gemini_screenplay_engine_request: tier='{eff_tier}' genre='{genre}' archetype='{primary_archetype}' search={google_search_enabled}")
 
     try:
-        resp = await client.post(url, json=payload, timeout=120.0)
+        resp = await client.post(url, json=payload, timeout=180.0)
     except Exception as net_err:
         err_desc = f"{type(net_err).__name__}: {net_err}" if str(net_err) else type(net_err).__name__
         logger.error(f"gemini_network_error: {err_desc}")

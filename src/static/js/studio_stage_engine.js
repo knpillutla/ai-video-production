@@ -258,14 +258,22 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         audio_only: isAudioOnly,
         master_only: isMasterOnly,
         num_shots: (function() {
+          if (typeof isTravelOrSkylineChannel === "function" && isTravelOrSkylineChannel()) return -1;
           const g = ((document.getElementById("studio-genre-selector")?.value) || vid.genre || "").toLowerCase();
-          const ch = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : (vid.channelId || vid.channel_id || "");
-          if (ch === "skylinediariesindia4k" || g.startsWith("travel") || vid.numShots === -1 || vid.num_shots === -1) {
+          const subg = ((document.getElementById("studio-subgenre-selector")?.value) || vid.sub_genre || "").toLowerCase();
+          const arch = ((document.getElementById("studio-archetype-selector")?.value) || vid.primary_archetype || "").toLowerCase();
+          if (
+            g === "documentary" || g.startsWith("travel") || g.includes("tour") ||
+            subg.includes("tour") || subg.includes("doc_places") ||
+            arch.includes("tour") || arch.includes("itinerary") ||
+            vid.numShots === -1 || vid.num_shots === -1 ||
+            (typeof activeShotsCount !== "undefined" && activeShotsCount === -1)
+          ) {
             return -1;
           }
           return (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "prod")
-            ? parseInt(document.getElementById("studio-prod-shots")?.value || "1", 10)
-            : (typeof activeShotsCount !== "undefined" ? activeShotsCount : (vid.numShots || 1));
+            ? parseInt(document.getElementById("studio-prod-shots")?.value || "-1", 10)
+            : (typeof activeShotsCount !== "undefined" ? activeShotsCount : -1);
         })(),
         long_play_hours: (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "prod")
           ? parseFloat(document.getElementById("studio-stretch-hours")?.value || "3.0")

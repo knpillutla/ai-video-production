@@ -193,17 +193,28 @@ function getEffectiveProductionDuration() {
 
 function isTravelOrSkylineChannel() {
   const selChan = (typeof currentChannel !== "undefined" && currentChannel?.id) || document.getElementById("studio-channel-select")?.value || "";
-  const genreVal = document.getElementById("studio-genre-selector")?.value || "";
+  const genreVal = (document.getElementById("studio-genre-selector")?.value || "").toLowerCase();
+  const subgVal = (document.getElementById("studio-subgenre-selector")?.value || "").toLowerCase();
+  const archVal = (document.getElementById("studio-archetype-selector")?.value || "").toLowerCase();
+  const fmtVal = (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "").toLowerCase();
   return (
     selChan === "skylinediariesindia4k" ||
     selChan.includes("skyline") ||
     genreVal.startsWith("travel") ||
-    (typeof currentChannel !== "undefined" && currentChannel?.genre?.startsWith("travel"))
+    genreVal === "documentary" ||
+    genreVal.includes("doc_places") ||
+    subgVal.includes("doc_places") ||
+    subgVal.includes("tour") ||
+    archVal.includes("tour") ||
+    archVal.includes("itinerary") ||
+    fmtVal === "documentary" ||
+    fmtVal === "walking_tour" ||
+    (typeof currentChannel !== "undefined" && (currentChannel?.genre?.startsWith("travel") || currentChannel?.genre === "documentary"))
   );
 }
 
 function syncTravelShotUI() {
-  const isTravel = isTravelOrSkylineChannel();
+  const isDocOrTour = isTravelOrSkylineChannel();
   const testShotsEl = document.getElementById("studio-test-shots");
   const prodShotsEl = document.getElementById("studio-prod-shots");
   const testStretchEl = document.getElementById("studio-test-stretch");
@@ -211,36 +222,35 @@ function syncTravelShotUI() {
   const cadenceCont = document.getElementById("relaxation-cadence-container");
   const btnProduceText = document.getElementById("btn-produce-text");
 
-  if (cadenceCont) {
-    cadenceCont.style.display = isTravel ? "none" : "";
-  }
+  if (cadenceCont) cadenceCont.style.display = isDocOrTour ? "none" : "";
   if (testShotsEl) {
-    testShotsEl.style.display = isTravel ? "none" : "";
-  }
-  if (prodShotsEl) {
-    prodShotsEl.style.display = isTravel ? "none" : "";
-  }
-  if (testStretchEl && testStretchEl.parentElement) {
-    testStretchEl.parentElement.className = isTravel ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-2 gap-1.5";
-    if (isTravel && (!testStretchEl.value || testStretchEl.value === "0")) {
-      testStretchEl.value = "0.033";
-      activeBroadcastHours = 0.033;
-      activeTestDuration = 120;
+    testShotsEl.style.display = isDocOrTour ? "none" : "";
+    if (isDocOrTour) {
+      testShotsEl.value = "-1";
+      activeShotsCount = -1;
     }
   }
+  if (prodShotsEl) {
+    prodShotsEl.style.display = isDocOrTour ? "none" : "";
+    if (isDocOrTour) prodShotsEl.value = "-1";
+  }
+  if (testStretchEl && testStretchEl.parentElement) {
+    testStretchEl.parentElement.className = isDocOrTour ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-2 gap-1.5";
+  }
   if (prodStretchEl && prodStretchEl.parentElement) {
-    prodStretchEl.parentElement.className = isTravel ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-2 gap-1.5";
+    prodStretchEl.parentElement.className = isDocOrTour ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-2 gap-1.5";
   }
 
-  if (isTravel && typeof selectProductionTier === "function" && typeof currentTier !== "undefined" && currentTier !== "balanced") {
+  if (isDocOrTour && typeof selectProductionTier === "function" && typeof currentTier !== "undefined" && currentTier !== "balanced") {
     selectProductionTier("balanced");
   }
 
   if (btnProduceText) {
     if (activeExecutionMode === "test") {
-      btnProduceText.textContent = isTravel
-        ? "Run Preview (Autonomous Cadence)"
-        : (activePipelineStrategy === "manual" ? `Run Test (${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''})` : `Run Draft (${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''})`);
+      const shotsLbl = activeShotsCount === -1 ? "Auto Cadence" : `${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''}`;
+      btnProduceText.textContent = isDocOrTour
+        ? (activePipelineStrategy === "manual" ? "Run Test (Auto Cadence)" : "Run Draft (Auto Cadence)")
+        : (activePipelineStrategy === "manual" ? `Run Test (${shotsLbl})` : `Run Draft (${shotsLbl})`);
     } else {
       btnProduceText.textContent = activePipelineStrategy === "manual" ? "Produce Video (Gate)" : "Produce Master Video";
     }

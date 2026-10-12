@@ -105,7 +105,7 @@ class DocumentaryProducer:
                 map_rendered_paths[scene.scene_index] = kf_file
             elif getattr(scene, "is_map_transition", False) and scene.origin_coords and scene.destination_coords:
                 # 4K Google Maps route: complete circuit, green up to current stop, blue upcoming
-                curr_idx = 1 if scene.scene_index <= 2 else 0
+                prior_attrs = sum(1 for ps in sb.scenes[:scene.scene_index - 1] if not (getattr(ps, "is_map_transition", False) or getattr(ps, "is_itinerary_overview", False) or getattr(ps, "is_itinerary_summary", False) or getattr(ps, "is_vacation_scope", False)))
                 render_4k_route_map(
                     origin_name=scene.origin_name or "Origin",
                     dest_name=scene.destination_name or "Destination",
@@ -116,7 +116,7 @@ class DocumentaryProducer:
                     output_path=kf_file,
                     all_stops=tour_stops or None,
                     tour_title=sb.title,
-                    current_stop_index=curr_idx,
+                    current_stop_index=max(1, prior_attrs),
                     force_rerun=force_rerun,
                 )
                 map_rendered_paths[scene.scene_index] = kf_file
@@ -180,8 +180,10 @@ class DocumentaryProducer:
 
         async def _synthesize_scene_clip(scene, kf_path: Path) -> Path:
             out_clip = ep_dir / f"motion_p{scene.scene_index}.mp4"
-            if out_clip.is_file() and out_clip.stat().st_size > 1000:
-                return out_clip
+            if not force_rerun and out_clip.is_file() and out_clip.stat().st_size > 1000:
+                from src.services.ambient_export_service import get_media_duration
+                if abs(get_media_duration(out_clip) - float(scene.duration_seconds)) <= 1.0:
+                    return out_clip
 
             # Map transitions, itinerary overviews, summary recaps, and vacation scope cards are static infographics
             is_graphic_card = (
@@ -283,11 +285,7 @@ class DocumentaryProducer:
         except Exception as ex_t:
             logger.warning(f"failed_to_generate_tour_thumbnails: {ex_t}")
 
-        await topic_memory.remember_topic(
-            topic=sb.title, genre=f"doc_{sb.genre.value}", tags=[sb.genre.value, "documentary", sb.language],
-            story_synopsis=f"4K Documentary on {sb.title} ({len(sb.scenes)} scenes)", episode_id=ep_dir.name,
-        )
-
+        await topic_memory.remember_topic(topic=sb.title, genre=f"doc_{sb.genre.value}", tags=[sb.genre.value, "documentary", sb.language], story_synopsis=f"4K Documentary on {sb.title} ({len(sb.scenes)} scenes)", episode_id=ep_dir.name)
         render_time = round(time.time() - t_start, 2)
         logger.info(f"documentary_production_ready: {ep_dir.name} in {render_time}s")
 

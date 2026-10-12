@@ -47,13 +47,11 @@ def _format_leg_transit_badge(st: Dict[str, Any], next_st: Dict[str, Any], next_
     t_dur_raw = str(st.get("transit_duration") or "").lower()
     mode = str(st.get("transit_mode") or "").lower()
 
-    # Rule: If walk time <= 10 mins, show Walk ONLY with dual distance and time, NO Uber cost
-    is_walk = (est_walk_mins <= 10 or ("walk" in mode and "drive" not in mode and "cab" not in mode and est_walk_mins <= 12)) and mode != "drive"
+    # Hard Ceiling: Walk ONLY if distance <= 0.8 km and walk duration <= 10 mins
+    raw_mins = int(m_w.group(1)) if (m_w := re.search(r"(\d+)\s*min", t_dur_raw)) and "walk" in t_dur_raw else 0
+    is_walk = km_val <= 0.8 and est_walk_mins <= 10 and (raw_mins == 0 or raw_mins <= 10) and mode != "drive" and "cab" not in t_dur_raw and "drive" not in t_dur_raw
     if is_walk:
-        walk_mins = est_walk_mins
-        m_w = re.search(r"(\d+)\s*min", t_dur_raw)
-        if m_w and "walk" in t_dur_raw:
-            walk_mins = int(m_w.group(1))
+        walk_mins = raw_mins if (0 < raw_mins <= 10) else min(10, est_walk_mins)
         return f"• Walk: {walk_mins} mins ({dist_str})    →    Next: {next_name}"
 
     # Otherwise: Drive with drive time, dual distance, and Uber cost
@@ -67,7 +65,7 @@ def _format_leg_transit_badge(st: Dict[str, Any], next_st: Dict[str, Any], next_
             drive_mins = min(all_nums) if len(all_nums) > 1 else all_nums[0]
 
     cost_raw = st.get("approx_leg_cost")
-    if not cost_raw or str(cost_raw).strip().lower() in ("concluded", "none", "0", "free", ""):
+    if not cost_raw or str(cost_raw).strip().lower() in ("concluded", "none", "0", "free", "", "free (walk)"):
         cost_raw = "£8–£10 Uber" if km_val < 2.0 else ("£12–£15 Uber" if km_val < 4.0 else "£16–£22 Uber")
     if "uber" not in str(cost_raw).lower() and "cab" not in str(cost_raw).lower():
         cost_raw = f"{cost_raw} Uber"
@@ -117,11 +115,7 @@ def render_4k_itinerary_hierarchy_card(
     # Outer decorative framing
     draw.rectangle([120, 60, w - 120, h - 60], outline=(203, 213, 225), width=2)
 
-    # 1. Header Bar
-    draw.text((180, 90), "MASTER DAY TIMELINE & TRANSIT HIERARCHY", fill=(2, 132, 199), font=font_header_sub)
-    draw.text((180, 138), f"{tour_title} • Daily Planner (09:00 AM – 06:00 PM)", fill=(15, 23, 42), font=font_header_title)
-
-    # 2. Filter valid physical stops (exclude overview/summary/vacation cards and deduplicate)
+    # 1. Filter valid physical stops (exclude overview/summary/vacation cards and deduplicate)
     raw_stops = [
         s for s in stops
         if not (
@@ -144,6 +138,16 @@ def render_4k_itinerary_hierarchy_card(
                 valid_stops.append(s)
     if not valid_stops:
         valid_stops = stops[:4]
+
+    # Dynamic Day Excursion Window for Header
+    ov_st = next((s for s in stops if s.get("is_itinerary_overview") or s.get("shot_type") == "itinerary_overview_card"), None)
+    t_start = (ov_st.get("start_time") if ov_st else None) or (summary.get("start_time") if summary else None) or (valid_stops[0].get("start_time") if valid_stops else "09:00 AM")
+    t_end = (ov_st.get("end_time") if ov_st else None) or (summary.get("end_time") if summary else None) or (valid_stops[-1].get("end_time") if valid_stops else "05:30 PM")
+    day_window_str = f"({t_start} – {t_end})" if (t_start and t_end) else "(09:00 AM – 06:00 PM)"
+
+    # Header Bar
+    draw.text((180, 90), "MASTER DAY TIMELINE & TRANSIT HIERARCHY", fill=(2, 132, 199), font=font_header_sub)
+    draw.text((180, 138), f"{tour_title} • Daily Planner {day_window_str}", fill=(15, 23, 42), font=font_header_title)
 
     # Calculate free vs paid admission metrics
     free_cnt, paid_cnt, paid_sum, curr_sym = 0, 0, 0.0, "£"

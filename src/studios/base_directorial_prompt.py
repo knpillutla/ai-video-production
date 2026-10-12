@@ -18,123 +18,118 @@ __all__ = [
 
 
 def build_base_directorial_prompt(
-    genre: str,
-    sub_genre: str,
-    archetype: str,
-    cluster: str,
-    custom_prompt: Optional[str] = None,
-    duration_seconds: float = 60.0,
-    num_shots: int = 1,
-    camera_motion: str = "locked_tripod",
-    excluded_topics: Optional[List[str]] = None,
-    specific_rules: str = "",
-    curation_landmarks: Optional[List[str]] = None,
-    color_temp_kelvin: int = 5500,
-    channel_id: Optional[str] = None,
-    tier: str = "balanced",
+    genre: str, sub_genre: str, archetype: str, cluster: str,
+    custom_prompt: Optional[str] = None, duration_seconds: float = 60.0,
+    num_shots: int = 1, camera_motion: str = "locked_tripod",
+    excluded_topics: Optional[List[str]] = None, specific_rules: str = "",
+    curation_landmarks: Optional[List[str]] = None, color_temp_kelvin: int = 5500,
+    channel_id: Optional[str] = None, tier: str = "balanced",
+    extra_root_schema: str = "", extra_scene_schema: str = "",
+    speech_cadence_wpm: int = 120, speech_words_per_sec: float = 2.0,
+    tts_provider_name: str = "Azure Speech Neural",
 ) -> str:
     """Compose the authoritative directorial system prompt for Gemini storyboarding."""
-    g_lower = (genre or "").lower()
-    a_lower = (archetype or "").lower()
-    ch_lower = (channel_id or "").lower()
-    clean_tier = (tier or "balanced").strip().lower()
+    g_lower, a_lower = (genre or "").lower(), (archetype or "").lower()
+    ch_lower, clean_tier = (channel_id or "").lower(), (tier or "balanced").strip().lower()
 
     is_nature_relax = (
-        g_lower.startswith("relax")
-        or "nature" in g_lower
-        or a_lower in (
-            "zen", "mountain", "forest", "ocean", "valley", "waterfall",
-            "healing", "rain", "cozy", "blizzard", "hearth", "beach_lounge", "desert"
-        )
+        g_lower.startswith("relax") or "nature" in g_lower
+        or a_lower in ("zen", "mountain", "forest", "ocean", "valley", "waterfall", "healing", "rain", "cozy", "blizzard", "hearth", "beach_lounge", "desert")
     )
-
     is_urban_or_travel = (
-        g_lower.startswith("travel")
-        or "travel" in g_lower
+        g_lower.startswith("travel") or "travel" in g_lower
         or a_lower in ("cities", "tourist_places", "iconic_places", "spiritual_places", "natural_wonders", "remote_places")
-        or ch_lower == "skylinediariesindia4k"
-        or (ch_lower == "earth_serenade" and not is_nature_relax)
-        or num_shots == -1
+        or ch_lower == "skylinediariesindia4k" or (ch_lower == "earth_serenade" and not is_nature_relax) or num_shots == -1
     )
+    is_documentary = "doc" in g_lower or "documentary" in ch_lower or "doc" in (sub_genre or "").lower() or "documentary" in a_lower
 
-    is_documentary = (
-        "doc" in g_lower
-        or "documentary" in ch_lower
-        or "doc" in (sub_genre or "").lower()
-        or "documentary" in a_lower
-    )
-
-    # User choice for shot count: ALWAYS respect explicit user shot selection across all tiers and genres
+    is_tour = "tour" in a_lower or "itinerary" in a_lower or "doc_places" in (sub_genre or "").lower()
     user_chose_fixed_shots = (num_shots is not None and num_shots > 0 and num_shots != -1)
     if user_chose_fixed_shots:
         eff_shots = num_shots
         per_shot_dur = round(duration_seconds / max(1, eff_shots), 1)
+        cadence_spec = f"- Target Duration: ~{duration_seconds}s (Directorial buffer enabled) | Explicit Shots: {eff_shots} (~{per_shot_dur}s/shot)"
+        schema_mandate = f"\n- Generate exactly {eff_shots} scene(s) matching the requested shot count inside 'scenes' with duration matching narration."
+    elif is_tour:
+        eff_shots = max(5, round(duration_seconds / 9.0))
+        per_shot_dur = round(duration_seconds / max(1, eff_shots), 1)
         cadence_spec = (
-            f"- Total Duration: {duration_seconds} seconds\n"
-            f"- Explicit Shot Count: Exactly {eff_shots} shot(s) requested by user ({per_shot_dur}s per shot).\n"
-            f"- Shot Count Mandate: You MUST generate an array of exactly {eff_shots} scene(s) inside 'scenes', each approximately {per_shot_dur}s."
+            f"- Target Duration: ~{duration_seconds}s (Directorial buffer enabled) | Autonomous Tour Cadence:\n"
+            f"  * Autonomously determine the exact number of scenes based on the tour duration and planned landmarks.\n"
+            f"  * Mandatory structure: Scene 1: Overview Flowchart Card, followed by each Attraction and its connecting Route Map, ending with the Master Recap Table slide."
         )
-        schema_mandate = f"\n- Generate exactly {eff_shots} scene(s) matching the requested shot count inside 'scenes'."
+        schema_mandate = (
+            f"\n- Autonomously generate the complete set of scenes inside 'scenes' matching the tour route and duration. "
+            f"Every planned landmark MUST have its own dedicated physical scene, followed by a connecting route map slide, concluding with the Master Recap Table."
+        )
     else:
-        # Autonomous cadence (-1 or unspecified): Dynamic 2s to 12s range
         eff_shots = max(2, round(duration_seconds / 12.0)) if (is_urban_or_travel or duration_seconds > 18.0) else max(1, round(duration_seconds / 6.0))
         per_shot_dur = round(duration_seconds / max(1, eff_shots), 1)
         cadence_spec = (
-            f"- Total Duration: {duration_seconds} seconds\n"
-            f"- Autonomous Cadence Contract (num_shots: -1, Balanced Mode: 2s to 12s Dynamic Range):\n"
-            f"  * Dynamic Shot Range: Every scene MUST have duration_seconds between 2.0s and 12.0s (strictly 2.0 <= dur <= 12.0).\n"
-            f"  * Cinematic Rhythm: Vary durations across scenes (2s-4s punchy detail/establishing, 5s-8s fluid orbit/reveal, 9s-12s monumental panoramic hold).\n"
-            f"  * Mandatory Scene Count: Generate an array of exactly {eff_shots} scenes (~{per_shot_dur}s per shot) summing to {duration_seconds}s.\n"
-            f"  * Under NO circumstances generate a monotonous static loop or repeat the same duration for all shots."
+            f"- Target Duration: ~{duration_seconds}s (Directorial buffer enabled) | Autonomous Cadence:\n"
+            f"  * Curate {eff_shots} scenes (~{per_shot_dur}s each) with durations dynamically matched to narration length."
         )
-        schema_mandate = f"\n- You MUST generate an array of exactly {eff_shots} scenes with dynamic durations (2s-12s) inside 'scenes' for this {duration_seconds}s video."
+        schema_mandate = f"\n- Generate {eff_shots} scenes inside 'scenes' with duration dynamically matched to narration."
 
-    target_words = max(25, int(duration_seconds * 1.95))
-    per_shot_words = max(12, int(target_words / max(1, eff_shots)))
+    target_words = max(25, int(duration_seconds * speech_words_per_sec))
+    per_shot_words = max(8, int(per_shot_dur * speech_words_per_sec))
     eff_kelvin, tod_key, tod_desc = detect_lighting_directive(custom_prompt, archetype, color_temp_kelvin or 5500)
     lighting_block = format_universal_lighting_guardrails(tod_key, eff_kelvin, tod_desc)
 
-    exclusion_block = ""
-    if excluded_topics:
-        exclusion_block = "\nPREVIOUSLY PRODUCED TOPICS (MANDATORY DEDUPLICATION):\n" + "\n".join(f"- {t}" for t in excluded_topics[-15:]) + "\n"
-
+    exclusion_block = ("\nPREVIOUSLY PRODUCED TOPICS (MANDATORY DEDUPLICATION):\n" + "\n".join(f"- {t}" for t in excluded_topics[-15:]) + "\n") if excluded_topics else ""
     landmarks_list = "\n".join(f"      {idx}. {lm}" for idx, lm in enumerate(curation_landmarks or [], 1)) if curation_landmarks else ""
     landmarks_block = f"\nCURATED REGIONAL LANDMARK INSPIRATION:\n{landmarks_list}\n" if landmarks_list else ""
+    channel_block = f"\n{profile.format_directorial_guardrails_block()}\n" if channel_id and (profile := get_channel_profile(channel_id)) else ""
 
-    channel_block = ""
-    if channel_id:
-        profile = get_channel_profile(channel_id)
-        if profile:
-            channel_block = "\n" + profile.format_directorial_guardrails_block() + "\n"
+    motion_rule = (
+        f"3. HYBRID MOTION DIRECTORIAL CONTRACT (TIER: {clean_tier.upper()}):\n"
+        '   - Gemini DECIDES "motion_type" ("ken_burns" | "ai_diffusion") and "motion_rationale" for every scene.\n'
+        '   - Default for stable landscapes & geometry: "ken_burns" ($0.00 compute local 4K perspective engine).\n'
+        '   - Select "ai_diffusion" only if complex kinematics (waterfalls, running fauna) strictly require neural video.\n'
+        '   - WHEN DIRECTING KEN BURNS: Direct camera motion from supported primitives: "dollyin", "dollyout", "pan-left", "pan-right", "tilt-up", "tilt-down", "orbit-left", "orbit-right", "drift-up-right", "stay".\n'
+        '   - PARALLEL & MULTI-STAGE MOVEMENTS: Direct compound parallel movements (e.g. ["dollyin", "pan-left"]) or multi-stage choreography in "camera_movement" matching scene duration.'
+    )
 
-    if is_documentary or is_urban_or_travel or clean_tier in ("tier_0", "local", "ken_burns"):
-        d1 = """1. 4K CINEMATIC BLUE-CHIP DOCUMENTARY & DRONE SHOWCASE:
-   - Dynamic Scenic Cadence: Curate distinct world-class natural landmarks, architecture, and habitats across scenes.
-   - NO MOVING OBJECTS DIRECTIVE (MANDATORY FOR DOCUMENTARY IMAGES): Always compose still, timeless landscape, architectural, and vista keyframe images with ZERO moving objects (strictly NO moving trains, vehicles, cars, buses, boats, ferries, airplanes, walking pedestrians, crowds, or darting animals). Moving objects cause perspective warping and smearing during drone flight. Focus exclusively on monumental terrain, majestic vistas, tranquil valleys, tracks/roads empty of traffic, and pristine architecture.
-   - Authoritative Measured Narration: Measured, poetic, educational voiceover (~120 WPM) rich in geological, ecological, and cultural lore.
-   - 100% Crisp Natural Lighting: Balanced daylight or dramatic authentic golden/blue hour, zero artificial CGI gloss."""
+    if is_nature_relax:
+        d1 = ("1. PURE PRISTINE UNINHABITED NATURE & LIVING WALLPAPER (ZERO HUMANS, ZERO STRUCTURES):\n"
+              "   - Every scene MUST be 100% uninhabited, wild, raw, primordial nature overlooking a majestic scenery.\n"
+              "   - Strictly zero humans, tourists, swimmers, hikers, guides, voices, or faces.\n"
+              "   - Zero modern structures, buildings, cabins, paved roads, vehicles, fences, power lines, boats, or railings.\n"
+              "   - Living Wallpaper Framing: Compose as a tranquil living wallpaper overlooking the scenic expanse.")
         ex_motion_type = "ken_burns"
-        ex_rationale = "100% local 4K perspective drone flight with compound choreography and zero AI diffusion artifacts ($0.00 compute)."
-        motion_rule = """3. 100% TIER-0 LOCAL PERSPECTIVE DRONE & KEN BURNS MOTION CONTRACT ($0.00 COMPUTE):
-   - MANDATORY 100% LOCAL MOTION: Set "motion_type": "ken_burns" for scenes. By default for all documentaries and landscapes, use local drone motion.
-   - Direct camera choreography using local perspective drone flight stages and compound movements:
-     * Allowed movements: 'stay', 'dollyin', 'dollyout', 'pan-left', 'pan-right', 'tilt-up', 'tilt-down', 'drift-up-right', 'drift-up-left', 'orbit-left', 'orbit-right'.
-     * Compound actions: specify parallel compound movements (e.g. ['dollyin', 'pan-left']).
-     * Weather overlay: specify 'weather': 'none', 'rain', or 'snow'.
-     * Motion easing: 'cosine' (smooth S-curve), 'ramp-up', 'linear'.
-   - Multi-waypoint kinetic choreography: In "camera_waypoints", provide sub-movements summing to duration_seconds."""
+        ex_rationale = "Fixed locked tripod overlooking scenery via local 4K ken_burns hold ($0.00 compute)."
+        rig_palette = '["locked_tripod_telephoto"]'
+        default_rig = "locked_tripod_telephoto"
+        default_cam_move = "locked_stationary_cinemagraph"
+        cam_contract = (
+            "4. FIXED LOCKED TRIPOD OVERLOOKING SCENERY (RELAXATION MANDATE):\n"
+            "   - Relaxation format (across all genres, archetypes, and weathers) strictly mandates a FIXED LOCKED TRIPOD overlooking scenery.\n"
+            "   - 'camera_rig': strictly 'locked_tripod_telephoto' overlooking the natural vista.\n"
+            "   - 'camera_movement': strictly 'locked_stationary_cinemagraph' (or ['stay']) with 0 panning, tilting, or zooming.\n"
+            "   - Motion: Direct ONLY organic environmental micro-motion (water ripples, swaying leaves, drifting mist/snow).\n"
+            "   - Individual genres/archetypes/weather add their own unique atmospheric & sensory properties on top."
+        )
     else:
-        d1 = """1. PURE PRISTINE UNINHABITED NATURE (ZERO HUMANS, ZERO STRUCTURES):
-   - Every scene MUST be 100% uninhabited, wild, raw, primordial nature.
-   - Absolutely zero humans, tourists, swimmers, hikers, guides, voices, or faces.
-   - Strictly zero modern structures, buildings, cabins, paved roads, vehicles, fences, power lines, boats, or railings."""
+        d1 = ("1. 4K CINEMATIC BLUE-CHIP DOCUMENTARY & DRONE SHOWCASE:\n"
+              "   - Dynamic Scenic Cadence: Curate distinct world-class natural landmarks, architecture, and habitats.\n"
+              "   - NO MOVING OBJECTS DIRECTIVE: Still, timeless landscape keyframes with ZERO moving objects.\n"
+              "   - Authoritative Measured Narration: Measured, poetic, educational voiceover (~120 WPM).\n"
+              "   - 100% Crisp Natural Lighting: Balanced daylight or dramatic authentic golden/blue hour.")
         ex_motion_type = "ken_burns"
-        ex_rationale = "Local 4K perspective drone glide with smooth compound vector trajectory."
-        motion_rule = f"""3. HYBRID MOTION DIRECTORIAL SCRIPT CONTRACT (TIER: {clean_tier.upper()}):
-   - SCRIPT IS THE MANDATORY FOUNDATION FOR PRODUCTION. Every scene MUST explicitly specify "motion_type" ("ken_burns" | "ai_diffusion") and "motion_rationale".
-   - Default for static & rigid landscapes: "ken_burns" to guarantee 100% geometry at $0.00 compute.
-   - Only select "ai_diffusion" if complex organic kinematics (running animals, violent splashing rapids) strictly require neural diffusion.
-   - Direct local drone flight in "camera_waypoints" with sub-movements ('dollyin', 'dollyout', 'pan-left', 'pan-right', 'orbit-left', 'orbit-right')."""
+        ex_rationale = "100% local 4K perspective drone flight via ken_burns compound choreography ($0.00 compute)."
+        rig_palette = '["heavy_lift_cine_drone", "technocrane_jib", "stabilized_steadicam_gimbal", "motorized_cine_slider"]'
+        default_rig = "heavy_lift_cine_drone"
+        default_cam_move = "slow_drone_forward"
+        cam_contract = (
+            "4. CAMERA RIG & TRAJECTORY DIRECTORIAL CONTRACT (ANTI-MONOTONY):\n"
+            "   - Gemini autonomously directs 'camera_rig' and 'camera_movement' based on architectural lines and vista scale.\n"
+            "   - 'camera_rig': heavy_lift_cine_drone, technocrane_jib, stabilized_steadicam_gimbal, motorized_cine_slider.\n"
+            "   - 'camera_movement': compound 3D flight (e.g. 'dollyin', 'orbit_wrap_left', parallel ['dollyin', 'pan-left'], or stages).\n"
+            "   - ANTI-MONOTONY GUARD: Rotate rigs and trajectories across consecutive scenes to eliminate visual repetition."
+        )
+
+    root_ext = f"{extra_root_schema.strip()}\n" if extra_root_schema and extra_root_schema.strip() else ""
+    scene_ext = f"{extra_scene_schema.strip()}\n" if extra_scene_schema and extra_scene_schema.strip() else ""
 
     return f"""You are the Master Visual Director and Senior Cinematic Storyboard Artist for CineAI Studio.
 Your role is to author a complete, production-ready, broadcast-grade Screenplay for the "{genre}" channel genre.
@@ -153,31 +148,12 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
 
 {motion_rule}
 
-4. CAMERA RIG VS. CAMERA MOVEMENT DIRECTORIAL CONTRACT (MANDATORY):
-   - Direct every shot from an authoritative cinematic director's chair with deliberate spatial intention.
-   - "camera_rig" defines the PHYSICAL MOUNTING APPARATUS:
-     * heavy_lift_cine_drone: Monumental high-altitude aerial sweeps and grand landscape panoramas.
-     * technocrane_jib: Smooth vertical elevation reveals, dramatic crane cresting over foreground rocks/trees.
-     * cable_cam_system: Fluid, silent glides through canopies, river valleys, or along grand avenues.
-     * low_altitude_fpv_rig: Dynamic low-skimming trajectory skimming over water surfaces or open terrain.
-     * stabilized_steadicam_gimbal: Smooth eye-level sweeping tracking shots through architectural plazas.
-     * locked_tripod_telephoto: Symmetrical, perfectly stable framing for living wallpapers and distant summits.
-     * motorized_cine_slider: Silky lateral parallax tracking across foreground textures and foliage.
-   - "camera_movement" defines the 3D KINETIC TRAJECTORY:
-     * slow_drone_forward: Majestic forward flight into the horizon.
-     * dolly_pullback_reveal: Starting close on an architectural or natural motif and expanding backward to reveal scale.
-     * orbit_wrap_left / orbit_wrap_right: Sweeping semicircular arc around a focal landmark.
-     * tilt_up_monumental_reveal: Starting low and tilting upward to reveal towering heights.
-     * crane_pedestal_down / crane_pedestal_up: Vertical elevation glide establishing spatial grandeur.
-     * lateral_truck_right / lateral_truck_left: Horizontal tracking across skylines, coastlines, or mountain ranges.
-     * low_angle_forward_skim: Skimming low over water or ground level toward the vista.
-     * locked_stationary_cinemagraph: 100% frozen frame for pure living wallpaper cinemagraphs.
-   - ANTI-MONOTONY GUARD: Consecutive scenes MUST NOT repeat the same camera_rig or camera_movement! Rotate rigs and trajectories to create rich cinematic grandeur.
+{cam_contract}
 
-5. DYNAMIC SHOT DURATION DIRECTIVE (BALANCED MODE: 2s TO 12s RANGE):
-   - When in balanced mode, shot durations MUST dynamically vary strictly between 2.0s and 12.0s.
-   - Allocate duration based on shot grandeur: 2s-4s (punchy detail/establishing), 5s-8s (orbit/lateral glide), 9s-12s (monumental panoramic hold).
-   - The sum of all scene 'duration_seconds' must equal {duration_seconds}s.
+5. DIRECTORIAL SCENE CADENCE & DURATION BUFFER (+LEEWAY):
+   - Target Total Duration: ~{duration_seconds}s (Directorial Leeway Buffer of +15% to +25%, or up to +60s for tours is explicitly permitted).
+   - Allocate duration based on shot grandeur: 4s-6s (detail/establishing), 8s-12s (orbit/lateral glide), 14s-20s (monumental hold / transit maps).
+   - DIRECTORIAL RULE: If a scene requires more narrative context or transit explanation, Gemini MUST INCREASE 'duration_seconds' to match: required_duration = (word_count / {speech_words_per_sec:.2f}) + 1.5s pause. Never truncate narration or rush speech!
 
 6. MULTI-MODEL PROMPTS ("image_model_configs" & "model_configs"):
    - For every scene, author model-tailored landscape prompts for "flux_dev", "flux_pro", and "zimage".
@@ -187,9 +163,12 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
    - For Pure Wilderness: "clouds, cloudy, overcast sky, moving clouds, timelapse clouds, camera shake, jitter, rapid motion, flickering, temporal jump, parched, frozen ice, stagnant water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings".
    - For Architectural & Travel: "clouds, overcast sky, moving clouds, camera shake, jitter, rapid motion, morphing architecture, changing furniture, structural drift, flickering, temporal jump, gelatinous water, artifacts, humans, tourist, clutter, plastic junk, modern electronics".
 
-8. UNIVERSAL AUDIO & SPOKEN VOICEOVER DIRECTORIAL CONTRACT (MANDATORY):
-   - "spoken_narration_script" & "narration_text": Whenever voiceover is enabled or documentary/educational storytelling is requested, you MUST provide authoritative, continuous, broadcast-grade narration (~{target_words} words, ~120-125 WPM) in 'audio_master.spoken_narration_script', and divide it smoothly across every scene in 'scenes[].narration_text'. NEVER leave narration blank.
-   - "suno_musical_tags" & "suno_prompt": Autonomously compose bespoke cultural acoustic tags and mood descriptions matching the geographic location, instruments, and time-of-day. Never leave music tags blank.
+8. NARRATION ENGINE & DURATION WIRING CONTRACT (MANDATORY):
+   - Active Narration Engine: {tts_provider_name} ({speech_cadence_wpm} WPM, ~{speech_words_per_sec:.2f} words/sec). Tail breathing pause: 1.5s.
+   - Per-Scene Word Formula: Max words = (duration_seconds - 1.5s) * {speech_words_per_sec:.2f}. Total script ~{target_words} words.
+   - Divide narration smoothly across 'scenes[].narration_text' perfectly matching each shot's 'duration_seconds'.
+   - Continuous Camera Motion: Visual camera motion runs for the FULL duration of the scene, ensuring continuous flight while narration speaks with ZERO frozen frames.
+   - "suno_musical_tags" & "suno_prompt": Autonomously compose bespoke cultural acoustic tags matching geography and mood.
 
 {specific_rules}
 {landmarks_block}
@@ -204,7 +183,7 @@ PRODUCTION SPECIFICATIONS:
 - Geographic Cluster: {cluster}
 - Motion & Quality Tier: {clean_tier}
 {cadence_spec}
-- Camera Rig Palette: ["heavy_lift_cine_drone", "technocrane_jib", "cable_cam_system", "stabilized_steadicam_gimbal", "locked_tripod_telephoto", "motorized_cine_slider"]
+- Camera Rig Palette: {rig_palette}
 - Target Image Models: ["flux_dev", "flux_pro", "zimage"]
 - Target Video Models: ["kling_v1_6_pro", "wan_2_1"]
 
@@ -225,7 +204,7 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
   "recommended_fps": 24,
   "aspect_ratio": "16:9",
   "total_duration_seconds": {duration_seconds},
-  "global_culture": {{
+{root_ext}  "global_culture": {{
     "continent_region": "Autonomously derive true continent/region",
     "culture_heritage": "Authentic regional natural and conservation heritage",
     "authentic_textiles_and_fabrics": "Authentic natural materials (weathered stone, moss, river slate, native timber)",
@@ -255,10 +234,10 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
       "scene_index": 1,
       "location_hub": "Specific Vista 1 Name",
       "shot_type": "wide_panoramic_picturesque",
-      "camera_rig": "heavy_lift_cine_drone",
+      "camera_rig": "{default_rig}",
       "color_temp_kelvin": {eff_kelvin},
-      "visual_prompt": "A photorealistic, symmetrical 16:9 cinematic landscape view of [Landmark Name], shot from heavy lift cine drone. Crisp natural lighting.",
-      "image_model_configs": {{
+      "visual_prompt": "A photorealistic, symmetrical 16:9 cinematic landscape view of [Landmark Name], shot from {default_rig}. Crisp natural lighting.",
+{scene_ext}      "image_model_configs": {{
         "flux_dev": {{"model": "fal-ai/flux/dev", "prompt": "Photorealistic wide panoramic view of [Landmark Name], 16:9 cinematic.", "aspect_ratio": "16:9", "guidance_scale": 3.5, "num_inference_steps": 28}},
         "flux_pro": {{"model": "fal-ai/flux-pro/v1.1-ultra", "prompt": "Ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c of [Landmark Name], 16:9.", "aspect_ratio": "16:9", "raw": true}},
         "zimage": {{"model": "fal-ai/z-image/turbo", "prompt": "Stunning photorealistic panoramic landscape of [Landmark Name], 16:9, sharp focus.", "aspect_ratio": "16:9", "num_inference_steps": 8}}
@@ -271,7 +250,7 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
       }},
       "domain": "landscape_solid",
       "motion_type": "{ex_motion_type}",
-      "camera_movement": "slow_drone_forward",
+      "camera_movement": "{default_cam_move}",
       "camera_waypoints": [
         {{"motion": "slow_drone_forward", "duration_seconds": 6.0}},
         {{"motion": "orbit_wrap_left", "duration_seconds": 4.0}}

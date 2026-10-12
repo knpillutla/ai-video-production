@@ -11,7 +11,7 @@ import os
 from typing import Optional
 
 from src.core.telemetry import logger
-from src.studios.ambient_world.relax_models import RelaxScreenplay
+from src.studios.ambient_world.relax_models import RelaxAudioMasterSpec, RelaxScene, RelaxScreenplay
 from src.studios.alpine_studio.alpine_director import generate_alpine_screenplay
 from src.studios.waterfall_studio.waterfall_director import generate_waterfall_screenplay
 from src.studios.silent_hearth.hearth_director import generate_hearth_screenplay
@@ -53,7 +53,6 @@ async def dispatch_studio_director(
     # 0. Dedicated Blue-Chip Documentary Studio Dispatch
     if "doc" in genre_lower or "documentary" in ch_lower or "doc" in sub_lower:
         from src.studios.documentary_studio.doc_storyboard import generate_documentary_storyboard_gemini, DocGenre
-        from src.studios.ambient_world.relax_models import RelaxScene
         doc_genre_map = {
             "places": DocGenre.PLACES, "doc_places": DocGenre.PLACES, "beaches": DocGenre.BEACHES, "doc_beaches": DocGenre.BEACHES,
             "mountains": DocGenre.MOUNTAINS, "doc_mountains": DocGenre.MOUNTAINS, "nature": DocGenre.NATURE, "doc_nature": DocGenre.NATURE,
@@ -77,20 +76,23 @@ async def dispatch_studio_director(
         )
         # Convert DocStoryboard to RelaxScreenplay container for pipeline compatibility
         full_narration = " ".join(s.narration_text.strip() for s in sb.scenes if getattr(s, "narration_text", None))
-        from src.studios.ambient_world.relax_models import RelaxAudioMasterSpec
         relax_scenes = [
             RelaxScene(
                 scene_index=s.scene_index,
+                location_hub=getattr(s, "location_hub", None) or getattr(s, "origin_name", None) or f"Scenic Vista {s.scene_index}",
+                shot_type=s.shot_type,
+                camera_rig=getattr(s, "camera_rig", None) or "heavy_lift_cine_drone",
+                color_temp_kelvin=getattr(s, "color_temp_kelvin", 5500),
                 visual_prompt=s.visual_prompt,
                 motion_prompt=s.motion_prompt,
-                motion_negative_prompt="rapid cuts, chaotic movement, jerky shake, disorienting pans",
-                recommended_model=s.recommended_model,
-                motion_domain=s.motion_domain,
-                motion_type="ken_burns",
-                camera_motion="perspective_drone",
-                camera_movement=s.drone_choreography or "dollyin",
+                motion_negative_prompt=getattr(s, "motion_negative_prompt", None) or "rapid cuts, chaotic movement, jerky shake, disorienting pans",
+                model_configs=getattr(s, "model_configs", None) or {},
+                image_model_configs=getattr(s, "image_model_configs", None) or {},
+                domain=getattr(s, "motion_domain", "landscape_solid"),
+                motion_type=getattr(s, "motion_type", "ken_burns"),
+                camera_movement=getattr(s, "camera_movement", None) or getattr(s, "drone_choreography", None) or "slow_drone_forward",
+                motion_rationale=getattr(s, "motion_rationale", None),
                 duration_seconds=s.duration_seconds,
-                shot_type=s.shot_type,
                 narration_text=getattr(s, "narration_text", "") or "",
                 day_number=getattr(s, "day_number", 1) or 1,
                 start_time=getattr(s, "start_time", None),
@@ -175,67 +177,27 @@ async def dispatch_studio_director(
         from src.studios.art_studio.art_director import generate_art_screenplay_gemini
         return await generate_art_screenplay_gemini(genre="relax/art", sub_genre=sub_genre or primary_archetype or "living_impressionism", primary_archetype=primary_archetype or "living_impressionism", **kwargs)
 
+    base_kwargs = {k: v for k, v in kwargs.items() if k != "tier"}
+
     # 1. Japanese Zen Studio Dispatch (Kyoto Zen, Bamboo Groves, Raked Rock Gardens, Tsukubai)
     if genre_lower in {"relax/zen", "zen"} or sub_lower in {"zen_garden", "bamboo_grove", "lotus_pond"} or arch_lower in {"zen_garden", "bamboo_grove"}:
         logger.info(f"dispatcher_route: target='ZenStudio' genre='{genre}' sub_genre='{sub_genre}' archetype='{primary_archetype}' channel='{channel_id}'")
-        return await generate_zen_screenplay_gemini(
-            genre=genre,
-            sub_genre=sub_genre or "zen_garden",
-            primary_archetype=primary_archetype or "zen_garden",
-            custom_prompt=custom_prompt or "",
-            duration_seconds=duration_seconds,
-            user_id=user_id or "user_krishna_01",
-            num_shots=num_shots,
-            raw_output_path=raw_output_path,
-            image_model=image_model,
-            channel_id=channel_id or "earth_serenade",
-        )
+        return await generate_zen_screenplay_gemini(genre=genre, sub_genre=sub_genre or "zen_garden", primary_archetype=primary_archetype or "zen_garden", **kwargs)
 
     # 2. Global Healing Sanctuaries & Solfeggio Dispatch (Himalayas, Bali, Geothermal, Redwoods)
     if genre_lower in {"relax/healing", "healing_relaxation", "healing"} or sub_lower in {"global_healing", "himalayan_valley", "geothermal_springs", "redwood_cathedral", "solfeggio_sanctuary", "crystal_spring"} or arch_lower in {"sacred_sanctuary", "healing_sanctuary", "geothermal_springs"}:
         logger.info(f"dispatcher_route: target='HealingRelaxationStudio' genre='{genre}' sub_genre='{sub_genre}'")
-        return await generate_healing_screenplay(
-            custom_prompt=custom_prompt,
-            duration_seconds=duration_seconds,
-            num_shots=num_shots,
-            camera_motion=camera_motion,
-            user_id=user_id,
-            channel_id=channel_id,
-            raw_output_path=raw_output_path,
-            image_model=image_model,
-            sub_genre=sub_genre or "global_healing",
-        )
+        return await generate_healing_screenplay(sub_genre=sub_genre or "global_healing", **base_kwargs)
 
     # 2. Rain Retreat & River ASMR Dispatch
     if genre_lower in {"relax/rain", "rain_retreat"} or sub_lower in {"biophilic_retreat", "forest_rain", "river_rain", "rainy_bedroom"} or "rain" in arch_lower or "bedroom" in arch_lower:
         logger.info(f"dispatcher_route: target='RainRetreatStudio' genre='{genre}' sub_genre='{sub_genre}' archetype='{primary_archetype}'")
-        return await generate_rain_screenplay(
-            custom_prompt=custom_prompt,
-            duration_seconds=duration_seconds,
-            num_shots=num_shots,
-            camera_motion=camera_motion,
-            user_id=user_id,
-            channel_id=channel_id,
-            raw_output_path=raw_output_path,
-            image_model=image_model,
-            sub_genre=sub_genre or "rainy_bedroom",
-            primary_archetype=primary_archetype,
-        )
+        return await generate_rain_screenplay(sub_genre=sub_genre or "rainy_bedroom", primary_archetype=primary_archetype, **base_kwargs)
 
     # 3. Cozy Ambiance & Fireplace Dispatch
     if genre_lower in {"relax/cozy", "cozy_ambiance"} or sub_lower in {"cozy_living", "cozy_shelter", "fireplace"}:
         logger.info(f"dispatcher_route: target='CozyAmbianceStudio' genre='{genre}' sub_genre='{sub_genre}'")
-        return await generate_cozy_screenplay(
-            custom_prompt=custom_prompt,
-            duration_seconds=duration_seconds,
-            num_shots=num_shots,
-            camera_motion=camera_motion,
-            user_id=user_id,
-            channel_id=channel_id,
-            raw_output_path=raw_output_path,
-            image_model=image_model,
-            sub_genre=sub_genre or "cozy_shelter",
-        )
+        return await generate_cozy_screenplay(sub_genre=sub_genre or "cozy_shelter", **base_kwargs)
 
     # 4. Waterfall Studio Dispatch
     if (
@@ -245,16 +207,7 @@ async def dispatch_studio_director(
         or (not any(w in p_lower for w in ["alps", "swiss", "mountain", "hearth", "rain", "zen", "bamboo"]) and any(w in p_lower for w in ["waterfall", "niagara", "iguazu", "victoria falls", "cascade", "plunge pool"]))
     ):
         logger.info(f"dispatcher_route: target='WaterfallStudio' prompt='{custom_prompt}'")
-        return await generate_waterfall_screenplay(
-            custom_prompt=custom_prompt,
-            duration_seconds=duration_seconds,
-            num_shots=num_shots,
-            camera_motion=camera_motion,
-            user_id=user_id,
-            channel_id=channel_id,
-            raw_output_path=raw_output_path,
-            image_model=image_model,
-        )
+        return await generate_waterfall_screenplay(**base_kwargs)
 
     # 5. Silent Hearth & Beach Campfire Studio Dispatch
     if (
@@ -266,16 +219,7 @@ async def dispatch_studio_director(
         or any(w in p_lower for w in ["campfire", "fire pit", "hearth", "beach fire", "shoreline fire"])
     ):
         logger.info(f"dispatcher_route: target='SilentHearthStudio' prompt='{custom_prompt}'")
-        return await generate_hearth_screenplay(
-            custom_prompt=custom_prompt,
-            duration_seconds=duration_seconds,
-            num_shots=num_shots,
-            camera_motion=camera_motion,
-            user_id=user_id,
-            channel_id=channel_id,
-            raw_output_path=raw_output_path,
-            image_model=image_model,
-        )
+        return await generate_hearth_screenplay(**base_kwargs)
 
     # 6. Alpine Nature Studio Dispatch (Swiss Alps, Dolomites, Mountains, Meadows)
     if (
@@ -285,29 +229,13 @@ async def dispatch_studio_director(
         and not any(w in sub_lower for w in ["desert", "dune", "pavilion", "oasis"])
     ):
         logger.info(f"dispatcher_route: target='AlpineStudio' prompt='{custom_prompt}'")
-        return await generate_alpine_screenplay(
-            custom_prompt=custom_prompt,
-            duration_seconds=duration_seconds,
-            num_shots=num_shots,
-            camera_motion=camera_motion,
-            user_id=user_id,
-            channel_id=channel_id,
-            raw_output_path=raw_output_path,
-            image_model=image_model,
-            tier=tier,
-        )
+        return await generate_alpine_screenplay(**kwargs)
 
     # 7. Default Ambient World Studio (Fusion & 14 Archetypes)
     logger.info(f"dispatcher_route: target='AmbientWorldStudio' genre='{genre}' prompt='{custom_prompt}'")
     return await generate_relax_screenplay_gemini(
         primary=primary_archetype or sub_genre or "",
-        custom_prompt=custom_prompt,
-        duration_seconds=duration_seconds,
-        num_shots=num_shots,
-        camera_motion=camera_motion,
         genre=genre,
-        user_id=user_id,
-        channel_id=channel_id,
-        raw_output_path=raw_output_path,
-        tier=tier,
+        **kwargs,
     )
+

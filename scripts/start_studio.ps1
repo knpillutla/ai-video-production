@@ -141,7 +141,9 @@ if ($Foreground) {
 # 9. Background Execution (DEFAULT)
 Write-Host "[*] Launching Studio API server & background agent workers in BACKGROUND..." -ForegroundColor Yellow
 
-$ProcArgs = @("-u") + $UvicornArgs
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
+$ProcArgs = @("-X", "utf8", "-u") + $UvicornArgs
 $Proc = Start-Process -FilePath $PythonExe `
     -ArgumentList $ProcArgs `
     -WorkingDirectory $ProjectRoot `

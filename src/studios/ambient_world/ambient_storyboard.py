@@ -232,12 +232,16 @@ async def generate_ambient_storyboard_gemini(
 
         full_gemini_prompt = f"{system_prompt}\n\n{user_msg}"
         logger.info(f"gemini_request_sent: theme='{theme_seed}' shots={shots_count}\n--- PROMPT SENT TO GEMINI ---\n{full_gemini_prompt}\n-----------------------------")
-        print(f"\n[GEMINI DIRECTORIAL REQUEST DISPATCHED]")
-        print(f"--- PROMPT SENT TO GEMINI ---\n{full_gemini_prompt}\n-----------------------------")
+        print(f"\n[GEMINI DIRECTORIAL REQUEST DISPATCHED] Generating structured screenplay...")
 
         data = await llm.generate_structured(full_gemini_prompt)
         logger.info(f"gemini_response_received:\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}")
-        print(f"\n[GEMINI DIRECTORIAL RESPONSE RECEIVED]\n{json.dumps(data, indent=2) if isinstance(data, dict) else str(data)}\n")
+        title_disp = (data.get("title") or theme_seed) if isinstance(data, dict) else theme_seed
+        scene_count = len(data.get("scenes", [])) if isinstance(data, dict) else 0
+        try:
+            print(f"\n[GEMINI DIRECTORIAL RESPONSE RECEIVED] '{title_disp}' ({scene_count} scenes synthesized)\n")
+        except UnicodeEncodeError:
+            print(f"\n[GEMINI DIRECTORIAL RESPONSE RECEIVED] ({scene_count} scenes synthesized)\n")
 
         if data and isinstance(data, dict) and data.get("scenes") and len(data["scenes"]) >= shots_count:
             parsed_scenes = []

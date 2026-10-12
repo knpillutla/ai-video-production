@@ -1,7 +1,9 @@
 """Google Gemini 1.5 Pro LLM adapter for structured scriptwriting and retention hooks."""
 
+import asyncio
 import json
 from typing import Any
+import httpx
 from pydantic import BaseModel, Field
 
 from src.core.config import settings
@@ -54,14 +56,50 @@ class GeminiLLMAdapter(LLMProviderProtocol):
         self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
         self.strict = strict
 
+    async def _post_with_retry(
+        self, body: dict[str, Any], timeout: float = 180.0, max_retries: int = 2
+    ) -> dict[str, Any]:
+        """Post request to Gemini API with non-blocking retry on timeouts and network errors."""
+        client = HTTPClientPool.get_client()
+        headers = {"Content-Type": "application/json"}
+        params = {"key": self.api_key} if self.api_key else {}
+        req_timeout = httpx.Timeout(timeout, connect=30.0, read=timeout)
+
+        for attempt in range(1, max_retries + 2):
+            try:
+                resp = await client.post(
+                    self.base_url, headers=headers, params=params, json=body, timeout=req_timeout
+                )
+                if resp.status_code == 200:
+                    return resp.json()
+                if resp.status_code == 429:
+                    err_msg = "Google AI Studio prepayment credits depleted (HTTP 429 RESOURCE_EXHAUSTED)."
+                    logger.error(f"gemini_api_quota_exhausted: {err_msg}")
+                    raise RuntimeError(f"Gemini API Error: {err_msg} Top up at https://ai.studio/projects")
+                else:
+                    logger.error(f"gemini_api_call_non_200: status={resp.status_code}, body={resp.text[:200]}.")
+                    raise RuntimeError(f"Gemini API Error (HTTP {resp.status_code}): {resp.text[:200]}")
+            except (httpx.TimeoutException, httpx.NetworkError) as net_err:
+                err_type = type(net_err).__name__
+                if attempt <= max_retries:
+                    backoff_s = attempt * 2.0
+                    logger.warning(
+                        f"gemini_api_network_retry: attempt {attempt}/{max_retries + 1} failed with {err_type} "
+                        f"({net_err or 'timeout'}). Retrying in {backoff_s:.1f}s..."
+                    )
+                    await asyncio.sleep(backoff_s)
+                    continue
+                logger.error(f"gemini_api_network_exhausted: all {max_retries + 1} attempts failed: {err_type}")
+                raise RuntimeError(
+                    f"Gemini API request timed out or failed after {max_retries + 1} attempts ({err_type}): "
+                    f"{net_err or 'Network read timeout'}"
+                ) from net_err
+        return {}
+
     async def generate_text(self, prompt: str, system_prompt: str = "", temperature: float = 0.7) -> str:
         """Generate unstructured retention narrative text."""
         if is_mock_mode():
             return f"[Generated Script] Topic: {prompt[:80]} | Retention Hook: Did you know this changed everything?"
-
-        client = HTTPClientPool.get_client()
-        headers = {"Content-Type": "application/json"}
-        params = {"key": self.api_key} if self.api_key else {}
 
         body = {
             "contents": [{"parts": [{"text": prompt}]}],
@@ -71,17 +109,9 @@ class GeminiLLMAdapter(LLMProviderProtocol):
             body["systemInstruction"] = {"parts": [{"text": system_prompt}]}
 
         try:
-            resp = await client.post(self.base_url, headers=headers, params=params, json=body, timeout=90.0)
-            if resp.status_code == 200:
-                data = resp.json()
+            data = await self._post_with_retry(body, timeout=180.0)
+            if data and "candidates" in data:
                 return data["candidates"][0]["content"]["parts"][0]["text"]
-            if resp.status_code == 429:
-                err_msg = "Google AI Studio prepayment credits depleted (HTTP 429 RESOURCE_EXHAUSTED)."
-                logger.error(f"gemini_api_quota_exhausted: {err_msg}")
-                raise RuntimeError(f"Gemini API Error: {err_msg} Top up at https://ai.studio/projects")
-            else:
-                logger.error(f"gemini_api_call_non_200: status={resp.status_code}, body={resp.text[:200]}.")
-                raise RuntimeError(f"Gemini API Error (HTTP {resp.status_code}): {resp.text[:200]}")
         except Exception as ex:
             if not is_mock_mode():
                 raise
@@ -140,9 +170,7 @@ class GeminiLLMAdapter(LLMProviderProtocol):
         """Request Gemini JSON with an API-enforced response schema."""
         if is_mock_mode() and not self.strict:
             return json.dumps(self._build_storyboard_for_prompt(prompt))
-        client = HTTPClientPool.get_client()
-        headers = {"Content-Type": "application/json"}
-        params = {"key": self.api_key} if self.api_key else {}
+
         body = {
             "contents": [{"parts": [{"text": prompt}]}],
             "systemInstruction": {"parts": [{"text": system_prompt}]},
@@ -153,11 +181,11 @@ class GeminiLLMAdapter(LLMProviderProtocol):
             },
         }
         try:
-            resp = await client.post(self.base_url, headers=headers, params=params, json=body, timeout=90.0)
-            if resp.status_code == 200:
-                return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+            data = await self._post_with_retry(body, timeout=180.0)
+            if data and "candidates" in data:
+                return data["candidates"][0]["content"]["parts"][0]["text"]
             if self.strict:
-                raise RuntimeError(f"Production Halted: Gemini structured request HTTP {resp.status_code}: {resp.text[:180]}")
+                raise RuntimeError("Production Halted: Gemini returned empty candidates.")
         except Exception:
             if self.strict:
                 raise

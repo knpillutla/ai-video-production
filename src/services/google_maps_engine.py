@@ -170,10 +170,22 @@ def render_4k_google_itinerary_map(
         dist_raw = curr_stop.get("distance_local") or "1.5 km"
         dual_dist = format_dual_distance(dist_raw)
         t_mode = str(curr_stop.get("transit_mode") or "walk").lower()
-        mode_icon = "🚶 Walk" if "walk" in t_mode else "🚕 Drive"
+        t_dur = str(curr_stop.get("transit_duration") or "").lower()
 
+        dist_m = re.search(r"([\d\.]+)", str(dist_raw))
+        dist_km_val = float(dist_m.group(1)) if dist_m else 1.0
+        dur_m = re.search(r"(\d+)\s*min", t_dur)
+        walk_mins_val = int(dur_m.group(1)) if (dur_m and "walk" in t_dur) else int(dist_km_val * 12.5)
+
+        # Enforce Hard 10-min / 0.8 km walk ceiling: switch to Drive if exceeded
+        if "walk" in t_mode and (dist_km_val > 0.8 or walk_mins_val > 10):
+            t_mode = "drive"
+
+        mode_icon = "🚶 Walk" if "walk" in t_mode else "🚕 Drive"
         leg_cost = curr_stop.get("approx_leg_cost") or ("Free (walk)" if "walk" in t_mode else "£8–£12 Uber")
-        if "uber" not in leg_cost.lower() and "free" not in leg_cost.lower() and "walk" not in leg_cost.lower():
+        if "walk" not in t_mode and ("free" in leg_cost.lower() or not any(ch.isdigit() for ch in leg_cost)):
+            leg_cost = "£8–£12 Uber"
+        elif "uber" not in leg_cost.lower() and "free" not in leg_cost.lower() and "walk" not in leg_cost.lower():
             leg_cost = f"{leg_cost} Uber"
 
         is_done_leg = idx < (curr_idx - 1)
