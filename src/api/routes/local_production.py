@@ -272,9 +272,21 @@ async def produce_video_locally(req: LocalProduceRequest):
 
 
 @router.get("/poll-artifacts")
-async def poll_production_artifacts(channel_id: str, episode_id: str, user_id: str = "knpillutla@gmail.com"):
+async def poll_production_artifacts(
+    channel_id: str,
+    episode_id: str,
+    format: Optional[str] = None,
+    production_name: Optional[str] = None,
+    user_id: str = "knpillutla@gmail.com",
+):
     """Real-time disk scanner returning synthesized keyframes, motion clips, and audio as they finish."""
-    c_dir = storage_service.find_episode_path(user_id=user_id, channel_id=channel_id, episode_id=episode_id)
+    c_dir = storage_service.find_episode_path(
+        user_id=user_id,
+        channel_id=channel_id,
+        episode_id=episode_id,
+        format_slug=format,
+        production_name=production_name,
+    )
     if not c_dir or not c_dir.exists():
         return {"keyframes": [], "motion_clips": [], "audio_stems": [], "video_url": None, "stage": 1}
 

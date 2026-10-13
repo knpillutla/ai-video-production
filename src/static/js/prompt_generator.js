@@ -268,26 +268,25 @@ function quickTestProduceFromPrompt() {
     dual_editions: dualEditionsChecked,
     status: "queued", youtubeStatus: "unpublished", youtubeChannel: null, youtubeUrl: null,
     youtubeReferenceUrl: ytUrl, videoUrl: "/static/videos/preview_master.mp4",
+    keyframes: [], motion_clips: [], audio_stems: [], editions: [], long_play_editions: [], currentStage: 1, progress: 10,
     durationSeconds: durationSec, duration: longPlayHours > 0 ? `${longPlayHours}h` : `${durationSec}s`, numShots, num_shots: numShots,
     longPlayHours: longPlayHours, long_play_hours: longPlayHours, executionMode: isTestMode ? "test" : "prod",
-    language: langVal === "te" ? "Telugu (te)" : (langVal === "hi" ? "Hindi (hi)" : "English (en)"),
-    langCode: langVal, format: fmtStr, style: "Cinematic Photoreal",
-    tierKey: tier.key, tierName: `${tier.name} (${tier.priceStr})`,
-    cost: effCost, cost_usd: effCost, costStr: `$${effCost.toFixed(2)} USD`,
-    theme: themeVal, idea: ideaVal, script: scriptVal,
-    enableBgm: getChk("studio-toggle-bgm"), enableVoiceOver: getChk("studio-toggle-voice-over"),
+    language: langVal === "te" ? "Telugu (te)" : (langVal === "hi" ? "Hindi (hi)" : "English (en)"), langCode: langVal, display_format: fmtStr, style: "Cinematic Photoreal",
+    tierKey: tier.key, tierName: `${tier.name} (${tier.priceStr})`, cost: effCost, cost_usd: effCost, costStr: `$${effCost.toFixed(2)} USD`,
+    theme: themeVal, idea: ideaVal, script: scriptVal, enableBgm: getChk("studio-toggle-bgm"), enableVoiceOver: getChk("studio-toggle-voice-over"),
     enableTts: document.getElementById("studio-toggle-tts")?.checked || false,
     enableLipsync: document.getElementById("studio-toggle-lipsync")?.checked || false,
     allowFallback: document.getElementById("studio-toggle-fallback")?.checked || false,
-    motionModel: isTravelOrSkyline ? "ken_burns" : (isTestMode ? "wan" : "auto"),
-    voiceGender: getVal("studio-voice-gender", "female"),
+    motionModel: isTravelOrSkyline ? "ken_burns" : (isTestMode ? "wan" : "auto"), voiceGender: getVal("studio-voice-gender", "female"),
     pipelineStrategy: typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "auto",
     createdAt: Date.now(), startedAt: null, completedAt: null, publishedAt: null
   };
 
   studioVideos.unshift(newVid);
   if (typeof saveVideosState === "function") saveVideosState();
+  if (typeof setArchiveFormatFilter === "function") setArchiveFormatFilter(selFormatVal || "all");
   if (typeof switchCreationTab === "function") switchCreationTab("archive");
+  if (typeof selectArchiveEpisode === "function") selectArchiveEpisode(newVid.id, newVid.channel_id, newVid.format, newVid.production_name);
   if (typeof renderStudioVideoHistory === "function") renderStudioVideoHistory();
   if (typeof startStudioLiveStageProgress === "function") startStudioLiveStageProgress(newVid, newVid.pipelineStrategy);
 }

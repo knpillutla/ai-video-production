@@ -59,7 +59,9 @@ async function openScriptDrawer(initialTab = "visual") {
   if (!vid.screenplay || !vid.pipeline_state || !vid.user_inputs || !(vid.scenes?.length > 0)) {
     try {
       const uEmail = (typeof currentUser !== "undefined" && currentUser?.email) ? currentUser.email : "knpillutla@gmail.com";
-      const res = await fetch(`/api/production/poll-artifacts?channel_id=${chSlug}&episode_id=${epId}&user_id=${encodeURIComponent(uEmail)}`);
+      const fmtQ = encodeURIComponent(vid.format || vid.format_slug || "");
+      const prodQ = encodeURIComponent(vid.production_name || "");
+      const res = await fetch(`/api/production/poll-artifacts?channel_id=${chSlug}&episode_id=${epId}&format=${fmtQ}&production_name=${prodQ}&user_id=${encodeURIComponent(uEmail)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.script) vid.script = data.script;

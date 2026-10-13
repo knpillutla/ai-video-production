@@ -20,6 +20,36 @@ function loadSavedVideos() {
       if (vidId.startsWith("ep_swiss_alps_") || vidId.startsWith("ep_blizzard_")) return false;
       return true;
     });
+
+    // Purge cross-format contaminated artifacts in legacy storage
+    videos.forEach(v => {
+      const vFmt = String(v.format || v.format_slug || "").toLowerCase().trim();
+      if (vFmt && Array.isArray(v.keyframes)) {
+        v.keyframes = v.keyframes.filter(kf => {
+          const u = String(typeof kf === "object" ? kf.url : kf || "");
+          if (u.includes("/relaxation/") && vFmt.includes("documentary")) return false;
+          if (u.includes("/documentary/") && vFmt.includes("relaxation")) return false;
+          return true;
+        });
+      }
+      if (vFmt && Array.isArray(v.motion_clips)) {
+        v.motion_clips = v.motion_clips.filter(mc => {
+          const u = String(typeof mc === "object" ? mc.url : mc || "");
+          if (u.includes("/relaxation/") && vFmt.includes("documentary")) return false;
+          if (u.includes("/documentary/") && vFmt.includes("relaxation")) return false;
+          return true;
+        });
+      }
+      if (vFmt && Array.isArray(v.audio_stems)) {
+        v.audio_stems = v.audio_stems.filter(as => {
+          const u = String(typeof as === "object" ? as.url : as || "");
+          if (u.includes("/relaxation/") && vFmt.includes("documentary")) return false;
+          if (u.includes("/documentary/") && vFmt.includes("relaxation")) return false;
+          return true;
+        });
+      }
+    });
+
     return videos;
   } catch (e) {
     console.warn("Storage read error:", e);
@@ -38,21 +68,44 @@ function saveVideosState() {
 
 let studioVideos = loadSavedVideos();
 
-function findStudioEpisodeById(episodeId, channelId) {
+function findStudioEpisodeById(episodeId, channelId, formatSlug, productionName) {
   if (!episodeId) return null;
-  const matchesId = episode => episode && (episode.id === episodeId || episode.episode_id === episodeId);
-  const active = (typeof currentActiveInspectorEpisode !== "undefined") ? currentActiveInspectorEpisode : null;
-  if (matchesId(active) && (!channelId || channelId === "all" || (active.channelId || active.channel_id) === channelId)) return active;
+  const normId = String(episodeId).trim().toUpperCase();
+  const matchesId = episode => episode && String(episode.id || episode.episode_id || "").trim().toUpperCase() === normId;
 
-  const selectedChannel = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all")
-    ? selectedStudioChannel
-    : null;
-  const targetChannel = (channelId && channelId !== "all") || selectedChannel;
+  const normFmt = formatSlug ? String(formatSlug).trim().toLowerCase() : null;
+  const normProd = productionName ? String(productionName).trim().toLowerCase().replace(/\s+/g, "_") : null;
+  const targetChannel = (channelId && channelId !== "all")
+    ? String(channelId).trim().toLowerCase()
+    : ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? String(selectedStudioChannel).trim().toLowerCase() : null);
+
+  const matchesScope = episode => {
+    if (!episode) return false;
+    if (targetChannel) {
+      const eCh = String(episode.channelId || episode.channel_id || "earth_serenade").trim().toLowerCase();
+      if (eCh && eCh !== targetChannel) return false;
+    }
+    if (normFmt) {
+      const eFmt = String(episode.format || episode.format_slug || "").trim().toLowerCase();
+      if (eFmt && !eFmt.includes(normFmt) && !normFmt.includes(eFmt)) return false;
+    }
+    if (normProd && normProd !== "standalone") {
+      const eProd = String(episode.production_name || "").trim().toLowerCase().replace(/\s+/g, "_");
+      if (eProd && eProd !== normProd) return false;
+    }
+    return true;
+  };
+
+  const active = (typeof currentActiveInspectorEpisode !== "undefined") ? currentActiveInspectorEpisode : null;
+  if (matchesId(active) && matchesScope(active)) return active;
+
   const records = [
     ...(Array.isArray(studioVideos) ? studioVideos : []),
     ...(typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes) ? channelArchiveEpisodes : []),
   ];
   const matches = records.filter(matchesId);
+  const scoped = matches.filter(matchesScope);
+  if (scoped.length > 0) return scoped[0];
   if (targetChannel) {
     return matches.find(episode => (episode.channelId || episode.channel_id || "earth_serenade") === targetChannel) || null;
   }
@@ -109,6 +162,8 @@ async function syncChannelEpisodesFromBackend() {
           primary_archetype: ep.primary_archetype || ep.screenplay?.primary_archetype || ep.user_inputs?.primary_archetype || ep.manifest?.primary_archetype || null,
           formatType: "Long (16:9)", styleType: "Cinematic 4K", productionType: "Theme",
           channelId: ep.channel_id, channel_id: ep.channel_id,
+          format: ep.format || "relaxation", format_slug: ep.format || "relaxation",
+          created_timestamp: ep.created_timestamp || ep.updated_timestamp || 0,
           numShots: sceneCount, num_shots: sceneCount,
           status: hasMaster ? "completed" : "ready",
           currentStage: curStage,

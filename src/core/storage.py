@@ -137,9 +137,16 @@ class MultiTenantStorageService:
         else:
             search_roots.extend([user_root / "networks", user_root / "channels"])
 
-        if channel_id and format_slug and production_name:
+        clean_fmt = re.sub(r"[^a-zA-Z0-9_-]", "_", str(format_slug).lower()).strip("_") if format_slug else None
+        if clean_fmt:
+            for std in ("documentary", "relaxation", "walking_tour", "music_video", "short"):
+                if std in clean_fmt:
+                    clean_fmt = std
+                    break
+
+        if channel_id and clean_fmt and production_name:
             exact_dir = self.get_channel_format_production_episode_path(
-                user_id, channel_id, format_slug, production_name, episode_id
+                user_id, channel_id, clean_fmt, production_name, episode_id
             )
             if exact_dir.exists() and exact_dir.is_dir():
                 return exact_dir
@@ -167,11 +174,22 @@ class MultiTenantStorageService:
 
         clean_prod = re.sub(r"[^a-zA-Z0-9_-]", "_", str(production_name).lower()).strip("_") if production_name else None
 
-        # Score matches: prefer directory with matching production, motion clips, keyframes, or screenplay
+        # Score matches: strictly respect format and production scope, heavily penalizing cross-format candidates
         def _score(p: Path) -> int:
             score = 0
-            if clean_prod and p.parent.name.lower() == clean_prod:
-                score += 300
+            path_parts = [part.lower() for part in p.parts]
+            if clean_fmt:
+                if clean_fmt in path_parts:
+                    score += 600
+                else:
+                    for other_fmt in ("documentary", "relaxation", "walking_tour", "music_video", "short"):
+                        if other_fmt != clean_fmt and other_fmt in path_parts:
+                            score -= 2000
+            if clean_prod:
+                if p.parent.name.lower() == clean_prod:
+                    score += 400
+                elif any(other_prod in path_parts for other_prod in ("swiss_landscape", "geneva_tour", "standalone") if other_prod != clean_prod):
+                    score -= 1000
             try:
                 if clean_prod and (p / "user_inputs.json").exists():
                     import json

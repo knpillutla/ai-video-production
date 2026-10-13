@@ -393,10 +393,69 @@ async function fetchAndRenderChannelArchive() {
   filterChannelArchive();
 }
 
+let selectedArchiveFormat = "all";
+
+function setArchiveFormatFilter(fmt) {
+  selectedArchiveFormat = fmt || "all";
+  renderArchiveFormatPills();
+  filterChannelArchive();
+}
+
+function renderArchiveFormatPills() {
+  const container = document.getElementById("archive-format-pills");
+  if (!container) return;
+
+  const ch = typeof selectedStudioChannel !== "undefined" ? selectedStudioChannel : "all";
+  const rawList = [
+    ...(typeof studioVideos !== "undefined" && Array.isArray(studioVideos) ? studioVideos : []),
+    ...(typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes) ? channelArchiveEpisodes : [])
+  ];
+
+  const seenKeys = new Set();
+  const formatCounts = { all: 0 };
+  rawList.forEach(ep => {
+    const cId = (ep.channel_id || ep.channelId || "earth_serenade").toLowerCase().trim();
+    if (ch !== "all" && cId !== ch.toLowerCase().trim()) return;
+    const rawEId = String(ep.episode_id || ep.id || "").trim().toUpperCase();
+    const fmt = String(ep.format || ep.format_slug || "relaxation").toLowerCase().trim();
+    const prod = String(ep.production_name || "standalone").toLowerCase().trim().replace(/\s+/g, "_");
+    const key = `${cId}_${fmt}_${prod}_${rawEId}`;
+    if (seenKeys.has(key)) return;
+    seenKeys.add(key);
+
+    formatCounts.all = (formatCounts.all || 0) + 1;
+    formatCounts[fmt] = (formatCounts[fmt] || 0) + 1;
+  });
+
+  const formatMeta = {
+    all: { label: "All", icon: "fa-border-all" },
+    relaxation: { label: "🌿 Relaxation", icon: "fa-leaf" },
+    documentary: { label: "🎬 Documentary", icon: "fa-film" },
+    travel_walking: { label: "🚶 Walking Tour", icon: "fa-person-walking" },
+    dance_musical: { label: "💃 Dance / Song", icon: "fa-music" },
+    nature_retreat: { label: "🌲 Retreat", icon: "fa-tree" },
+    ambient_world: { label: "🌌 Ambient", icon: "fa-moon" }
+  };
+
+  const availableFormats = ["all", ...Object.keys(formatCounts).filter(f => f !== "all" && formatCounts[f] > 0)];
+
+  container.innerHTML = availableFormats.map(fmt => {
+    const isAct = (selectedArchiveFormat === fmt);
+    const meta = formatMeta[fmt] || { label: fmt.charAt(0).toUpperCase() + fmt.slice(1), icon: "fa-tag" };
+    const cnt = formatCounts[fmt] || 0;
+    const btnCls = isAct
+      ? "bg-indigo-600 text-white font-bold shadow-sm ring-1 ring-indigo-400"
+      : "bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-gray-300 font-medium";
+    return `<button type="button" onclick="setArchiveFormatFilter('${fmt}')" class="px-2 py-0.5 rounded-full text-[9px] shrink-0 transition flex items-center gap-1 ${btnCls}"><span>${meta.label}</span><span class="opacity-75 font-mono text-[8px]">(${cnt})</span></button>`;
+  }).join("");
+}
+
 function filterChannelArchive() {
   const container = document.getElementById("channel-archive-list-container");
   const badgeCount = document.getElementById("channel-archive-badge-count");
   if (!container) return;
+
+  renderArchiveFormatPills();
 
   const search = (document.getElementById("archive-filter-search")?.value || "").toLowerCase().trim();
   const ch = typeof selectedStudioChannel !== "undefined" ? selectedStudioChannel : "all";
@@ -407,15 +466,18 @@ function filterChannelArchive() {
       const cId = (v.channelId || v.channel_id || "earth_serenade").toLowerCase().trim();
       const rawEId = (v.id || v.episode_id || "").trim();
       const normEId = rawEId ? rawEId.toUpperCase() : "EP-001";
-      const key = `${cId}_${normEId}`;
+      const fmt = String(v.format_slug || v.format || "relaxation").toLowerCase().trim();
+      const prod = String(v.production_name || "standalone").toLowerCase().trim().replace(/\s+/g, "_");
+      const key = `${cId}_${fmt}_${prod}_${normEId}`;
       allMap.set(key, {
-        episode_id: normEId, channel_id: cId,
+        episode_id: normEId, channel_id: cId, format: fmt, format_slug: fmt,
         production_name: v.production_name || v.user_inputs?.production_name || null,
         title: v.title, story_topic: v.concept || v.story_topic || v.title,
         cost_usd: v.cost || v.cost_usd || 0.14, status: v.status || "completed",
         is_approved: Boolean(v.is_approved || v.approved),
         progress: v.progress || (v.status === "completed" ? 100 : (v.status === "processing" ? 50 : 15)),
-        videoUrl: v.videoUrl || v.video_url, keyframes: v.keyframes || [], motion_clips: v.motion_clips || [], audio_stems: v.audio_stems || []
+        videoUrl: v.videoUrl || v.video_url, keyframes: v.keyframes || [], motion_clips: v.motion_clips || [], audio_stems: v.audio_stems || [],
+        created_timestamp: Number(v.created_timestamp || (v.createdAt ? v.createdAt / 1000 : 0) || 0)
       });
     });
   }
@@ -424,9 +486,16 @@ function filterChannelArchive() {
     const cId = (ep.channel_id || "earth_serenade").toLowerCase().trim();
     const rawEId = (ep.episode_id || ep.id || "").trim();
     const normEId = rawEId ? rawEId.toUpperCase() : "EP-001";
-    const key = `${cId}_${normEId}`;
+    const fmt = String(ep.format || ep.format_slug || "relaxation").toLowerCase().trim();
+    const prod = String(ep.production_name || "standalone").toLowerCase().trim().replace(/\s+/g, "_");
+    const key = `${cId}_${fmt}_${prod}_${normEId}`;
     if (!allMap.has(key)) {
-      allMap.set(key, { ...ep, episode_id: normEId, channel_id: cId, is_approved: Boolean(ep.is_approved || ep.approved), status: "completed", progress: 100 });
+      allMap.set(key, {
+        ...ep, episode_id: normEId, channel_id: cId, format: fmt, format_slug: fmt,
+        production_name: ep.production_name || "standalone",
+        is_approved: Boolean(ep.is_approved || ep.approved), status: "completed", progress: 100,
+        created_timestamp: Number(ep.created_timestamp || ep.updated_timestamp || 0)
+      });
     } else {
       const ex = allMap.get(key);
       if (ep.production_name && (!ex.production_name || ex.production_name === "standalone")) ex.production_name = ep.production_name;
@@ -435,34 +504,51 @@ function filterChannelArchive() {
       if (ep.motion_clips && ep.motion_clips.length > 0 && (!ex.motion_clips || ex.motion_clips.length === 0)) ex.motion_clips = ep.motion_clips;
       if (ep.audio_stems && ep.audio_stems.length > 0 && (!ex.audio_stems || ex.audio_stems.length === 0)) ex.audio_stems = ep.audio_stems;
       if (ep.video_url && !ex.videoUrl) ex.videoUrl = ep.video_url;
+      if (ep.created_timestamp && !ex.created_timestamp) ex.created_timestamp = Number(ep.created_timestamp);
     }
   });
 
   const allEpisodes = Array.from(allMap.values());
   const filtered = allEpisodes.filter(ep => {
     if (ch !== "all" && ep.channel_id !== ch) return false;
+    if (selectedArchiveFormat && selectedArchiveFormat !== "all") {
+      const epFmt = String(ep.format || ep.format_slug || "").toLowerCase().trim();
+      if (epFmt && epFmt !== selectedArchiveFormat.toLowerCase().trim()) return false;
+    }
     if (search) {
-      const match = [ep.title, ep.episode_id, ep.story_topic].some(s => (s || "").toLowerCase().includes(search));
+      const match = [ep.title, ep.episode_id, ep.story_topic, ep.production_name, ep.format].some(s => (s || "").toLowerCase().includes(search));
       if (!match) return false;
     }
     return true;
   });
 
+  // Sort descending: newest created / updated on top
+  filtered.sort((a, b) => {
+    const tA = Number(a.created_timestamp || (a.createdAt ? a.createdAt / 1000 : 0) || 0);
+    const tB = Number(b.created_timestamp || (b.createdAt ? b.createdAt / 1000 : 0) || 0);
+    return tB - tA;
+  });
+
   if (badgeCount) badgeCount.textContent = filtered.length;
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div class="p-6 text-center text-xs text-gray-500 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-dashed border-[var(--border)]">No productions found for this channel.</div>`;
+    container.innerHTML = `<div class="p-6 text-center text-xs text-gray-500 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-dashed border-[var(--border)]">No productions found for this format filter.</div>`;
     return;
   }
 
   const activeEpisode = (typeof currentActiveInspectorEpisode !== "undefined") ? currentActiveInspectorEpisode : null;
   const activeEpId = activeEpisode ? String(activeEpisode.id || activeEpisode.episode_id || "").trim().toUpperCase() : null;
   const activeChannelId = activeEpisode ? String(activeEpisode.channelId || activeEpisode.channel_id || "").trim().toLowerCase() : null;
+  const activeFmt = activeEpisode ? String(activeEpisode.format || activeEpisode.format_slug || "").trim().toLowerCase() : null;
+  const activeProd = activeEpisode ? String(activeEpisode.production_name || "").trim().toLowerCase().replace(/\s+/g, "_") : null;
 
   container.innerHTML = filtered.map(ep => {
     const curEpId = String(ep.episode_id || ep.id || "").trim().toUpperCase();
     const curChId = String(ep.channel_id || ep.channelId || "").trim().toLowerCase();
-    const isSel = Boolean(activeEpId && curEpId === activeEpId && (!activeChannelId || curChId === activeChannelId));
+    const curFmt = String(ep.format || ep.format_slug || "").trim().toLowerCase();
+    const curProd = String(ep.production_name || "").trim().toLowerCase().replace(/\s+/g, "_");
+
+    const isSel = Boolean(activeEpId && curEpId === activeEpId && (!activeChannelId || curChId === activeChannelId) && (!activeFmt || curFmt === activeFmt) && (!activeProd || curProd === activeProd));
     const isProc = (ep.status === "processing" || ep.status === "queued");
     const isApp = Boolean(ep.is_approved || ep.approved);
     const bCls = isSel ? "border-2 border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/40 ring-1 ring-indigo-500/30" : "border border-slate-200 dark:border-slate-800 hover:border-indigo-400 bg-slate-50 dark:bg-slate-950/80";
@@ -471,16 +557,19 @@ function filterChannelArchive() {
     const prodName = ep.production_name ? ep.production_name.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) : "Standalone";
     const geminiTitle = ep.title || ep.story_topic || "Untitled Episode";
     const storyDesc = ep.story_topic && ep.story_topic !== ep.title ? ep.story_topic : "";
+    const fmtBadge = ep.format ? `<span class="px-1.5 py-0.2 rounded text-[7px] font-mono uppercase bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">${ep.format}</span>` : "";
+
     return `
-      <div onclick="selectArchiveEpisode('${ep.episode_id}', '${ep.channel_id}')" class="p-2.5 ${bCls} rounded-xl cursor-pointer transition space-y-1.5 group relative">
+      <div onclick="selectArchiveEpisode('${ep.episode_id}', '${ep.channel_id}', '${ep.format || ''}', '${ep.production_name || ''}')" class="p-2.5 ${bCls} rounded-xl cursor-pointer transition space-y-1.5 group relative">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-1.5 overflow-hidden">
             <span class="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400 shrink-0">${ep.episode_id}</span>
             <span class="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate" title="${prodName}"><i class="fa-solid fa-film text-[9px] text-slate-400 mr-1"></i>${prodName}</span>
+            ${fmtBadge}
           </div>
           <div class="flex items-center gap-1 shrink-0">
             ${badge}
-            <button type="button" onclick="event.stopPropagation(); deleteStudioEpisode('${ep.episode_id}', event, '${ep.channel_id}');" class="p-1 text-slate-400 hover:text-red-600 rounded transition" title="Delete Episode"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+            <button type="button" onclick="event.stopPropagation(); deleteStudioEpisode('${ep.episode_id}', event, '${ep.channel_id}', '${ep.format || ''}', '${ep.production_name || ''}');" class="p-1 text-slate-400 hover:text-red-600 rounded transition" title="Delete Episode"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
           </div>
         </div>
         <div>
@@ -528,25 +617,77 @@ async function approveCurrentEpisode() {
   }
 }
 
-function selectArchiveEpisode(epId, chId) {
+function selectArchiveEpisode(epId, chId, formatSlug, prodName) {
   const normEpId = String(epId || "").trim().toUpperCase();
   const ch = chId || (typeof selectedStudioChannel !== "undefined" ? selectedStudioChannel : "all");
   const normCh = String(ch || "").trim().toLowerCase();
+  const normFmt = String(formatSlug || "").trim().toLowerCase();
+  const normProd = String(prodName || "").trim().toLowerCase().replace(/\s+/g, "_");
 
-  // Look in studioVideos first, then channelArchiveEpisodes
-  let ep = (typeof studioVideos !== "undefined" && Array.isArray(studioVideos))
-    ? studioVideos.find(x => String(x.id || x.episode_id || "").trim().toUpperCase() === normEpId && (normCh === "all" || String(x.channelId || x.channel_id || "").trim().toLowerCase() === normCh))
-    : null;
+  const matchFn = x => {
+    if (!x) return false;
+    const curId = String(x.id || x.episode_id || "").trim().toUpperCase();
+    if (curId !== normEpId) return false;
+    const curCh = String(x.channelId || x.channel_id || "").trim().toLowerCase();
+    if (normCh !== "all" && curCh && curCh !== normCh) return false;
+    if (normFmt) {
+      const curFmt = String(x.format || x.format_slug || "").trim().toLowerCase();
+      if (curFmt && !curFmt.includes(normFmt) && !normFmt.includes(curFmt)) return false;
+    }
+    if (normProd) {
+      const curProd = String(x.production_name || "").trim().toLowerCase().replace(/\s+/g, "_");
+      if (curProd && curProd !== normProd) return false;
+    }
+    return true;
+  };
+
+  let ep = (typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) ? studioVideos.find(matchFn) : null;
   if (!ep && typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) {
-    ep = channelArchiveEpisodes.find(x => String(x.episode_id || x.id || "").trim().toUpperCase() === normEpId && (normCh === "all" || String(x.channel_id || x.channelId || "").trim().toLowerCase() === normCh));
+    ep = channelArchiveEpisodes.find(matchFn);
   }
-  if (!ep && typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) {
-    ep = studioVideos.find(x => String(x.id || x.episode_id || "").trim().toUpperCase() === normEpId);
-  }
-  if (!ep && typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) {
-    ep = channelArchiveEpisodes.find(x => String(x.episode_id || x.id || "").trim().toUpperCase() === normEpId);
+  if (!ep) {
+    const looseMatch = x => {
+      if (!x || String(x.id || x.episode_id || "").trim().toUpperCase() !== normEpId) return false;
+      if (normCh !== "all" && String(x.channelId || x.channel_id || "").trim().toLowerCase() !== normCh) return false;
+      if (normFmt) {
+        const curFmt = String(x.format || x.format_slug || "").trim().toLowerCase();
+        if (curFmt && !curFmt.includes(normFmt) && !normFmt.includes(curFmt)) return false;
+      }
+      return true;
+    };
+    ep = (typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) ? studioVideos.find(looseMatch) : null;
+    if (!ep && typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) {
+      ep = channelArchiveEpisodes.find(looseMatch);
+    }
   }
   if (!ep) return;
+
+  // Sanitize cross-format artifact bleed
+  const epFmt = String(ep.format || ep.format_slug || normFmt || "").toLowerCase();
+  if (epFmt && Array.isArray(ep.keyframes)) {
+    ep.keyframes = ep.keyframes.filter(kf => {
+      const u = String(typeof kf === "object" ? kf.url : kf || "");
+      if (u.includes("/relaxation/") && epFmt.includes("documentary")) return false;
+      if (u.includes("/documentary/") && epFmt.includes("relaxation")) return false;
+      return true;
+    });
+  }
+  if (epFmt && Array.isArray(ep.motion_clips)) {
+    ep.motion_clips = ep.motion_clips.filter(mc => {
+      const u = String(typeof mc === "object" ? mc.url : mc || "");
+      if (u.includes("/relaxation/") && epFmt.includes("documentary")) return false;
+      if (u.includes("/documentary/") && epFmt.includes("relaxation")) return false;
+      return true;
+    });
+  }
+  if (epFmt && Array.isArray(ep.audio_stems)) {
+    ep.audio_stems = ep.audio_stems.filter(as => {
+      const u = String(typeof as === "object" ? as.url : as || "");
+      if (u.includes("/relaxation/") && epFmt.includes("documentary")) return false;
+      if (u.includes("/documentary/") && epFmt.includes("relaxation")) return false;
+      return true;
+    });
+  }
 
   // Set active inspector episode immediately
   currentActiveInspectorEpisode = ep;

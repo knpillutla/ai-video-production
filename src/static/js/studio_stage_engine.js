@@ -149,7 +149,9 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
 
   const pollArtifacts = async () => {
     try {
-      const res = await fetch(`/api/production/poll-artifacts?channel_id=${chSlug}&episode_id=${epId}&user_id=${encodeURIComponent(uEmail)}`);
+      const fmtQ = encodeURIComponent(vid.format || vid.format_slug || "");
+      const prodQ = encodeURIComponent(vid.production_name || "");
+      const res = await fetch(`/api/production/poll-artifacts?channel_id=${chSlug}&episode_id=${epId}&format=${fmtQ}&production_name=${prodQ}&user_id=${encodeURIComponent(uEmail)}`);
       if (res.ok) {
         const data = await res.json();
         let changed = false;
@@ -176,24 +178,64 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           changed = true;
         }
         const reqShots = sceneCount || vid.numShots || vid.num_shots || 1;
-        if (data.keyframes && data.keyframes.length > 0 && (!vid.keyframes || vid.keyframes.length !== data.keyframes.length || vid.keyframes[0]?.isGenerating)) {
-          vid.keyframes = data.keyframes;
-          if (!isManual && data.keyframes.length >= reqShots && vid.currentStage < 2) vid.currentStage = 2;
-          changed = true;
+        const vFmt = String(vid.format || vid.format_slug || "").toLowerCase().trim();
+        if (Array.isArray(data.keyframes)) {
+          if (data.keyframes.length > 0) {
+            if (!vid.keyframes || vid.keyframes.length !== data.keyframes.length || vid.keyframes[0]?.isGenerating) {
+              vid.keyframes = data.keyframes;
+              if (!isManual && data.keyframes.length >= reqShots && vid.currentStage < 2) vid.currentStage = 2;
+              changed = true;
+            }
+          } else if (Array.isArray(vid.keyframes) && vid.keyframes.length > 0) {
+            const hasContaminated = vid.keyframes.some(kf => {
+              const u = String(typeof kf === "object" ? kf.url : kf || "");
+              return (u.includes("/relaxation/") && vFmt.includes("documentary")) || (u.includes("/documentary/") && vFmt.includes("relaxation"));
+            });
+            if (hasContaminated || (vid.status === "processing" && vid.currentStage <= 1)) {
+              vid.keyframes = [];
+              changed = true;
+            }
+          }
         }
         if (!isManual && data.stage && data.stage > vid.currentStage) {
           vid.currentStage = data.stage;
           changed = true;
         }
-        if (data.motion_clips && data.motion_clips.length > 0 && (!vid.motion_clips || vid.motion_clips.length !== data.motion_clips.length || vid.motion_clips[0]?.isGenerating)) {
-          vid.motion_clips = data.motion_clips;
-          if (!isManual && data.motion_clips.length >= reqShots && vid.currentStage < 4) vid.currentStage = 4;
-          changed = true;
+        if (Array.isArray(data.motion_clips)) {
+          if (data.motion_clips.length > 0) {
+            if (!vid.motion_clips || vid.motion_clips.length !== data.motion_clips.length || vid.motion_clips[0]?.isGenerating) {
+              vid.motion_clips = data.motion_clips;
+              if (!isManual && data.motion_clips.length >= reqShots && vid.currentStage < 4) vid.currentStage = 4;
+              changed = true;
+            }
+          } else if (Array.isArray(vid.motion_clips) && vid.motion_clips.length > 0) {
+            const hasContaminated = vid.motion_clips.some(mc => {
+              const u = String(typeof mc === "object" ? mc.url : mc || "");
+              return (u.includes("/relaxation/") && vFmt.includes("documentary")) || (u.includes("/documentary/") && vFmt.includes("relaxation"));
+            });
+            if (hasContaminated || (vid.status === "processing" && vid.currentStage <= 3)) {
+              vid.motion_clips = [];
+              changed = true;
+            }
+          }
         }
-        if (data.audio_stems && JSON.stringify(vid.audio_stems || []) !== JSON.stringify(data.audio_stems)) {
-          vid.audio_stems = data.audio_stems;
-          if (!isManual && data.audio_stems.length > 0 && vid.currentStage < 3) vid.currentStage = 3;
-          changed = true;
+        if (Array.isArray(data.audio_stems)) {
+          if (data.audio_stems.length > 0) {
+            if (JSON.stringify(vid.audio_stems || []) !== JSON.stringify(data.audio_stems)) {
+              vid.audio_stems = data.audio_stems;
+              if (!isManual && data.audio_stems.length > 0 && vid.currentStage < 3) vid.currentStage = 3;
+              changed = true;
+            }
+          } else if (Array.isArray(vid.audio_stems) && vid.audio_stems.length > 0) {
+            const hasContaminated = vid.audio_stems.some(as => {
+              const u = String(typeof as === "object" ? as.url : as || "");
+              return (u.includes("/relaxation/") && vFmt.includes("documentary")) || (u.includes("/documentary/") && vFmt.includes("relaxation"));
+            });
+            if (hasContaminated || (vid.status === "processing" && vid.currentStage <= 2)) {
+              vid.audio_stems = [];
+              changed = true;
+            }
+          }
         }
         if (data.editions && data.editions.length > 0) {
           vid.editions = data.editions;
@@ -306,9 +348,9 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           : (vid.primaryArchetypeLabel || vid.primary_archetype_label || document.getElementById("studio-archetype-selector")?.selectedOptions?.[0]?.textContent?.trim() || ""),
         weather: (document.querySelector('input[name="studio_weather"]:checked')?.value || "normal"),
         production_name: (vid.production_name || document.getElementById("studio-production-name")?.value?.trim() || null),
-        format: (document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "relaxation")),
-        format_slug: (document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "relaxation")),
-        aspect_ratio: (document.getElementById("studio-selected-format")?.value || "16:9"),
+        format: (vid.format_slug || (vid.format && !["16:9", "9:16"].includes(vid.format) ? vid.format : null) || document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "documentary")),
+        format_slug: (vid.format_slug || (vid.format && !["16:9", "9:16"].includes(vid.format) ? vid.format : null) || document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "documentary")),
+        aspect_ratio: (vid.aspect_ratio || document.getElementById("studio-selected-format")?.value || "16:9"),
         force_rerun: Boolean(vid.force_rerun)
       })
     });
@@ -570,12 +612,15 @@ function advanceToMasterStage(vid, forceRerun = false) {
 async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRerun = false) {
   let ep = currentActiveInspectorEpisode;
   const targetId = episodeId || (ep ? (ep.id || ep.episode_id) : "EP-001");
-  if (typeof studioVideos !== "undefined") {
-    const found = typeof findStudioEpisodeById === "function" ? findStudioEpisodeById(targetId) : null;
+  const curCh = ep?.channelId || ep?.channel_id;
+  const curFmt = ep?.format || ep?.format_slug;
+  const curProd = ep?.production_name;
+  if (!ep && typeof studioVideos !== "undefined") {
+    const found = typeof findStudioEpisodeById === "function" ? findStudioEpisodeById(targetId, curCh, curFmt, curProd) : null;
     if (found) ep = found;
   }
   if (!ep && typeof channelArchiveEpisodes !== "undefined") {
-    const found = typeof findStudioEpisodeById === "function" ? findStudioEpisodeById(targetId) : null;
+    const found = typeof findStudioEpisodeById === "function" ? findStudioEpisodeById(targetId, curCh, curFmt, curProd) : null;
     if (found) ep = found;
   }
   const activeStrat = (typeof activePipelineStrategy !== "undefined" && activePipelineStrategy) ? activePipelineStrategy : "manual";

@@ -7,7 +7,29 @@ function populateProductionControlsFromEpisode(rawVid) {
   const epId = rawVid.id || rawVid.episode_id;
   let vid = rawVid;
   if ((!vid.user_inputs || !vid.screenplay) && typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) {
-    const diskRecord = channelArchiveEpisodes.find(x => (x.id === epId || x.episode_id === epId));
+    const normEpId = String(epId || "").trim().toUpperCase();
+    const curFmt = String(rawVid.format || rawVid.format_slug || "").trim().toLowerCase();
+    const curProd = String(rawVid.production_name || "").trim().toLowerCase().replace(/\s+/g, "_");
+    const curCh = String(rawVid.channelId || rawVid.channel_id || "").trim().toLowerCase();
+
+    const diskRecord = channelArchiveEpisodes.find(x => {
+      if (!x) return false;
+      const xId = String(x.id || x.episode_id || "").trim().toUpperCase();
+      if (xId !== normEpId) return false;
+      if (curCh && curCh !== "all") {
+        const xCh = String(x.channelId || x.channel_id || "").trim().toLowerCase();
+        if (xCh && xCh !== curCh) return false;
+      }
+      if (curFmt) {
+        const xFmt = String(x.format || x.format_slug || "").trim().toLowerCase();
+        if (xFmt && !xFmt.includes(curFmt) && !curFmt.includes(xFmt)) return false;
+      }
+      if (curProd && curProd !== "standalone") {
+        const xProd = String(x.production_name || "").trim().toLowerCase().replace(/\s+/g, "_");
+        if (xProd && xProd !== curProd) return false;
+      }
+      return true;
+    });
     if (diskRecord) vid = Object.assign({}, diskRecord, rawVid);
   }
 
@@ -58,6 +80,10 @@ function populateProductionControlsFromEpisode(rawVid) {
   const effAspect = screenplay.aspect_ratio || vid.format || vid.formatType || inputs.aspect_ratio || "16:9";
   const isPortrait = (effAspect === "9:16" || String(effAspect).includes("9:16") || String(effAspect).includes("Short"));
   if (typeof setStudioFormat === "function") setStudioFormat(isPortrait ? "9:16" : "16:9");
+
+  // 3b. Production Format (documentary, relaxation, etc.)
+  const effFormatSlug = vid.format_slug || (vid.format && !["16:9", "9:16"].includes(vid.format) ? vid.format : null);
+  if (effFormatSlug && typeof selectStudioFormat === "function") selectStudioFormat(effFormatSlug);
 
   // 4. Production Tier
   const effTier = inputs.tier || vid.tier || vid.tierKey || screenplay.tier || "balanced";

@@ -16,7 +16,9 @@ async function renderDistributionPackaging(vid) {
   let pub = vid.publishing || vid.screenplay?.publishing || vid.script?.publishing;
   if (!pub) {
     try {
-      const res = await fetch(`/api/production/poll-artifacts?channel_id=${chSlug}&episode_id=${epId}&user_id=${encodeURIComponent(uEmail)}`);
+      const fmtQ = encodeURIComponent(vid.format || vid.format_slug || "");
+      const prodQ = encodeURIComponent(vid.production_name || "");
+      const res = await fetch(`/api/production/poll-artifacts?channel_id=${chSlug}&episode_id=${epId}&format=${fmtQ}&production_name=${prodQ}&user_id=${encodeURIComponent(uEmail)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.screenplay?.publishing) pub = data.screenplay.publishing;
