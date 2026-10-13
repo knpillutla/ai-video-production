@@ -90,38 +90,31 @@ def assemble_4k_master(
     afade_filter = f"afade=t=out:st={fade_start:.2f}:d={fade_dur:.2f}"
 
     if n == 1:
-        c_dur = get_media_duration(seamless_clips[0]) or 5.0
-        v_loops = max(1, int(target_dur / max(1.0, c_dur)) + 2)
+        v_filter_padded = f"{v_filter},tpad=stop_mode=clone:stop=-1"
         if audio_path and audio_path.is_file():
             cmd = [
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
-                "-stream_loop", str(v_loops), "-i", str(seamless_clips[0]),
+                "-i", str(seamless_clips[0]),
                 "-i", str(audio_path), "-map", "0:v:0", "-map", "1:a:0",
-                "-af", afade_filter, "-t", f"{target_dur:.2f}", "-vf", v_filter,
+                "-af", afade_filter, "-t", f"{target_dur:.2f}", "-vf", v_filter_padded,
                 "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
                 "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)
             ]
         else:
             cmd = [
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
-                "-stream_loop", str(v_loops), "-i", str(seamless_clips[0]),
-                "-map", "0:v:0", "-t", f"{target_dur:.2f}", "-vf", v_filter,
+                "-i", str(seamless_clips[0]),
+                "-map", "0:v:0", "-t", f"{target_dur:.2f}", "-vf", v_filter_padded,
                 "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
                 "-movflags", "+faststart", str(out_master)
             ]
     else:
         hold_list = [float(d) for d in shot_durations] if (shot_durations and len(shot_durations) == n) else [max(6.0, (target_dur + ((n - 1) * x_dur)) / n)] * n
         inputs = []
-        for c, h_d in zip(seamless_clips, hold_list):
-            c_d = get_media_duration(c) or 5.0
-            needed_d = h_d + x_dur + 0.5
-            if c_d < needed_d:
-                loops = max(1, int(needed_d / max(1.0, c_d)) + 2)
-                inputs.extend(["-stream_loop", str(loops), "-i", str(c)])
-            else:
-                inputs.extend(["-i", str(c)])
+        for c in seamless_clips:
+            inputs.extend(["-i", str(c)])
 
-        filter_parts = [f"[{i}:v]{build_adaptive_resolution_filter(c, 3840, 2160)}[s{i}]" for i, c in enumerate(seamless_clips)]
+        filter_parts = [f"[{i}:v]{build_adaptive_resolution_filter(c, 3840, 2160)},tpad=stop_mode=clone:stop=-1[s{i}]" for i, c in enumerate(seamless_clips)]
         prev_tag, curr_offset = "s0", max(0.1, hold_list[0] - x_dur)
         for i in range(1, n):
             out_tag = f"v{i}" if i < n - 1 else "v"
@@ -188,7 +181,7 @@ def assemble_dual_masters(
             cmd_mix = [
                 imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error",
                 "-i", str(eff_audio), "-i", str(narr_audio),
-                "-filter_complex", f"[0:a]volume=0.22[bgm];[1:a]volume=1.0[vox];[bgm][vox]amix=inputs=2:duration=first:dropout_transition=3,apad,afade=t=out:st={max(0, t_dur - 3.0):.2f}:d=3.0[aout]",
+                "-filter_complex", f"[0:a]aloop=loop=-1:size=2e+09,volume=0.22,atrim=0:{t_dur:.2f}[bgm];[1:a]volume=1.0,apad,atrim=0:{t_dur:.2f}[vox];[bgm][vox]amix=inputs=2:duration=longest:dropout_transition=0,afade=t=out:st={max(0.0, t_dur - 3.0):.2f}:d=3.0[aout]",
                 "-map", "[aout]", "-c:a", "libmp3lame", "-b:a", "320k", "-ar", "48000",
                 "-t", f"{t_dur:.2f}", str(mixed_audio),
             ]

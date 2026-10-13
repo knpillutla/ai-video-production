@@ -231,10 +231,18 @@ class DocumentaryProducer:
                 dest_n = getattr(scene, "destination_name", None)
                 trans_t = f"{trans_dur} to {dest_n}" if (trans_dur and dest_n and dest_n != attraction_name and trans_dur != "concluded") else None
 
+                from src.studios.documentary_studio.doc_directorial_prompt import is_tour_archetype
+                is_tour = is_tour_archetype(
+                    getattr(sb, "primary_archetype", "")
+                    or getattr(sb, "archetype", "")
+                    or getattr(sb, "sub_genre", "")
+                    or getattr(sb, "genre", "")
+                    or ""
+                )
                 hud_data = {
                     "attraction_name": attraction_name, "timing_text": f"🕒 {start_t} – {end_t}  ({vis_dur})",
                     "day_badge": f"DAY {day_n} • STOP {scene.scene_index}", "cost_text": cost_t, "transit_text": trans_t,
-                }
+                } if is_tour else None
                 choreo = local_cfg.get("movement") or scene.drone_choreography or scene.motion_prompt
                 return await render_perspective_drone_clip(
                     image_path=kf_path, output_path=out_clip, duration_seconds=scene.duration_seconds,

@@ -43,7 +43,15 @@ def build_base_directorial_prompt(
     )
     is_documentary = "doc" in g_lower or "documentary" in ch_lower or "doc" in (sub_genre or "").lower() or "documentary" in a_lower
 
-    tour_archetypes = {"itinerary_map_tour", "travel_itinerary_tour"}
+    tour_archetypes = {
+        "itinerary_map_tour",
+        "travel_itinerary_tour",
+        "grand_tour",
+        "top_attractions_tour",
+        "local_neighborhood_tour",
+        "culinary_food_tour",
+        "architecture_design_tour",
+    }
     is_tour = (a_lower in tour_archetypes) or ((sub_genre or "").lower().strip() in tour_archetypes)
     user_chose_fixed_shots = (num_shots is not None and num_shots > 0 and num_shots != -1)
     if user_chose_fixed_shots:

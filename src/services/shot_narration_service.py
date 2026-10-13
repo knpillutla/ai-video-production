@@ -152,13 +152,6 @@ async def synthesize_shot_aligned_narration(
         part_padded = stem_dir / f"shot_{idx + 1}_padded.mp3"
 
         log_pipeline_step("checking audio", f"Shot {idx + 1} Narration Stem", "started", metadata={"file": part_padded.name})
-        if not force_rerun and part_padded.is_file() and part_padded.stat().st_size > 1000:
-            padded_dur = get_media_duration(part_padded) or p_dur
-            effective_shot_durs.append(round(padded_dur, 2))
-            padded_part_paths.append(part_padded)
-            log_pipeline_step("checking audio", f"Shot {idx + 1} Narration Stem", "completed", "narration stem exists, TTS not recreated", {"file": part_padded.name, "duration": round(padded_dur, 2), "cost": "$0.00"})
-            continue
-
         if text:
             if not part_raw.is_file() or force_rerun:
                 await tts_adapter.synthesize_to_file(text, output_path=part_raw, voice_id=voice_id, speech_rate=speech_rate)
@@ -169,7 +162,15 @@ async def synthesize_shot_aligned_narration(
         # Anti-fatigue rule: shot must be at least speech_dur + lead_in + min_tail_pause
         needed_shot_dur = speech_dur + lead_in_sec + min_tail_pause_sec if speech_dur > 0 else p_dur
         final_shot_dur = max(p_dur, needed_shot_dur)
-        effective_shot_durs.append(round(final_shot_dur, 2))
+
+        # Check existing padded stem: MUST have valid duration >= needed_shot_dur and newer than raw stem
+        if not force_rerun and part_padded.is_file() and part_padded.stat().st_size > 1000:
+            padded_dur = get_media_duration(part_padded) or 0.0
+            if padded_dur >= (speech_dur + lead_in_sec + 0.1):
+                effective_shot_durs.append(round(padded_dur, 2))
+                padded_part_paths.append(part_padded)
+                log_pipeline_step("checking audio", f"Shot {idx + 1} Narration Stem", "completed", "narration stem exists, TTS not recreated", {"file": part_padded.name, "duration": round(padded_dur, 2), "cost": "$0.00"})
+                continue
 
         # Pad audio with lead-in delay and trailing silence
         delay_ms = int(lead_in_sec * 1000)
@@ -193,12 +194,14 @@ async def synthesize_shot_aligned_narration(
         flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
         subprocess.run(cmd, check=True, creationflags=flags)
         padded_part_paths.append(part_padded)
+        effective_shot_durs.append(round(final_shot_dur, 2))
         log_pipeline_step("checking audio", f"Shot {idx + 1} Narration Stem", "completed", "narration stem synthesized", {"file": part_padded.name, "duration": final_shot_dur})
 
     # Concat all padded shots into master spoken_narration.mp3
     log_pipeline_step("checking audio", "Master Narration Concat", "started", metadata={"shots": len(padded_part_paths)})
     total_master_dur = sum(effective_shot_durs)
-    if not force_rerun and out_master.is_file() and out_master.stat().st_size > 1000:
+    cur_m_dur = get_media_duration(out_master) if out_master.is_file() else 0.0
+    if not force_rerun and out_master.is_file() and out_master.stat().st_size > 1000 and abs(cur_m_dur - total_master_dur) <= 1.0:
         log_pipeline_step("checking audio", "Master Narration Concat", "completed", "master narration exists, concat not recreated", {"file": out_master.name, "cost": "$0.00"})
     else:
         concat_list = ep_dir / "narration_concat.txt"

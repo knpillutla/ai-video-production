@@ -13,6 +13,11 @@ from src.studios.base_directorial_prompt import build_base_directorial_prompt
 TOUR_ARCHETYPES = {
     "itinerary_map_tour",
     "travel_itinerary_tour",
+    "grand_tour",
+    "top_attractions_tour",
+    "local_neighborhood_tour",
+    "culinary_food_tour",
+    "architecture_design_tour",
 }
 
 

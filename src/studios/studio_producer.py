@@ -124,7 +124,13 @@ class StudioProducer:
             })
 
         from src.studios.documentary_studio.doc_directorial_prompt import is_tour_archetype
-        is_itinerary_tour = is_tour_archetype(getattr(sb, "archetype", "") or getattr(sb, "sub_genre", "") or "")
+        is_itinerary_tour = is_tour_archetype(
+            getattr(sb, "primary_archetype", "")
+            or getattr(sb, "archetype", "")
+            or getattr(sb, "sub_genre", "")
+            or getattr(sb, "genre", "")
+            or ""
+        )
 
         for idx, s in enumerate(sb.scenes, 1):
             target_kf = ep_dir / f"keyframe_p{idx}.jpg"
@@ -376,7 +382,7 @@ class StudioProducer:
                             "day_badge": f"DAY {day_n} • STOP {idx}",
                             "cost_text": cost_t,
                             "transit_text": trans_t,
-                        }
+                        } if is_itinerary_tour else None
 
                         choreo = local_cfg.get("movement") or getattr(s, "drone_choreography", None) or getattr(s, "camera_movement", None) or "dollyin"
                         coro = render_perspective_drone_clip(
