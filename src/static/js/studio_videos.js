@@ -59,15 +59,27 @@ function findStudioEpisodeById(episodeId, channelId) {
   return matches.length === 1 ? matches[0] : null;
 }
 
-function nextEpisodeIdForChannel(channelId) {
+function nextEpisodeIdForChannel(channelId, formatKey, productionName) {
   const records = [
     ...(Array.isArray(studioVideos) ? studioVideos : []),
     ...(typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes) ? channelArchiveEpisodes : [])
   ];
+  const normChan = (channelId || "").toLowerCase().trim();
+  const normFmt = (formatKey || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "relaxation")).toLowerCase().trim();
+  const rawProd = (productionName || (document.getElementById("studio-production-name")?.value) || "standalone").toLowerCase().trim().replace(/\s+/g, "_");
+
   const prefix = /^EP-(\d+)$/i;
   let highest = 0;
   records.forEach(record => {
-    if ((record.channelId || record.channel_id) !== channelId) return;
+    const rChan = String(record.channelId || record.channel_id || "").toLowerCase().trim();
+    if (normChan && rChan && rChan !== normChan) return;
+
+    const rFmt = String(record.format_slug || record.format || "").toLowerCase().trim();
+    if (normFmt && rFmt && rFmt !== normFmt) return;
+
+    const rProd = String(record.production_name || "standalone").toLowerCase().trim().replace(/\s+/g, "_");
+    if (rawProd && rProd && rProd !== rawProd) return;
+
     const match = String(record.episode_id || record.id || "").match(prefix);
     if (match) highest = Math.max(highest, Number(match[1]));
   });
@@ -91,6 +103,7 @@ async function syncChannelEpisodesFromBackend() {
         return {
           id: normEpId, episode_id: normEpId, jobId: `job_${normEpId.toLowerCase()}`, title: ep.title || ep.story_topic,
           concept: ep.story_topic || ep.title, videoType: ep.category === "Music" ? "Relaxation & ASMR" : "Nature Soundscape",
+          production_name: ep.production_name || ep.user_inputs?.production_name || "standalone",
           genre: ep.genre || ep.screenplay?.genre || ep.user_inputs?.genre || ep.manifest?.genre || "relax/nature",
           sub_genre: ep.sub_genre || ep.screenplay?.sub_genre || ep.user_inputs?.sub_genre || ep.manifest?.sub_genre || null,
           primary_archetype: ep.primary_archetype || ep.screenplay?.primary_archetype || ep.user_inputs?.primary_archetype || ep.manifest?.primary_archetype || null,
@@ -194,7 +207,15 @@ function renderStudioVideoHistory() {
     return `
       <tr data-video-id="${v.id}" data-video-channel="${channelId}" onclick="onLedgerRowClick(event, '${v.id}', '${channelId}')" class="hover:bg-slate-100/70 dark:hover:bg-slate-800/40 transition">
         <td class="p-3"><div class="font-mono font-bold text-slate-900 dark:text-white text-xs">${v.id}</div><div class="font-mono text-[9px] text-indigo-600 dark:text-indigo-400 cursor-pointer hover:underline truncate max-w-[120px]" onclick="viewEpisodeArtifacts('${v.id}', '${channelId}')">${v.jobId}</div></td>
-        <td class="p-3"><div class="font-bold text-slate-900 dark:text-white text-xs">${v.title}</div><div class="text-[10px] text-slate-500 dark:text-gray-400 max-w-md">${v.concept}</div></td>
+        <td class="p-3">
+          <div class="flex items-center gap-1.5 mb-0.5">
+            <span class="px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
+              <i class="fa-solid fa-film text-[8px] mr-1"></i>${(v.production_name || 'Standalone').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </span>
+          </div>
+          <div class="font-bold text-slate-900 dark:text-white text-xs">${v.title}</div>
+          <div class="text-[10px] text-slate-500 dark:text-gray-400 max-w-md line-clamp-1">${v.concept}</div>
+        </td>
         <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-800 dark:text-blue-300 border border-blue-500/30">${v.videoType || "Series"}</span></td>
         <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${fmtBadge}">${v.formatType || "16:9"}</span></td>
         <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-500/15 text-purple-800 dark:text-purple-300 border border-purple-500/30">${v.styleType || "Realistic"}</span></td>

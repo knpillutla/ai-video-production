@@ -68,15 +68,15 @@ def interleave_tour_storyboard_scenes(
     if not physical_attractions:
         return raw_scenes
 
-    # Duration budgeting: 5s per card/map, remaining time divided across attractions
+    # Duration budgeting: 8s per card, 9s per map, remaining time divided across attractions
     num_attrs = len(physical_attractions)
     num_maps = max(0, num_attrs - 1)
-    card_dur = 5.0
-    map_dur = 5.0
+    card_dur = 8.0
+    map_dur = 9.0
     fixed_overhead = (2 * card_dur) + (num_maps * map_dur)  # Overview + Summary + Maps
 
-    remaining_attr_time = max(8.0 * num_attrs, total_duration_seconds - fixed_overhead)
-    per_attr_dur = round(max(8.0, remaining_attr_time / num_attrs), 1)
+    remaining_attr_time = max(9.0 * num_attrs, total_duration_seconds - fixed_overhead)
+    per_attr_dur = round(max(9.0, remaining_attr_time / num_attrs), 1)
 
     interleaved: List[Dict[str, Any]] = []
 

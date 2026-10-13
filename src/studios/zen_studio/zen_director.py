@@ -57,9 +57,12 @@ async def generate_zen_screenplay_gemini(
     duration_seconds: float = 60.0,
     user_id: str = "user_krishna_01",
     num_shots: int = 1,
+    camera_motion: str = "locked_tripod",
     raw_output_path: Optional[str | Path] = None,
     image_model: str = "flux_1_1_pro_ultra",
     channel_id: Optional[str] = None,
+    tier: str = "balanced",
+    **kwargs: Any,
 ) -> RelaxScreenplay:
     """Dynamically generate 432Hz healing meditation screenplay via Gemini LLM."""
     logger.info(f"generating_zen_screenplay: prompt='{custom_prompt}' genre='{genre}' shots={num_shots} channel={channel_id}")
@@ -69,6 +72,7 @@ async def generate_zen_screenplay_gemini(
         custom_prompt=custom_prompt,
         duration_seconds=duration_seconds,
         num_shots=num_shots,
+        camera_motion=camera_motion,
         image_model=image_model,
         sub_genre=sub_genre,
         channel_id=channel_id,

@@ -168,14 +168,20 @@ async def produce_channel_video(
     # Resolve episode directory under channel audience brand:
     # channels/{channel_slug}/{format_slug}/{production_name}/{episode_id}
     if episode_id:
-        eff_fmt = format_slug or ("documentaries" if "documentary" in eff_genre.lower() else ("walking_tours" if "walking" in eff_genre.lower() else "relaxation"))
+        eff_fmt = format_slug or ("documentary" if "documentary" in eff_genre.lower() else ("walking_tour" if "walking" in eff_genre.lower() else "relaxation"))
+        eff_prod = production_name or "standalone"
         # First, search if the episode already exists in user channel network directory:
-        found_existing_ep_dir = storage_service.find_episode_path(user_id=effective_user, channel_id=channel_id, episode_id=episode_id)
+        found_existing_ep_dir = storage_service.find_episode_path(
+            user_id=effective_user,
+            channel_id=channel_id,
+            episode_id=episode_id,
+            format_slug=eff_fmt,
+            production_name=eff_prod,
+        )
 
         if found_existing_ep_dir:
             ep_dir = found_existing_ep_dir
         else:
-            eff_prod = production_name or "standalone"
             ep_dir = storage_service.get_channel_format_production_episode_path(
                 effective_user, channel_id, eff_fmt, eff_prod, episode_id
             )
@@ -613,9 +619,9 @@ async def produce_channel_video(
         current_stage = 1
     elif photos_only:
         current_stage = 2
-    elif motion_only:
-        current_stage = 3
     elif audio_only:
+        current_stage = 3
+    elif motion_only:
         current_stage = 4
     elif master_v:
         current_stage = 5
@@ -656,15 +662,15 @@ async def produce_channel_video(
         "stage_approvals": {
             "script": True,
             "keyframes": current_stage >= 2 and len(keyframes) > 0,
-            "motion": current_stage >= 3 and len(motion_clips) > 0,
-            "audio": current_stage >= 4 and len(audio_stems) > 0,
+            "audio": current_stage >= 3 and len(audio_stems) > 0,
+            "motion": current_stage >= 4 and len(motion_clips) > 0,
             "master": current_stage >= 5 and bool(master_v),
         },
         "stages_completed": {
             "script": True,
             "keyframes": current_stage >= 2 and len(keyframes) > 0,
-            "motion": current_stage >= 3 and len(motion_clips) > 0,
-            "audio": current_stage >= 4 and len(audio_stems) > 0,
+            "audio": current_stage >= 3 and len(audio_stems) > 0,
+            "motion": current_stage >= 4 and len(motion_clips) > 0,
             "master": current_stage >= 5 and bool(master_v),
         },
         "keyframes": keyframes,

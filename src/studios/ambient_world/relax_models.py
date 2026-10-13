@@ -33,6 +33,13 @@ class RelaxModelConfigDirective(BaseModel):
     model: str = ""
     prompts: RelaxModelPromptsSpec = Field(default_factory=RelaxModelPromptsSpec)
     settings: Dict[str, Any] = Field(default_factory=dict)
+    movement: Optional[str] = None
+    start_pan: Optional[str] = "center"
+    start_zoom: Optional[str] = "normal"
+    start_tilt: Optional[str] = "center"
+    curve: Optional[str] = "cosine"
+    speed_factor: Optional[float] = 1.0
+    rationale: Optional[str] = None
 
 
 class RelaxTravelTourismSpec(BaseModel):

@@ -39,7 +39,7 @@ async def list_channels(current_user: User = Depends(get_current_user)):
         for c_dir in target_dir.iterdir():
             if c_dir.is_dir():
                 slug = c_dir.name
-                prof_file = c_dir / "channel_profile.json"
+                prof_file = c_dir / "network_profile.json" if (c_dir / "network_profile.json").exists() else c_dir / "channel_profile.json"
                 existing = repo.get_channel(current_user.id, slug)
                 if prof_file.exists():
                     try:
@@ -299,7 +299,7 @@ async def save_profile(
     profile = ChannelProfile(**profile_data)
     user_chan_dir = storage_service.get_network_path(current_user.email, profile.channel_id.lower().strip())
     user_chan_dir.mkdir(parents=True, exist_ok=True)
-    target_file = user_chan_dir / "channel_profile.json"
+    target_file = user_chan_dir / "network_profile.json"
     target_file.write_text(profile.model_dump_json(indent=2), encoding="utf-8")
     return {"status": "ok", "saved_file": str(target_file), "channel_id": profile.channel_id}
 
@@ -362,6 +362,34 @@ async def list_channel_productions(
         })
     results.sort(key=lambda x: x["name"])
     return {"status": "ok", "channel_slug": channel_slug, "format": format, "productions": results}
+
+
+@router.get("/{channel_slug}/next-episode")
+async def get_next_episode(
+    channel_slug: str,
+    format: str = "relaxation",
+    production_name: str = "standalone",
+    current_user: User = Depends(get_current_user),
+):
+    """Compute next episode code strictly scoped to user/network/format/production_name."""
+    clean_fmt = re.sub(r"[^a-zA-Z0-9_-]", "_", str(format).lower()).strip("_") or "relaxation"
+    clean_prod = re.sub(r"[^a-zA-Z0-9_-]", "_", str(production_name).lower()).strip("_") or "standalone"
+    prod_dir = storage_service.get_network_path(current_user.email, channel_slug) / clean_fmt / clean_prod
+    highest_ep = 0
+    if prod_dir.exists() and prod_dir.is_dir():
+        for ep_item in prod_dir.iterdir():
+            if ep_item.is_dir() and (ep_item.name.upper().startswith("EP-") or ep_item.name.upper().startswith("EP_")):
+                ep_suffix = ep_item.name.replace("EP-", "").replace("EP_", "").replace("ep-", "").replace("ep_", "")
+                if ep_suffix.isdigit():
+                    highest_ep = max(highest_ep, int(ep_suffix))
+    return {
+        "status": "ok",
+        "channel_slug": channel_slug,
+        "format": clean_fmt,
+        "production_name": clean_prod,
+        "highest_ep": highest_ep,
+        "next_episode_code": f"EP-{(highest_ep + 1):03d}",
+    }
 
 
 

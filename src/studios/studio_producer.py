@@ -100,7 +100,12 @@ class StudioProducer:
 
         tour_stops = []
         for idx, s in enumerate(sb.scenes):
-            if not getattr(s, "origin_coords", None) or getattr(s, "is_map_transition", False) or getattr(s, "is_itinerary_summary", False) or getattr(s, "is_itinerary_overview", False) or getattr(s, "is_vacation_scope", False) or getattr(s, "shot_type", "") in ("itinerary_overview_card", "itinerary_summary_card", "leisure_vacation_scope_card", "overhead_cartographic"):
+            st_type = str(getattr(s, "shot_type", "") or getattr(s, "perspective_type", "") or "").lower()
+            loc_hub = str(getattr(s, "location_hub", "") or "").lower()
+            is_ov = bool(getattr(s, "is_itinerary_overview", False) or "overview" in st_type or "overview" in loc_hub or "master day" in loc_hub)
+            is_sum = bool(getattr(s, "is_itinerary_summary", False) or "summary" in st_type or "summary" in loc_hub)
+            is_map = bool(getattr(s, "is_map_transition", False) or "overhead_cartographic" in st_type or "transit" in loc_hub)
+            if not getattr(s, "origin_coords", None) or is_ov or is_sum or is_map or getattr(s, "is_vacation_scope", False):
                 continue
             nxt_tr = next((nxt for nxt in sb.scenes[idx + 1:] if getattr(nxt, "is_map_transition", False)), None)
             tour_stops.append({
@@ -231,12 +236,68 @@ class StudioProducer:
             except Exception as tts_err:
                 logger.warning(f"tts_voiceover_failed: {tts_err}")
 
+        # Acoustic Foley & Brown Noise Mastering Gate
+        audio_stems = []
+        bgm_path = ep_dir / "raw_soundtrack.mp3"
+        legacy_bgm = ep_dir / "soundscape_master.mp3"
+        if legacy_bgm.is_file() and not bgm_path.is_file():
+            try: legacy_bgm.rename(bgm_path)
+            except Exception: pass
+        if not no_bgm:
+            log_pipeline_step("checking audio", "BGM Soundtrack", "started", metadata={"file": bgm_path.name})
+            if bgm_path.is_file() and bgm_path.stat().st_size >= 1000 and not force_rerun:
+                log_pipeline_step("checking audio", "BGM Soundtrack", "completed", "soundtrack exists, soundtrack not recreated", {"file": bgm_path.name, "cost": "$0.00"})
+            else:
+                log_pipeline_step("checking audio", "BGM Soundtrack", "started", "soundtrack missing, synthesizing via Suno/DSP", {"file": bgm_path.name})
+                bgm_path = await soundtrack_service.synthesize_ambient_soundtrack(
+                    title=sb.title, tags=sb.audio_tags or "432Hz ambient soundscape, deep relaxation, -14 LUFS",
+                    out_path=bgm_path, total_duration=sb.total_duration, genre=f"{getattr(sb, 'cluster', 'studio')} soundscape", episode_id=ep_dir.name,
+                )
+                log_pipeline_step("checking audio", "BGM Soundtrack", "completed", "soundtrack synthesized", {"file": bgm_path.name})
+            if bgm_path and bgm_path.is_file():
+                audio_stems.append(bgm_path)
+
+        if voice_path.is_file() and voice_path.stat().st_size > 1000:
+            audio_stems.append(voice_path)
+
+        spatial_audio_path = ep_dir / "velvet_binaural_master_48k.mp3"
+        legacy_spatial = ep_dir / "binaural_soundscape_master.wav"
+        if legacy_spatial.is_file() and not spatial_audio_path.is_file():
+            try:
+                legacy_spatial.rename(spatial_audio_path)
+            except Exception:
+                pass
+        log_pipeline_step("checking audio", "Spatial Binaural Master", "started", metadata={"file": spatial_audio_path.name})
+        if spatial_audio_path.is_file() and spatial_audio_path.stat().st_size >= 1000 and not force_rerun:
+            log_pipeline_step("checking audio", "Spatial Binaural Master", "completed", "spatial audio exists, spatial audio not recreated", {"file": spatial_audio_path.name, "cost": "$0.00"})
+        else:
+            if bgm_path and Path(bgm_path).is_file():
+                spatial_audio_path = await asyncio.to_thread(
+                    apply_binaural_spatial_mastering,
+                    input_audio=bgm_path,
+                    output_audio=spatial_audio_path,
+                    target_lufs=-14.0,
+                )
+                log_pipeline_step("checking audio", "Spatial Binaural Master", "completed", "spatial audio synthesized", {"file": spatial_audio_path.name})
+
+        if audio_only:
+            return {
+                "status": "success",
+                "stage": "audio_only",
+                "episode_id": ep_dir.name,
+                "keyframes": [str(p) for p in image_results],
+                "bgm_path": str(spatial_audio_path) if spatial_audio_path else (str(bgm_path) if bgm_path else None),
+                "narration_path": str(voice_path) if voice_path.is_file() else None,
+                "spatial_audio": str(spatial_audio_path) if spatial_audio_path else None,
+                "audio_stems": [str(p) for p in audio_stems if p.is_file()],
+                "episode_dir": str(ep_dir),
+            }
+
         # Stage 4: Motion Diffusion Gate (Parallel AI Video Diffusion with In-Flight Token Resumption)
         existing_vids = [ep_dir / f"motion_p{idx}.mp4" for idx in range(1, len(sb.scenes) + 1)]
-        from src.services.ambient_export_service import get_media_duration
-        all_motion_exist = all(p.is_file() and p.stat().st_size > 1000 and abs(get_media_duration(p) - float(getattr(sb.scenes[i - 1], "duration_seconds", 0.0) or 0.0)) <= 1.0 for i, p in enumerate(existing_vids, 1))
+        all_motion_exist = len(existing_vids) > 0 and all(p.is_file() and p.stat().st_size > 1000 for p in existing_vids)
 
-        if (audio_only or master_only) and all_motion_exist and not (force_rerun and motion_only):
+        if master_only and all_motion_exist and not (force_rerun and motion_only):
             logger.info(f"downstream_stage_reuse_motion: episode='{ep_dir.name}' reusing {len(existing_vids)} existing motion clips ($0 spend)")
             video_clips = existing_vids
         else:
@@ -253,7 +314,7 @@ class StudioProducer:
 
             for idx, (s, kf) in enumerate(zip(sb.scenes, valid_keyframes), 1):
                 out_clip = ep_dir / f"motion_p{idx}.mp4"
-                if not force_rerun and out_clip.is_file() and out_clip.stat().st_size > 1000 and abs(get_media_duration(out_clip) - float(getattr(s, "duration_seconds", 0.0) or 0.0)) <= 1.0:
+                if not force_rerun and out_clip.is_file() and out_clip.stat().st_size > 1000:
                     video_clips.append(out_clip)
                     continue
                 is_tour_slide = (
@@ -262,21 +323,34 @@ class StudioProducer:
                     or getattr(s, "is_map_transition", False)
                     or getattr(s, "is_vacation_scope", False)
                 )
-                use_local = is_tour_slide or (motion_model == "locked_tripod") or (getattr(s, "motion_type", "") in ("ken_burns", "static", "local_drone"))
+                is_relax = str(getattr(sb, "genre", "")).lower().startswith("relax") or "relax" in str(getattr(sb, "cluster", "")).lower()
+                use_local = is_relax or is_tour_slide or (motion_model in ("locked_tripod", "local_drone", "local_zoompan", "local", "offline")) or (getattr(s, "motion_type", "") in ("ken_burns", "static", "local_drone", "locked_tripod"))
 
                 if use_local:
-                    if is_tour_slide:
-                        # Static map/card hold: skip drone camera movement and HUD overlay
+                    raw_cfg = getattr(s, "model_configs", None) or {}
+                    local_cfg = {}
+                    if hasattr(raw_cfg, "get"):
+                        local_cfg = raw_cfg.get("local_drone") or raw_cfg.get("ken_burns") or {}
+                    if hasattr(local_cfg, "model_dump"):
+                        local_cfg = local_cfg.model_dump()
+                    elif not isinstance(local_cfg, dict):
+                        local_cfg = {}
+
+                    cam_mov = str(getattr(s, "camera_movement", "") or getattr(s, "camera_rig", "") or motion_model or "").lower()
+                    is_fixed_tripod = is_relax or any(w in cam_mov for w in ("locked", "tripod", "static", "fixed", "stay", "hold")) or (local_cfg.get("movement") == "stay")
+
+                    if is_tour_slide or is_fixed_tripod:
+                        # Static locked tripod hold: pure locked stationary frame ($0.00 compute)
                         coro = render_perspective_drone_clip(
                             image_path=kf,
                             output_path=out_clip,
                             duration_seconds=s.duration_seconds,
                             fps=sb.recommended_fps or 24,
                             target_res=(3840, 2160),
-                            choreography="hold",
-                            start_pan="center",
-                            start_zoom="normal",
-                            start_tilt="center",
+                            choreography="stay",
+                            start_pan=local_cfg.get("start_pan", "center"),
+                            start_zoom=local_cfg.get("start_zoom", "normal"),
+                            start_tilt=local_cfg.get("start_tilt", "center"),
                             curve="linear",
                             lower_third_hud=None,
                         )
@@ -299,23 +373,28 @@ class StudioProducer:
                             "transit_text": trans_t,
                         }
 
+                        choreo = local_cfg.get("movement") or s.motion_prompt or "slow_pan"
                         coro = render_perspective_drone_clip(
                             image_path=kf,
                             output_path=out_clip,
                             duration_seconds=s.duration_seconds,
                             fps=sb.recommended_fps or 24,
                             target_res=(3840, 2160),
-                            choreography=s.motion_prompt or "slow_pan",
-                            start_pan="center",
-                            start_zoom="normal",
-                            start_tilt="center",
-                            curve="cosine",
+                            choreography=choreo,
+                            start_pan=local_cfg.get("start_pan", "center"),
+                            start_zoom=local_cfg.get("start_zoom", "normal"),
+                            start_tilt=local_cfg.get("start_tilt", "center"),
+                            curve=local_cfg.get("curve", "cosine"),
                             lower_third_hud=hud_data,
                         )
                     local_coros.append(coro)
                     local_indices.append(idx)
                 else:
-                    custom_model_cfg = getattr(s, "model_configs", None) if isinstance(getattr(s, "model_configs", None), dict) else None
+                    custom_model_cfg = getattr(s, "model_configs", None)
+                    if hasattr(custom_model_cfg, "model_dump"):
+                        custom_model_cfg = custom_model_cfg.model_dump()
+                    elif not isinstance(custom_model_cfg, dict):
+                        custom_model_cfg = None
                     chosen_model, m_allow_fallback, m_rationale = resolve_scene_motion_model(
                         scene=s, tier=tier, requested_motion_model=motion_model,
                         scene_index=idx - 1, total_scenes=len(valid_keyframes), genre=getattr(sb, "cluster", "relax/nature"),
@@ -359,90 +438,23 @@ class StudioProducer:
                 "video_clips": [str(c) for c in video_clips], "episode_dir": str(ep_dir),
             }
 
-        # Stage 5: Acoustic Foley & Brown Noise Mastering Gate
-        audio_stems = []
-        bgm_path = ep_dir / "raw_soundtrack.mp3"
-        legacy_bgm = ep_dir / "soundscape_master.mp3"
-        if legacy_bgm.is_file() and not bgm_path.is_file():
-            try: legacy_bgm.rename(bgm_path)
-            except Exception: pass
-        if not no_bgm:
-            log_pipeline_step("checking audio", "BGM Soundtrack", "started", metadata={"file": bgm_path.name})
-            if bgm_path.is_file() and bgm_path.stat().st_size >= 1000 and not force_rerun:
-                log_pipeline_step("checking audio", "BGM Soundtrack", "completed", "soundtrack exists, soundtrack not recreated", {"file": bgm_path.name, "cost": "$0.00"})
-            else:
-                log_pipeline_step("checking audio", "BGM Soundtrack", "started", "soundtrack missing, synthesizing via Suno/DSP", {"file": bgm_path.name})
-                bgm_path = await soundtrack_service.synthesize_ambient_soundtrack(
-                    title=sb.title, tags=sb.audio_tags or "432Hz ambient soundscape, deep relaxation, -14 LUFS",
-                    out_path=bgm_path, total_duration=sb.total_duration, genre=f"{getattr(sb, 'cluster', 'studio')} soundscape", episode_id=ep_dir.name,
-                )
-                log_pipeline_step("checking audio", "BGM Soundtrack", "completed", "soundtrack synthesized", {"file": bgm_path.name})
-            if bgm_path and bgm_path.is_file():
-                audio_stems.append(bgm_path)
-
-        if enable_voiceover and (spoken_text or has_narr):
-            if not voice_path.is_file() or voice_path.stat().st_size < 1000 or (force_rerun and audio_only):
-                log_pipeline_step("checking audio", "Spoken Narration Voiceover", "started", metadata={"file": voice_path.name})
-                try:
-                    from src.services.shot_narration_service import synthesize_shot_aligned_narration
-                    narr_res = await synthesize_shot_aligned_narration(
-                        scenes=sb.scenes, ep_dir=ep_dir, fallback_script=spoken_text,
-                        total_target_sec=float(sb.total_duration or 60.0), force_rerun=force_rerun and audio_only,
-                    )
-                    if narr_res.get("narration_path") and Path(narr_res["narration_path"]).is_file():
-                        voice_path = Path(narr_res["narration_path"])
-                    log_pipeline_step("checking audio", "Spoken Narration Voiceover", "completed", "narration synthesized", {"file": voice_path.name})
-                except Exception as tts_err:
-                    logger.warning(f"tts_voiceover_failed: {tts_err}")
-
-        if voice_path.is_file() and voice_path.stat().st_size > 1000:
-            audio_stems.append(voice_path)
-
-        spatial_audio_path = ep_dir / "velvet_binaural_master_48k.mp3"
-        legacy_spatial = ep_dir / "binaural_soundscape_master.wav"
-        if legacy_spatial.is_file() and not spatial_audio_path.is_file():
-            try:
-                legacy_spatial.rename(spatial_audio_path)
-            except Exception:
-                pass
-        log_pipeline_step("checking audio", "Spatial Binaural Master", "started", metadata={"file": spatial_audio_path.name})
-        if spatial_audio_path.is_file() and spatial_audio_path.stat().st_size >= 1000 and not force_rerun:
-            log_pipeline_step("checking audio", "Spatial Binaural Master", "completed", "spatial audio exists, spatial audio not recreated", {"file": spatial_audio_path.name, "cost": "$0.00"})
-        else:
-            if bgm_path and Path(bgm_path).is_file():
-                spatial_audio_path = await asyncio.to_thread(
-                    apply_binaural_spatial_mastering,
-                    input_audio=bgm_path,
-                    output_audio=spatial_audio_path,
-                    target_lufs=-14.0,
-                )
-                log_pipeline_step("checking audio", "Spatial Binaural Master", "completed", "spatial audio synthesized", {"file": spatial_audio_path.name})
-
-        if audio_only:
-            return {
-                "status": "success",
-                "stage": "audio_only",
-                "episode_id": ep_dir.name,
-                "keyframes": [str(p) for p in image_results],
-                "bgm_path": str(spatial_audio_path),
-                "narration_path": str(voice_path) if voice_path.is_file() else None,
-                "spatial_audio": str(spatial_audio_path),
-                "episode_dir": str(ep_dir),
-            }
-
-        target_dur = float(getattr(sb, "total_duration_seconds", None) or getattr(sb, "total_duration", None) or 60.0)
+        # Stage 5: Broadcast Master Assembly Gate
+        eff_shot_durs = [float(s.duration_seconds) for s in sb.scenes] if hasattr(sb, "scenes") else None
+        target_dur = float(getattr(sb, "total_duration_seconds", None) or (sum(eff_shot_durs) if eff_shot_durs else 60.0))
         if generate_short:
             return await handle_short_export(
                 sb, ep_dir, video_clips, spatial_audio_path, t_start,
                 long_play_hours, fade_to_black_hours, force_rerun,
                 narration_audio_path=voice_path,
                 target_duration_sec=target_dur,
+                shot_durations=eff_shot_durs,
             )
         dual_res = await asyncio.to_thread(
             assemble_dual_masters,
             video_clips=video_clips, audio_path=spatial_audio_path, ep_dir=ep_dir,
             target_fps=sb.recommended_fps, force_rerun=force_rerun,
             narration_audio_path=voice_path, target_duration_sec=target_dur,
+            shot_durations=eff_shot_durs,
         )
         metadata_pkgs = export_metadata_packages(sb, ep_dir)
 

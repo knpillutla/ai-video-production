@@ -133,14 +133,13 @@
   <!-- SECTION 3: STEM MODALITY MATRIX & CINEMATIC SPECS -->
   <div class="space-y-1">
     <span class="text-xs font-bold text-[var(--text)]">3. Stems &amp; Specs:</span>
-    <div class="grid grid-cols-2 gap-1 text-xs">
+    <div class="grid grid-cols-3 gap-1 text-xs">
       <label class="flex items-center gap-1.5 p-1 bg-[var(--card-subtle)] rounded-lg border border-[var(--border)] cursor-pointer"><input type="checkbox" id="studio-toggle-bgm" checked class="accent-[var(--accent)]"><span class="truncate text-[var(--text)]">BGM</span></label>
-      <label class="flex items-center gap-1.5 p-1 bg-[var(--card-subtle)] rounded-lg border border-[var(--border)] cursor-pointer"><input type="checkbox" id="studio-toggle-voice-over" class="accent-[var(--accent)]"><span class="truncate text-[var(--text)]">Voiceover</span></label>
-      <label class="flex items-center gap-1.5 p-1 bg-[var(--card-subtle)] rounded-lg border border-[var(--border)] cursor-pointer"><input type="checkbox" id="studio-toggle-tts" class="accent-[var(--accent)]"><span class="truncate text-[var(--text)]">TTS</span></label>
-      <label class="flex items-center gap-1.5 p-1 bg-[var(--card-subtle)] rounded-lg border border-[var(--border)] cursor-pointer" title="Enable local steadycam zoom-pan fallback if live AI video diffusion is unavailable"><input type="checkbox" id="studio-toggle-fallback" class="accent-[var(--accent)]"><span class="truncate text-[var(--text)] font-semibold">Fallback</span></label>
+      <label class="flex items-center gap-1.5 p-1 bg-[var(--card-subtle)] rounded-lg border border-[var(--border)] cursor-not-allowed opacity-60"><input type="checkbox" id="studio-toggle-voice-over" disabled class="accent-[var(--accent)]"><span class="truncate text-[var(--text)]">Voiceover</span></label>
+      <label class="flex items-center gap-1.5 p-1 bg-[var(--card-subtle)] rounded-lg border border-[var(--border)] cursor-not-allowed opacity-60"><input type="checkbox" id="studio-toggle-tts" disabled class="accent-[var(--accent)]"><span class="truncate text-[var(--text)]">TTS</span></label>
     </div>
 
-    <div id="studio-dual-editions-row" class="pt-0.5">
+    <div id="studio-dual-editions-row" class="pt-0.5 hidden">
       <label class="flex items-center gap-1.5 p-1 bg-[var(--card-subtle)] rounded-lg border border-[var(--border)] cursor-pointer" title="Export separate Music Only (without voiceover) and Narration Only (without music) video editions">
         <input type="checkbox" id="studio-toggle-dual-editions" class="accent-[var(--accent)]">
         <span class="truncate text-[var(--text)] text-[11px] font-semibold">Dual Masters (Music + Narration)</span>

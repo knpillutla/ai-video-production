@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import time
 import json
@@ -232,13 +233,13 @@ async def produce_video_locally(req: LocalProduceRequest):
                 keyframes=result.get("keyframes", []), motion_clips=[],
                 audio_stems=[], video_url=None,
             )
-        elif eff_motion_only:
+        elif eff_audio_only:
             job_manager.update_job(
                 job_id=eff_job_id, stage=3, progress=60, status="ready",
-                keyframes=result.get("keyframes", []), motion_clips=result.get("motion_clips", []),
-                audio_stems=[], video_url=None,
+                keyframes=result.get("keyframes", []), motion_clips=[],
+                audio_stems=result.get("audio_stems", []), video_url=None,
             )
-        elif eff_audio_only:
+        elif eff_motion_only:
             job_manager.update_job(
                 job_id=eff_job_id, stage=4, progress=80, status="ready",
                 keyframes=result.get("keyframes", []), motion_clips=result.get("motion_clips", []),
@@ -393,22 +394,25 @@ async def approve_episode(episode_id: str, channel_id: Optional[str] = None, use
 @router.delete("/episodes/{episode_id}")
 async def delete_episode_artifacts(episode_id: str, channel_id: Optional[str] = None, user_id: str = "knpillutla@gmail.com"):
     """Delete all synthesized artifacts and folders for a specific episode from disk."""
+    clean_ep = re.sub(r"[^a-zA-Z0-9_-]", "_", str(episode_id).lower()).strip("_")
     user_container = storage_service.get_user_container_path(user_id)
-    scan_roots = [user_container / "networks", user_container / "channels"]
+    scan_roots = []
+    if channel_id:
+        scan_roots.extend([storage_service.get_network_path(user_id, channel_id), user_container / "channels" / channel_id])
+    else:
+        scan_roots.extend([user_container / "networks", user_container / "channels", user_container / "productions"])
+
     deleted_paths = []
     for root in scan_roots:
         if not root.exists():
             continue
-        if channel_id and (root / channel_id / episode_id).exists():
-            ep_dir = root / channel_id / episode_id
-            shutil.rmtree(ep_dir, ignore_errors=True)
-            deleted_paths.append(str(ep_dir))
-        else:
-            for ch_dir in root.iterdir():
-                if ch_dir.is_dir() and (ch_dir / episode_id).exists():
-                    ep_dir = ch_dir / episode_id
-                    shutil.rmtree(ep_dir, ignore_errors=True)
-                    deleted_paths.append(str(ep_dir))
+        try:
+            for sub in list(root.rglob("*")):
+                if sub.is_dir() and sub.name.lower() in (episode_id.lower(), clean_ep):
+                    shutil.rmtree(sub, ignore_errors=True)
+                    deleted_paths.append(str(sub))
+        except Exception as e:
+            logger.warning(f"delete_episode_artifacts scan warning: {e}")
     return {"success": True, "episode_id": episode_id, "deleted_paths": deleted_paths, "message": f"Episode {episode_id} deleted."}
 
 

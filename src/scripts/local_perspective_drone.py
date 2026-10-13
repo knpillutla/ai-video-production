@@ -452,7 +452,9 @@ def normalize_choreography_sequence(choreography: Union[list, str, None], defaul
     if isinstance(choreography, str):
         mov = choreography.lower().strip()
         dur = max(2.0, min(14.0, default_duration))
-        if "left" in mov:
+        if any(w in mov for w in ("stay", "hold", "fixed", "locked", "tripod", "static", "cinemagraph", "still")):
+            return [("stay", dur)]
+        elif "left" in mov:
             return [("pan-left", dur)]
         elif "right" in mov:
             return [("pan-right", dur)]
@@ -462,24 +464,26 @@ def normalize_choreography_sequence(choreography: Union[list, str, None], defaul
             return [("tilt-down", dur)]
         elif "out" in mov or "pull" in mov:
             return [("dollyout", dur)]
-        elif "stay" in mov or "hold" in mov or "fixed" in mov:
-            return [("stay", dur)]
         return [("dollyin", dur)]
 
     norm = []
     for item in choreography:
         if isinstance(item, tuple) and len(item) == 2:
             norm.append(item)
+        elif isinstance(item, str):
+            norm.append((item.lower().replace("_", "-"), default_duration / max(1, len(choreography))))
         elif isinstance(item, dict):
             # Supports Gemini Stage format: {"stage": 1, "duration": 4.0, "movements": ["dollyin", "pan-left"]}
-            dur = float(item.get("duration", 5.0))
+            # Sequential format: {"movement": "dollyin", "duration": 6.0}
+            # Waypoint format: {"motion": "dollyin", "duration_seconds": 6.0}
+            dur = float(item.get("duration") or item.get("duration_seconds") or (default_duration / max(1, len(choreography))))
             dur = max(0.5, dur)
-            moves = item.get("movements") or item.get("action")
+            moves = item.get("movements") or item.get("movement") or item.get("motion") or item.get("action")
             if isinstance(moves, list):
                 if len(moves) == 1:
-                    norm.append((moves[0].lower().replace("_", "-"), dur))
+                    norm.append((str(moves[0]).lower().replace("_", "-"), dur))
                 else:
-                    norm.append(("parallel", [(m.lower().replace("_", "-"), dur) for m in moves]))
+                    norm.append(("parallel", [(str(m).lower().replace("_", "-"), dur) for m in moves]))
             elif isinstance(moves, str):
                 norm.append((moves.lower().replace("_", "-"), dur))
             elif "action" in item:
@@ -527,44 +531,44 @@ def precompute_sequence_matrices(
     timeline_states = []
 
     def resolve_target(action_name, s_d, s_p, s_t, s_r):
-        act = action_name.lower().replace("_", "-")
+        act = action_name.lower().replace("_", "-").replace(" ", "-")
         t_d, t_p, t_t, t_r = s_d, s_p, s_t, s_r
-        if act == "stay":
+        if any(w in act for w in ("stay", "hold", "static", "locked", "tripod", "fixed")):
             pass
-        elif act in ("dollyin", "zoom-in"):
+        elif act in ("dollyin", "dolly-in", "zoomin", "zoom-in"):
             t_d = 1.0
-        elif act in ("dollyout", "zoom-out"):
+        elif act in ("dollyout", "dolly-out", "zoomout", "zoom-out"):
             t_d = 0.0
-        elif act == "pan-left":
+        elif act in ("pan-left", "panleft"):
             t_p = -1.0
-        elif act == "pan-right":
+        elif act in ("pan-right", "panright"):
             t_p = 0.0 if s_p < -0.05 else 1.0
-        elif act in ("tilt-up", "pedestal-up"):
+        elif act in ("tilt-up", "tiltup", "pedestal-up", "crane-up", "ascend"):
             t_t = -1.0
-        elif act in ("tilt-down", "pedestal-down"):
+        elif act in ("tilt-down", "tiltdown", "pedestal-down", "crane-down", "descend"):
             t_t = 0.0 if s_t < -0.05 else 1.0
-        elif act == "roll-left":
+        elif act in ("roll-left", "rollleft"):
             t_r = -3.5
-        elif act == "roll-right":
+        elif act in ("roll-right", "rollright"):
             t_r = 3.5
         elif act == "level":
             t_r = 0.0
-        elif act == "drift-up-right":
+        elif act in ("drift-up-right", "driftupright"):
             t_p = 1.0; t_t = -1.0
-        elif act == "drift-up-left":
+        elif act in ("drift-up-left", "driftupleft"):
             t_p = -1.0; t_t = -1.0
-        elif act == "drift-down-right":
+        elif act in ("drift-down-right", "driftdownright"):
             t_p = 1.0; t_t = 1.0
-        elif act == "drift-down-left":
+        elif act in ("drift-down-left", "driftdownleft"):
             t_p = -1.0; t_t = 1.0
-        elif act == "orbit-left":
+        elif act in ("orbit-left", "orbitleft"):
             t_p = -0.75; t_r = 2.5
-        elif act == "orbit-right":
+        elif act in ("orbit-right", "orbitright"):
             t_p = 0.75; t_r = -2.5
-        elif act == "pan-right-zoom-out":
-            t_d = 0.0; t_p = 1.0; t_t = s_t; t_r = s_r
-        elif act == "pan-left-zoom-out":
-            t_d = 0.0; t_p = -1.0; t_t = s_t; t_r = s_r
+        elif "zoom-out" in act or "zoomout" in act or "dollyout" in act:
+            t_d = 0.0; t_p = 1.0 if "right" in act else -1.0; t_t = s_t; t_r = s_r
+        elif "zoom-in" in act or "zoomin" in act or "dollyin" in act:
+            t_d = 1.0; t_p = 1.0 if "right" in act else -1.0; t_t = s_t; t_r = s_r
         return t_d, t_p, t_t, t_r
 
     for item in sequence:
@@ -595,27 +599,27 @@ def precompute_sequence_matrices(
                 for sub_act, tgt_d, tgt_p, tgt_t, tgt_r, sub_frames in channels:
                     prog = min(1.0, f / max(1, sub_frames - 1)) if sub_frames > 1 else 1.0
                     e = calculate_easing(prog, curve)
-                    act = sub_act.lower().replace("_", "-")
-                    if act in ("dollyin", "dollyout", "zoom-in", "zoom-out", "pan-right-zoom-out", "pan-left-zoom-out"):
+                    act = sub_act.lower().replace("_", "-").replace(" ", "-")
+                    if any(k in act for k in ("dollyin", "zoom-in", "zoomin", "dollyout", "zoom-out", "zoomout")):
                         d_val = start_d + e * (tgt_d - start_d)
-                    if act in ("pan-left", "pan-right", "drift-up-right", "drift-up-left", "drift-down-right", "drift-down-left", "orbit-left", "orbit-right", "pan-right-zoom-out", "pan-left-zoom-out"):
+                    if any(k in act for k in ("pan", "drift", "orbit", "left", "right")):
                         p_val = start_p + e * (tgt_p - start_p)
-                    if act in ("tilt-up", "tilt-down", "pedestal-up", "pedestal-down", "drift-up-right", "drift-up-left", "drift-down-right", "drift-down-left", "pan-right-zoom-out", "pan-left-zoom-out"):
+                    if any(k in act for k in ("tilt", "pedestal", "crane", "drift", "up", "down", "ascend", "descend")):
                         t_val = start_t + e * (tgt_t - start_t)
-                    if act in ("roll-left", "roll-right", "level", "orbit-left", "orbit-right"):
+                    if any(k in act for k in ("roll", "orbit", "level")):
                         r_val = start_r + e * (tgt_r - start_r)
 
                 timeline_states.append((d_val, p_val, t_val, r_val))
 
             for sub_act, tgt_d, tgt_p, tgt_t, tgt_r, _ in channels:
-                act = sub_act.lower().replace("_", "-")
-                if act in ("dollyin", "dollyout", "zoom-in", "zoom-out", "pan-right-zoom-out", "pan-left-zoom-out"):
+                act = sub_act.lower().replace("_", "-").replace(" ", "-")
+                if any(k in act for k in ("dollyin", "zoom-in", "zoomin", "dollyout", "zoom-out", "zoomout")):
                     cur_depth = tgt_d
-                if act in ("pan-left", "pan-right", "drift-up-right", "drift-up-left", "drift-down-right", "drift-down-left", "orbit-left", "orbit-right", "pan-right-zoom-out", "pan-left-zoom-out"):
+                if any(k in act for k in ("pan", "drift", "orbit", "left", "right")):
                     cur_pan = tgt_p
-                if act in ("tilt-up", "tilt-down", "pedestal-up", "pedestal-down", "drift-up-right", "drift-up-left", "drift-down-right", "drift-down-left", "pan-right-zoom-out", "pan-left-zoom-out"):
+                if any(k in act for k in ("tilt", "pedestal", "crane", "drift", "up", "down", "ascend", "descend")):
                     cur_tilt = tgt_t
-                if act in ("roll-left", "roll-right", "level", "orbit-left", "orbit-right"):
+                if any(k in act for k in ("roll", "orbit", "level")):
                     cur_roll = tgt_r
 
         else:
@@ -812,17 +816,21 @@ def render_perspective_drone_clip_sync(
             elif snow_engine:
                 frame = snow_engine.render(frame, i)
 
-            # Smooth cinematic fade-in (0.6s to 1.4s) and fade-out (after 6s)
+            # Lower-third HUD display: stays solid on screen without flickering
+            # Stays entire duration if duration <= 15s; displays for 12.5s if duration > 15s
             if hud_bgr is not None and hud_alpha is not None:
-                # Fade in between frames 15 and 35
-                if i < 15:
-                    fade = 0.0
-                elif i < 35:
-                    fade = (i - 15) / 20.0
-                elif i < 145:
+                fade_in_frames = min(12, max(6, int(fps * 0.4)))
+                if duration_seconds <= 15.0:
+                    fade_out_start = total_frames + 999  # Stays solid for entire shot duration
+                else:
+                    fade_out_start = int(12.5 * fps)
+
+                if i < fade_in_frames:
+                    fade = i / max(1.0, float(fade_in_frames))
+                elif i < fade_out_start:
                     fade = 1.0
-                elif i < 170:
-                    fade = max(0.0, 1.0 - (i - 145) / 25.0)
+                elif i < fade_out_start + 20:
+                    fade = max(0.0, 1.0 - (i - fade_out_start) / 20.0)
                 else:
                     fade = 0.0
 

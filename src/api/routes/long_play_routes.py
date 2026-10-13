@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 from pathlib import Path
 from typing import Any, Optional
@@ -40,16 +41,30 @@ def _to_storage_url(p: Path | str) -> str:
 
 
 def _find_episode_dir(episode_id: str, channel_id: Optional[str], user_id: str) -> Optional[Path]:
+    norm_ep = str(episode_id).lower().strip()
+    clean_ep = re.sub(r"[^a-zA-Z0-9_-]", "_", norm_ep).strip("_")
     user_container = storage_service.get_user_container_path(user_id)
-    scan_roots = [user_container / "networks", user_container / "channels"]
+    scan_roots = []
+    if channel_id:
+        scan_roots.extend([storage_service.get_network_path(user_id, channel_id), user_container / "channels" / channel_id])
+    else:
+        scan_roots.extend([user_container / "networks", user_container / "channels", user_container / "productions"])
+
+    target_names = {norm_ep, clean_ep, episode_id.strip()}
+
     for root in scan_roots:
         if not root.exists():
             continue
-        if channel_id and (root / channel_id / episode_id).exists():
-            return root / channel_id / episode_id
-        for ch_dir in root.iterdir():
-            if ch_dir.is_dir() and (ch_dir / episode_id).exists():
-                return ch_dir / episode_id
+        for t in target_names:
+            candidate = root / t
+            if candidate.is_dir():
+                return candidate
+        try:
+            for sub in root.rglob("*"):
+                if sub.is_dir() and sub.name.lower() in target_names:
+                    return sub
+        except Exception as e:
+            logger.warning(f"_find_episode_dir scan warning: {e}")
     return None
 
 
@@ -111,6 +126,7 @@ async def generate_long_play_for_episode(episode_id: str, req: LongPlayStretchRe
         "error": None,
     }
     long_play_jobs[episode_id] = job_state
+    long_play_jobs[episode_id.lower().strip()] = job_state
 
     async def _run_stretch():
         try:
@@ -174,6 +190,9 @@ async def generate_long_play_for_episode(episode_id: str, req: LongPlayStretchRe
 @router.get("/episodes/{episode_id}/long-play-status")
 async def get_long_play_status(episode_id: str, channel_id: Optional[str] = None, user_id: str = "knpillutla@gmail.com"):
     """Get live progress and artifacts for dual long-play broadcast rendering."""
+    norm_ep = episode_id.lower().strip()
+    if norm_ep in long_play_jobs:
+        return long_play_jobs[norm_ep]
     if episode_id in long_play_jobs:
         return long_play_jobs[episode_id]
 

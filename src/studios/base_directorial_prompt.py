@@ -86,8 +86,7 @@ def build_base_directorial_prompt(
         '   - Gemini DECIDES "motion_type" ("ken_burns" | "ai_diffusion") and "motion_rationale" for every scene.\n'
         '   - Default for stable landscapes & geometry: "ken_burns" ($0.00 compute local 4K perspective engine).\n'
         '   - Select "ai_diffusion" only if complex kinematics (waterfalls, running fauna) strictly require neural video.\n'
-        '   - WHEN DIRECTING KEN BURNS: Direct camera motion from supported primitives: "dollyin", "dollyout", "pan-left", "pan-right", "tilt-up", "tilt-down", "orbit-left", "orbit-right", "drift-up-right", "stay".\n'
-        '   - PARALLEL & MULTI-STAGE MOVEMENTS: Direct compound parallel movements (e.g. ["dollyin", "pan-left"]) or multi-stage choreography in "camera_movement" matching scene duration.'
+        '   - SEQUENTIAL & PARALLEL MULTI-STAGE MOVEMENTS: Direct sequential timeline arrays (e.g. [{"movement": "dollyin", "duration": 6.0}, {"movement": "zoomin", "duration": 4.0}]) or parallel compound movements matching scene duration.'
     )
 
     if is_nature_relax:
@@ -96,8 +95,27 @@ def build_base_directorial_prompt(
               "   - Strictly zero humans, tourists, swimmers, hikers, guides, voices, or faces.\n"
               "   - Zero modern structures, buildings, cabins, paved roads, vehicles, fences, power lines, boats, or railings.\n"
               "   - Living Wallpaper Framing: Compose as a tranquil living wallpaper overlooking the scenic expanse.")
-        ex_motion_type = "ken_burns"
-        ex_rationale = "Fixed locked tripod overlooking scenery via local 4K ken_burns hold ($0.00 compute)."
+        is_low = clean_tier in ("low_cost", "tier_0", "local")
+        if is_low:
+            ex_motion_type = "ken_burns"
+            ex_rationale = "Fixed locked tripod overlooking natural scenery via local 4K steady hold ($0.00 compute)."
+            motion_rule = (
+                "3. TIER-0 / LOW-COST LOCKED TRIPOD KEN BURNS DIRECTORIAL CONTRACT ($0.00 COMPUTE):\n"
+                '   - MANDATORY "motion_type": "ken_burns" for all relaxation scenes.\n'
+                '   - STRICT LOCKED TRIPOD MANDATE: Relaxation format strictly mandates a FIXED LOCKED TRIPOD overlooking scenery with 0 panning, tilting, orbiting, or zooming.\n'
+                '   - "camera_movement": strictly ["stay"] or locked stationary hold stage.\n'
+                '   - "motion_rationale": "Fixed locked tripod overlooking natural scenery via local 4K steady hold ($0.00 compute)."'
+            )
+        else:
+            ex_motion_type = "ai_diffusion"
+            ex_rationale = "Living wallpaper cinemagraph via AI video diffusion animating natural water and foliage kinematics."
+            motion_rule = (
+                f"3. HYBRID AI DIFFUSION LIVING WALLPAPER CONTRACT (TIER: {clean_tier.upper()}):\n"
+                '   - MANDATORY "motion_type": "ai_diffusion" for living nature, water, rivers, falls, ocean, foliage, and living wallpapers.\n'
+                '   - "camera_movement": strictly "locked_stationary_cinemagraph".\n'
+                '   - "camera_rig": strictly "locked_tripod_telephoto".\n'
+                '   - "motion_rationale": "Living wallpaper cinemagraph via AI diffusion for natural fluid/foliage kinematics."'
+            )
         rig_palette = '["locked_tripod_telephoto"]'
         default_rig = "locked_tripod_telephoto"
         default_cam_move = "locked_stationary_cinemagraph"
@@ -156,8 +174,7 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
    - DIRECTORIAL RULE: If a scene requires more narrative context or transit explanation, Gemini MUST INCREASE 'duration_seconds' to match: required_duration = (word_count / {speech_words_per_sec:.2f}) + 1.5s pause. Never truncate narration or rush speech!
 
 6. MULTI-MODEL PROMPTS ("image_model_configs" & "model_configs"):
-   - For every scene, author model-tailored landscape prompts for "flux_dev", "flux_pro", and "zimage".
-   - Author model-tailored positive/negative prompts for "kling_v1_6_pro" and "wan_2_1".
+   - Author model-tailored positive/negative prompts for "kling_v1_6_pro", "wan_2_1", and "local_drone". For relaxation, "local_drone" MUST be pure locked: {{"movement": "stay"}}. For documentary/travel, "local_drone" MUST specify dynamic movements: "dollyin", "zoomin", "pan-right", or parallel compound stages [{{"stage": 1, "duration": 5.0, "movements": ["dollyin", "pan-right"]}}].
 
 7. MANDATORY NEGATIVE PROMPT:
    - For Pure Wilderness: "clouds, cloudy, overcast sky, moving clouds, timelapse clouds, camera shake, jitter, rapid motion, flickering, temporal jump, parched, frozen ice, stagnant water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings".
@@ -185,7 +202,7 @@ PRODUCTION SPECIFICATIONS:
 {cadence_spec}
 - Camera Rig Palette: {rig_palette}
 - Target Image Models: ["flux_dev", "flux_pro", "zimage"]
-- Target Video Models: ["kling_v1_6_pro", "wan_2_1"]
+- Target Video Models: ["kling_v1_6_pro", "wan_2_1", "local_drone"]
 
 CRITICAL SCHEMA ENFORCEMENT:
 Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
@@ -222,12 +239,8 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
     "audio_mode": "ambient_nature",
     "spoken_narration_script": "Continuous unbroken master voiceover (~{target_words} words for {duration_seconds}s at 125 WPM), seamlessly narrating the journey without loops.",
     "singing_lyrics_spec": "",
-    "suno_musical_tags": "432Hz meditative soundbath, joyful uplifting handpan, singing bowls, warm velvet synth pads, deep stress relief, peaceful sleep drone, -21 LUFS",
-    "vocal_gender": "none",
-    "tempo_bpm": 64,
-    "speech_cadence_wpm": 125,
-    "target_lufs": -14.0,
-    "ducking_db": -18.0
+    "suno_musical_tags": "432Hz meditative soundbath, joyful handpan, warm velvet synth pads, deep stress relief, -21 LUFS",
+    "vocal_gender": "none", "tempo_bpm": 64, "speech_cadence_wpm": 125, "target_lufs": -14.0, "ducking_db": -18.0
   }},
   "scenes": [
     {{
@@ -238,15 +251,15 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
       "color_temp_kelvin": {eff_kelvin},
       "visual_prompt": "A photorealistic, symmetrical 16:9 cinematic landscape view of [Landmark Name], shot from {default_rig}. Crisp natural lighting.",
 {scene_ext}      "image_model_configs": {{
-        "flux_dev": {{"model": "fal-ai/flux/dev", "prompt": "Photorealistic wide panoramic view of [Landmark Name], 16:9 cinematic.", "aspect_ratio": "16:9", "guidance_scale": 3.5, "num_inference_steps": 28}},
-        "flux_pro": {{"model": "fal-ai/flux-pro/v1.1-ultra", "prompt": "Ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c of [Landmark Name], 16:9.", "aspect_ratio": "16:9", "raw": true}},
-        "zimage": {{"model": "fal-ai/z-image/turbo", "prompt": "Stunning photorealistic panoramic landscape of [Landmark Name], 16:9, sharp focus.", "aspect_ratio": "16:9", "num_inference_steps": 8}}
+        "flux_dev": {{"model": "fal-ai/flux/dev", "prompt": "Photorealistic wide panoramic view, 16:9 cinematic.", "aspect_ratio": "16:9", "guidance_scale": 3.5, "num_inference_steps": 28}},
+        "flux_pro": {{"model": "fal-ai/flux-pro/v1.1-ultra", "prompt": "Ultra-photorealistic 8K UHD shot, 16:9.", "aspect_ratio": "16:9", "raw": true}}
       }},
       "motion_prompt": "Living wallpaper cinemagraph style. Smooth panoramic sweep across natural landscape.",
       "motion_negative_prompt": "camera shake, jitter, rapid motion, morphing landscape, artifacts",
       "model_configs": {{
         "wan_2_1": {{"model": "fal-ai/wan-i2v", "prompts": {{"positive_prompt": "Smooth fluid motion.", "negative_prompt": "camera shake, artifacts"}}, "settings": {{"guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9"}}}},
-        "kling_v1_6_pro": {{"model": "fal-ai/kling-video/v1.6/pro/image-to-video", "prompts": {{"positive_prompt": "Cinematic visual grandeur.", "negative_prompt": "camera shake, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}}
+        "kling_v1_6_pro": {{"model": "fal-ai/kling-video/v1.6/pro/image-to-video", "prompts": {{"positive_prompt": "Cinematic visual grandeur.", "negative_prompt": "camera shake, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}},
+        "local_drone": {{"model": "local_perspective_drone", "movement": "stay", "start_pan": "center", "start_zoom": "normal", "curve": "cosine", "rationale": "Pure locked stationary tripod framing"}}
       }},
       "domain": "landscape_solid",
       "motion_type": "{ex_motion_type}",
@@ -255,11 +268,7 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
         {{"motion": "slow_drone_forward", "duration_seconds": 6.0}},
         {{"motion": "orbit_wrap_left", "duration_seconds": 4.0}}
       ],
-      "kinetic_micro_zones": {{
-        "sprites": [{{"label": "car_eastbound", "bbox": [0.72, 0.74, 0.30, 0.33], "delta_pct": [0.08, 0.0]}}],
-        "tree_sway_zones": [[0.20, 0.50, 0.80, 0.95]],
-        "water_zones": [[0.65, 0.95, 0.10, 0.90]]
-      }},
+      "kinetic_micro_zones": {{ "sprites": [], "tree_sway_zones": [], "water_zones": [] }},
       "motion_rationale": "{ex_rationale}",
       "duration_seconds": {per_shot_dur},
       "narration_text": "Evocative, continuous narration for this vista (~{per_shot_words} words) paced smoothly for {per_shot_dur}s."

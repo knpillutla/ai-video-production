@@ -137,6 +137,13 @@ class MultiTenantStorageService:
         else:
             search_roots.extend([user_root / "networks", user_root / "channels"])
 
+        if channel_id and format_slug and production_name:
+            exact_dir = self.get_channel_format_production_episode_path(
+                user_id, channel_id, format_slug, production_name, episode_id
+            )
+            if exact_dir.exists() and exact_dir.is_dir():
+                return exact_dir
+
         matches = []
         for root in search_roots:
             if not root.exists():
@@ -158,11 +165,24 @@ class MultiTenantStorageService:
         if not matches:
             return None
 
-        # Score matches: prefer directory with keyframes, screenplay.json, episode_manifest.json, or non-empty
+        clean_prod = re.sub(r"[^a-zA-Z0-9_-]", "_", str(production_name).lower()).strip("_") if production_name else None
+
+        # Score matches: prefer directory with matching production, motion clips, keyframes, or screenplay
         def _score(p: Path) -> int:
             score = 0
+            if clean_prod and p.parent.name.lower() == clean_prod:
+                score += 300
+            try:
+                if clean_prod and (p / "user_inputs.json").exists():
+                    import json
+                    u_in = json.loads((p / "user_inputs.json").read_text(encoding="utf-8"))
+                    u_prod = re.sub(r"[^a-zA-Z0-9_-]", "_", str(u_in.get("production_name", "")).lower()).strip("_")
+                    if u_prod == clean_prod:
+                        score += 500
+            except Exception:
+                pass
+            if any(p.glob("motion_p*.mp4")): score += 100
             if any(p.glob("keyframe_p*.jpg")): score += 50
-            if any(p.glob("motion_p*.mp4")): score += 40
             if (p / "screenplay.json").exists(): score += 10
             if (p / "episode_manifest.json").exists(): score += 5
             if (p / "user_inputs.json").exists(): score += 2

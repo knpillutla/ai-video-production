@@ -58,6 +58,13 @@ DOCUMENTARY DIRECTORIAL MANDATES (BBC / NATGEO BLUE-CHIP CALIBER):
 4. FLUID KINETICS & SURVIVAL REALISM (Rules 18, 20):
    - For mountain/extreme climates: depictions of biting sub-zero blizzards, wind gusts carving powder drifts, weathered timber shelters.
    - For rivers/waterfalls: parallel flow camera alignment, smooth glassy currents, zero static foam blobs.
+
+5. LOCAL DRONE CAMERA MOVEMENTS ("model_configs.local_drone"):
+   - For documentary and travel shots, model_configs["local_drone"] MUST specify dynamic camera flight matching the scene:
+     * Simple movements: "movement": "dollyin", "dollyout", "pan-left", "pan-right", "drift-up-right", "drift-down-left"
+     * Sequential timeline array: "movement": [{{"movement": "dollyin", "duration": 6.0}}, {{"movement": "zoomin", "duration": 4.0}}] (e.g. first 6s dolly in, then next 4s zoom in)
+     * Parallel compound movements: "movement": [{{"stage": 1, "duration": 5.0, "movements": ["dollyin", "pan-right"]}}]
+     * Framing: "start_pan": "center", "start_zoom": "normal", "curve": "cosine"
 """
     return build_base_directorial_prompt(
         genre="documentary",

@@ -1,9 +1,4 @@
-"""Documentary Studio 4K Single-Pass Master Producer.
-
-Orchestrates 4-Stage Progressive Quality Gate for blue-chip documentaries:
-Topic Deduplication -> Keyframes Review -> Narration Voiceover -> Video Motion -> 4K Master Assembly.
-"""
-
+"""Documentary Studio 4K Single-Pass Master Producer with 4-Stage Quality Gate."""
 from __future__ import annotations
 
 import os
@@ -62,7 +57,12 @@ class DocumentaryProducer:
 
         tour_stops = []
         for i, s in enumerate(sb.scenes):
-            if not getattr(s, "origin_coords", None) or getattr(s, "is_map_transition", False) or getattr(s, "is_itinerary_summary", False) or getattr(s, "is_itinerary_overview", False) or getattr(s, "is_vacation_scope", False) or getattr(s, "shot_type", "") in ("itinerary_overview_card", "itinerary_summary_card", "leisure_vacation_scope_card", "overhead_cartographic"):
+            st_type = str(getattr(s, "shot_type", "") or getattr(s, "perspective_type", "") or "").lower()
+            loc_hub = str(getattr(s, "location_hub", "") or "").lower()
+            is_ov = bool(getattr(s, "is_itinerary_overview", False) or "overview" in st_type or "overview" in loc_hub or "master day" in loc_hub)
+            is_sum = bool(getattr(s, "is_itinerary_summary", False) or "summary" in st_type or "summary" in loc_hub)
+            is_map = bool(getattr(s, "is_map_transition", False) or "overhead_cartographic" in st_type or "transit" in loc_hub)
+            if not getattr(s, "origin_coords", None) or is_ov or is_sum or is_map or getattr(s, "is_vacation_scope", False):
                 continue
             nxt_tr = next((nxt for nxt in sb.scenes[i + 1:] if getattr(nxt, "is_map_transition", False)), None)
             tour_stops.append({
@@ -216,7 +216,9 @@ class DocumentaryProducer:
             use_local = force_local_drone or (getattr(scene, "motion_engine", "local_drone") == "local_drone")
             if use_local:
                 logger.info(f"doc_motion_dispatch: Scene {scene.scene_index} -> 4K Local Perspective Drone (duration: {scene.duration_seconds}s)")
-                framing = scene.start_framing or {}
+                raw_cfg = getattr(scene, "model_configs", None) or {}
+                local_cfg = raw_cfg.get("local_drone") or raw_cfg.get("ken_burns") or {}
+                framing = scene.start_framing or {"pan": local_cfg.get("start_pan", "center"), "zoom": local_cfg.get("start_zoom", "normal"), "tilt": local_cfg.get("start_tilt", "center")}
                 attraction_name = getattr(scene, "attraction_name", None) or getattr(scene, "origin_name", None) or getattr(scene, "location_hub", None) or f"Stop {scene.scene_index}"
                 start_t = getattr(scene, "start_time", "09:00 AM") or "09:00 AM"
                 end_t = getattr(scene, "end_time", "11:30 AM") or "11:30 AM"
@@ -228,26 +230,16 @@ class DocumentaryProducer:
                 trans_t = f"{trans_dur} to {dest_n}" if (trans_dur and dest_n and dest_n != attraction_name and trans_dur != "concluded") else None
 
                 hud_data = {
-                    "attraction_name": attraction_name,
-                    "timing_text": f"🕒 {start_t} – {end_t}  ({vis_dur})",
-                    "day_badge": f"DAY {day_n} • STOP {scene.scene_index}",
-                    "cost_text": cost_t,
-                    "transit_text": trans_t,
+                    "attraction_name": attraction_name, "timing_text": f"🕒 {start_t} – {end_t}  ({vis_dur})",
+                    "day_badge": f"DAY {day_n} • STOP {scene.scene_index}", "cost_text": cost_t, "transit_text": trans_t,
                 }
-
+                choreo = local_cfg.get("movement") or scene.drone_choreography or scene.motion_prompt
                 return await render_perspective_drone_clip(
-                    image_path=kf_path,
-                    output_path=out_clip,
-                    duration_seconds=scene.duration_seconds,
-                    fps=24,
-                    target_res=(3840, 2160),
-                    choreography=scene.drone_choreography or scene.motion_prompt,
-                    start_pan=framing.get("pan", "center"),
-                    start_zoom=framing.get("zoom", "normal"),
-                    start_tilt=framing.get("tilt", "center"),
-                    curve=getattr(scene, "motion_curve", "cosine"),
-                    rain=(getattr(scene, "weather", "none") == "rain"),
-                    snow=(getattr(scene, "weather", "none") == "snow"),
+                    image_path=kf_path, output_path=out_clip, duration_seconds=scene.duration_seconds,
+                    fps=24, target_res=(3840, 2160), choreography=choreo,
+                    start_pan=framing.get("pan", "center"), start_zoom=framing.get("zoom", "normal"), start_tilt=framing.get("tilt", "center"),
+                    curve=local_cfg.get("curve") or getattr(scene, "motion_curve", "cosine"),
+                    rain=(getattr(scene, "weather", "none") == "rain"), snow=(getattr(scene, "weather", "none") == "snow"),
                     lower_third_hud=hud_data,
                 )
             else:

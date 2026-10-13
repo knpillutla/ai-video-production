@@ -19,6 +19,13 @@ function populateProductionControlsFromEpisode(rawVid) {
   const rawPrompt = inputs.prompt || vid.prompt || vid.story_topic || vid.concept || vid.theme || vid.title || "";
   if (promptInput && rawPrompt) promptInput.value = rawPrompt;
 
+  // 1b. Production Name and Episode Code
+  const pInput = document.getElementById("studio-production-name");
+  const effProd = vid.production_name || inputs.production_name || vid.series || vid.production || "";
+  if (pInput && effProd) pInput.value = effProd;
+  const epCodeInput = document.getElementById("studio-episode-code");
+  if (epCodeInput && epId) epCodeInput.value = epId;
+
   // 2. Genre, Subgenre & Archetype Selectors
   const effGenre = inputs.genre || vid.genre || vid.videoType || screenplay.genre;
   if (effGenre) {

@@ -49,6 +49,8 @@ async def generate_art_screenplay_gemini(
     raw_output_path: Optional[os.PathLike | str] = None,
     image_model: str = "flux_1_1_pro_ultra",
     channel_id: Optional[str] = None,
+    tier: str = "balanced",
+    **kwargs: Any,
 ) -> RelaxScreenplay:
     """Generate structured RelaxScreenplay for Living Art Studio using Gemini Flash."""
     eff_arch = primary_archetype or sub_genre or "living_impressionism"

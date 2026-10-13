@@ -78,9 +78,13 @@ function applySettingsToStudio(settings) {
 
   setChk("studio-toggle-pure-nature", settings.pureNature);
   setChk("studio-toggle-bgm", settings.bgm !== undefined ? settings.bgm : true);
-  setChk("studio-toggle-voice-over", settings.voiceOver !== undefined ? settings.voiceOver : false);
-  setChk("studio-toggle-tts", settings.tts);
-  setChk("studio-toggle-lipsync", settings.lipsync);
+  const isDoc = (typeof activeStudioFormat !== "undefined" && activeStudioFormat === "documentary");
+  const voEl = document.getElementById("studio-toggle-voice-over");
+  if (voEl) { voEl.checked = isDoc ? (settings.voiceOver ?? true) : false; voEl.disabled = !isDoc; }
+  const ttsEl = document.getElementById("studio-toggle-tts");
+  if (ttsEl) { ttsEl.checked = isDoc ? !!settings.tts : false; ttsEl.disabled = !isDoc; }
+  const fbEl = document.getElementById("studio-toggle-fallback");
+  if (fbEl) { fbEl.checked = isDoc ? !!settings.fallback : false; fbEl.disabled = !isDoc; }
 
   setVal("studio-duration", settings.duration || "10");
   setVal("studio-stretch-hours", settings.stretchHours || "3.0");

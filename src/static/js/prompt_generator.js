@@ -53,7 +53,8 @@ function selectNicheRadio(nicheKey) {
   if (!cfg) return;
   const setC = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
   const setV = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-  setC("studio-toggle-bgm", cfg.bgm); setC("studio-toggle-voice-over", cfg.voice); setV("studio-fps", cfg.fps || "24");
+  const isDoc = (typeof activeStudioFormat !== "undefined" && activeStudioFormat === "documentary");
+  setC("studio-toggle-bgm", cfg.bgm); setC("studio-toggle-voice-over", isDoc ? cfg.voice : false); setV("studio-fps", cfg.fps || "24");
   syncCameraAngleVisibility(nicheKey);
 }
 
@@ -236,11 +237,23 @@ function quickTestProduceFromPrompt() {
   const selArchLabel = archEl?.selectedOptions?.[0]?.textContent?.trim() || "";
   const dualEditionsChecked = Boolean(document.getElementById("studio-toggle-dual-editions")?.checked);
 
-  const selProdName = document.getElementById("studio-production-name")?.value?.trim() || null;
+  let selProdName = document.getElementById("studio-production-name")?.value?.trim() || null;
+  const seriesSelect = document.getElementById("studio-existing-series-select");
+  if (!selProdName && seriesSelect?.value) {
+    const selOpt = seriesSelect.selectedOptions?.[0];
+    selProdName = selOpt ? selOpt.textContent.split("(")[0].trim() : seriesSelect.value;
+  }
+  if (!selProdName) {
+    const pInput = document.getElementById("studio-production-name");
+    if (pInput) { pInput.classList.add("ring-2", "ring-rose-500", "border-rose-500"); pInput.focus(); }
+    alert("⚠️ Action Required: Production / Web Series Name is mandatory.\n\nPlease enter a series or franchise name (e.g. 'Swiss Alpine Odyssey') before producing.");
+    return;
+  }
   const selFormatVal = document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "documentary");
   const selAspect = document.getElementById("studio-selected-format")?.value || "16:9";
 
-  const newId = nextEpisodeIdForChannel(chId);
+  const epInputVal = document.getElementById("studio-episode-code")?.value?.trim();
+  const newId = (epInputVal && /^EP-\d+$/i.test(epInputVal)) ? epInputVal.toUpperCase() : nextEpisodeIdForChannel(chId, selFormatVal, selProdName);
   const uniqueJobId = `job_${newId.toLowerCase()}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
   const newVid = {
     id: newId, episode_id: newId, jobId: uniqueJobId, title, concept, story_topic: concept,
@@ -281,7 +294,6 @@ function quickTestProduceFromPrompt() {
 
 document.addEventListener("DOMContentLoaded", () => {
   const pInput = document.getElementById("youtube-prompt-input"), uInput = document.getElementById("youtube-url-input");
-  if (pInput) pInput.addEventListener("input", clearTemplateCardHighlights);
-  if (uInput) uInput.addEventListener("input", clearTemplateCardHighlights);
+  [pInput, uInput].forEach(el => el?.addEventListener("input", clearTemplateCardHighlights));
   setCreationMode("theme", false);
 });

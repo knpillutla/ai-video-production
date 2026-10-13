@@ -105,13 +105,19 @@ def load_channel_profiles(force_reload: bool = False, user_email: str = "knpillu
     if not user_chan_dir.exists():
         user_chan_dir = user_container / "channels"
     if user_chan_dir.exists():
-        for prof_file in user_chan_dir.glob("*/channel_profile.json"):
+        found = list(user_chan_dir.glob("*/network_profile.json")) + list(user_chan_dir.glob("*/channel_profile.json"))
+        seen_slugs = set()
+        for prof_file in found:
+            slug = prof_file.parent.name.lower()
+            if slug in seen_slugs:
+                continue
+            seen_slugs.add(slug)
             try:
                 data = json.loads(prof_file.read_text(encoding="utf-8"))
                 profile = ChannelProfile(**data)
                 profiles[profile.channel_id.lower()] = profile
             except Exception as exc:
-                logger.warning(f"Failed to load channel profile {prof_file}: {exc}")
+                logger.warning(f"Failed to load network profile {prof_file}: {exc}")
 
     _CACHE = profiles
     return _CACHE
@@ -131,10 +137,10 @@ def save_channel_profile(profile: ChannelProfile, user_email: str = "knpillutla@
     from src.core.storage import storage_service
     user_chan_dir = storage_service.get_network_path(user_email, profile.channel_id.lower().strip())
     user_chan_dir.mkdir(parents=True, exist_ok=True)
-    target_file = user_chan_dir / "channel_profile.json"
+    target_file = user_chan_dir / "network_profile.json"
     target_file.write_text(profile.model_dump_json(indent=2), encoding="utf-8")
     load_channel_profiles(force_reload=True, user_email=user_email)
-    logger.info(f"Saved channel profile: {target_file}")
+    logger.info(f"Saved network profile: {target_file}")
     return target_file
 
 

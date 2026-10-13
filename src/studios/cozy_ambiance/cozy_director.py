@@ -9,7 +9,7 @@ import json
 import os
 import random
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from src.core.config import settings
 from src.core.telemetry import logger
@@ -28,6 +28,8 @@ async def generate_cozy_screenplay(
     raw_output_path: Optional[os.PathLike | str] = None,
     image_model: str = "flux_1_1_pro_ultra",
     sub_genre: str = "cozy_shelter",
+    tier: str = "balanced",
+    **kwargs: Any,
 ) -> RelaxScreenplay:
     """Synthesize dedicated cozy ambiance directorial screenplay via Gemini."""
     recent_topics = topic_memory.get_recent_topics(user_id=user_id, channel_id=channel_id, limit=20)

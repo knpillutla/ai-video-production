@@ -105,15 +105,17 @@ function renderMasterVideosList(vid) {
 
   // CASE 2: Not yet ready -> Waiting for Approval or Queued
   if (!isMasterReady || eds.length === 0) {
+    const rawMot = (vid?.motion_clips && vid.motion_clips.length > 0) ? vid.motion_clips : (vid?.artifacts?.motion_clips || []);
     const rawStems = (vid?.audio_stems && vid.audio_stems.length > 0) ? vid.audio_stems : (vid?.artifacts?.audio_stems || []);
-    const hasStems = Boolean(!isProc && rawStems.length > 0);
-    if (hasStems) {
+    const hasMot = Boolean(rawMot.length > 0);
+    const hasStems = Boolean(rawStems.length > 0);
+    if (!isProc && hasMot && hasStems) {
       c.innerHTML = `<div class="col-span-2 p-1.5 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border border-emerald-300 dark:border-emerald-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
-        <div class="flex items-center gap-1.5"><i class="fa-solid fa-crown text-emerald-600 dark:text-emerald-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-emerald-950 dark:text-white">Stems &amp; Motion Ready</span><span class="text-[7px] text-emerald-700 dark:text-emerald-300">Ready for 4K Master render</span></div></div>
+        <div class="flex items-center gap-1.5"><i class="fa-solid fa-crown text-emerald-600 dark:text-emerald-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-emerald-950 dark:text-white">Motion &amp; Audio Ready</span><span class="text-[7px] text-emerald-700 dark:text-emerald-300">Ready for Stage 5 4K Master render</span></div></div>
         <button type="button" onclick="advanceToMasterStage(currentActiveInspectorEpisode)" class="px-2 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95"><i class="fa-solid fa-circle-check text-[7px]"></i><span>Approve &amp; Render 4K Master ➔</span></button>
       </div>`;
     } else if (isProc && stage <= 4) {
-      c.innerHTML = `<div class="col-span-2 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-amber-500 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 5 4K Master</span><span class="text-[7px] text-slate-400 font-mono">(Starts after Audio Stems approved)</span></div>`;
+      c.innerHTML = `<div class="col-span-2 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-amber-500 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 5 4K Master</span><span class="text-[7px] text-slate-400 font-mono">(Starts after Motion clips &amp; Audio stems approved)</span></div>`;
     } else {
       c.innerHTML = `<div class="col-span-2 h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-2 shadow-sm"><i class="fa-solid fa-crown text-slate-400 text-xs"></i><span class="text-[9px] font-bold text-slate-700 dark:text-slate-300">No Master Video Yet</span><span class="text-[7px] text-slate-500 font-mono">(Renders in Stage 5)</span></div>`;
     }
@@ -352,7 +354,7 @@ function renderMotionClipsList(vid) {
     return url && (url.startsWith("http") || url.startsWith("/static/") || url.startsWith("/storage/")) && !url.includes("placeholder_");
   });
 
-  if (isFailed && (vid.failedStage === 2 || vid.failedStage === 3 || (!rawClips.length && vid.failedStage !== 1))) {
+  if (isFailed && (vid.failedStage === 4 || (!rawClips.length && vid.failedStage !== 1 && vid.failedStage !== 2 && vid.failedStage !== 3))) {
     if (countEl) countEl.textContent = "Error";
     c.innerHTML = `<div class="col-span-3 p-3 bg-white dark:bg-slate-950 border-2 border-red-500 rounded-xl flex flex-col gap-2 shadow-md">
       <div class="flex items-center justify-between flex-wrap gap-1">
@@ -368,7 +370,7 @@ function renderMotionClipsList(vid) {
   }
 
   const isGeneratingMotion = Boolean(
-    isProc && (stage === 3 || (vid.pipelineStrategy === "autonomous" && stage >= 3 && completedClips.length < numClips))
+    isProc && (stage === 4 || (vid.pipelineStrategy === "autonomous" && stage >= 4 && (completedClips.length < numClips || vid.force_rerun)))
   );
 
   if (countEl) {
@@ -376,14 +378,19 @@ function renderMotionClipsList(vid) {
       countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-purple-200 font-bold font-mono text-[10px] border border-purple-300 dark:border-purple-700 animate-pulse inline-flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[8px]"></i>Rendering ${completedClips.length + 1}/${numClips}...</span>`;
     } else if (completedClips.length > 0) {
       countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 font-bold font-mono text-[10px] border border-emerald-300 dark:border-emerald-700 inline-flex items-center gap-1"><i class="fa-solid fa-check text-[8px]"></i>${completedClips.length}/${numClips} Ready</span>`;
+    } else if (isProc && stage < 4) {
+      countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold font-mono text-[10px] border border-slate-300 dark:border-slate-700">Queued</span>`;
     } else {
       countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold font-mono text-[10px] border border-slate-300 dark:border-slate-700">${numClips} Clip${numClips > 1 ? 's' : ''}</span>`;
     }
   }
 
-  if (!isProc && completedClips.length === 0 && rawClips.length === 0) {
+  if (!isProc && completedClips.length === 0) {
+    const rawStems = (vid.audio_stems && vid.audio_stems.length > 0) ? vid.audio_stems : (vid.artifacts?.audio_stems || []);
+    const hasAudio = Boolean(rawStems.length > 0);
     const hasKfs = Boolean((vid.keyframes && vid.keyframes.length > 0) || (vid.artifacts?.keyframes && vid.artifacts.keyframes.length > 0));
-    if (hasKfs) {
+
+    if (hasAudio) {
       const scenes = vid.screenplay?.scenes || vid.script?.scenes || vid.scenes || [];
       const shot1 = scenes[0] || {};
       const mType = (shot1.motion_type || shot1.motion || "").toLowerCase();
@@ -408,7 +415,7 @@ function renderMotionClipsList(vid) {
         : `<button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'kling_v3', true)" class="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Render with Kling v3 4K Native ($1.40)"><i class="fa-solid fa-crown text-[7px]"></i><span>Kling v3 4K (Prod) ➔</span></button>`;
 
       c.innerHTML = `<div class="col-span-3 p-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/40 dark:to-indigo-950/40 border border-purple-300 dark:border-purple-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
-        <div class="flex items-center gap-1.5"><i class="fa-solid fa-film text-purple-600 dark:text-purple-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-purple-950 dark:text-white">Stage 2 Photos Ready</span><span class="text-[7px] text-purple-700 dark:text-purple-300">${isLocalDroneShot ? '🎬 Director locked to Local Drone' : 'Choose motion engine:'}</span></div></div>
+        <div class="flex items-center gap-1.5"><i class="fa-solid fa-film text-purple-600 dark:text-purple-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-purple-950 dark:text-white">Stage 3 Audio Ready</span><span class="text-[7px] text-purple-700 dark:text-purple-300">${isLocalDroneShot ? '🎬 Director locked to Local Drone' : 'Choose motion engine:'}</span></div></div>
         <div class="flex items-center gap-1 flex-wrap">
           ${localBtn}
           ${wanBtn}
@@ -417,20 +424,22 @@ function renderMotionClipsList(vid) {
           ${kling4kBtn}
         </div>
       </div>`;
+    } else if (hasKfs) {
+      c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-amber-500 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 4 Motion</span><span class="text-[7px] text-slate-400 font-mono">(Starts after Stage 3 Audio approved)</span></div>`;
     } else {
       c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-2 shadow-sm"><i class="fa-solid fa-film text-purple-600 dark:text-purple-400 text-xs"></i><span class="text-[9px] font-bold text-slate-900 dark:text-white">No Motion Clips Yet</span><span class="text-[7px] text-slate-500 font-mono">(${defModel})</span></div>`;
     }
     return;
   }
 
-  if (isProc && stage < 3 && !isGeneratingMotion) {
-    c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-amber-500 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 3 Motion</span><span class="text-[7px] text-slate-400 font-mono">(Starts after Keyframes approved)</span></div>`;
+  if (isProc && stage < 4 && !isGeneratingMotion) {
+    c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-amber-500 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 4 Motion</span><span class="text-[7px] text-slate-400 font-mono">(Starts after Stage 3 Audio approved)</span></div>`;
     return;
   }
 
   const epId = vid.id || vid.episode_id || "EP-001", dur = vid.duration || (vid.durationSeconds ? `${vid.durationSeconds}s` : "5s");
   if (!vid.selectedMotionClipIds) vid.selectedMotionClipIds = Array.from({ length: numClips }, (_, i) => i);
-  const activeGenIdx = isGeneratingMotion ? completedClips.length : -1;
+  const activeGenIdx = isGeneratingMotion ? (vid.force_rerun ? 0 : completedClips.length) : -1;
   const pVal = Math.min(95, vid.progress || 50);
 
   const scenes = vid.screenplay?.scenes || vid.script?.scenes || vid.scenes || [];
@@ -455,7 +464,7 @@ function renderMotionClipsList(vid) {
     const isShotLocalDrone = shotMotionType.includes("ken_burns") || shotMotionType.includes("local") || shotMotionType.includes("drone") || shotMotionType.includes("zoompan");
 
     const isThisClipGenerating = Boolean(
-      isGeneratingMotion && !hasVid && (i === activeGenIdx || (numClips === 1 && isProc && stage === 3))
+      isGeneratingMotion && (!hasVid || vid.force_rerun) && (i === activeGenIdx || (numClips === 1 && isProc && stage === 4))
     );
 
     if (isThisClipGenerating) {
@@ -463,7 +472,7 @@ function renderMotionClipsList(vid) {
       return `<div class="flex flex-col items-center gap-0.5 w-full"><div class="relative w-full h-11 rounded-lg bg-purple-50/80 dark:bg-slate-900 border-2 border-purple-500 shadow-sm flex flex-col justify-between p-1 ring-2 ring-purple-500/20"><div class="flex items-center justify-between w-full"><span class="text-[8px] font-mono font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[7px]"></i> ${activeModelLabel}</span><span class="text-[7px] font-mono text-purple-600 dark:text-purple-400 font-bold">${pVal}%</span></div><div class="w-full bg-purple-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-purple-600 to-pink-500 rounded-full animate-pulse" style="width: ${pVal}%"></div></div></div><span class="text-[8px] font-bold text-purple-600 dark:text-purple-400 truncate w-full text-center">${name}</span></div>`;
     }
 
-    if (hasVid && !vid.force_rerun) {
+    if (hasVid && (!vid.force_rerun || !isGeneratingMotion)) {
       const borderCls = isSel ? "border-2 border-purple-500" : "border border-slate-300 dark:border-slate-700";
       const kf = (vid.keyframes && vid.keyframes[i]) ? vid.keyframes[i] : (vid.artifacts?.keyframes?.[i] || null);
       const kfUrl = (typeof kf === "object" && kf !== null) ? kf.url : (typeof kf === "string" ? kf : "");
@@ -512,10 +521,10 @@ function renderAudioStemsList(vid) {
   const isProc = vid.status === "processing", isFailed = vid.status === "failed", stage = vid.currentStage || 1;
   const rawStems = (vid.audio_stems && vid.audio_stems.length > 0) ? vid.audio_stems : (vid.artifacts?.audio_stems || []);
 
-  if (isFailed && vid.failedStage === 4) {
+  if (isFailed && vid.failedStage === 3) {
     c.innerHTML = `<div class="col-span-3 p-3 bg-white border-2 border-red-500 rounded-xl flex flex-col gap-2 shadow-md">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-black text-red-700 flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-red-600"></i> Stage 4 Audio Error</span>
+        <span class="text-xs font-black text-red-700 flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-red-600"></i> Stage 3 Audio Error</span>
         <button type="button" onclick="retryEpisodeWithFallback('${vid.id || vid.episode_id}')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-red-600 hover:bg-red-700 text-white transition flex items-center gap-1 shadow-sm">🔄 Retry</button>
       </div>
       <div class="text-[11px] font-mono font-semibold text-red-600 leading-normal break-words">${vid.errorMessage || 'Audio stem synthesis failed.'}</div>
@@ -523,23 +532,27 @@ function renderAudioStemsList(vid) {
     return;
   }
 
-  // If Stage < 4 and not processing Stage 4
-  if (isProc && stage < 4 && rawStems.length === 0) {
-    c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-slate-400 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 4 Audio</span><span class="text-[7px] text-slate-400 font-mono">(Suno v3.5 &amp; 3D Velvet DSP)</span></div>`;
+  // If Stage < 3 and not processing Stage 3
+  if (isProc && stage < 3 && rawStems.length === 0) {
+    c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-slate-400 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 3 Audio</span><span class="text-[7px] text-slate-400 font-mono">(Starts after Keyframe Photos approved)</span></div>`;
     return;
   }
 
   // If not processing and no stems yet
   if (!isProc && rawStems.length === 0) {
-    const rawMot = (vid.motion_clips && vid.motion_clips.length > 0) ? vid.motion_clips : (vid.artifacts?.motion_clips || []);
-    const hasMot = Boolean(rawMot.length > 0);
-    if (hasMot) {
+    const rawKfs = (vid.keyframes && vid.keyframes.length > 0) ? vid.keyframes : (vid.artifacts?.keyframes || []);
+    const completedKfs = rawKfs.filter(kf => {
+      const url = (typeof kf === "object") ? kf.url : kf;
+      return url && (url.startsWith("http") || url.startsWith("/static/") || url.startsWith("/storage/")) && !url.includes("placeholder_");
+    });
+    const hasKfs = Boolean(completedKfs.length > 0 || rawKfs.length > 0);
+    if (hasKfs) {
       c.innerHTML = `<div class="col-span-3 p-1.5 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/40 dark:to-blue-950/40 border border-cyan-300 dark:border-cyan-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
-        <div class="flex items-center gap-1.5"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-cyan-950 dark:text-white">Stage 3 Motion Ready</span><span class="text-[7px] text-cyan-700 dark:text-cyan-300">Ready to compose Suno &amp; 3D Velvet audio</span></div></div>
+        <div class="flex items-center gap-1.5"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-cyan-950 dark:text-white">Stage 2 Photos Ready</span><span class="text-[7px] text-cyan-700 dark:text-cyan-300">Ready to compose Suno &amp; 3D Velvet audio</span></div></div>
         <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode)" class="px-2 py-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95"><i class="fa-solid fa-circle-check text-[7px]"></i><span>Approve &amp; Compose Audio ➔</span></button>
       </div>`;
     } else {
-      c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-2 shadow-sm"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><span class="text-[9px] font-bold text-slate-900 dark:text-white">No Audio Stems Yet</span><span class="text-[7px] text-slate-500 font-mono">(Suno v3.5 &amp; 3D Velvet DSP)</span></div>`;
+      c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-2 shadow-sm"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><span class="text-[9px] font-bold text-slate-900 dark:text-white">No Audio Stems Yet</span><span class="text-[7px] text-slate-500 font-mono">(Azure TTS, Suno v3.5 &amp; 3D Velvet DSP)</span></div>`;
     }
     return;
   }
@@ -549,7 +562,7 @@ function renderAudioStemsList(vid) {
   const velvetStem = rawStems.find(s => (s.filename && s.filename.includes("velvet")) || (s.name && (s.name.toLowerCase().includes("velvet") || s.name.toLowerCase().includes("binaural") || s.name.toLowerCase().includes("432hz"))));
   const narrStem = rawStems.find(s => (s.filename && (s.filename.includes("spoken_narration") || s.filename.includes("narration"))) || (s.name && (s.name.toLowerCase().includes("narration") || s.name.toLowerCase().includes("voiceover"))));
 
-  const isAudioActive = Boolean(isProc && stage === 4);
+  const isAudioActive = Boolean(isProc && stage === 3);
   const items = [
     {
       name: "Suno Soundtrack",

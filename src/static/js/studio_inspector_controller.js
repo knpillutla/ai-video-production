@@ -92,8 +92,8 @@ function renderInspectorFromVideo(vid) {
           }
           if (updated) {
             if (typeof renderKeyframesList === "function") renderKeyframesList(currentActiveInspectorEpisode);
-            if (typeof renderMotionClipsList === "function") renderMotionClipsList(currentActiveInspectorEpisode);
             if (typeof renderAudioStemsList === "function") renderAudioStemsList(currentActiveInspectorEpisode);
+            if (typeof renderMotionClipsList === "function") renderMotionClipsList(currentActiveInspectorEpisode);
             if (typeof updateStageGateDock === "function") updateStageGateDock(currentActiveInspectorEpisode);
           }
         }
@@ -178,8 +178,8 @@ function renderInspectorFromVideo(vid) {
       const stageData = {
         1: { title: "Generating Screenplay & Storyboard", subtitle: "Gemini 2.5 Flash • Context & beat formulation", pct: "20%", step: "Stage 1 of 5" },
         2: { title: "Synthesizing 4K Keyframe Photos", subtitle: "FLUX 1.1 Pro Ultra • Hasselblad 8K cinematography", pct: "40%", step: "Stage 2 of 5" },
-        3: { title: "Rendering Diffusion Video Motion", subtitle: "Wan 2.1 / Kling v3 • Living wallpaper cinemagraph", pct: "65%", step: "Stage 3 of 5" },
-        4: { title: "Mastering Spatial Binaural Audio", subtitle: "Suno v3.5 & Velvet DSP • 48kHz -14 LUFS soundscape", pct: "85%", step: "Stage 4 of 5" },
+        3: { title: "Mastering Voiceover & Audio Stems", subtitle: "Azure TTS & Velvet DSP • 48kHz -14 LUFS soundscape", pct: "65%", step: "Stage 3 of 5" },
+        4: { title: "Rendering Diffusion Video Motion", subtitle: "Wan 2.1 / Kling v3 • Living wallpaper cinemagraph", pct: "85%", step: "Stage 4 of 5" },
         5: { title: "Assembling 4K Master Deliverables", subtitle: "Single-pass FFmpeg • Dual-aspect broadcast stretch", pct: "95%", step: "Stage 5 of 5" }
       };
 
@@ -196,8 +196,8 @@ function renderInspectorFromVideo(vid) {
   if (typeof renderMasterVideosList === "function") renderMasterVideosList(vid);
   if (typeof renderLongPlayStretchSection === "function") renderLongPlayStretchSection(vid);
   if (typeof renderKeyframesList === "function") renderKeyframesList(vid);
-  if (typeof renderMotionClipsList === "function") renderMotionClipsList(vid);
   if (typeof renderAudioStemsList === "function") renderAudioStemsList(vid);
+  if (typeof renderMotionClipsList === "function") renderMotionClipsList(vid);
   updateStageGateDock(vid);
 
   if (typeof renderDistributionPackaging === "function") renderDistributionPackaging(vid);
@@ -293,16 +293,16 @@ function updateStageGateDock(vid) {
     const selCount = (vid.selectedKeyframeIds || []).length || (vid.keyframes || []).length;
     if (counter) counter.textContent = `${selCount}/${(vid.keyframes || []).length} Photos Ready`;
     if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Photos";
-    if (advBtn) advBtn.textContent = `➡️ Next Stage: Generate Video Motion (${selCount} Photos) ➔`;
+    if (advBtn) advBtn.textContent = `➡️ Next Stage: Compose Audio & Vocals ➔`;
   } else if (vid.currentStage === 3) {
-    if (title) title.innerHTML = '<i class="fa-solid fa-film text-purple-500"></i><span>Stage 3: Video Motion Curation</span>';
-    if (counter) counter.textContent = `${(vid.selectedMotionClipIds || []).length || (vid.motion_clips || []).length} Clips Ready`;
-    if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Motion";
-    if (advBtn) advBtn.textContent = `➡️ Next Stage: Compose Audio & Stems ➔`;
-  } else if (vid.currentStage === 4) {
-    if (title) title.innerHTML = '<i class="fa-solid fa-wave-square text-cyan-500"></i><span>Stage 4: Audio &amp; Vocals Review</span>';
+    if (title) title.innerHTML = '<i class="fa-solid fa-wave-square text-cyan-500"></i><span>Stage 3: Audio &amp; Vocals Review</span>';
     if (counter) counter.textContent = `Stems Ready`;
     if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Audio";
+    if (advBtn) advBtn.textContent = `➡️ Next Stage: Generate Video Motion ➔`;
+  } else if (vid.currentStage === 4) {
+    if (title) title.innerHTML = '<i class="fa-solid fa-film text-purple-500"></i><span>Stage 4: Video Motion Curation</span>';
+    if (counter) counter.textContent = `${(vid.selectedMotionClipIds || []).length || (vid.motion_clips || []).length} Clips Ready`;
+    if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Motion";
     if (advBtn) advBtn.textContent = `➡️ Next Stage: Render Final 4K Master ➔`;
   }
 }

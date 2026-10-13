@@ -77,42 +77,43 @@
       <input type="hidden" id="studio-active-format-val" value="relaxation">
     </div>
 
-    <!-- 2. PRODUCTION / WEB SERIES (Existing vs New Series) & EPISODE NUMBER -->
-    <div class="p-2 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
+    <!-- 2. PRODUCTION (New Production vs Existing Production) & EPISODE NUMBER -->
+    <div class="p-2.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-2">
       <div class="flex items-center justify-between">
-        <span class="text-[11px] font-bold text-[var(--text)] flex items-center gap-1">
-          <i class="fa-solid fa-clapperboard text-[10px] text-[var(--accent)]"></i>
-          <span>2. Production / Web Series:</span>
-        </span>
-        <!-- Existing vs New Toggle -->
-        <div class="segmented-track text-[10px]">
-          <button type="button" onclick="setSeriesMode('existing')" id="series-mode-existing-btn" class="segmented-btn py-0.5 px-2 active" title="Select from Existing Web Series">
-            <i class="fa-solid fa-folder-open text-[9px]"></i>
-            <span>Existing</span>
-          </button>
-          <button type="button" onclick="setSeriesMode('new')" id="series-mode-new-btn" class="segmented-btn py-0.5 px-2" title="Create a New Web Series">
-            <i class="fa-solid fa-plus text-[9px]"></i>
+        <label class="text-xs font-bold text-[var(--text)] flex items-center gap-1.5">
+          <i class="fa-solid fa-clapperboard text-xs text-[var(--accent)]"></i>
+          <span>2. Production:</span>
+          <span class="text-rose-500 font-bold ml-0.5" title="Mandatory">*</span>
+        </label>
+        <!-- Prominent Existing vs New Switcher -->
+        <div class="segmented-track text-xs">
+          <button type="button" onclick="setSeriesMode('new')" id="series-mode-new-btn" class="segmented-btn py-1 px-3" title="Create a New Production">
+            <i class="fa-solid fa-plus text-[10px]"></i>
             <span>+ New</span>
+          </button>
+          <button type="button" onclick="setSeriesMode('existing')" id="series-mode-existing-btn" class="segmented-btn py-1 px-3 active" title="Select from Existing Productions">
+            <i class="fa-solid fa-folder-open text-[10px]"></i>
+            <span>Existing</span>
           </button>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-[1fr_90px] gap-1.5">
-        <!-- Existing Series Dropdown Container -->
-        <div id="series-existing-container">
-          <select id="studio-existing-series-select" onchange="onExistingSeriesSelect(this.value)" class="w-full px-2.5 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]">
-            <option value="">(No existing series found - start new)</option>
-          </select>
+      <div class="grid grid-cols-1 sm:grid-cols-[1fr_95px] gap-2 items-center">
+        <!-- New Production Input Container -->
+        <div id="series-new-container" class="hidden">
+          <input type="text" id="studio-production-name" oninput="onNewSeriesNameInput(this.value)" required placeholder="Enter New Production Name (e.g. Swiss Landscape)..." class="w-full px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-medium placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
         </div>
 
-        <!-- New Series Input Container -->
-        <div id="series-new-container" class="hidden">
-          <input type="text" id="studio-production-name" oninput="onNewSeriesNameInput(this.value)" placeholder="e.g. Swiss Alpine Diaries" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
+        <!-- Existing Production Dropdown Container -->
+        <div id="series-existing-container">
+          <select id="studio-existing-series-select" onchange="onExistingSeriesSelect(this.value)" class="w-full px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]">
+            <option value="">(No existing productions found - start new)</option>
+          </select>
         </div>
 
         <!-- Sequential Episode Box -->
         <div>
-          <input type="text" id="studio-episode-code" placeholder="EP-001" title="Episode Identifier" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-mono font-bold text-center placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
+          <input type="text" id="studio-episode-code" placeholder="EP-001" title="Episode Identifier" class="w-full px-2 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-mono font-bold text-center placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
         </div>
       </div>
     </div>

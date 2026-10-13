@@ -125,6 +125,7 @@ const ALL_STUDIO_GENRES = {
 };
 
 const DEFAULT_CHANNEL_GENRES = {
+  "nature_rhythms": ["relax/ocean", "relax/beach_lounge", "relax/desert", "relax/mountain", "relax/valley", "relax/blizzard", "relax/forest", "relax/rain", "relax/nature", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient", "relax/hearth", "relax/cozy", "travel/scenic", "documentary", "travel_walking"],
   "earth_serenade": ["relax/ocean", "relax/beach_lounge", "relax/desert", "relax/mountain", "relax/valley", "relax/blizzard", "relax/forest", "relax/rain", "relax/nature", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient", "travel/scenic", "relax/art"],
   "silent_hearth": ["relax/hearth", "relax/rain", "relax/cozy", "relax/blizzard"],
   "skylinediariesindia4k": ["travel/scenic"]

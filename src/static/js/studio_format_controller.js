@@ -13,12 +13,16 @@ function setStudioFormat(format) {
 function togglePureNatureMode(isPure) {
   const bgmToggle = document.getElementById("studio-toggle-bgm");
   const voiceToggle = document.getElementById("studio-toggle-voice-over");
+  const isDoc = (typeof activeStudioFormat !== "undefined" && activeStudioFormat === "documentary");
   
   if (isPure) {
     if (bgmToggle) bgmToggle.checked = false;
-    if (voiceToggle) voiceToggle.checked = false;
+    if (voiceToggle) { voiceToggle.checked = false; voiceToggle.disabled = true; }
   } else {
     if (bgmToggle) bgmToggle.checked = true;
-    if (voiceToggle) voiceToggle.checked = true;
+    if (voiceToggle) {
+      voiceToggle.checked = isDoc;
+      voiceToggle.disabled = !isDoc;
+    }
   }
 }

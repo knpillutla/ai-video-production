@@ -49,27 +49,21 @@ def _format_leg_transit_badge(st: Dict[str, Any], next_st: Dict[str, Any], next_
 
     # Hard Ceiling: Walk ONLY if distance <= 0.8 km and walk duration <= 10 mins
     raw_mins = int(m_w.group(1)) if (m_w := re.search(r"(\d+)\s*min", t_dur_raw)) and "walk" in t_dur_raw else 0
-    is_walk = km_val <= 0.8 and est_walk_mins <= 10 and (raw_mins == 0 or raw_mins <= 10) and mode != "drive" and "cab" not in t_dur_raw and "drive" not in t_dur_raw
-    if is_walk:
-        walk_mins = raw_mins if (0 < raw_mins <= 10) else min(10, est_walk_mins)
-        return f"• Walk: {walk_mins} mins ({dist_str})    →    Next: {next_name}"
+    if km_val <= 0.8 and est_walk_mins <= 10 and (raw_mins == 0 or raw_mins <= 10) and mode != "drive" and "cab" not in t_dur_raw and "drive" not in t_dur_raw:
+        return f"• Walk: {raw_mins if (0 < raw_mins <= 10) else min(10, est_walk_mins)} mins ({dist_str})    →    Next: {next_name}"
 
     # Otherwise: Drive with drive time, dual distance, and Uber cost
     drive_mins = est_drive_mins
-    m_cab = re.search(r"(\d+)\s*min[a-z\s]*(?:cab|taxi|drive|uber)", t_dur_raw) or re.search(r"(?:cab|taxi|drive|uber)[a-z\s]*(\d+)\s*min", t_dur_raw)
-    if m_cab:
+    if m_cab := (re.search(r"(\d+)\s*min[a-z\s]*(?:cab|taxi|drive|uber)", t_dur_raw) or re.search(r"(?:cab|taxi|drive|uber)[a-z\s]*(\d+)\s*min", t_dur_raw)):
         drive_mins = int(m_cab.group(1) or m_cab.group(2))
-    elif "cab" in t_dur_raw or "drive" in t_dur_raw:
-        all_nums = [int(n) for n in re.findall(r"(\d+)\s*min", t_dur_raw)]
-        if all_nums:
-            drive_mins = min(all_nums) if len(all_nums) > 1 else all_nums[0]
+    elif all_nums := [int(n) for n in re.findall(r"(\d+)\s*min", t_dur_raw)]:
+        drive_mins = min(all_nums) if len(all_nums) > 1 else all_nums[0]
 
     cost_raw = st.get("approx_leg_cost")
     if not cost_raw or str(cost_raw).strip().lower() in ("concluded", "none", "0", "free", "", "free (walk)"):
         cost_raw = "£8–£10 Uber" if km_val < 2.0 else ("£12–£15 Uber" if km_val < 4.0 else "£16–£22 Uber")
     if "uber" not in str(cost_raw).lower() and "cab" not in str(cost_raw).lower():
         cost_raw = f"{cost_raw} Uber"
-
     return f"• Drive: {drive_mins} mins ({dist_str})    •    Uber / Cab: {cost_raw}    →    Next: {next_name}"
 
 
@@ -102,13 +96,9 @@ def render_4k_itinerary_hierarchy_card(
     draw = ImageDraw.Draw(pil_img)
 
     try:
-        font_header_sub = ImageFont.truetype("arialbd.ttf", 32)
-        font_header_title = ImageFont.truetype("arialbd.ttf", 56)
-        font_pill = ImageFont.truetype("arialbd.ttf", 28)
-        font_node_title = ImageFont.truetype("arialbd.ttf", 38)
-        font_node_sub = ImageFont.truetype("arialbd.ttf", 28)
-        font_leg_text = ImageFont.truetype("arialbd.ttf", 26)
-        font_num = ImageFont.truetype("arialbd.ttf", 32)
+        font_header_sub, font_header_title = ImageFont.truetype("arialbd.ttf", 32), ImageFont.truetype("arialbd.ttf", 56)
+        font_pill, font_node_title = ImageFont.truetype("arialbd.ttf", 28), ImageFont.truetype("arialbd.ttf", 38)
+        font_node_sub, font_leg_text, font_num = ImageFont.truetype("arialbd.ttf", 28), ImageFont.truetype("arialbd.ttf", 26), ImageFont.truetype("arialbd.ttf", 32)
     except Exception:
         font_header_sub = font_header_title = font_pill = font_node_title = font_node_sub = font_leg_text = font_num = ImageFont.load_default()
 
@@ -124,18 +114,42 @@ def render_4k_itinerary_hierarchy_card(
             or s.get("is_itinerary_overview")
             or s.get("is_vacation_scope")
             or s.get("shot_type") in ("itinerary_overview_card", "itinerary_summary_card", "leisure_vacation_scope_card", "overhead_cartographic")
+            or s.get("perspective_type") in ("itinerary_overview_card", "itinerary_summary_card", "leisure_vacation_scope_card", "overhead_cartographic")
+            or "overview" in str(s.get("location_hub", "")).lower()
+            or "summary" in str(s.get("location_hub", "")).lower()
+            or "plan" in str(s.get("location_hub", "")).lower()
+            or "transit" in str(s.get("location_hub", "")).lower()
         )
     ]
     valid_stops, seen_names = [], set()
     for s in raw_stops:
-        n = s.get("attraction_name") or s.get("name") or s.get("origin_name")
+        n = s.get("attraction_name") or s.get("origin_name") or s.get("name")
         if n:
             cn = str(n).strip().lower()
-            if cn not in seen_names and not cn.startswith("stop "):
+            if (
+                cn not in seen_names
+                and not cn.startswith("stop ")
+                and not cn.startswith("attraction ")
+                and "overview" not in cn
+                and "plan" not in cn
+            ):
                 seen_names.add(cn)
                 valid_stops.append(s)
-            elif cn.startswith("stop ") and s not in valid_stops:
-                valid_stops.append(s)
+    # If summary specifies attractions, cross-match to guarantee Stop 1 is the first real attraction
+    if summary and summary.get("attractions") and (not valid_stops or len(valid_stops) < len(summary["attractions"])):
+        sum_stops = []
+        for a_idx, a_name in enumerate(summary["attractions"], 1):
+            matched = next((st for st in raw_stops if str(st.get("attraction_name") or st.get("name") or "").lower() == a_name.lower()), None)
+            if matched:
+                sum_stops.append(matched)
+            else:
+                sum_stops.append({
+                    "attraction_name": a_name, "name": a_name,
+                    "start_time": f"{8 + a_idx * 2:02d}:00 AM",
+                    "end_time": f"{9 + a_idx * 2:02d}:30 AM",
+                    "visit_duration": "1.5 hrs",
+                })
+        valid_stops = sum_stops
     if not valid_stops:
         valid_stops = stops[:4]
 
@@ -257,16 +271,10 @@ def render_4k_itinerary_hierarchy_card(
         sched_txt = f"Schedule: {s_time} – {e_time} ({v_dur})    •    Admission: {cost}"
         draw.text((card_x + 32, node_y + 36), sched_txt, fill=(180, 83, 9), font=font_node_sub)
 
-        # Inter-leg branch to next stop
         if idx < n_stops - 1:
             next_st = valid_stops[idx + 1]
-            next_cand = [
-                next_st.get("attraction_name"),
-                next_st.get("name"),
-                next_st.get("origin_name"),
-                next_st.get("destination_name"),
-            ]
-            next_name = next((str(c).strip() for c in next_cand if c and not str(c).lower().startswith("stop ")), f"Stop {st_num + 1}")
+            cands = [next_st.get("attraction_name"), next_st.get("origin_name"), next_st.get("name")]
+            next_name = next((str(c).strip() for c in cands if c and not str(c).lower().startswith("stop ")), f"Stop {st_num + 1}")
             leg_y = node_y + int(step_y * 0.58)
             draw.line([spine_x, leg_y, spine_x + 55, leg_y], fill=(37, 99, 235), width=3)
             leg_pill_w = 2650

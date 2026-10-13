@@ -5,15 +5,15 @@ function stageGateRerollCurrent() {
   const vid = currentActiveInspectorEpisode;
   if (!vid) return;
   if (vid.currentStage === 1) {
-    if (!vid.keyframes) vid.keyframes = [];
-    vid.keyframes.push({ name: `Shot ${vid.keyframes.length + 1}: Angle`, url: `/static/img/shot${(vid.keyframes.length % 4) + 1}_wide.jpg`, timing: "3.5s" });
-    vid.selectedKeyframeIds = vid.keyframes.map((_, i) => i);
-    renderKeyframesList(vid); updateStageGateDock(vid);
+    startStudioLiveStageProgress(vid, "manual", "script");
   } else if (vid.currentStage === 2) {
-    if (!vid.motion_clips) vid.motion_clips = [];
-    vid.motion_clips.push({ name: `Motion ${vid.motion_clips.length + 1}: Dynamic Pan`, model: "Wan 2.1", duration: "5s", url: "/static/videos/preview_master.mp4", timing: "12.0s" });
-    vid.selectedMotionClipIds = vid.motion_clips.map((_, i) => i);
-    renderMotionClipsList(vid); updateStageGateDock(vid);
+    advanceToKeyframesStage(vid, null, true);
+  } else if (vid.currentStage === 3) {
+    advanceToAudioStage(vid);
+  } else if (vid.currentStage === 4) {
+    advanceToMotionStage(vid, null, true);
+  } else if (vid.currentStage >= 5) {
+    advanceToMasterStage(vid, true);
   }
 }
 
@@ -21,8 +21,8 @@ function stageGateAdvanceNext() {
   const vid = currentActiveInspectorEpisode;
   if (!vid) return;
   if (vid.currentStage === 1) advanceToKeyframesStage(vid);
-  else if (vid.currentStage === 2) advanceToMotionStage(vid);
-  else if (vid.currentStage === 3) advanceToAudioStage(vid);
+  else if (vid.currentStage === 2) advanceToAudioStage(vid);
+  else if (vid.currentStage === 3) advanceToMotionStage(vid);
   else if (vid.currentStage >= 4) advanceToMasterStage(vid);
 }
 
@@ -89,12 +89,12 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
       isPhotosOnly = true;
       vid.currentStage = 2;
       vid.progress = 25;
-    } else if (manualPhase === "motion") {
-      isMotionOnly = true;
-      vid.currentStage = 3;
-      vid.progress = 50;
     } else if (manualPhase === "audio") {
       isAudioOnly = true;
+      vid.currentStage = 3;
+      vid.progress = 50;
+    } else if (manualPhase === "motion") {
+      isMotionOnly = true;
       vid.currentStage = 4;
       vid.progress = 75;
     } else if (manualPhase === "master") {
@@ -132,8 +132,8 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
       else if (isPhotosOnly) {
         const mLabel = (vid.imageModel && (vid.imageModel.includes("pro") || vid.imageModel.includes("ultra"))) ? "FLUX 1.1 Pro Ultra" : ((vid.imageModel && vid.imageModel.includes("zimage")) ? "Z-Image Turbo" : "FLUX.1-dev");
         bb.textContent = `Stage 2: Synthesizing Keyframes (${mLabel})`;
-      } else if (isMotionOnly) bb.textContent = "Stage 3: Synthesizing Motion (Wan 2.1 / Kling)";
-      else if (isAudioOnly) bb.textContent = "Stage 4: Synthesizing Audio (Suno v3.5 & 432Hz DSP)";
+      } else if (isAudioOnly) bb.textContent = "Stage 3: Synthesizing Audio & Vocals (Azure TTS, Suno & 432Hz DSP)";
+      else if (isMotionOnly) bb.textContent = "Stage 4: Synthesizing Motion (Wan 2.1 / Kling / Perspective Drone)";
       else bb.textContent = `Stage ${vid.currentStage || 5}: Rendering 4K Master & Long-Play Broadcast`;
       bb.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-blue-600 text-white animate-pulse";
     }
@@ -187,11 +187,12 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         }
         if (data.motion_clips && data.motion_clips.length > 0 && (!vid.motion_clips || vid.motion_clips.length !== data.motion_clips.length || vid.motion_clips[0]?.isGenerating)) {
           vid.motion_clips = data.motion_clips;
-          if (!isManual && data.motion_clips.length >= reqShots && vid.currentStage < 3) vid.currentStage = 3;
+          if (!isManual && data.motion_clips.length >= reqShots && vid.currentStage < 4) vid.currentStage = 4;
           changed = true;
         }
         if (data.audio_stems && JSON.stringify(vid.audio_stems || []) !== JSON.stringify(data.audio_stems)) {
           vid.audio_stems = data.audio_stems;
+          if (!isManual && data.audio_stems.length > 0 && vid.currentStage < 3) vid.currentStage = 3;
           changed = true;
         }
         if (data.editions && data.editions.length > 0) {
@@ -204,7 +205,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         }
         if (data.video_url && !vid.videoUrl) {
           vid.videoUrl = data.video_url;
-          vid.currentStage = 4;
+          if (!isManual && vid.currentStage < 5) vid.currentStage = 5;
           changed = true;
         }
 
@@ -304,7 +305,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           ? document.getElementById("studio-archetype-selector").selectedOptions[0].textContent.trim()
           : (vid.primaryArchetypeLabel || vid.primary_archetype_label || document.getElementById("studio-archetype-selector")?.selectedOptions?.[0]?.textContent?.trim() || ""),
         weather: (document.querySelector('input[name="studio_weather"]:checked')?.value || "normal"),
-        production_name: (document.getElementById("studio-production-name")?.value?.trim() || vid.production_name || null),
+        production_name: (vid.production_name || document.getElementById("studio-production-name")?.value?.trim() || null),
         format: (document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "relaxation")),
         format_slug: (document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "relaxation")),
         aspect_ratio: (document.getElementById("studio-selected-format")?.value || "16:9"),
@@ -365,7 +366,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         vid.failedStage = null;
         const bb = document.getElementById("studio-banner-phase-badge");
         if (bb) {
-          bb.textContent = "Stage 2: Keyframe Photos Ready (Approve Motion Below)";
+          bb.textContent = "Stage 2: Keyframe Photos Ready (Approve Audio Below)";
           bb.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-blue-600 text-white";
         }
         const banner = document.getElementById("studio-queued-banner");
@@ -373,9 +374,9 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           const tEl = document.getElementById("studio-banner-title");
           if (tEl) tEl.textContent = "Keyframe Photos Ready";
           const dEl = document.getElementById("studio-banner-detail");
-          if (dEl) dEl.textContent = `Episode ${vid.id || vid.episode_id}: Photos synthesized. Approve below to render video motion.`;
+          if (dEl) dEl.textContent = `Episode ${vid.id || vid.episode_id}: Photos synthesized. Approve below to compose audio.`;
         }
-      } else if (isManual && isMotionOnly) {
+      } else if (isManual && isAudioOnly) {
         vid.status = "ready";
         vid.progress = 60;
         vid.currentStage = 3;
@@ -383,25 +384,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         vid.failedStage = null;
         const bb = document.getElementById("studio-banner-phase-badge");
         if (bb) {
-          bb.textContent = "Stage 3: Video Motion Ready (Approve Audio Below)";
-          bb.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-purple-600 text-white";
-        }
-        const banner = document.getElementById("studio-queued-banner");
-        if (banner) {
-          const tEl = document.getElementById("studio-banner-title");
-          if (tEl) tEl.textContent = "Video Motion Ready";
-          const dEl = document.getElementById("studio-banner-detail");
-          if (dEl) dEl.textContent = `Episode ${vid.id || vid.episode_id}: Motion clips rendered. Approve below to compose audio.`;
-        }
-      } else if (isManual && isAudioOnly) {
-        vid.status = "ready";
-        vid.progress = 80;
-        vid.currentStage = 4;
-        vid.errorMessage = null;
-        vid.failedStage = null;
-        const bb = document.getElementById("studio-banner-phase-badge");
-        if (bb) {
-          bb.textContent = "Stage 4: Audio Stems Ready (Approve 4K Master Below)";
+          bb.textContent = "Stage 3: Audio Stems Ready (Approve Motion Below)";
           bb.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-cyan-600 text-white";
         }
         const banner = document.getElementById("studio-queued-banner");
@@ -409,7 +392,25 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           const tEl = document.getElementById("studio-banner-title");
           if (tEl) tEl.textContent = "Audio Stems Ready";
           const dEl = document.getElementById("studio-banner-detail");
-          if (dEl) dEl.textContent = `Episode ${vid.id || vid.episode_id}: Audio stems ready. Approve below to render 4K Master.`;
+          if (dEl) dEl.textContent = `Episode ${vid.id || vid.episode_id}: Audio stems ready. Approve below to render video motion.`;
+        }
+      } else if (isManual && isMotionOnly) {
+        vid.status = "ready";
+        vid.progress = 80;
+        vid.currentStage = 4;
+        vid.errorMessage = null;
+        vid.failedStage = null;
+        const bb = document.getElementById("studio-banner-phase-badge");
+        if (bb) {
+          bb.textContent = "Stage 4: Video Motion Ready (Approve 4K Master Below)";
+          bb.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-purple-600 text-white";
+        }
+        const banner = document.getElementById("studio-queued-banner");
+        if (banner) {
+          const tEl = document.getElementById("studio-banner-title");
+          if (tEl) tEl.textContent = "Video Motion Ready";
+          const dEl = document.getElementById("studio-banner-detail");
+          if (dEl) dEl.textContent = `Episode ${vid.id || vid.episode_id}: Motion clips rendered. Approve below to assemble 4K Master.`;
         }
       } else {
         vid.status = "completed"; vid.progress = 100; vid.currentStage = 5;
@@ -490,8 +491,8 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
 function detectFailedStage(errMsg, currentStage) {
   const msg = String(errMsg || "").toLowerCase();
   if (msg.includes("ffmpeg") || msg.includes("master") || msg.includes("assembly") || msg.includes("concat") || msg.includes("broadcast")) return 5;
-  if (msg.includes("suno") || msg.includes("soundtrack") || msg.includes("binaural") || msg.includes("foley") || msg.includes("audio") || msg.includes("speech") || msg.includes("tts")) return 4;
-  if (msg.includes("diffusion") || msg.includes("kling") || msg.includes("wan") || msg.includes("motion") || msg.includes("video clip") || msg.includes("render_motion")) return 3;
+  if (msg.includes("diffusion") || msg.includes("kling") || msg.includes("wan") || msg.includes("motion") || msg.includes("video clip") || msg.includes("render_motion")) return 4;
+  if (msg.includes("suno") || msg.includes("soundtrack") || msg.includes("binaural") || msg.includes("foley") || msg.includes("audio") || msg.includes("speech") || msg.includes("tts")) return 3;
   if (msg.includes("keyframe") || msg.includes("flux") || msg.includes("photo") || (msg.includes("image") && !msg.includes("imageio"))) return 2;
   if (msg.includes("gemini") || msg.includes("storyboard") || msg.includes("script") || msg.includes("director")) return 1;
   return currentStage || 1;
@@ -525,12 +526,24 @@ function advanceToKeyframesStage(vid, imageModelOverride, forceRerun = false) {
   startStudioLiveStageProgress(target, "manual", "photos");
 }
 
-function advanceToMotionStage(vid, motionModelOverride, forceRerun = false) {
+function advanceToAudioStage(vid) {
   let target = vid || currentActiveInspectorEpisode;
   if (!target) return;
   target.currentStage = 3;
   target.status = "processing";
   target.progress = 50;
+  currentActiveInspectorEpisode = target;
+  renderInspectorFromVideo(target);
+  if (typeof filterChannelArchive === "function") filterChannelArchive();
+  startStudioLiveStageProgress(target, "manual", "audio");
+}
+
+function advanceToMotionStage(vid, motionModelOverride, forceRerun = false) {
+  let target = vid || currentActiveInspectorEpisode;
+  if (!target) return;
+  target.currentStage = 4;
+  target.status = "processing";
+  target.progress = 75;
   target.force_rerun = Boolean(forceRerun);
   if (motionModelOverride) {
     target.motionModel = motionModelOverride;
@@ -539,18 +552,6 @@ function advanceToMotionStage(vid, motionModelOverride, forceRerun = false) {
   renderInspectorFromVideo(target);
   if (typeof filterChannelArchive === "function") filterChannelArchive();
   startStudioLiveStageProgress(target, "manual", "motion");
-}
-
-function advanceToAudioStage(vid) {
-  let target = vid || currentActiveInspectorEpisode;
-  if (!target) return;
-  target.currentStage = 4;
-  target.status = "processing";
-  target.progress = 75;
-  currentActiveInspectorEpisode = target;
-  renderInspectorFromVideo(target);
-  if (typeof filterChannelArchive === "function") filterChannelArchive();
-  startStudioLiveStageProgress(target, "manual", "audio");
 }
 
 function advanceToMasterStage(vid, forceRerun = false) {
@@ -577,19 +578,20 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
     const found = typeof findStudioEpisodeById === "function" ? findStudioEpisodeById(targetId) : null;
     if (found) ep = found;
   }
+  const activeStrat = (typeof activePipelineStrategy !== "undefined" && activePipelineStrategy) ? activePipelineStrategy : "manual";
   if (!ep) {
     ep = {
       id: targetId,
       episode_id: targetId,
       title: `Episode ${targetId}`,
       status: "processing",
-      pipelineStrategy: "autonomous"
+      pipelineStrategy: activeStrat
     };
   }
   ep.id = targetId;
   ep.episode_id = targetId;
   ep.status = "processing";
-  ep.pipelineStrategy = "autonomous";
+  ep.pipelineStrategy = activeStrat;
   ep.is_approved = true;
   ep.errorMessage = null;
   ep.failedStage = null;
@@ -604,8 +606,6 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
   const chSlug = ep.channelId || ep.channel_id || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : "skylinediariesindia4k");
   ep.channelId = chSlug;
   ep.channel_id = chSlug;
-  const activeStrat = (typeof activePipelineStrategy !== "undefined" && activePipelineStrategy) ? activePipelineStrategy : "manual";
-  ep.pipelineStrategy = activeStrat;
   console.log(`[REPROCESS] Reprocessing episode ${targetId} for channel ${chSlug} (${activeStrat} mode)`);
 
   // Persist disk approval
@@ -617,12 +617,23 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
   // Resumes pipeline respecting user Gate setting (Manual: resumes current pending phase; Auto: end-to-end)
   let targetPhase = null;
   if (activeStrat === "manual") {
-    const rawMot = (ep.motion_clips && ep.motion_clips.length > 0) ? ep.motion_clips : (ep.artifacts?.motion_clips || []);
+    const hasScript = Boolean(ep.script || ep.storyboard || ep.screenplay);
     const rawKfs = (ep.keyframes && ep.keyframes.length > 0) ? ep.keyframes : (ep.artifacts?.keyframes || []);
-    if (rawMot.length > 0) targetPhase = "audio";
-    else if (rawKfs.length > 0) targetPhase = "motion";
-    else if (ep.script) targetPhase = "photos";
-    else targetPhase = "script";
+    const completedKfs = rawKfs.filter(kf => {
+      const url = (typeof kf === "object") ? kf.url : kf;
+      return url && (url.startsWith("http") || url.startsWith("/static/") || url.startsWith("/storage/")) && !url.includes("placeholder_");
+    });
+    const hasPhotos = Boolean(completedKfs.length > 0 || rawKfs.length > 0);
+    const rawStems = (ep.audio_stems && ep.audio_stems.length > 0) ? ep.audio_stems : (ep.artifacts?.audio_stems || []);
+    const hasAudio = Boolean(rawStems.length > 0);
+    const rawClips = (ep.motion_clips && ep.motion_clips.length > 0) ? ep.motion_clips : (ep.artifacts?.motion_clips || []);
+    const hasMotion = Boolean(rawClips.length > 0);
+
+    if (!hasScript) targetPhase = "script";
+    else if (!hasPhotos) targetPhase = "photos";
+    else if (!hasAudio) targetPhase = "audio";
+    else if (!hasMotion) targetPhase = "motion";
+    else targetPhase = "master";
   }
   startStudioLiveStageProgress(ep, activeStrat, targetPhase);
 }

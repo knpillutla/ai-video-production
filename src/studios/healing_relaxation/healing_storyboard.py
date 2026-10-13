@@ -1,7 +1,7 @@
 """Directorial Storyboard Generator for Healing Meditation & Relaxing Music."""
 
 import json
-from typing import List
+from typing import Any, List, Optional
 from pydantic import BaseModel, Field
 from src.core.telemetry import logger
 from src.studios.ambient_world.relax_models import RelaxAudioMasterSpec, RelaxSceneDirective, RelaxScreenplay
@@ -218,12 +218,19 @@ async def generate_zen_storyboard_gemini(
 
 
 async def generate_zen_screenplay_gemini(
-    genre: str,
-    sub_genre: str,
-    primary_archetype: str,
-    custom_prompt: str,
-    duration_seconds: float,
-    user_id: str,
+    genre: str = "relax/zen",
+    sub_genre: str = "zen_healing",
+    primary_archetype: str = "zen_garden",
+    custom_prompt: str = "",
+    duration_seconds: float = 60.0,
+    user_id: str = "user_krishna_01",
+    num_shots: int = 1,
+    camera_motion: str = "locked_tripod",
+    raw_output_path: Optional[str] = None,
+    image_model: str = "flux_1_1_pro_ultra",
+    channel_id: Optional[str] = None,
+    tier: str = "balanced",
+    **kwargs: Any,
 ) -> RelaxScreenplay:
     """Generate a Zen screenplay using the dedicated Healing Relaxation director."""
     storyboard = await generate_zen_storyboard_gemini(

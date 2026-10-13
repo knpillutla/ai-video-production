@@ -66,14 +66,38 @@ function setSeriesMode(mode) {
       if (epCode && !epCode.value) epCode.value = "EP-001";
     }
   } else {
+    const pInput = document.getElementById("studio-production-name");
     const epCode = document.getElementById("studio-episode-code");
+    if (pInput) {
+      pInput.value = "";
+      pInput.focus();
+    }
     if (epCode) epCode.value = "EP-001";
   }
 }
 
+let newSeriesDebounceTimer = null;
 function onNewSeriesNameInput(val) {
   const epCode = document.getElementById("studio-episode-code");
-  if (epCode && !epCode.value.trim()) epCode.value = "EP-001";
+  const chSlug = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : "nature_rhythms";
+  const fmtKey = (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "relaxation");
+  const cleanName = (val || "").trim();
+  if (!cleanName) {
+    if (epCode) epCode.value = "EP-001";
+    return;
+  }
+  clearTimeout(newSeriesDebounceTimer);
+  newSeriesDebounceTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`/api/channels/${chSlug}/next-episode?format=${encodeURIComponent(fmtKey)}&production_name=${encodeURIComponent(cleanName)}`);
+      const data = await res.json();
+      if (data.status === "ok" && epCode) {
+        epCode.value = data.next_episode_code || "EP-001";
+      }
+    } catch (e) {
+      if (epCode && !epCode.value.trim()) epCode.value = "EP-001";
+    }
+  }, 250);
 }
 
 async function fetchAndPopulateExistingSeries(channelSlug, formatKey) {
@@ -98,7 +122,7 @@ async function fetchAndPopulateExistingSeries(channelSlug, formatKey) {
       onExistingSeriesSelect(data.productions[0].slug);
     } else {
       cachedExistingSeries = [];
-      sel.innerHTML = '<option value="">(No existing series • Click + New)</option>';
+      sel.innerHTML = '<option value="">(No existing productions found • Click + New)</option>';
       const epCode = document.getElementById("studio-episode-code");
       if (epCode) epCode.value = "EP-001";
     }
@@ -184,7 +208,9 @@ function syncGenreDropdownOnly(channelSlug) {
   const channelGenres = (typeof DEFAULT_CHANNEL_GENRES !== "undefined") ? DEFAULT_CHANNEL_GENRES : {};
 
   const p = (typeof cachedChannelProfiles !== "undefined" ? cachedChannelProfiles[channelSlug] : null) || (typeof studioChannelMetas !== "undefined" ? studioChannelMetas[channelSlug] : null);
-  const allowed = p?.allowed_genres || p?.raw?.allowed_genres || (p?.raw?.primary_genre ? [p.raw.primary_genre] : channelGenres[channelSlug]);
+  const fallbackList = channelGenres[channelSlug] || [];
+  const rawAllowed = p?.allowed_genres || p?.raw?.allowed_genres || [];
+  const allowed = (rawAllowed.length >= fallbackList.length && rawAllowed.length > 2) ? rawAllowed : (fallbackList.length > 0 ? fallbackList : (rawAllowed.length > 0 ? rawAllowed : Object.keys(genresDict)));
 
   // Filter genres strictly matching the active format selected in Step 1
   let normalized = (allowed && allowed.length > 0 && channelSlug !== "all")
@@ -228,39 +254,32 @@ function onGenreChange(genreVal) {
   updateArchetypeOptions(genreVal, subSelector.value);
   onSubGenreChange(subSelector.value);
 
-  // Sync active channel audio defaults
+  // Sync active channel audio defaults & stem modality
   const bgmToggle = document.getElementById("studio-toggle-bgm");
   const voiceToggle = document.getElementById("studio-toggle-voice-over");
+  const ttsToggle = document.getElementById("studio-toggle-tts");
+  const fallbackToggle = document.getElementById("studio-toggle-fallback");
   const dualToggle = document.getElementById("studio-toggle-dual-editions");
+  const dualRow = document.getElementById("studio-dual-editions-row");
 
-  const isDoc = (activeStudioFormat === "documentary" || genreVal === "documentary" || genreVal.includes("doc"));
+  const isDoc = (activeStudioFormat === "documentary");
   if (isDoc) {
-    if (bgmToggle) {
-      bgmToggle.checked = true;
-      bgmToggle.disabled = true;
-    }
-    if (voiceToggle) {
-      voiceToggle.checked = true;
-      voiceToggle.disabled = true;
-    }
-    if (dualToggle) {
-      dualToggle.checked = true;
-      dualToggle.disabled = true;
-    }
+    if (bgmToggle) { bgmToggle.checked = true; bgmToggle.disabled = false; }
+    if (voiceToggle) { voiceToggle.checked = true; voiceToggle.disabled = false; }
+    if (ttsToggle) { ttsToggle.disabled = false; }
+    if (fallbackToggle) { fallbackToggle.disabled = false; }
+    if (dualRow) dualRow.classList.remove("hidden");
+    if (dualToggle) { dualToggle.checked = true; dualToggle.disabled = false; }
   } else {
-    if (bgmToggle) {
-      bgmToggle.disabled = false;
-      bgmToggle.checked = (genreVal !== "relax/hearth");
-    }
-    if (voiceToggle) {
-      voiceToggle.disabled = false;
-    }
-    if (dualToggle) {
-      dualToggle.disabled = false;
-    }
+    // Relaxation & non-documentary: Voiceover, TTS, Fallback disabled by default
+    if (bgmToggle) { bgmToggle.disabled = false; bgmToggle.checked = (genreVal !== "relax/hearth"); }
+    if (voiceToggle) { voiceToggle.checked = false; voiceToggle.disabled = true; }
+    if (ttsToggle) { ttsToggle.checked = false; ttsToggle.disabled = true; }
+    if (fallbackToggle) { fallbackToggle.checked = false; fallbackToggle.disabled = true; }
+    if (dualRow) dualRow.classList.add("hidden");
+    if (dualToggle) { dualToggle.checked = false; dualToggle.disabled = true; }
   }
 
-  syncDualMastersVisibility();
   if (typeof syncTravelShotUI === "function") {
     syncTravelShotUI();
   }
@@ -272,11 +291,8 @@ function onGenreChange(genreVal) {
 function syncDualMastersVisibility() {
   const row = document.getElementById("studio-dual-editions-row");
   if (!row) return;
-  const g = (document.getElementById("studio-genre-selector")?.value || "").toLowerCase();
-  const vo = Boolean(document.getElementById("studio-toggle-voice-over")?.checked);
-  const isDoc = (activeStudioFormat === "documentary" || g.includes("doc"));
-  const isRelevant = isDoc || g.includes("travel") || vo;
-  row.classList.toggle("hidden", !isRelevant);
+  const isDoc = (activeStudioFormat === "documentary");
+  row.classList.toggle("hidden", !isDoc);
 }
 
 function updateArchetypeOptions(genreVal, subGenreVal) {
@@ -394,6 +410,7 @@ function filterChannelArchive() {
       const key = `${cId}_${normEId}`;
       allMap.set(key, {
         episode_id: normEId, channel_id: cId,
+        production_name: v.production_name || v.user_inputs?.production_name || null,
         title: v.title, story_topic: v.concept || v.story_topic || v.title,
         cost_usd: v.cost || v.cost_usd || 0.14, status: v.status || "completed",
         is_approved: Boolean(v.is_approved || v.approved),
@@ -412,6 +429,7 @@ function filterChannelArchive() {
       allMap.set(key, { ...ep, episode_id: normEId, channel_id: cId, is_approved: Boolean(ep.is_approved || ep.approved), status: "completed", progress: 100 });
     } else {
       const ex = allMap.get(key);
+      if (ep.production_name && (!ex.production_name || ex.production_name === "standalone")) ex.production_name = ep.production_name;
       if (ep.is_approved || ep.approved) ex.is_approved = true;
       if (ep.keyframes && ep.keyframes.length > 0 && (!ex.keyframes || ex.keyframes.length === 0)) ex.keyframes = ep.keyframes;
       if (ep.motion_clips && ep.motion_clips.length > 0 && (!ex.motion_clips || ex.motion_clips.length === 0)) ex.motion_clips = ep.motion_clips;
@@ -450,7 +468,27 @@ function filterChannelArchive() {
     const bCls = isSel ? "border-2 border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/40 ring-1 ring-indigo-500/30" : "border border-slate-200 dark:border-slate-800 hover:border-indigo-400 bg-slate-50 dark:bg-slate-950/80";
     const badge = isProc ? `<span class="text-[8px] font-mono px-1.5 py-0.2 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30 font-bold animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-0.5"></i> In Progress</span>` : (isApp ? `<span class="text-[8px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold">✓ Approved</span>` : `<span class="text-[8px] font-mono px-1.5 py-0.2 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold">⏳ Unapproved</span>`);
     const pBar = isProc ? `<div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1"><div class="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-300" style="width: ${ep.progress || 45}%"></div></div>` : "";
-    return `<div onclick="selectArchiveEpisode('${ep.episode_id}', '${ep.channel_id}')" class="p-2 ${bCls} rounded-xl cursor-pointer transition space-y-1 group relative"><div class="flex items-center justify-between"><div class="flex items-center gap-1.5"><span class="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400">${ep.episode_id}</span><button type="button" onclick="event.stopPropagation(); deleteStudioEpisode('${ep.episode_id}', event, '${ep.channel_id}');" class="p-1 text-slate-400 hover:text-red-600 rounded transition" title="Delete Episode"><i class="fa-solid fa-trash-can text-[10px]"></i></button></div>${badge}</div><div class="font-bold text-slate-900 dark:text-white text-xs group-hover:text-indigo-600 dark:group-hover:text-indigo-300 truncate">${ep.title}</div><div class="text-[10px] text-slate-500 dark:text-gray-400 line-clamp-1">${ep.story_topic}</div>${pBar}</div>`;
+    const prodName = ep.production_name ? ep.production_name.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) : "Standalone";
+    const geminiTitle = ep.title || ep.story_topic || "Untitled Episode";
+    const storyDesc = ep.story_topic && ep.story_topic !== ep.title ? ep.story_topic : "";
+    return `
+      <div onclick="selectArchiveEpisode('${ep.episode_id}', '${ep.channel_id}')" class="p-2.5 ${bCls} rounded-xl cursor-pointer transition space-y-1.5 group relative">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5 overflow-hidden">
+            <span class="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400 shrink-0">${ep.episode_id}</span>
+            <span class="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate" title="${prodName}"><i class="fa-solid fa-film text-[9px] text-slate-400 mr-1"></i>${prodName}</span>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            ${badge}
+            <button type="button" onclick="event.stopPropagation(); deleteStudioEpisode('${ep.episode_id}', event, '${ep.channel_id}');" class="p-1 text-slate-400 hover:text-red-600 rounded transition" title="Delete Episode"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+          </div>
+        </div>
+        <div>
+          <div class="font-semibold text-indigo-600 dark:text-indigo-300 text-xs group-hover:underline truncate" title="${geminiTitle}">${geminiTitle}</div>
+          ${storyDesc ? `<div class="text-[10px] text-slate-500 dark:text-gray-400 line-clamp-1">${storyDesc}</div>` : ''}
+        </div>
+        ${pBar}
+      </div>`;
   }).join("");
 }
 
@@ -531,19 +569,33 @@ async function deleteStudioEpisode(epId, event, channelId) {
   const vid = findStudioEpisodeById(epId, channelId);
   const chSlug = channelId || vid?.channelId || vid?.channel_id || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : null);
   if (!chSlug) return;
+  const normEpId = String(epId || "").toLowerCase().trim();
   try {
     await fetch(`/api/production/episodes/${epId}?channel_id=${chSlug}&user_id=${encodeURIComponent(uEmail)}`, { method: "DELETE" });
   } catch (e) { console.warn("Delete episode request notice:", e); }
   if (Array.isArray(studioVideos)) {
-    const idx = studioVideos.findIndex(x => (x.id === epId || x.episode_id === epId) && (x.channelId || x.channel_id || "earth_serenade") === chSlug);
-    if (idx >= 0) studioVideos.splice(idx, 1);
+    studioVideos = studioVideos.filter(x => {
+      const xId = String(x.id || x.episode_id || "").toLowerCase().trim();
+      const xCh = x.channelId || x.channel_id || "earth_serenade";
+      return !(xId === normEpId && (xCh === chSlug || chSlug === "all"));
+    });
   }
-  channelArchiveEpisodes = channelArchiveEpisodes.filter(x => x.episode_id !== epId || x.channel_id !== chSlug);
+  channelArchiveEpisodes = channelArchiveEpisodes.filter(x => {
+    const xId = String(x.id || x.episode_id || "").toLowerCase().trim();
+    const xCh = x.channelId || x.channel_id;
+    return !(xId === normEpId && (xCh === chSlug || chSlug === "all"));
+  });
   if (typeof saveVideosState === "function") saveVideosState();
   if (typeof renderStudioVideoHistory === "function") renderStudioVideoHistory();
   filterChannelArchive();
-  if (currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id === epId || currentActiveInspectorEpisode.episode_id === epId)) {
-    if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
+  if (currentActiveInspectorEpisode) {
+    const curId = String(currentActiveInspectorEpisode.id || currentActiveInspectorEpisode.episode_id || "").toLowerCase().trim();
+    if (curId === normEpId) {
+      if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
+    }
+  }
+  if (typeof fetchAndPopulateExistingSeries === "function" && typeof activeStudioFormat !== "undefined") {
+    fetchAndPopulateExistingSeries(chSlug, activeStudioFormat);
   }
   if (typeof showProfileStatusToast === "function") showProfileStatusToast(`Episode ${epId} deleted.`);
 }

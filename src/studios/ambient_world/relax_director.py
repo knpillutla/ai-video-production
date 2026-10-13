@@ -30,7 +30,9 @@ async def generate_relax_screenplay_gemini(
     user_id: Optional[str] = None,
     channel_id: Optional[str] = None,
     raw_output_path: Optional[os.PathLike | str] = None,
+    image_model: str = "flux_1_1_pro_ultra",
     tier: str = "balanced",
+    **kwargs: Any,
 ) -> RelaxScreenplay:
     """Synthesize fresh relaxation directorial screenplay via Gemini with Relax Genre Directives & Channel Topic Memory."""
     # Retrieve recently generated topics for this user channel to strictly prevent repeats (Rule 10)

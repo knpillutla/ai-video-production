@@ -57,4 +57,14 @@ def build_default_video_model_configs(fluid_motion: str, static_elements: str = 
                 "aspect_ratio": "16:9",
             },
         },
+        "local_drone": {
+            "model": "local_perspective_drone",
+            "movement": "stay",
+            "start_pan": "center",
+            "start_zoom": "normal",
+            "start_tilt": "center",
+            "curve": "cosine",
+            "speed_factor": 1.0,
+            "rationale": "Pure locked stationary tripod living wallpaper framing with zero camera movement ($0.00 compute)",
+        },
     }

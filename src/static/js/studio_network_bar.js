@@ -7,10 +7,11 @@ function updateStudioChannelMetas(channelsList) {
   if (Array.isArray(channelsList) && channelsList.length > 0) {
     channelsList.forEach(ch => {
       const slug = ch.channel_slug || ch.channel_name.toLowerCase().replace(/[^a-z0-9]/g, "_");
-      const cachedProf = (typeof cachedChannelProfiles !== "undefined" && cachedChannelProfiles[slug]) ? cachedChannelProfiles[slug] : null;
-      const rawAllowed = (ch.allowed_genres && ch.allowed_genres.length > 0) ? ch.allowed_genres :
+      const defGen = (typeof DEFAULT_CHANNEL_GENRES !== "undefined" && DEFAULT_CHANNEL_GENRES[slug]) ? DEFAULT_CHANNEL_GENRES[slug] : null;
+      const rawAllowed = (defGen && defGen.length > (ch.allowed_genres?.length || 0)) ? defGen :
+        ((ch.allowed_genres && ch.allowed_genres.length > 0) ? ch.allowed_genres :
         (cachedProf?.allowed_genres && cachedProf.allowed_genres.length > 0) ? cachedProf.allowed_genres :
-        (defaultGenres || (ch.primary_genre ? [ch.primary_genre] : null));
+        (defGen || (ch.primary_genre ? [ch.primary_genre] : null)));
       const allowed = rawAllowed ? rawAllowed.map(g => g === "relax/scenic" ? "travel/scenic" : g) : null;
 
       const channelFormats = (ch.allowed_formats && ch.allowed_formats.length > 0) ? ch.allowed_formats :

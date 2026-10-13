@@ -9,7 +9,7 @@ import json
 import os
 import random
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from src.core.config import settings
 from src.core.telemetry import logger
@@ -34,6 +34,8 @@ async def generate_rain_screenplay(
     image_model: str = "flux_1_1_pro_ultra",
     sub_genre: str = "rainy_bedroom",
     primary_archetype: Optional[str] = None,
+    tier: str = "balanced",
+    **kwargs: Any,
 ) -> RelaxScreenplay:
     """Synthesize dedicated rain retreat directorial screenplay via Gemini."""
     recent_topics = topic_memory.get_recent_topics(user_id=user_id, channel_id=channel_id, limit=20)

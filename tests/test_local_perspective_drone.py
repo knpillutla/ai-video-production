@@ -3,83 +3,63 @@
 import numpy as np
 import pytest
 from src.scripts.local_perspective_drone import (
-    compute_perspective_corners,
-    compute_waypoint_perspective_corners,
+    normalize_choreography_sequence,
+    precompute_sequence_matrices,
 )
 
 
-def test_compute_perspective_corners_forward():
-    corners_start = compute_perspective_corners(3840, 2160, 0.0, "slow_drone_forward")
-    corners_end = compute_perspective_corners(3840, 2160, 1.0, "slow_drone_forward")
-
-    assert isinstance(corners_start, np.ndarray)
-    assert corners_start.shape == (4, 2)
-    assert isinstance(corners_end, np.ndarray)
-    assert corners_end.shape == (4, 2)
-
-    # At progress=0, corners match the outer canvas edges
-    assert np.allclose(corners_start[0], [0, 0], atol=1e-2)
-    assert np.allclose(corners_start[3], [3840, 2160], atol=1e-2)
-
-    # At progress=1, top-left is moved inward (zoom + tilt)
-    assert corners_end[0][0] > 0
-    assert corners_end[0][1] > 0
-    # Top-right is moved inward from right edge
-    assert corners_end[1][0] < 3840
+def test_precompute_sequence_matrices_forward():
+    seq = [("dollyin", 5.0)]
+    matrices, total_frames = precompute_sequence_matrices(
+        img_shape=(2160, 3840, 3),
+        sequence=seq,
+        fps=24.0,
+        output_size=(3840, 2160),
+    )
+    assert total_frames == 120
+    assert len(matrices) == 120
+    assert matrices[0].shape == (3, 3)
 
 
-def test_compute_perspective_corners_sweep_directions():
-    corners_left = compute_perspective_corners(1920, 1080, 1.0, "drone_sweep_left")
-    corners_right = compute_perspective_corners(1920, 1080, 1.0, "drone_sweep_right")
-
-    # Lateral tracking coordinates must be non-zero and distinct
-    assert not np.array_equal(corners_left, corners_right)
-    # Left sweep shifts x negatively or inward
-    assert corners_left[0][0] < corners_right[0][0]
-
-
-def test_compute_perspective_corners_crane_ascend():
-    corners_crane = compute_perspective_corners(1920, 1080, 1.0, "crane_ascend")
-    assert corners_crane.shape == (4, 2)
-    # Vertical perspective tilt should alter y coordinates
-    assert corners_crane[0][1] < corners_crane[2][1]
+def test_precompute_sequence_matrices_stay():
+    seq = [("stay", 5.0)]
+    matrices, total_frames = precompute_sequence_matrices(
+        img_shape=(2160, 3840, 3),
+        sequence=seq,
+        fps=24.0,
+        output_size=(3840, 2160),
+    )
+    assert total_frames == 120
+    # For pure locked stay, transformation matrices should be invariant across time
+    assert np.allclose(matrices[0], matrices[-1], atol=1e-3)
 
 
-def test_compute_waypoint_perspective_corners_progression():
-    waypoints = [
-        {"motion": "slow_drone_forward", "duration_seconds": 15.0},
-        {"motion": "pan_right", "duration_seconds": 15.0},
-        {"motion": "crane_up", "duration_seconds": 10.0},
+def test_normalize_choreography_sequence_timeline_and_stages():
+    from src.scripts.local_perspective_drone import normalize_choreography_sequence
+
+    # Sequential timeline array format
+    seq_input = [
+        {"movement": "dollyin", "duration": 6.0},
+        {"movement": "zoomin", "duration": 4.0},
     ]
-    # Total duration = 40.0s
-    c0 = compute_waypoint_perspective_corners(3840, 2160, 0.0, 40.0, waypoints)
-    c15 = compute_waypoint_perspective_corners(3840, 2160, 15.0, 40.0, waypoints)
-    c30 = compute_waypoint_perspective_corners(3840, 2160, 30.0, 40.0, waypoints)
-    c40 = compute_waypoint_perspective_corners(3840, 2160, 40.0, 40.0, waypoints)
+    norm = normalize_choreography_sequence(seq_input, default_duration=10.0)
+    assert len(norm) == 2
+    assert norm[0] == ("dollyin", 6.0)
+    assert norm[1] == ("zoomin", 4.0)
 
-    assert np.allclose(c0[0], [0, 0], atol=1e-2)
-    assert not np.array_equal(c0, c15)
-    assert not np.array_equal(c15, c30)
-    assert not np.array_equal(c30, c40)
+    # Gemini stage format with parallel movement
+    stage_input = [
+        {"stage": 1, "duration": 5.0, "movements": ["dollyin", "pan-right"]},
+        {"stage": 2, "duration": 5.0, "movements": ["tilt-up"]},
+    ]
+    norm_stages = normalize_choreography_sequence(stage_input, default_duration=10.0)
+    assert len(norm_stages) == 2
+    assert norm_stages[0][0] == "parallel"
+    assert norm_stages[1] == ("tilt-up", 5.0)
 
-    # Smooth continuity check: corners at 14.99s and 15.01s should be continuous with no sudden jump
-    c14_99 = compute_waypoint_perspective_corners(3840, 2160, 14.99, 40.0, waypoints)
-    c15_01 = compute_waypoint_perspective_corners(3840, 2160, 15.01, 40.0, waypoints)
-    assert np.allclose(c14_99, c15_01, atol=2.0)
-
-
-def test_compute_perspective_corners_orbital_and_descend():
-    c_orbit = compute_perspective_corners(3840, 2160, 1.0, "orbital_wrap")
-    c_descend = compute_perspective_corners(3840, 2160, 1.0, "descending_glide")
-
-    assert c_orbit.shape == (4, 2)
-    assert c_descend.shape == (4, 2)
-    assert not np.array_equal(c_orbit, c_descend)
-
-    # 2.5D Depth parallax check: bottom corners must be displaced further than top corners
-    # (foreground moves faster than background)
-    top_dx = abs(c_orbit[1][0] - c_orbit[0][0])
-    bot_dx = abs(c_orbit[3][0] - c_orbit[2][0])
-    assert bot_dx != top_dx
+    # Relaxation locked hold format
+    relax_input = [{"movement": "stay", "duration": 10.0}]
+    norm_relax = normalize_choreography_sequence(relax_input, default_duration=10.0)
+    assert norm_relax == [("stay", 10.0)]
 
 

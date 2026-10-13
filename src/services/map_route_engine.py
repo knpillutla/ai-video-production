@@ -254,16 +254,16 @@ def create_lower_third_hud_overlay(
     w, h = target_res
     overlay = np.zeros((h, w, 4), dtype=np.uint8)
 
-    # Safe bottom-left positioning (x=120, y=h-360, w=960, h=250)
-    hud_h = 240 if (cost_text or transit_text) else 200
-    hud_x, hud_y = 120, h - (hud_h + 110)
-    hud_w = 980
+    # Safe bottom-left positioning (x=120, y=h-420, w=1180, h=280)
+    hud_h = 280 if (cost_text or transit_text) else 230
+    hud_x, hud_y = 120, h - (hud_h + 120)
+    hud_w = 1180
 
-    # Draw dark frosted glass card (alpha = 205 / 255 = 80% opacity)
+    # Draw dark frosted glass card (alpha = 220 / 255 = 86% opacity)
     card_rgba = np.zeros((hud_h, hud_w, 4), dtype=np.uint8)
-    card_rgba[:, :] = [16, 20, 26, 205]
-    # Electric Cyan left accent border
-    card_rgba[:, :8] = [255, 190, 0, 255]
+    card_rgba[:, :] = [14, 18, 25, 220]
+    # Gold accent border
+    card_rgba[:, :10] = [255, 195, 0, 255]
     overlay[hud_y : hud_y + hud_h, hud_x : hud_x + hud_w] = card_rgba
 
     # PIL rendering for crisp typography
@@ -271,16 +271,16 @@ def create_lower_third_hud_overlay(
     draw = ImageDraw.Draw(pil_overlay)
 
     try:
-        font_sub = ImageFont.truetype("arialbd.ttf", 26)
-        font_title = ImageFont.truetype("arialbd.ttf", 40)
-        font_time = ImageFont.truetype("arial.ttf", 28)
-        font_detail = ImageFont.truetype("arialbd.ttf", 26)
+        font_sub = ImageFont.truetype("arialbd.ttf", 32)
+        font_title = ImageFont.truetype("arialbd.ttf", 52)
+        font_time = ImageFont.truetype("arial.ttf", 36)
+        font_detail = ImageFont.truetype("arialbd.ttf", 32)
     except Exception:
         font_sub = font_title = font_time = font_detail = ImageFont.load_default()
 
-    draw.text((hud_x + 32, hud_y + 22), day_badge.upper(), fill=(0, 210, 255, 255), font=font_sub)
-    draw.text((hud_x + 32, hud_y + 60), attraction_name[:36], fill=(255, 255, 255, 255), font=font_title)
-    draw.text((hud_x + 32, hud_y + 120), timing_text, fill=(210, 225, 240, 255), font=font_time)
+    draw.text((hud_x + 36, hud_y + 24), day_badge.upper(), fill=(0, 220, 255, 255), font=font_sub)
+    draw.text((hud_x + 36, hud_y + 68), attraction_name[:38], fill=(255, 255, 255, 255), font=font_title)
+    draw.text((hud_x + 36, hud_y + 138), timing_text, fill=(220, 235, 250, 255), font=font_time)
 
     # Optional 4th line for Admission Cost and Next Transit leg
     if cost_text or transit_text:
@@ -290,6 +290,6 @@ def create_lower_third_hud_overlay(
         if transit_text:
             parts.append(f"🚶 {transit_text}")
         extra_line = "   •   ".join(parts)
-        draw.text((hud_x + 32, hud_y + 175), extra_line, fill=(255, 215, 0, 255), font=font_detail)
+        draw.text((hud_x + 36, hud_y + 198), extra_line, fill=(255, 215, 0, 255), font=font_detail)
 
     return np.array(pil_overlay)

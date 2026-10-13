@@ -8,38 +8,28 @@ def get_relaxation_pipeline_constraints(archetype: str = "") -> str:
     arch_l = archetype.lower()
     if any(w in arch_l for w in ["starlight", "midnight", "hearth"]):
         return (
-            "\n======================================================================\n"
-            "[DESERT & STARLIT HEARTH PIPELINE GUARDRAILS - MANDATORY]\n"
-            "======================================================================\n"
-            "1. DESERT MANDATE: Vast rolling golden sand dunes under an open starlit midnight sky with Milky Way galaxy.\n"
-            "2. WARM CAMPFIRE & LANTERN HEARTH: Open-air luxury Bedouin pavilion on a dune ridge with glowing lanterns and hearth campfire.\n"
-            "3. HYPNOTIC SERENITY: Warm lantern glow (2200K) against deep velvet indigo starry cosmos, rock-steady locked tripod.\n"
+            "\n[DESERT & STARLIT HEARTH PIPELINE GUARDRAILS]\n"
+            "1. DESERT MANDATE: Rolling golden dunes under starlit midnight sky with Milky Way.\n"
+            "2. WARM CAMPFIRE: Open-air luxury Bedouin pavilion on dune ridge, glowing lanterns, stone campfire.\n"
+            "3. HYPNOTIC SERENITY: Warm lantern glow (2200K) against indigo cosmos, rock-steady locked tripod.\n"
         )
     if any(w in arch_l for w in ["desert", "dune", "tent", "glamping", "daytime"]):
         return (
-            "\n======================================================================\n"
-            "[LUXURY DESERT TENT & DAYTIME DUNES GUARDRAILS - MANDATORY]\n"
-            "======================================================================\n"
-            "1. DAYTIME DESERT MANDATE: View looking out at vast golden sand dunes in natural DAYTIME sunlight (5500K) under clear blue sky. Strictly NO night, NO darkness unless user specifies.\n"
-            "2. INSIDE-OUT TENT FRAMING: Shaded pavilion interior framing the view, sheer cream linen curtains, rich Berber kilims.\n"
-            "3. DAYTIME CRISP ILLUMINATION: 5500K natural daylight, sun caustics on sand ripples, zero harsh glare, zero 2200K nighttime wash.\n"
-            "4. AUDIO MASTER: 432Hz ultra-slow (50 BPM) meditative desert soundbath, airy wooden ney flute, qanun, gentle breeze, -21 LUFS.\n"
+            "\n[LUXURY DESERT TENT & DAYTIME DUNES GUARDRAILS]\n"
+            "1. DAYTIME DESERT: Vast golden sand dunes in natural daytime sunlight (5500K) under clear blue sky.\n"
+            "2. INSIDE-OUT TENT FRAMING: Shaded pavilion framing view, sheer cream linen curtains, rich Berber kilims.\n"
+            "3. DAYTIME CRISP ILLUMINATION: 5500K natural daylight, sun caustics on sand ripples, zero harsh glare.\n"
+            "4. AUDIO MASTER: 432Hz ultra-slow (50 BPM) desert soundbath, airy wooden ney flute, breeze, -21 LUFS.\n"
         )
     if "alpine" in arch_l or "mountain" in arch_l:
         return (
-            "\n======================================================================\n"
-            "[ALPINE MOUNTAIN & NATURE PIPELINE GUARDRAILS]\n"
-            "======================================================================\n"
-            "1. CRISP NATURAL ATMOSPHERE: Prioritize majestic alpine clarity with towering snow-capped peaks, "
-            "vibrant wildflower meadows, and crystal-clear glacial streams.\n"
-            "2. BALANCED NATURAL ILLUMINATION: Crisp morning or afternoon daylight (5500K-6000K), soft alpine glow, "
-            "zero harsh artificial lens flare blowouts.\n"
+            "\n[ALPINE MOUNTAIN & NATURE PIPELINE GUARDRAILS]\n"
+            "1. CRISP NATURAL ATMOSPHERE: Majestic alpine peaks, vibrant wildflower meadows, crystal glacial streams.\n"
+            "2. BALANCED NATURAL ILLUMINATION: Crisp daylight (5500K-6000K), soft alpine glow, zero flare blowouts.\n"
             "3. CAMERA COMPOSITION: 16:9 panoramic landscape framing, locked tripod, flat straight horizon line.\n"
         )
     return (
-        "\n======================================================================\n"
-        "[RELAXATION/NATURE PIPELINE GUARDRAILS]\n"
-        "======================================================================\n"
+        "\n[RELAXATION/NATURE PIPELINE GUARDRAILS]\n"
         "1. NATURAL DIFFUSED ILLUMINATION: Soft, balanced natural lighting, zero artificial harsh glare.\n"
         "2. ECOSYSTEM AUTHENTICITY: Depict genuine geographic topography, vegetation, and water dynamics.\n"
         "3. CAMERA COMPOSITION: Living wallpaper cinemagraph style, locked tripod, deep edge-to-edge optical clarity.\n"
@@ -56,8 +46,11 @@ def build_ambient_directorial_prompt(
     excluded_topics: Optional[list[str]] = None,
     image_model: str = "flux_1_1_pro_ultra",
     google_search_enabled: bool = False,
+    tier: str = "balanced",
 ) -> str:
     """Build dynamic nature & relaxation directorial system instructions for Gemini."""
+    clean_tier = (tier or "balanced").strip().lower()
+    is_low_cost = clean_tier in ("low_cost", "tier_0", "local")
     per_shot_dur = round(duration_seconds / max(1, num_shots), 1)
     landmark_research_directive = (
         "Use Google Search grounding alongside built-in geographic knowledge to verify current facts and destination interest. "
@@ -90,6 +83,32 @@ def build_ambient_directorial_prompt(
                 f"You MUST NOT duplicate these concepts:\n{cleaned_excl}\n"
                 "Autonomously pivot to a fresh, distinct destination, season, or perspective.\n"
             )
+
+    if is_low_cost:
+        motion_contract = (
+            "3. TIER-0 / LOW-COST LOCKED TRIPOD KEN BURNS DIRECTORIAL CONTRACT ($0.00 COMPUTE):\n"
+            '   - MANDATORY "motion_type": "ken_burns" for 100% of scenes.\n'
+            '   - STRICT LOCKED TRIPOD MANDATE: Relaxation format strictly mandates a FIXED LOCKED TRIPOD overlooking scenery.\n'
+            f'   - "camera_movement": strictly stationary hold: [{{"stage": 1, "duration": {per_shot_dur}, "movements": ["stay"]}}]. Strictly ZERO panning, tilting, orbiting, or zooming.\n'
+            '   - "camera_rig": strictly "locked_tripod_telephoto".\n'
+            '   - "motion_rationale": "Fixed locked tripod overlooking natural scenery via local 4K steady hold ($0.00 compute)."'
+        )
+        ex_motion_type = "ken_burns"
+        ex_motion_engine = "local_steady_hold"
+        ex_camera_movement = f'[{{ "stage": 1, "duration": {per_shot_dur}, "movements": ["stay"] }}]'
+    else:
+        motion_contract = (
+            f"3. AI DIFFUSION LIVING WALLPAPER DIRECTORIAL CONTRACT (TIER: {clean_tier.upper()}):\n"
+            '   - MANDATORY "motion_type": "ai_diffusion" for 100% of scenes.\n'
+            '   - LIVING WALLPAPER CINEMAGRAPH: Symmetrical 16:9 framing on a locked tripod with living AI video diffusion animating water currents, waves, swaying flora, or drifting mist.\n'
+            '   - "camera_movement": strictly "locked_stationary_cinemagraph".\n'
+            '   - "camera_rig": strictly "locked_tripod_telephoto".\n'
+            '   - "motion_rationale": "Living wallpaper cinemagraph via AI diffusion for natural fluid/foliage kinematics."\n'
+            '   - Model Configs: Generate model-specific configs for "wan_2_1" and "kling_v1_6_pro".'
+        )
+        ex_motion_type = "ai_diffusion"
+        ex_motion_engine = "neural_diffusion"
+        ex_camera_movement = '"locked_stationary_cinemagraph"'
 
     return f"""You are the Lead Nature Cinematographer & Velvet Acoustic Soundscape Director for CineAI Studio.
 Your mission is to synthesize an 8K broadcast-grade master directorial screenplay for a PURE NATURE / AMBIENT SOUNDSCAPE production conforming strictly to the RelaxScreenplay JSON schema.
@@ -136,16 +155,7 @@ STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
    - In "visual_prompt", format for high-stability 16:9 landscape framing on a locked tripod with balanced natural depth.
    - In "motion_prompt", ALWAYS anchor with: "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, zero panning, zero tilting, zero zooming."
 
-3. HYBRID MOTION DIRECTORIAL SCRIPT CONTRACT:
-   - SCRIPT IS THE MANDATORY FOUNDATION FOR PRODUCTION. Every scene MUST explicitly specify "motion_type" ("ai_diffusion" | "ken_burns") and "motion_rationale". Zero fallbacks allowed.
-   - MANDATORY "ai_diffusion": living subjects (people, animals), fluid dynamics (rivers, waves, falls, rain, embers, steam), macro kinetics (swaying flower petals, rustling leaves), or moving vehicles.
-   - MANDATORY "ken_burns": rigid monumental terrain (distant mountain peaks, granite cliffs, dunes) and architecture (stone temples, palaces, room walls) to preserve 100% geometry at $0.00 compute.
-   - When motion_type is "ken_burns", "camera_movement" MUST BE AN ARRAY of stage objects specifying exact durations and parallel/sequential movements:
-     * Actions supported: 'stay', 'dollyin', 'dollyout', 'pan-left', 'pan-right', 'tilt-up', 'tilt-down', 'drift-up-right', 'drift-up-left', 'drift-down-right', 'drift-down-left', 'orbit-left', 'orbit-right'.
-     * Structure: [ {{ "stage": 1, "duration": <float_seconds>, "movements": ["<action1>", "<action2>"] }}, ... ]
-     * Sum of all stage durations MUST equal the scene duration ({per_shot_dur}s).
-   - Anti-Motion-Fatigue Clear Sky Standard: The sky MUST be a crystal-clear cloudless azure sky. STRICTLY PROHIBIT drifting clouds.
-   - Domain Specification: Set "water_fluid" for water/rain/falls, "landscape_solid" for mountain/forest, or "cozy_hearth" for campfires.
+{motion_contract}
 
 4. MODEL-SPECIFIC IMAGE PROMPTS ("image_model_configs"):
    - For every scene, generate model-tailored image prompts inside "image_model_configs" for the target image model ("{image_model}"):
@@ -156,6 +166,7 @@ STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
    - For every scene, you MUST generate model-specific positive prompts, negative prompts, and optimal API settings inside "model_configs" for:
      * "kling_v1_6_pro": Model "fal-ai/kling-video/v1.6/pro/image-to-video". Directorial action command style: "Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Rock cliffs and horizon line remain 100% frozen and static. Continuous downward flowing water cascades directly matching the source image into the churning emerald basin, soft rising vapor mist, seamless cyclic motion, pristine untouched nature, zero humans." Settings: {{ "mode": "pro", "duration": "5", "aspect_ratio": "16:9" }}
      * "wan_2_1": Model "fal-ai/wan-i2v". Continuous fluid kinetic phrasing: "Living wallpaper cinemagraph, completely stationary static frame. Rock cliffs and landscape structure remain 100% frozen and unmoving. Smooth continuous laminar water cascades flowing steadily downwards into the basin, tranquil rising vapor mist. Stable uniform illumination, seamless loop compatible." Settings: {{ "guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9" }}
+     * "local_drone": Model "local_perspective_drone". For relaxation format living wallpapers, camera movement MUST be strictly pure locked stationary frame: {{ "movement": "stay", "start_pan": "center", "start_zoom": "normal", "start_tilt": "center", "curve": "cosine", "speed_factor": 1.0, "rationale": "Pure locked stationary tripod living wallpaper framing with zero camera movement" }}.
 
 8. DIRECTORIAL CAMERA RIG & MANDATORY NEGATIVE PROMPT (Rule 20):
    - Always provide "motion_negative_prompt" and model-specific negative prompts containing: "clouds, cloudy, overcast sky, cumulus, stratus, cirrus, storm clouds, dark clouds, moving clouds, timelapse clouds, rapid clouds, rolling clouds, cloud morphing, rapid cloud shadows, camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings"
@@ -182,7 +193,7 @@ PRODUCTION SPECIFICATIONS:
 - Shot Count: {num_shots} shots ({per_shot_dur}s per shot)
 - Camera Rig: {camera_motion}
 - Target Image Model: {image_model}
-- Target Video Models: ["kling_v1_6_pro", "wan_2_1"]
+- Target Video Models: ["kling_v1_6_pro", "wan_2_1", "local_drone"]
 
 CRITICAL SCHEMA ENFORCEMENT:
 Return ONLY a valid JSON object matching RelaxScreenplay:
@@ -200,30 +211,16 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
   "recommended_fps": 24,
   "aspect_ratio": "16:9",
   "total_duration_seconds": {duration_seconds},
-  "global_culture": {{
-    "continent_region": "Autonomously derive true continent/region of the landmark",
-    "culture_heritage": "Authentic regional natural and conservation heritage",
-    "authentic_textiles_and_fabrics": "Authentic natural materials (weathered stone, moss, river slate, native timber)",
-    "cultural_gestures_and_rituals": "Mindful contemplation of nature and tranquil silence"
-  }},
-  "travel_tourism": {{
-    "destination_name": "True Geographic Landmark Name",
-    "country": "Authentic Country",
-    "province_state": null,
-    "attraction_type": "Autonomously derive true topographical structure (e.g., 'River Escarpment & Waterfall Cascade', 'Glacial Fjord', 'Canyon Rapids', 'High Mountain Ridge')",
-    "best_season_and_lighting": "Autonomously derive optimal season and lighting"
-  }},
+  "global_culture": {{ "continent_region": "Autonomously derive true region", "culture_heritage": "Authentic natural heritage", "authentic_textiles_and_fabrics": "Weathered stone, moss, slate, timber", "cultural_gestures_and_rituals": "Tranquil silence" }},
+  "travel_tourism": {{ "destination_name": "True Landmark Name", "country": "Authentic Country", "province_state": null, "attraction_type": "True topographical structure", "best_season_and_lighting": "Optimal lighting" }},
   "cast": [],
   "audio_master": {{
     "audio_mode": "ambient_nature",
-    "spoken_narration_script": "Mandatory authoritative, poetic documentary voiceover sentence describing the timeless geological wonder and geographic lore of this landmark (never leave blank).",
+    "spoken_narration_script": "Authoritative, poetic voiceover sentence describing the timeless geological wonder and geographic lore.",
     "singing_lyrics_spec": "",
-    "suno_musical_tags": "Autonomously author fresh tags: 432Hz Solfeggio, authentic solo cultural instrument (e.g. airy wooden ney flute, bansuri, handpan), warm velvet pads, 50 BPM slow heartbeat rhythm, deep stress relief, sleep drone, -21 LUFS",
-    "suno_prompt": "Autonomously compose bespoke hummable motif prompt: e.g. [Instrumental Meditative Landscape]\\n[Tempo: 50 BPM - Slow Resting Heartbeat Rhythm]\\n[Tuning: 432Hz Solfeggio Velvet Bed]\\n[Lead Motif: Gentle hummable 5-note melodic motif on <Solo Cultural Instrument> with soft breathing pauses]\\n[Accompaniment: Plucked <Secondary Texture> & resonant drone]\\n[Atmosphere: Warm velvet ambient pads, tranquil, zero guitars, zero fast arpeggios]\\n[Emotion: Joyful, enlightened, lovely, deep stress and anxiety reduction, peaceful sleep]\\n[Outro: Infinite peaceful dissolve]",
-    "vocal_gender": "none",
-    "tempo_bpm": 50,
-    "target_lufs": -21.0,
-    "ducking_db": -18.0
+    "suno_musical_tags": "432Hz Solfeggio, authentic solo cultural instrument (e.g. wooden ney, bansuri, handpan), warm velvet pads, 50 BPM, -21 LUFS",
+    "suno_prompt": "[Instrumental Meditative Landscape]\\n[Tempo: 50 BPM]\\n[Tuning: 432Hz Solfeggio]\\n[Lead Motif: Gentle hummable 5-note melodic motif on <Solo Cultural Instrument>]\\n[Atmosphere: Warm velvet ambient pads, tranquil, zero guitars]\\n[Emotion: Joyful, deep stress and anxiety reduction, peaceful sleep]",
+    "vocal_gender": "none", "tempo_bpm": 50, "target_lufs": -21.0, "ducking_db": -18.0
   }},
   "scenes": [
     {{
@@ -232,60 +229,38 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
       "shot_type": "wide_panoramic_picturesque",
       "camera_rig": "{camera_motion}",
       "color_temp_kelvin": 5500,
-      "visual_prompt": "A photorealistic, wide panoramic landscape view of [Landmark Name]. Symmetrical 16:9 cinematic framing, shot on a locked tripod. In the majestic background, towering snow-dusted jagged mountain peaks rise into a crisp clear sky; in the foreground, lush green rolling alpine meadows dotted with wildflowers frame a tranquil crystal-clear glacial stream. Pristine natural wilderness, strictly zero buildings, zero tourists, zero vehicles, and zero modern structures.",
-      "image_model_configs": {{
-        "{image_model}": {{
-          "model": "fal-ai/flux-pro/v1.1-ultra",
-          "prompt": "A photorealistic, wide panoramic landscape view of [Landmark Name]. Symmetrical 16:9 cinematic framing, shot on a locked tripod. In the majestic background, towering snow-dusted jagged mountain peaks rise into a crisp clear sky; in the foreground, lush green rolling alpine meadows dotted with wildflowers frame a tranquil crystal-clear glacial stream. Pristine natural wilderness, strictly zero buildings, zero tourists, zero vehicles, and zero modern structures.",
-          "aspect_ratio": "16:9",
-          "raw": true
-        }}
-      }},
-      "motion_prompt": "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, zero panning, zero tilting, zero zooming. The rock cliffs, horizon line, and overall landscape structure remain 100% frozen and static. Only the water moves: continuous, downward flowing cataract curtains directly following the paths in the source image, into the churning turquoise basin below. Soft, slow-moving vapor mist steadily rises up from the bottom center chasm without shifting the landscape.",
-      "motion_negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water, motionless water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings",
+      "visual_prompt": "A photorealistic, wide panoramic landscape view of [Landmark Name]. Symmetrical 16:9 cinematic framing, shot on a locked tripod. In background, towering jagged mountain peaks; in foreground, lush alpine meadows with wildflowers frame a tranquil glacial stream. Pristine wilderness, zero buildings, zero tourists, zero modern structures.",
+      "image_model_configs": {{ "{image_model}": {{ "model": "fal-ai/flux-pro/v1.1-ultra", "prompt": "A photorealistic wide panoramic landscape of [Landmark Name], locked tripod, crisp natural daylight, pristine untouched wilderness.", "aspect_ratio": "16:9", "raw": true }} }},
+      "motion_prompt": "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, zero panning, zero tilting, zero zooming. Landscape structure remains 100% frozen and static. Continuous downward flowing stream water, soft slow-moving vapor mist, zero humans.",
+      "motion_negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing foliage, shifting rocks, flickering, temporal jump, sunny sky, rainbow, changing lighting, artifacts, humans, tourist, boat, buildings",
       "model_configs": {{
         "kling_v1_6_pro": {{
           "model": "fal-ai/kling-video/v1.6/pro/image-to-video",
-          "prompts": {{
-            "positive_prompt": "Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Rock cliffs and horizon line remain 100% frozen and static. Continuous downward flowing water cascades directly matching the source image into the churning emerald basin, soft rising vapor mist, seamless cyclic motion, pristine untouched nature, zero humans.",
-            "negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors"
-          }},
-          "settings": {{
-            "mode": "pro",
-            "duration": "5",
-            "aspect_ratio": "16:9"
-          }}
+          "prompts": {{ "positive_prompt": "Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Rock cliffs remain 100% frozen and static. Continuous downward flowing water cascades, soft rising vapor mist, seamless cyclic motion, zero humans.", "negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing perspective, flickering, artifacts" }},
+          "settings": {{ "mode": "pro", "duration": "5", "aspect_ratio": "16:9" }}
         }},
         "wan_2_1": {{
           "model": "fal-ai/wan-i2v",
-          "prompts": {{
-            "positive_prompt": "Living wallpaper cinemagraph, completely stationary static frame. Rock cliffs and landscape structure remain 100% frozen and unmoving. Smooth continuous laminar water cascades flowing steadily downwards into the basin, tranquil rising vapor mist. Stable uniform illumination, seamless loop compatible.",
-            "negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, appearing foliage, shifting rocks, altering cliff structures, structural drift, changing perspective, camera flythrough, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors"
-          }},
-          "settings": {{
-            "guide_scale": 5.0,
-            "num_inference_steps": 30,
-            "aspect_ratio": "16:9"
-          }}
+          "prompts": {{ "positive_prompt": "Living wallpaper cinemagraph, completely stationary static frame. Landscape structure remains 100% frozen. Smooth continuous laminar water cascades, tranquil rising vapor mist, seamless loop compatible.", "negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing perspective, flickering, artifacts" }},
+          "settings": {{ "guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9" }}
+        }},
+        "local_drone": {{
+          "model": "local_perspective_drone",
+          "movement": "stay",
+          "start_pan": "center",
+          "start_zoom": "normal",
+          "start_tilt": "center",
+          "curve": "cosine",
+          "speed_factor": 1.0,
+          "rationale": "Pure locked stationary tripod living wallpaper framing with zero camera movement"
         }}
       }},
-      "loop_strategy": {{
-        "target_clip_duration_seconds": {per_shot_dur},
-        "generation_segment_seconds": 5.0,
-        "continuity_mode": "cyclic_temporal_flow",
-        "seam_strategy": "forward_phase_aligned_crossfade",
-        "unidirectional_flow": true,
-        "crossfade_seconds": 1.2,
-        "loop_validation": true
-      }},
+      "loop_strategy": {{ "target_clip_duration_seconds": {per_shot_dur}, "generation_segment_seconds": 5.0, "continuity_mode": "cyclic_temporal_flow", "seam_strategy": "forward_phase_aligned_crossfade", "unidirectional_flow": true, "crossfade_seconds": 1.2, "loop_validation": true }},
       "domain": "water_fluid",
-      "motion_type": "ken_burns",
-      "motion_engine": "local_drone",
+      "motion_type": "{ex_motion_type}",
+      "motion_engine": "{ex_motion_engine}",
       "narration_text": "Poetic, educational sentence narrating this specific vista or geological feature.",
-      "camera_movement": [
-        {{ "stage": 1, "duration": 5.0, "movements": ["pan-right", "dollyout"] }},
-        {{ "stage": 2, "duration": 5.0, "movements": ["stay"] }}
-      ],
+      "camera_movement": {ex_camera_movement},
       "duration_seconds": {per_shot_dur}
     }}
   ],

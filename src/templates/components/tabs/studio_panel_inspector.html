@@ -128,10 +128,24 @@
       </div>
     </div>
 
-    <!-- STAGE 3: RAW MOTION VIDEO CLIPS -->
+    <!-- STAGE 3: AUDIO & SOUNDSCAPE STEMS -->
     <div class="space-y-1">
       <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
-        <span class="stage-header-title"><span class="stage-number-badge">3</span> Raw Video Motion</span>
+        <span class="stage-header-title"><span class="stage-number-badge">3</span> Audio &amp; Vocals (48kHz)</span>
+      </div>
+      <div id="panel-section-audio" class="grid grid-cols-3 gap-1.5 w-full h-[52px] min-h-[52px] max-h-[52px] overflow-hidden">
+        <div class="col-span-3 h-12 bg-[var(--card)] border border-[var(--border)] rounded-xl flex items-center justify-center gap-2 text-[var(--text)] px-3 shadow-sm">
+          <i class="fa-solid fa-wave-square text-[var(--text-muted)] text-xs"></i>
+          <span class="text-xs font-bold text-[var(--text)]">No Audio Stems Yet</span>
+          <span class="text-xs text-[var(--text-muted)] font-mono">(Azure TTS, Suno &amp; Velvet DSP)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAGE 4: RAW MOTION VIDEO CLIPS -->
+    <div class="space-y-1">
+      <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+        <span class="stage-header-title"><span class="stage-number-badge">4</span> Raw Video Motion</span>
         <div class="flex items-center gap-1.5">
           <span id="panel-raw-videos-count" class="px-2 py-0.5 rounded-full bg-[var(--card-subtle)] text-[var(--text)] font-mono text-xs font-bold border border-[var(--border)]">0 Clips</span>
         </div>
@@ -147,20 +161,6 @@
             <i class="fa-solid fa-arrows-rotate text-[8px]"></i>
             <span>Re-Synthesize</span>
           </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- STAGE 4: AUDIO & SOUNDSCAPE STEMS -->
-    <div class="space-y-1">
-      <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
-        <span class="stage-header-title"><span class="stage-number-badge">4</span> Audio &amp; Vocals (48kHz)</span>
-      </div>
-      <div id="panel-section-audio" class="grid grid-cols-3 gap-1.5 w-full h-[52px] min-h-[52px] max-h-[52px] overflow-hidden">
-        <div class="col-span-3 h-12 bg-[var(--card)] border border-[var(--border)] rounded-xl flex items-center justify-center gap-2 text-[var(--text)] px-3 shadow-sm">
-          <i class="fa-solid fa-wave-square text-[var(--text-muted)] text-xs"></i>
-          <span class="text-xs font-bold text-[var(--text)]">No Audio Stems Yet</span>
-          <span class="text-xs text-[var(--text-muted)] font-mono">(Suno &amp; Velvet DSP)</span>
         </div>
       </div>
     </div>

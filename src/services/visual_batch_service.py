@@ -47,6 +47,8 @@ from src.core.step_logger import log_pipeline_step
 def resolve_motion_model(model: str, prompt_context: str, total_shots: int = 4) -> tuple[str, str]:
     """Dynamically route to optimal AI video diffusion model with directorial rationale."""
     m_clean = (model or "").lower()
+    if m_clean in ("local_drone", "locked_tripod", "local", "offline", "drone"):
+        return "local_drone", "Local Perspective Drone ($0.00 compute)"
     if m_clean in ("wan_4k", "wan_super_res", "wan_upscale"):
         return "wan_4k", "Alibaba Wan 2.1 (1080p) + AI 4K Super-Resolution"
     if m_clean in ("wan", "wan_2_1", "wan21"):
@@ -146,10 +148,9 @@ class VisualBatchService:
             if not task.force_rerun and task.output_path.is_file() and task.output_path.stat().st_size > 1000:
                 from src.services.ambient_export_service import get_media_duration
                 c_dur = get_media_duration(task.output_path) or 0.0
-                if abs(c_dur - float(task.duration_seconds)) <= 1.0:
-                    logger.info(f"decision_motion_cache_hit: Reusing {task.output_path.name} ($0.00 spend)")
-                    log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip exists, motion clip not recreated", {"file": task.output_path.name, "duration": c_dur, "cost": "$0.00"})
-                    return task.output_path
+                logger.info(f"decision_motion_cache_hit: Reusing {task.output_path.name} ($0.00 spend)")
+                log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip exists, motion clip not recreated", {"file": task.output_path.name, "duration": c_dur, "cost": "$0.00"})
+                return task.output_path
 
             if task.force_rerun:
                 task.output_path.unlink(missing_ok=True)
@@ -161,9 +162,17 @@ class VisualBatchService:
             chosen_model, rationale = resolve_motion_model(task.model, f"{task.visual_prompt} {task.motion_prompt}", total_shots=total_shots)
             logger.info(f"decision_motion_routing: {task.output_path.name} -> {chosen_model.upper()} ({rationale})")
             log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "started", f"motion clip missing, synthesizing via {chosen_model.upper()}", {"file": task.output_path.name, "rationale": rationale})
-            if chosen_model in ("lanczos", "local_zoompan", "ken_burns", "zoompan"):
-                mov = task.camera_movement or task.camera_waypoints or "dollyin"
-                res_f = await self._render_local_fallback(task.image_path, task.output_path, task.duration_seconds, movement=mov, waypoints=task.camera_waypoints, kinetic_micro_zones=task.kinetic_micro_zones, interpolation=task.interpolation)
+            if chosen_model in ("lanczos", "local_zoompan", "ken_burns", "zoompan", "local_drone", "locked_tripod", "local"):
+                raw_cfg = task.model_configs if isinstance(task.model_configs, dict) else {}
+                local_cfg = raw_cfg.get("local_drone") or raw_cfg.get("ken_burns") or {}
+                mov = local_cfg.get("movement") or task.camera_movement or task.camera_waypoints or "stay"
+                res_f = await self._render_local_fallback(
+                    task.image_path, task.output_path, task.duration_seconds, movement=mov,
+                    waypoints=task.camera_waypoints, kinetic_micro_zones=task.kinetic_micro_zones,
+                    interpolation=task.interpolation, start_pan=local_cfg.get("start_pan", "center"),
+                    start_zoom=local_cfg.get("start_zoom", "normal"), start_tilt=local_cfg.get("start_tilt", "center"),
+                    curve=local_cfg.get("curve", "cosine"),
+                )
                 log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip created via local perspective drone", {"file": task.output_path.name, "cost": "$0.00"})
                 return res_f
 
@@ -262,26 +271,23 @@ class VisualBatchService:
 
         return list(await asyncio.gather(*[_process_single_motion(t) for t in tasks]))
 
-    async def _render_local_fallback(self, img_path: Path, out_path: Path, duration_sec: float, movement: Any = "slow_drone_forward", waypoints: Optional[list] = None, kinetic_micro_zones: Optional[dict] = None, interpolation: str = "cubic") -> Path:
-        """Deterministic 4K CPU motion engine ($0.00 spend): calm steady drone default, multi-angle on demand."""
+    async def _render_local_fallback(self, img_path: Path, out_path: Path, duration_sec: float, movement: Any = "stay", waypoints: Optional[list] = None, kinetic_micro_zones: Optional[dict] = None, interpolation: str = "cubic", start_pan: str = "center", start_zoom: str = "normal", start_tilt: str = "center", curve: str = "cosine") -> Path:
+        """Deterministic 4K CPU motion engine ($0.00 spend): pure locked default, calm drone on demand."""
         m_str = str(movement) if isinstance(movement, (list, dict)) else (movement or "")
         m_lower = m_str.lower()
         if any(k in m_lower for k in ("multi_angle", "skyline", "mission", "fpv_drone", "dynamic_drone")):
             logger.info(f"decision_motion_fallback: 4K CPU multi-angle skyline drone for {out_path.name}")
             from src.scripts.local_perspective_multiangle_drone import render_multiangle_drone_clip
-            return await render_multiangle_drone_clip(
-                image_path=img_path, output_path=out_path, duration_seconds=duration_sec,
-                fps=30, target_res=(3840, 2160), force_rerun=True, kinetic_micro_zones=kinetic_micro_zones,
-            )
-
-        logger.info(f"decision_motion_fallback: 4K CPU calm perspective drone for {out_path.name} (movement: {movement}, inter: {interpolation})")
+            return await render_multiangle_drone_clip(image_path=img_path, output_path=out_path, duration_seconds=duration_sec, fps=30, target_res=(3840, 2160), force_rerun=True, kinetic_micro_zones=kinetic_micro_zones)
+        choreo = "stay" if any(w in m_lower for w in ("stay", "locked", "tripod", "static", "fixed", "hold")) else movement
+        logger.info(f"decision_motion_fallback: 4K CPU perspective drone for {out_path.name} (choreo: {choreo}, inter: {interpolation})")
         from src.scripts.local_perspective_drone import render_perspective_drone_clip
         return await render_perspective_drone_clip(
             image_path=img_path, output_path=out_path, duration_seconds=duration_sec,
-            fps=24, target_res=(3840, 2160), camera_movement=movement, speed_factor=1.0, force_rerun=True, camera_waypoints=waypoints,
-            kinetic_micro_zones=kinetic_micro_zones, interpolation=interpolation,
+            fps=24, target_res=(3840, 2160), camera_movement=movement, choreography=choreo, speed_factor=1.0,
+            force_rerun=True, camera_waypoints=waypoints, kinetic_micro_zones=kinetic_micro_zones,
+            interpolation=interpolation, start_pan=start_pan, start_zoom=start_zoom, start_tilt=start_tilt, curve=curve,
         )
-
 
 visual_batch_service = VisualBatchService()
 

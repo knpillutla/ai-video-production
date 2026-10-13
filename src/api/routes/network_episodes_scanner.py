@@ -105,6 +105,7 @@ def scan_all_channel_episodes(storage_dir: Path, user_id: str | None = None) -> 
                                 ep_dict = _build_episode_record(prod_path, ch_meta, storage_dir)
                                 if ep_dict:
                                     ep_dict["format"] = fmt_name
+                                    ep_dict["production_name"] = "standalone"
                                     episodes.append(ep_dict)
                         else:
                             # Production / Web Series folder
@@ -317,6 +318,11 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
         "channel_icon": ch_meta["icon"],
         "channel_color": ch_meta["color"],
         "title": title,
+        "production_name": (
+            user_inputs_data.get("production_name")
+            or manifest_data.get("production_name")
+            or (ep_path.parent.name if ep_path.parent.name not in ("channels", "networks", ch_meta["id"]) else "standalone")
+        ),
         "genre": (manifest_data.get("genre") or screenplay_data.get("genre") or user_inputs_data.get("genre") or "relax/nature"),
         "sub_genre": (manifest_data.get("sub_genre") or screenplay_data.get("sub_genre") or user_inputs_data.get("sub_genre")),
         "primary_archetype": (manifest_data.get("primary_archetype") or screenplay_data.get("primary_archetype") or user_inputs_data.get("primary_archetype")),

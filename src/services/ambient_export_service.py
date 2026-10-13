@@ -75,14 +75,14 @@ def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf
 
     out_seamless = clip_path.parent / f"{base_stem}_fwd_seamless.mp4"
     duration = get_media_duration(clip_path)
-    if duration <= xfade_dur + 0.5:
+    if duration <= xfade_dur + 0.5 or duration >= 25.0:
         return clip_path
 
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     check = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], capture_output=True, text=True, errors="ignore")
     has_audio = "Audio:" in check.stderr
 
-    if out_seamless.is_file() and out_seamless.stat().st_size > 1000:
+    if out_seamless.is_file() and out_seamless.stat().st_size > 1000 and out_seamless.stat().st_mtime >= clip_path.stat().st_mtime:
         if has_audio:
             check_out = subprocess.run([ffmpeg_bin, "-i", str(out_seamless)], capture_output=True, text=True, errors="ignore")
             if "Audio:" in check_out.stderr:
@@ -245,16 +245,9 @@ def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], e
         n_mis = eff_target_dur and c_dur_n and abs(c_dur_n - float(eff_target_dur)) > 2.0
         if force_rerun or not m_narr.is_file() or m_narr.stat().st_size < 1000 or n_mis or any(sc.stat().st_mtime > m_narr.stat().st_mtime for sc in seamless_clips):
             if m_music.is_file() and m_music.stat().st_size > 1000:
-                t_r = time.time()
-                t_dur = float(eff_target_dur or get_media_duration(m_music) or 60.0)
-                cmd_r = [
-                    imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error",
-                    "-i", str(m_music), "-i", str(narr_audio),
-                    "-filter_complex", f"[0:a]volume=0.22[bgm];[1:a]volume=1.0[vox];[bgm][vox]amix=inputs=2:duration=first:dropout_transition=3,apad,afade=t=out:st={max(0, t_dur - 3.0):.2f}:d=3.0[aout]",
-                    "-map", "0:v:0", "-map", "[aout]",
-                    "-c:v", "copy", "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-                    "-t", f"{t_dur:.2f}", "-movflags", "+faststart", str(m_narr)
-                ]
+                t_r, t_dur = time.time(), float(eff_target_dur or get_media_duration(m_music) or 60.0)
+                fc = f"[0:a]volume=0.22[bgm];[1:a]volume=1.0[vox];[bgm][vox]amix=inputs=2:duration=first:dropout_transition=3,apad,afade=t=out:st={max(0, t_dur - 3.0):.2f}:d=3.0[aout]"
+                cmd_r = [imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error", "-i", str(m_music), "-i", str(narr_audio), "-filter_complex", fc, "-map", "0:v:0", "-map", "[aout]", "-c:v", "copy", "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-t", f"{t_dur:.2f}", "-movflags", "+faststart", str(m_narr)]
                 subprocess.run(cmd_r, check=True)
                 logger.info(f"fast_narration_master_remuxed: duration={time.time() - t_r:.2f}s target={t_dur:.2f}s")
             else:
@@ -289,7 +282,8 @@ def export_metadata_packages(sb: AmbientStoryboard, ep_dir: Path, hours: Optiona
     eff_h = hours or 3.0
     pkg_music = generate_youtube_ambient_package(sb.primary_archetype, eff_h, sb.secondary_archetype, fade_h)
     pkg_nature = generate_youtube_ambient_package(sb.primary_archetype, eff_h, sb.secondary_archetype, fade_h)
-    pkg_nature.title, pkg_nature.description = f"{pkg_nature.title} | Pure Nature Sounds [4K ASMR]", f"100% pure natural ambient soundscape without music.\n\n{pkg_nature.description}"
+    pkg_nature.title = f"{pkg_nature.title} | Pure Nature Sounds [4K ASMR]"
+    pkg_nature.description = f"100% pure natural ambient soundscape without music.\n\n{pkg_nature.description}"
     for fn, pkg in [("youtube_packaging.json", pkg_music), ("youtube_packaging_nature_only.json", pkg_nature),
                    ("youtube_packaging_30min.json", generate_youtube_ambient_package(sb.primary_archetype, 0.5, sb.secondary_archetype))]:
         (ep_dir / fn).write_text(json.dumps(pkg.model_dump(), indent=2), encoding="utf-8")

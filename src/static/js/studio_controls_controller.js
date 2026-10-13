@@ -122,28 +122,15 @@ function updateDurationOptionsForNiche(groupKey) {
   const select = document.getElementById("studio-stretch-hours");
   const customContainer = document.getElementById("studio-custom-duration-container");
   if (!select) return;
-
+  let opts = (currentNicheGroup === "relaxation") ? `<option value="90s">Short Master (90s)</option>` : "";
+  const maxM = (currentNicheGroup === "relaxation") ? 15 : 15;
+  for (let m = (currentNicheGroup === "relaxation" ? 2 : 1); m <= maxM; m++) opts += `<option value="${m}m">${m} min (${m * 60}s)</option>`;
   if (currentNicheGroup === "relaxation") {
-    let opts = `<option value="90s">Short Master (90s)</option>`;
-    for (let m = 2; m <= 15; m++) {
-      opts += `<option value="${m}m">${m} min (${m * 60}s)</option>`;
-    }
-    for (let h = 1; h <= 8; h++) {
-      const label = h === 3 ? "3 Hours (4K Broadcast)" : (h === 8 ? "8 Hours (Overnight)" : (h === 1 ? "1 Hour Stream" : `${h} Hours Stream`));
-      opts += `<option value="${h}h" ${h === 3 ? 'selected' : ''}>${label}</option>`;
-    }
-    opts += `<option value="custom">Custom...</option>`;
-    select.innerHTML = opts;
-    if (customContainer) customContainer.classList.add("hidden");
-  } else {
-    let opts = "";
-    for (let m = 1; m <= 15; m++) {
-      opts += `<option value="${m}m" ${m === 3 ? 'selected' : ''}>${m} min (${m * 60}s)</option>`;
-    }
-    opts += `<option value="custom">Custom...</option>`;
-    select.innerHTML = opts;
-    if (customContainer) customContainer.classList.add("hidden");
+    for (let h = 1; h <= 8; h++) opts += `<option value="${h}h" ${h === 3 ? 'selected' : ''}>${h === 3 ? "3 Hours (4K Broadcast)" : (h === 8 ? "8 Hours (Overnight)" : `${h} Hour${h > 1 ? 's' : ''} Stream`)}</option>`;
   }
+  opts += `<option value="custom">Custom...</option>`;
+  select.innerHTML = opts;
+  if (customContainer) customContainer.classList.add("hidden");
   calculateLiveCostEstimate();
 }
 
@@ -214,43 +201,39 @@ function isTravelOrSkylineChannel() {
 }
 
 function syncTravelShotUI() {
-  const isDocOrTour = isTravelOrSkylineChannel();
-  const testShotsEl = document.getElementById("studio-test-shots");
-  const prodShotsEl = document.getElementById("studio-prod-shots");
-  const testStretchEl = document.getElementById("studio-test-stretch");
-  const prodStretchEl = document.getElementById("studio-stretch-hours");
-  const cadenceCont = document.getElementById("relaxation-cadence-container");
-  const btnProduceText = document.getElementById("btn-produce-text");
+  const fmt = (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "relaxation").toLowerCase();
+  const isRelax = (fmt === "relaxation");
+  const isDocOrTour = !isRelax && isTravelOrSkylineChannel();
+  const testShotsEl = document.getElementById("studio-test-shots"), prodShotsEl = document.getElementById("studio-prod-shots");
+  const testStretchEl = document.getElementById("studio-test-stretch"), prodStretchEl = document.getElementById("studio-stretch-hours");
+  const cadenceCont = document.getElementById("relaxation-cadence-container"), btnProduceText = document.getElementById("btn-produce-text");
 
-  if (cadenceCont) cadenceCont.style.display = isDocOrTour ? "none" : "";
-  if (testShotsEl) {
-    testShotsEl.style.display = isDocOrTour ? "none" : "";
-    if (isDocOrTour) {
-      testShotsEl.value = "-1";
-      activeShotsCount = -1;
-    }
-  }
-  if (prodShotsEl) {
-    prodShotsEl.style.display = isDocOrTour ? "none" : "";
-    if (isDocOrTour) prodShotsEl.value = "-1";
-  }
-  if (testStretchEl && testStretchEl.parentElement) {
-    testStretchEl.parentElement.className = isDocOrTour ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-2 gap-1.5";
-  }
-  if (prodStretchEl && prodStretchEl.parentElement) {
-    prodStretchEl.parentElement.className = isDocOrTour ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-2 gap-1.5";
+  if (cadenceCont) cadenceCont.style.display = (isRelax || isDocOrTour) ? "none" : "";
+  if (isRelax) {
+    if (testShotsEl) { testShotsEl.style.display = ""; testShotsEl.value = "1"; testShotsEl.disabled = true; activeShotsCount = 1; }
+    if (prodShotsEl) { prodShotsEl.style.display = ""; prodShotsEl.value = "1"; prodShotsEl.disabled = true; }
+    if (testStretchEl) { testStretchEl.disabled = true; testStretchEl.value = "0.0167"; activeBroadcastHours = 0.0167; activeTestDuration = 60; }
+    if (prodStretchEl) { prodStretchEl.disabled = true; prodStretchEl.value = "3.0"; activeBroadcastHours = 3.0; }
+  } else if (isDocOrTour) {
+    if (testShotsEl) { testShotsEl.style.display = "none"; testShotsEl.disabled = false; testShotsEl.value = "-1"; activeShotsCount = -1; }
+    if (prodShotsEl) { prodShotsEl.style.display = "none"; prodShotsEl.disabled = false; prodShotsEl.value = "-1"; }
+    if (testStretchEl) testStretchEl.disabled = false;
+    if (prodStretchEl) prodStretchEl.disabled = false;
+  } else {
+    if (testShotsEl) { testShotsEl.style.display = ""; testShotsEl.disabled = false; }
+    if (prodShotsEl) { prodShotsEl.style.display = ""; prodShotsEl.disabled = false; }
+    if (testStretchEl) testStretchEl.disabled = false;
+    if (prodStretchEl) prodStretchEl.disabled = false;
   }
 
-  if (isDocOrTour && typeof selectProductionTier === "function" && typeof currentTier !== "undefined" && currentTier !== "balanced") {
-    selectProductionTier("balanced");
-  }
+  if (testStretchEl?.parentElement) testStretchEl.parentElement.className = isDocOrTour ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-2 gap-1.5";
+  if (prodStretchEl?.parentElement) prodStretchEl.parentElement.className = isDocOrTour ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-2 gap-1.5";
+  if (isDocOrTour && typeof selectProductionTier === "function" && typeof currentTier !== "undefined" && currentTier !== "balanced") selectProductionTier("balanced");
 
   if (btnProduceText) {
     if (activeExecutionMode === "test") {
-      const shotsLbl = activeShotsCount === -1 ? "Auto Cadence" : `${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''}`;
-      btnProduceText.textContent = isDocOrTour
-        ? (activePipelineStrategy === "manual" ? "Run Test (Auto Cadence)" : "Run Draft (Auto Cadence)")
-        : (activePipelineStrategy === "manual" ? `Run Test (${shotsLbl})` : `Run Draft (${shotsLbl})`);
+      const shotsLbl = isRelax ? "1 Shot" : (activeShotsCount === -1 ? "Auto Cadence" : `${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''}`);
+      btnProduceText.textContent = isDocOrTour ? (activePipelineStrategy === "manual" ? "Run Test (Auto Cadence)" : "Run Draft (Auto Cadence)") : (activePipelineStrategy === "manual" ? `Run Test (${shotsLbl})` : `Run Draft (${shotsLbl})`);
     } else {
       btnProduceText.textContent = activePipelineStrategy === "manual" ? "Produce Video (Gate)" : "Produce Master Video";
     }
@@ -304,10 +287,7 @@ document.addEventListener("DOMContentLoaded", () => {
   syncTravelShotUI();
   calculateLiveCostEstimate();
   ["studio-channel-select", "studio-genre-selector"].forEach(id => {
-    document.getElementById(id)?.addEventListener("change", () => {
-      syncTravelShotUI();
-      calculateLiveCostEstimate();
-    });
+    document.getElementById(id)?.addEventListener("change", () => { syncTravelShotUI(); calculateLiveCostEstimate(); });
   });
 });
 

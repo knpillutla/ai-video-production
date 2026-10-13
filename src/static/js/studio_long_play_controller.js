@@ -158,10 +158,12 @@ async function approveAndGenerateLongPlay() {
       startLongPlayStatusPolling(epId, chSlug, uEmail);
     } else {
       if (typeof showProfileStatusToast === "function") showProfileStatusToast(data.detail || "Failed to start long-play stretch.");
+      if (btnText) btnText.innerHTML = '<i class="fa-solid fa-arrows-rotate mr-1"></i> Approve & Generate Dual 4K Broadcasts';
     }
   } catch (err) {
     console.error("Long play stretch request error:", err);
     if (typeof showProfileStatusToast === "function") showProfileStatusToast("Network error starting long-play broadcast.");
+    if (btnText) btnText.innerHTML = '<i class="fa-solid fa-arrows-rotate mr-1"></i> Approve & Generate Dual 4K Broadcasts';
   }
 }
 

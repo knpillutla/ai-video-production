@@ -49,6 +49,8 @@ async def generate_mountain_screenplay_gemini(
     raw_output_path: Optional[os.PathLike | str] = None,
     image_model: str = "flux_1_1_pro_ultra",
     channel_id: Optional[str] = None,
+    tier: str = "balanced",
+    **kwargs: Any,
 ) -> RelaxScreenplay:
     eff_arch = primary_archetype or sub_genre or "mountain_daytime_vista"
     eff_channel = channel_id or "earth_serenade"
