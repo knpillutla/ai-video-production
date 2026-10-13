@@ -48,31 +48,38 @@ function populateProductionControlsFromEpisode(rawVid) {
   const epCodeInput = document.getElementById("studio-episode-code");
   if (epCodeInput && epId) epCodeInput.value = epId;
 
-  // 2. Genre, Subgenre & Archetype Selectors
+  // 2. Production Format (documentary, relaxation, etc.) - Must run before genre dropdown
+  const effFormatSlug = vid.format_slug || (vid.format && !["16:9", "9:16"].includes(vid.format) ? vid.format : null);
   const effGenre = inputs.genre || vid.genre || vid.videoType || screenplay.genre;
+  if (effFormatSlug && typeof selectStudioFormat === "function") {
+    selectStudioFormat(effFormatSlug, effGenre);
+  }
+
+  // 2b. Genre, Subgenre & Archetype Selectors
+  const effSubGenre = inputs.sub_genre || vid.sub_genre || vid.subGenre || screenplay.sub_genre;
+  const effArch = inputs.primary_archetype || vid.primary_archetype || vid.primaryArchetype || screenplay.primary_archetype;
+
   if (effGenre) {
     const gSel = document.getElementById("studio-genre-selector");
-    if (gSel && gSel.value !== effGenre) {
-      const opt = Array.from(gSel.options).find(o => o.value === effGenre);
-      if (opt) { gSel.value = effGenre; if (typeof onGenreChange === "function") onGenreChange(effGenre); }
+    if (gSel) {
+      gSel.value = effGenre;
+      if (typeof onGenreChange === "function") onGenreChange(effGenre, effSubGenre, effArch);
     }
   }
 
-  const effSubGenre = inputs.sub_genre || vid.sub_genre || vid.subGenre || screenplay.sub_genre;
   if (effSubGenre) {
     const subSel = document.getElementById("studio-subgenre-selector");
     if (subSel) {
-      const opt = Array.from(subSel.options).find(o => o.value === effSubGenre);
-      if (opt) { subSel.value = effSubGenre; if (typeof onSubGenreChange === "function") onSubGenreChange(effSubGenre); }
+      subSel.value = effSubGenre;
+      if (typeof onSubGenreChange === "function") onSubGenreChange(effSubGenre);
     }
   }
 
-  const effArch = inputs.primary_archetype || vid.primary_archetype || vid.primaryArchetype || screenplay.primary_archetype;
   if (effArch) {
     const archSel = document.getElementById("studio-archetype-selector");
     if (archSel) {
-      const opt = Array.from(archSel.options).find(o => o.value === effArch);
-      if (opt) archSel.value = effArch;
+      archSel.value = effArch;
+      if (typeof onArchetypeChange === "function") onArchetypeChange(effArch);
     }
   }
 
@@ -81,15 +88,19 @@ function populateProductionControlsFromEpisode(rawVid) {
   const isPortrait = (effAspect === "9:16" || String(effAspect).includes("9:16") || String(effAspect).includes("Short"));
   if (typeof setStudioFormat === "function") setStudioFormat(isPortrait ? "9:16" : "16:9");
 
-  // 3b. Production Format (documentary, relaxation, etc.)
-  const effFormatSlug = vid.format_slug || (vid.format && !["16:9", "9:16"].includes(vid.format) ? vid.format : null);
-  if (effFormatSlug && typeof selectStudioFormat === "function") selectStudioFormat(effFormatSlug);
-
   // 4. Production Tier
   const effTier = inputs.tier || vid.tier || vid.tierKey || screenplay.tier || "balanced";
   if (typeof selectProductionTier === "function") {
     const cleanTier = (effTier === "cinematic" || effTier === "4k_master") ? "cinematic" : (effTier === "low_cost" || effTier === "draft" ? "low_cost" : "balanced");
     selectProductionTier(cleanTier);
+  }
+
+  // 4b. Weather & Atmosphere
+  const effWeather = inputs.weather || inputs.selected_options?.weather?.value || vid.weather || "normal";
+  const weatherRadio = document.querySelector(`input[name="studio_weather"][value="${effWeather}"]`);
+  if (weatherRadio) {
+    weatherRadio.checked = true;
+    if (typeof onWeatherChange === "function") onWeatherChange(effWeather);
   }
 
   // 5. Durations & Hours Resolution

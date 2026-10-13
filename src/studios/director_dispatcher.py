@@ -35,6 +35,7 @@ async def dispatch_studio_director(
     raw_output_path: Optional[os.PathLike | str] = None,
     image_model: str = "flux_1_1_pro_ultra",
     tier: str = "balanced",
+    weather: Optional[str] = "normal",
 ) -> RelaxScreenplay:
     """Dispatch screenplay request to the appropriate specialized studio director."""
     p_lower = (custom_prompt or "").lower()
@@ -43,83 +44,41 @@ async def dispatch_studio_director(
     sub_lower = (sub_genre or "").lower()
     arch_lower = (primary_archetype or "").lower()
 
+    # Atmospheric weather injection for non-normal weather modes
+    eff_custom_prompt = custom_prompt
+    if weather and weather != "normal":
+        weather_modifiers = {
+            "rain": "gentle cinematic rainfall, mist plumes, wet reflections, and soothing rain soundscape",
+            "snow": "serene snowfall, frosted surfaces, and calm winter atmospheric haze",
+            "fog": "morning coastal mist, volumetric god rays, and soft atmospheric haze",
+            "sunset": "glorious golden hour sunset, warm 2800K illumination, and long dusk shadows",
+            "night": "deep midnight starlit sky, glowing celestial stars, and tranquil nighttime atmosphere",
+        }
+        mod = weather_modifiers.get(weather)
+        if mod and (not custom_prompt or not any(k in custom_prompt.lower() for k in [weather, "rain", "snow", "fog", "sunset", "night"])):
+            eff_custom_prompt = f"{custom_prompt or ''} ({mod})".strip()
+
     kwargs = dict(
-        custom_prompt=custom_prompt, duration_seconds=duration_seconds, num_shots=num_shots,
+        custom_prompt=eff_custom_prompt, duration_seconds=duration_seconds, num_shots=num_shots,
         camera_motion=camera_motion, user_id=user_id, raw_output_path=raw_output_path,
         image_model=image_model, channel_id=channel_id or "earth_serenade",
-        tier=tier,
+        tier=tier, weather=weather,
     )
+    base_kwargs = {k: v for k, v in kwargs.items() if k not in ("tier", "weather")}
 
     # 0. Dedicated Blue-Chip Documentary & Science Studio Dispatch
     is_science = "science" in genre_lower or "science" in sub_lower or "science" in arch_lower
     if "doc" in genre_lower or "documentary" in ch_lower or "doc" in sub_lower or is_science:
-        from src.studios.documentary_studio.doc_storyboard import generate_documentary_storyboard_gemini, DocGenre
-        doc_genre_map = {
-            "places": DocGenre.PLACES, "doc_places": DocGenre.PLACES, "beaches": DocGenre.BEACHES, "doc_beaches": DocGenre.BEACHES,
-            "mountains": DocGenre.MOUNTAINS, "doc_mountains": DocGenre.MOUNTAINS, "nature": DocGenre.NATURE, "doc_nature": DocGenre.NATURE,
-            "ocean": DocGenre.OCEAN, "doc_ocean": DocGenre.OCEAN, "desert": DocGenre.DESERT, "doc_desert": DocGenre.DESERT,
-            "wildlife": DocGenre.WILDLIFE, "doc_wildlife": DocGenre.WILDLIFE, "art": DocGenre.ART, "doc_art": DocGenre.ART,
-            "ancient_structures": DocGenre.ANCIENT_STRUCTURES, "doc_architecture": DocGenre.ANCIENT_STRUCTURES, "architecture_design_tour": DocGenre.ANCIENT_STRUCTURES,
-            "ancient_civilizations_history": DocGenre.ANCIENT_STRUCTURES, "heritage_history_tour": DocGenre.ANCIENT_STRUCTURES,
-            "open_topic_documentary": DocGenre.PLACES, "blue_chip_doc": DocGenre.PLACES, "itinerary_map_tour": DocGenre.PLACES, "grand_tour": DocGenre.PLACES,
-            "top_attractions_tour": DocGenre.PLACES, "local_neighborhood_tour": DocGenre.PLACES, "culinary_food_tour": DocGenre.PLACES, "travel_itinerary_tour": DocGenre.PLACES,
-            "science": DocGenre.SCIENCE, "science_discovery": DocGenre.SCIENCE, "doc_science": DocGenre.SCIENCE, "human_evolution": DocGenre.SCIENCE, "science_evolution": DocGenre.SCIENCE,
-            "science_earth": DocGenre.SCIENCE, "science_medicine": DocGenre.SCIENCE, "science_space": DocGenre.SCIENCE, "science_physics": DocGenre.SCIENCE, "science_tech": DocGenre.SCIENCE,
-        }
-        eff_doc_genre = doc_genre_map.get(sub_lower, doc_genre_map.get(arch_lower, DocGenre.SCIENCE if is_science else DocGenre.PLACES))
-        eff_archetype_name = primary_archetype or sub_genre or arch_lower or sub_lower or ("deep_space_webb" if is_science else "open_topic_documentary")
-        default_doc_themes = {
-            "ancient_civilizations_history": "Ancient Civilizations: Lost Metropolises & Monumental World History",
-            "giza_megalithic_pyramids": "Ancient Giza: Megalithic Engineering & The Great Pyramids",
-            "scotland_highlands_isles": "Scottish Highlands: Ancient Castles & Mist-Veiled Isles",
-            "swiss_alps_valleys": "Swiss Alps: Majestic Glaciers & Granite Titans",
-            "iceland_volcanic_coasts": "Iceland: Land of Fire & Glacial Ice",
-            "pacific_northwest_redwoods": "Olympic Rainforest & Ancient Redwood Giants",
-            "serengeti_savannah_predators": "Serengeti: Untamed Predators & The Great Migration",
-            "whitehaven_barrier_reef": "Great Barrier Reef & Whitehaven Beach",
-            "amalfi_cliffside_mediterranean": "Amalfi Coast: Azure Cliffs & Mediterranean Heritage",
-            "sahara_dunes_canyons": "Sahara: Monumental Star Dunes & Desert Horizons",
-            "open_topic_documentary": "Wonders of the World: Architectural & Natural Marvels",
-            # Science & Discovery Archetype Concept Seeds
-            "deep_space_webb": "Cosmic Dawn: James Webb Deep Field & The First Galaxies",
-            "black_holes_gravity": "Event Horizon: Black Hole Singularities & Gravitational Waves",
-            "solar_system_moons": "Subsurface Oceans: Europa, Enceladus & Alien Cryovolcanism",
-            "exoplanets_alien_worlds": "Exoplanetary Atmospheres & The Habitable Goldilocks Zone",
-            "deep_ocean_abyss": "The Hadal Zone: Mariana Trench & Hydrothermal Chemosynthesis",
-            "plate_tectonics_volcano": "Mantle Plumes & Supervolcano Calderas: Earth's Molten Engine",
-            "paleontology_fossil_epochs": "Deep Time & The Cambrian Explosion: Earth's Lost Epochs",
-            "extreme_meteorology": "Atmospheric Supercells & Jet Stream Physics: Extreme Weather",
-            "neuroscience_brain_connectome": "The Human Connectome: Synaptic Architecture & The Mind",
-            "cellular_microbiology": "Nanomachines of Life: Cellular Mitosis & Molecular Biology",
-            "genetics_crispr_dna": "The Genetic Code: CRISPR Precision & Chromatin Dynamics",
-            "immunology_body_defense": "The Immune Fortress: T-Cell Defense & Pathogen Warfare",
-            "quantum_superposition": "Quantum Superposition, Entanglement & Wave-Particle Duality",
-            "particle_accelerator_cern": "Inside CERN: Hadron Collider Collisions & The Higgs Boson",
-            "atomic_lattice_microscopy": "Imaging the Atom: Scanning Tunneling Microscopy & Lattices",
-            "thermodynamics_entropy": "The Arrow of Time: Entropy, Heat Death & Absolute Zero",
-            "fusion_energy_tokamak": "Harnessing Star Power: Tokamak Magnetic Confinement Fusion",
-            "quantum_computing": "Quantum Supremacy: Dilution Cryostats & Superconducting Qubits",
-            "deep_space_propulsion": "Interstellar Propulsion: Ion Thrusters & Relativistic Sails",
-            "megastructures_future": "Megastructures: Orbital Rings, Dyson Swarms & Future Engineering",
-            # Human Evolution & Deep Ancestry Archetypes
-            "hominin_origins_rift_valley": "Rift Valley Hominins: Australopithecus & The Dawn of Bipedalism",
-            "ice_age_neanderthals": "Ice Age Neanderthals & Denisovans: Mammoth Hunters & Ancient DNA",
-            "mastery_of_fire_stone_tools": "The Fire Revolution: Acheulean Flint Knapping & Primal Hearths",
-            "cognitive_revolution_cave_art": "The Cognitive Dawn: Lascaux Ochre Murals & Deep Cave Mysticism",
-        }
-        genre_fallbacks = {
-            DocGenre.ANCIENT_STRUCTURES: "Ancient Civilizations: Lost Metropolises & World History Architecture",
-            DocGenre.WILDLIFE: "Untamed Majesty: Predators of the Serengeti",
-            DocGenre.OCEAN: "Abyssal Realms: Secrets of the Deep Coral Sea",
-            DocGenre.NATURE: "Ancient Canopies: Whispers of the Temperate Rainforest",
-            DocGenre.MOUNTAINS: "Granite Sanctuaries: Titans of the Swiss Alps",
-            DocGenre.ART: "The Master's Touch: Secrets of Renaissance Frescoes",
-            DocGenre.BEACHES: "Untamed Shorelines: Coastal Wonders of the World",
-            DocGenre.DESERT: "Silent Dunes: Mysteries of the Living Sands",
-            DocGenre.PLACES: "Earth's Geographic Sanctuaries: Wonders of the World",
-            DocGenre.SCIENCE: "Cosmic Frontiers: The Architecture of Reality & Deep Space",
-        }
-        theme_seed = custom_prompt or default_doc_themes.get(eff_archetype_name.lower()) or genre_fallbacks.get(eff_doc_genre, "Cosmic Frontiers: Deep Space & Science")
+        from src.studios.documentary_studio.doc_storyboard import generate_documentary_storyboard_gemini
+        from src.studios.documentary_studio.doc_dispatch_helper import resolve_doc_dispatch_params
+        eff_doc_genre, eff_archetype_name, theme_seed = resolve_doc_dispatch_params(
+            sub_lower=sub_lower,
+            arch_lower=arch_lower,
+            is_science=is_science,
+            primary_archetype=primary_archetype,
+            sub_genre=sub_genre,
+            custom_prompt=custom_prompt,
+        )
         sb = await generate_documentary_storyboard_gemini(
             genre=eff_doc_genre,
             theme_seed=theme_seed,
@@ -187,7 +146,19 @@ async def dispatch_studio_director(
             primary_archetype=primary_archetype or eff_archetype_name,
         )
 
-    # 0. Dedicated Ocean Studio Dispatch (All 6 Diurnal Timings under genre 'relax/ocean')
+    # 0. Dedicated Rain Retreat & River ASMR Dispatch (genre 'relax/rain')
+    is_rain = (
+        genre_lower in {"relax/rain", "rain_retreat"}
+        or "rain" in genre_lower
+        or sub_lower in {"biophilic_retreat", "forest_rain", "river_rain", "rainy_bedroom", "tropical_village_rain"}
+        or any(k in arch_lower for k in ["rain", "bedroom", "bamboo", "village"])
+        or (any(w in p_lower for w in ["rain", "rainfall", "village rain", "bamboo hut", "monsoon"]) and not any(w in p_lower for w in ["ocean", "sea", "lagoon", "beach", "coast"]))
+    )
+    if is_rain:
+        logger.info(f"dispatcher_route: target='RainRetreatStudio' genre='{genre}' sub_genre='{sub_genre}' archetype='{primary_archetype}' prompt='{custom_prompt}'")
+        return await generate_rain_screenplay(sub_genre=sub_genre or "tropical_village_rain", primary_archetype=primary_archetype, **base_kwargs)
+
+    # 0.1 Dedicated Ocean Studio Dispatch (All 6 Diurnal Timings under genre 'relax/ocean')
     if genre_lower in {"relax/ocean", "ocean"} or "ocean" in arch_lower or "ocean" in sub_lower or "bioluminescent" in arch_lower or any(w in p_lower for w in ["ocean retreat", "ocean villa", "overwater villa", "turquoise lagoon"]):
         from src.studios.ocean_studio.ocean_director import generate_ocean_screenplay_gemini
         return await generate_ocean_screenplay_gemini(genre="relax/ocean", sub_genre=sub_genre or primary_archetype or "ocean_daytime_shore", primary_archetype=primary_archetype or "ocean_daytime_shore", **kwargs)
@@ -232,8 +203,6 @@ async def dispatch_studio_director(
         from src.studios.art_studio.art_director import generate_art_screenplay_gemini
         return await generate_art_screenplay_gemini(genre="relax/art", sub_genre=sub_genre or primary_archetype or "living_impressionism", primary_archetype=primary_archetype or "living_impressionism", **kwargs)
 
-    base_kwargs = {k: v for k, v in kwargs.items() if k != "tier"}
-
     # 1. Japanese Zen Studio Dispatch (Kyoto Zen, Bamboo Groves, Raked Rock Gardens, Tsukubai)
     if genre_lower in {"relax/zen", "zen"} or sub_lower in {"zen_garden", "bamboo_grove", "lotus_pond"} or arch_lower in {"zen_garden", "bamboo_grove"}:
         logger.info(f"dispatcher_route: target='ZenStudio' genre='{genre}' sub_genre='{sub_genre}' archetype='{primary_archetype}' channel='{channel_id}'")
@@ -243,11 +212,6 @@ async def dispatch_studio_director(
     if genre_lower in {"relax/healing", "healing_relaxation", "healing"} or sub_lower in {"global_healing", "himalayan_valley", "geothermal_springs", "redwood_cathedral", "solfeggio_sanctuary", "crystal_spring"} or arch_lower in {"sacred_sanctuary", "healing_sanctuary", "geothermal_springs"}:
         logger.info(f"dispatcher_route: target='HealingRelaxationStudio' genre='{genre}' sub_genre='{sub_genre}'")
         return await generate_healing_screenplay(sub_genre=sub_genre or "global_healing", **base_kwargs)
-
-    # 2. Rain Retreat & River ASMR Dispatch
-    if genre_lower in {"relax/rain", "rain_retreat"} or sub_lower in {"biophilic_retreat", "forest_rain", "river_rain", "rainy_bedroom"} or "rain" in arch_lower or "bedroom" in arch_lower:
-        logger.info(f"dispatcher_route: target='RainRetreatStudio' genre='{genre}' sub_genre='{sub_genre}' archetype='{primary_archetype}'")
-        return await generate_rain_screenplay(sub_genre=sub_genre or "rainy_bedroom", primary_archetype=primary_archetype, **base_kwargs)
 
     # 3. Cozy Ambiance & Fireplace Dispatch
     if genre_lower in {"relax/cozy", "cozy_ambiance"} or sub_lower in {"cozy_living", "cozy_shelter", "fireplace"}:

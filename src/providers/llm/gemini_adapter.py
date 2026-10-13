@@ -48,11 +48,26 @@ class ScriptOutput(BaseModel):
     vocal_delivery_type: str = Field(default="lead_lip_sync", description="'lead_lip_sync', 'background_song', 'voiceover_narration', or 'instrumental_only'")
 
 
+def get_live_gemini_api_key(explicit_key: str | None = None) -> str | None:
+    """Resolve active Gemini API key, dynamically checking disk .env for newly saved keys."""
+    if explicit_key:
+        return explicit_key
+    try:
+        from dotenv import dotenv_values
+        vals = dotenv_values(".env")
+        disk_k = vals.get("GEMINI_API_KEY") or vals.get("GOOGLE_API_KEY")
+        if disk_k and disk_k.strip():
+            return disk_k.strip()
+    except Exception:
+        pass
+    return settings.llm.google_api_key or settings.llm.gemini_api_key or None
+
+
 class GeminiLLMAdapter(LLMProviderProtocol):
     """Tier-2 Flagship LLM Adapter powered by Gemini 1.5 Pro via non-blocking Async HTTP."""
 
     def __init__(self, api_key: str | None = None, strict: bool = False):
-        self.api_key = api_key or settings.llm.google_api_key or settings.llm.gemini_api_key or None
+        self.api_key = get_live_gemini_api_key(api_key)
         self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
         self.strict = strict
 
@@ -60,10 +75,14 @@ class GeminiLLMAdapter(LLMProviderProtocol):
         self, body: dict[str, Any], timeout: float = 180.0, max_retries: int = 2
     ) -> dict[str, Any]:
         """Post request to Gemini API with non-blocking retry on timeouts and network errors."""
+        active_key = get_live_gemini_api_key(self.api_key)
         client = HTTPClientPool.get_client()
         headers = {"Content-Type": "application/json"}
-        params = {"key": self.api_key} if self.api_key else {}
+        params = {"key": active_key} if active_key else {}
         req_timeout = httpx.Timeout(timeout, connect=30.0, read=timeout)
+
+        masked_key = f"{active_key[:2]}...{active_key[-2:]}" if (active_key and len(active_key) >= 4) else "none"
+        logger.info(f"gemini_api_request: key='{masked_key}' endpoint='gemini-flash-latest'")
 
         for attempt in range(1, max_retries + 2):
             try:
@@ -74,16 +93,16 @@ class GeminiLLMAdapter(LLMProviderProtocol):
                     return resp.json()
                 if resp.status_code in (500, 502, 503, 504) and attempt <= max_retries:
                     backoff_s = attempt * 2.0
-                    logger.warning(f"gemini_api_transient_retry: status={resp.status_code}. Retrying in {backoff_s:.1f}s...")
+                    logger.warning(f"gemini_api_transient_retry: key='{masked_key}' status={resp.status_code}. Retrying in {backoff_s:.1f}s...")
                     await asyncio.sleep(backoff_s)
                     continue
                 if resp.status_code == 429:
                     err_msg = "Google AI Studio prepayment credits depleted (HTTP 429 RESOURCE_EXHAUSTED)."
-                    logger.error(f"gemini_api_quota_exhausted: {err_msg}")
-                    raise RuntimeError(f"Gemini API Error: {err_msg} Top up at https://ai.studio/projects")
+                    logger.error(f"gemini_api_quota_exhausted: key='{masked_key}' {err_msg}")
+                    raise RuntimeError(f"Gemini API Error (key: {masked_key}): {err_msg} Top up at https://ai.studio/projects")
                 else:
-                    logger.error(f"gemini_api_call_non_200: status={resp.status_code}, body={resp.text[:200]}.")
-                    raise RuntimeError(f"Gemini API Error (HTTP {resp.status_code}): {resp.text[:200]}")
+                    logger.error(f"gemini_api_call_non_200: key='{masked_key}', status={resp.status_code}, body={resp.text[:200]}.")
+                    raise RuntimeError(f"Gemini API Error (HTTP {resp.status_code}) [key: {masked_key}]: {resp.text[:200]}")
             except (httpx.TimeoutException, httpx.NetworkError) as net_err:
                 err_type = type(net_err).__name__
                 if attempt <= max_retries:

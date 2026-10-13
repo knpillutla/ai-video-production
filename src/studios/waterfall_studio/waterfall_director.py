@@ -46,15 +46,6 @@ async def generate_waterfall_screenplay(
         chosen = random.choice(unseen if unseen else WATERFALL_LANDMARK_POOL)
         eff_prompt = f"Monumental wall-to-wall cascading waterfall at {chosen}"
 
-    api_key = (
-        settings.llm.gemini_api_key
-        or settings.llm.google_api_key
-        or os.getenv("GEMINI_API_KEY", "")
-        or os.getenv("GOOGLE_API_KEY", "")
-    )
-    if not api_key:
-        return _build_deterministic_waterfall_screenplay(eff_prompt, duration_seconds, num_shots)
-
     sys_prompt = build_waterfall_prompt(
         custom_prompt=eff_prompt,
         duration_seconds=duration_seconds,
@@ -64,30 +55,17 @@ async def generate_waterfall_screenplay(
         image_model=image_model,
     )
 
+    from src.studios.base_screenplay_engine import execute_directorial_screenplay
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
-        payload = {
-            "contents": [{"parts": [{"text": sys_prompt}]}],
-            "generationConfig": {"responseMimeType": "application/json", "temperature": 0.7},
-        }
-        client = HTTPClientPool.get_client()
-        response = await client.post(url, json=payload, timeout=45.0)
-
-        if response.status_code != 200:
-            logger.error(f"waterfall_gemini_http_error: status={response.status_code}")
-            return _build_deterministic_waterfall_screenplay(eff_prompt, duration_seconds, num_shots)
-
-        raw_json = response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-        if raw_output_path:
-            try:
-                from pathlib import Path
-                p = Path(raw_output_path)
-                p.parent.mkdir(parents=True, exist_ok=True)
-                p.write_text(raw_json, encoding="utf-8")
-            except Exception:
-                pass
-
-        screenplay = RelaxScreenplay(**json.loads(raw_json))
+        screenplay = await execute_directorial_screenplay(
+            sys_prompt=sys_prompt,
+            raw_output_path=raw_output_path,
+            tier="balanced",
+            genre="relax/waterfall",
+            cluster="waterfall",
+            primary_archetype="waterfall_monumental_cascade",
+            sub_genre="waterfall_cascade",
+        )
         try:
             await topic_memory.remember_topic(
                 topic=screenplay.title,
@@ -102,7 +80,7 @@ async def generate_waterfall_screenplay(
             pass
         return screenplay
     except Exception as exc:
-        logger.error(f"waterfall_gemini_failed: {exc}")
+        logger.warning(f"waterfall_gemini_fallback: {exc}")
         return _build_deterministic_waterfall_screenplay(eff_prompt, duration_seconds, num_shots)
 
 

@@ -7,6 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from src.core.config import settings
 from src.core.storage import storage_service
 from src.core.step_logger import log_pipeline_step
 from src.core.telemetry import logger
@@ -21,6 +22,7 @@ from src.studios.ambient_world.relax_director import (
     generate_relax_screenplay_gemini,
     relax_to_ambient_storyboard,
 )
+from src.providers.llm.gemini_adapter import get_live_gemini_api_key
 from src.studios.director_dispatcher import dispatch_studio_director
 
 CHANNEL_MAP = {
@@ -255,14 +257,38 @@ async def produce_channel_video(
     else:
         effective_shots = 1
 
-    eff_genre_final = (getattr(existing_sp, "genre", None) if existing_sp else None) or eff_genre
-    sub_genre_final = (getattr(existing_sp, "sub_genre", None) if existing_sp else None) or (sub_genre or "")
-    primary_archetype_final = (getattr(existing_sp, "primary_archetype", None) if existing_sp else None) or (primary_archetype or "")
+    eff_genre_final = eff_genre or (getattr(existing_sp, "genre", None) if existing_sp else None) or "relax/nature"
+    sub_genre_final = (sub_genre or "").strip() or (getattr(existing_sp, "sub_genre", None) if existing_sp else "")
+    primary_archetype_final = (primary_archetype or "").strip() or (getattr(existing_sp, "primary_archetype", None) if existing_sp else "")
     prompt_final = (getattr(existing_sp, "story_topic", None) or prompt or saved_inputs.get("prompt", "")) if existing_sp else (prompt or "")
 
     eff_dur = getattr(existing_sp, "total_duration_seconds", None) or duration_seconds or saved_inputs.get("duration_seconds", 60.0)
     has_dual = bool(dual_editions or saved_inputs.get("dual_editions", False) or ((ep_dir / "master_4k_narration.mp4").is_file() if ep_dir else False))
     eff_exec_mode = execution_mode or saved_inputs.get("execution_mode", "test")
+
+    weather_label_map = {
+        "normal": "☀️ Normal",
+        "rain": "🌧️ Rain",
+        "snow": "❄️ Snow",
+        "fog": "🌫️ Mist/Fog",
+        "sunset": "🌅 Sunset",
+        "night": "🌌 Starlit",
+    }
+    eff_weather = weather or saved_inputs.get("weather") or "normal"
+    weather_label = (selection_labels or {}).get("weather") or weather_label_map.get(eff_weather, "☀️ Normal")
+
+    resolved_selected_options = {
+        "genre": {"value": eff_genre_final, "label": (selection_labels or {}).get("genre") or eff_genre_label},
+        "sub_genre": {"value": sub_genre_final, "label": (selection_labels or {}).get("sub_genre", "") or sub_genre_final},
+        "primary_archetype": {
+            "value": primary_archetype_final,
+            "label": (selection_labels or {}).get("primary_archetype", "") or primary_archetype_final,
+        },
+        "weather": {
+            "value": eff_weather,
+            "label": weather_label,
+        },
+    }
 
     user_inputs_payload = {
         "input_schema_version": 1,
@@ -274,7 +300,8 @@ async def produce_channel_video(
         "genre": eff_genre_final,
         "sub_genre": sub_genre_final,
         "primary_archetype": primary_archetype_final,
-        "selected_options": selected_options if not is_downstream_stage else saved_inputs.get("selected_options", selected_options),
+        "weather": eff_weather,
+        "selected_options": resolved_selected_options if not is_downstream_stage else saved_inputs.get("selected_options", resolved_selected_options),
         "screenplay_generation_status": "completed" if existing_sp else "pending",
         "episode_id": episode_id or "EP-001",
         "user_id": effective_user,
@@ -318,14 +345,24 @@ async def produce_channel_video(
         universal_sp = RelaxScreenplay(**json.loads(screenplay_file.read_text("utf-8")))
         log_pipeline_step("checking script", "Stage 1 (Screenplay Verification)", "completed", "script exists, script not recreated", {"file": "screenplay.json", "scenes": len(universal_sp.scenes), "cost": "$0.00"})
     else:
-        log_pipeline_step("checking script", "Stage 1 (Screenplay Formulation)", "started", "script missing, formulating via Gemini", {"tier": eff_tier, "duration": duration_seconds})
+        active_llm_key = get_live_gemini_api_key()
+        masked_llm_key = f"{active_llm_key[:2]}...{active_llm_key[-2:]}" if (active_llm_key and len(active_llm_key) >= 4) else "none"
+        log_pipeline_step(
+            "checking script",
+            "Stage 1 (Screenplay Formulation)",
+            "started",
+            f"script missing, formulating via Gemini (key: {masked_llm_key})",
+            {"tier": eff_tier, "duration": duration_seconds, "gemini_key": masked_llm_key},
+        )
+        logger.info(f"pipeline_stage_1_formulation: key='{masked_llm_key}' genre='{eff_genre}' duration={duration_seconds}s")
+        eff_custom_prompt = (prompt or "").strip() or (production_name or "").strip()
         try:
             universal_sp = await dispatch_studio_director(
                 genre=eff_genre,
                 sub_genre=sub_genre,
                 primary_archetype=primary_archetype,
                 channel_id=channel_id,
-                custom_prompt=prompt,
+                custom_prompt=eff_custom_prompt,
                 duration_seconds=duration_seconds or 60.0,
                 num_shots=effective_shots,
                 camera_motion=camera_motion or "locked_tripod",
@@ -333,6 +370,7 @@ async def produce_channel_video(
                 raw_output_path=(ep_dir / "raw_gemini_screenplay.json") if ep_dir else None,
                 image_model=image_model,
                 tier=eff_tier,
+                weather=eff_weather,
             )
             dur_stage1 = time.time() - t_stage1
             if ep_dir:
@@ -571,37 +609,65 @@ async def produce_channel_video(
         })
 
     master_nature_v = result.get("master_nature_video_path") or result.get("master_nature_video")
-    if not master_nature_v and manifest_file and (manifest_file.parent / "master_4k_narration.mp4").is_file():
-        master_nature_v = str(manifest_file.parent / "master_4k_narration.mp4")
+    if not master_nature_v and manifest_file:
+        if (manifest_file.parent / "master_4k_nature.mp4").is_file():
+            master_nature_v = str(manifest_file.parent / "master_4k_nature.mp4")
+        elif (manifest_file.parent / "master_4k_narration.mp4").is_file():
+            master_nature_v = str(manifest_file.parent / "master_4k_narration.mp4")
     video_url = _to_url(master_v) if master_v else (motion_clips[0]["url"] if motion_clips and not photos_only else None)
     nature_video_url = _to_url(master_nature_v) if master_nature_v else video_url
 
     dur_str = f"{int(duration_seconds)}s"
     editions = []
     if video_url and not photos_only and not motion_only and not audio_only and master_v:
+        is_doc = "documentary" in eff_genre.lower() or eff_voiceover or (manifest_file and (manifest_file.parent / "master_4k_narration.mp4").is_file())
         if dual_editions:
-            editions.append({
-                "edition_id": "master_music",
-                "name": f"🎵 Music Soundtrack Edition ({dur_str})",
-                "label": "4K Ambient Music & BGM (No Narration)",
-                "icon": "fa-music text-indigo-400",
-                "audio_mode": "Music Master",
-                "duration": dur_str,
-                "format": "4K UHD",
-                "status": "completed",
-                "url": video_url,
-            })
-            editions.append({
-                "edition_id": "master_narration",
-                "name": f"🎙️ Narration Only Edition ({dur_str})",
-                "label": "4K Documentary Narration (Without Music)",
-                "icon": "fa-microphone text-amber-400",
-                "audio_mode": "Narration Master",
-                "duration": dur_str,
-                "format": "4K Narration",
-                "status": "completed",
-                "url": nature_video_url,
-            })
+            if is_doc:
+                editions.append({
+                    "edition_id": "master_narration",
+                    "name": f"🎙️ Narration + Music Edition ({dur_str})",
+                    "label": "4K Blue-Chip Narration & Score",
+                    "icon": "fa-microphone text-amber-400",
+                    "audio_mode": "Narration Master",
+                    "duration": dur_str,
+                    "format": "4K Narration",
+                    "status": "completed",
+                    "url": video_url,
+                })
+                editions.append({
+                    "edition_id": "master_music",
+                    "name": f"🎵 Music Soundtrack Only ({dur_str})",
+                    "label": "4K Cinematic Orchestral Score (No Voiceover)",
+                    "icon": "fa-music text-indigo-400",
+                    "audio_mode": "Music Master",
+                    "duration": dur_str,
+                    "format": "4K UHD",
+                    "status": "completed",
+                    "url": nature_video_url,
+                })
+            else:
+                editions.append({
+                    "edition_id": "master_music",
+                    "name": f"🎵 Music Soundtrack Edition ({dur_str})",
+                    "label": "4K Suno Music & Spatial Foley",
+                    "icon": "fa-music text-indigo-400",
+                    "audio_mode": "Music Master",
+                    "duration": dur_str,
+                    "format": "4K UHD",
+                    "status": "completed",
+                    "url": video_url,
+                })
+                editions.append({
+                    "edition_id": "master_nature",
+                    "name": f"🌿 Pure Nature Foley Edition ({dur_str})",
+                    "label": "4K Pure Environmental ASMR (Zero Music)",
+                    "icon": "fa-leaf text-emerald-400",
+                    "audio_mode": "Nature Master",
+                    "duration": dur_str,
+                    "format": "4K Nature",
+                    "status": "completed",
+                    "url": nature_video_url,
+                })
         else:
             editions.append({
                 "edition_id": "master_broadcast",
@@ -614,6 +680,29 @@ async def produce_channel_video(
                 "status": "completed",
                 "url": video_url,
             })
+
+    long_play_editions = []
+    is_relax_format = eff_genre.lower().startswith("relax") or (format_slug or "").lower() in ("relaxation", "relax")
+    if ep_dir and is_relax_format:
+        lp_defs = [
+            (["master_4k_8hour_broadcast.mp4", "master_4k_8hour_sleep.mp4"], "8h_music", "8-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "8:00:00 (8h)", "16:9 Long-Play"),
+            (["master_4k_8hour_nature_only_broadcast.mp4", "master_4k_8hour_nature_only.mp4"], "8h_nature", "8-Hour 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature Foley ASMR", "8:00:00 (8h)", "16:9 Long-Play"),
+            (["master_4k_3hour_broadcast.mp4", "master_4k_3hour_sleep.mp4"], "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3h)", "16:9 Long-Play"),
+            (["master_4k_3hour_nature_only_broadcast.mp4", "master_4k_3hour_nature_only.mp4"], "3h_nature", "3-Hour 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature Foley ASMR", "3:00:00 (3h)", "16:9 Long-Play"),
+            (["master_4k_1hour_broadcast.mp4"], "1h_music", "1-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "1:00:00 (1h)", "16:9 Long-Play"),
+            (["master_4k_30min_broadcast.mp4"], "30m_music", "30-Min 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "30:00 (30m)", "16:9 Long-Play"),
+            (["master_4k_30min_nature_only_broadcast.mp4"], "30m_nature", "30-Min 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature Foley ASMR", "30:00 (30m)", "16:9 Long-Play"),
+        ]
+        for fn_list, eid, name, icon, mode, dur, fmt in lp_defs:
+            match_file = next((ep_dir / fn for fn in fn_list if (ep_dir / fn).is_file() and (ep_dir / fn).stat().st_size > 1000), None)
+            if match_file:
+                sz_mb = round(match_file.stat().st_size / (1024 * 1024), 1)
+                long_play_editions.append({
+                    "edition_id": eid, "name": name, "icon": icon, "audio_mode": mode,
+                    "duration": dur, "format": fmt, "status": "completed",
+                    "url": _to_url(match_file), "size_str": f"{sz_mb} MB" if sz_mb < 1000 else f"{round(sz_mb/1024, 2)} GB",
+                    "filename": match_file.name,
+                })
 
     if script_only:
         current_stage = 1
@@ -827,6 +916,7 @@ async def produce_channel_video(
         "video_url": video_url if not photos_only and not motion_only and not audio_only else None,
         "nature_video_url": nature_video_url if not photos_only and not motion_only and not audio_only else None,
         "editions": editions if not photos_only and not motion_only and not audio_only else [],
+        "long_play_editions": long_play_editions if not photos_only and not motion_only and not audio_only else [],
         "long_play_hours": long_play_hours,
         "storage_path": str(ep_dir) if ep_dir else (str(master_v) if master_v else str(cfg.output_dir / ep_id)),
         "file_size_bytes": Path(master_v).stat().st_size if master_v and Path(master_v).exists() else 1048576,

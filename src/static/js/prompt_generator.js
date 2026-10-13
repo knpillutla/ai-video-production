@@ -230,11 +230,15 @@ function quickTestProduceFromPrompt() {
   const numShots = isTravelOrSkyline
     ? -1
     : (isTestMode ? (typeof activeShotsCount !== "undefined" ? activeShotsCount : 1) : parseInt(document.getElementById("studio-prod-shots")?.value || "1", 10));
-  const selGenreLabel = genreEl?.selectedOptions?.[0]?.textContent?.trim() || "";
+  const genresDict = (typeof ALL_STUDIO_GENRES !== "undefined") ? ALL_STUDIO_GENRES : {};
+  const subMap = (typeof STUDIO_SUBOPTIONS_MAP !== "undefined") ? STUDIO_SUBOPTIONS_MAP : {};
+  const archMap = (typeof STUDIO_ARCHETYPES_MAP !== "undefined") ? STUDIO_ARCHETYPES_MAP : {};
+
+  const selGenreLabel = genreEl?.selectedOptions?.[0]?.textContent?.trim() || genresDict[selGenreVal] || selGenreVal;
   const selSubgenreVal = subgenreEl?.value || null;
-  const selSubgenreLabel = subgenreEl?.selectedOptions?.[0]?.textContent?.trim() || "";
+  const selSubgenreLabel = subgenreEl?.selectedOptions?.[0]?.textContent?.trim() || (subMap[selGenreVal]?.find(x => x.val === selSubgenreVal)?.label) || "";
   const selArchVal = archEl?.value || null;
-  const selArchLabel = archEl?.selectedOptions?.[0]?.textContent?.trim() || "";
+  const selArchLabel = archEl?.selectedOptions?.[0]?.textContent?.trim() || (archMap[selGenreVal]?.find(x => x.val === selArchVal)?.label) || "";
   const dualEditionsChecked = Boolean(document.getElementById("studio-toggle-dual-editions")?.checked);
 
   let selProdName = document.getElementById("studio-production-name")?.value?.trim() || null;
@@ -255,6 +259,17 @@ function quickTestProduceFromPrompt() {
   const epInputVal = document.getElementById("studio-episode-code")?.value?.trim();
   const newId = (epInputVal && /^EP-\d+$/i.test(epInputVal)) ? epInputVal.toUpperCase() : nextEpisodeIdForChannel(chId, selFormatVal, selProdName);
   const uniqueJobId = `job_${newId.toLowerCase()}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+  const weatherMap = {
+    normal: "☀️ Normal",
+    rain: "🌧️ Rain",
+    snow: "❄️ Snow",
+    fog: "🌫️ Mist/Fog",
+    sunset: "🌅 Sunset",
+    night: "🌌 Starlit"
+  };
+  const selWeather = document.querySelector('input[name="studio_weather"]:checked')?.value || "normal";
+  const selWeatherLabel = weatherMap[selWeather] || "☀️ Normal";
+
   const newVid = {
     id: newId, episode_id: newId, jobId: uniqueJobId, title, concept, story_topic: concept,
     channel_id: chId, channelId: chId, genre: selGenreVal,
@@ -265,6 +280,21 @@ function quickTestProduceFromPrompt() {
     genre_label: selGenreLabel, genreLabel: selGenreLabel,
     sub_genre_label: selSubgenreLabel, subGenreLabel: selSubgenreLabel,
     primary_archetype_label: selArchLabel, primaryArchetypeLabel: selArchLabel,
+    weather: selWeather, weather_label: selWeatherLabel,
+    user_inputs: {
+      prompt: concept,
+      production_name: selProdName,
+      genre: selGenreVal,
+      sub_genre: selSubgenreVal,
+      primary_archetype: selArchVal,
+      weather: selWeather,
+      selected_options: {
+        genre: { value: selGenreVal, label: selGenreLabel },
+        sub_genre: { value: selSubgenreVal || "", label: selSubgenreLabel },
+        primary_archetype: { value: selArchVal || "", label: selArchLabel },
+        weather: { value: selWeather, label: selWeatherLabel }
+      }
+    },
     dual_editions: dualEditionsChecked,
     status: "queued", youtubeStatus: "unpublished", youtubeChannel: null, youtubeUrl: null,
     youtubeReferenceUrl: ytUrl, videoUrl: "/static/videos/preview_master.mp4",

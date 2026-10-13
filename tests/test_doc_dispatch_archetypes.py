@@ -98,3 +98,38 @@ async def test_science_genre_and_subgenres_dispatch_offline(sub_genre, archetype
         assert res.sub_genre == sub_genre
         assert res.primary_archetype == archetype
 
+
+@pytest.mark.asyncio
+async def test_rain_retreat_village_hut_dispatch_offline():
+    from src.studios.rain_retreat.rain_prompt import build_rain_prompt
+
+    prompt = build_rain_prompt(
+        custom_prompt="",
+        duration_seconds=60.0,
+        num_shots=1,
+        sub_genre="tropical_village_rain",
+        primary_archetype="bamboo_hut_veranda",
+    )
+    assert "bamboo" in prompt.lower()
+    assert "eaves" in prompt.lower()
+    assert "Tropical Village" in prompt
+
+
+@pytest.mark.asyncio
+async def test_rain_dispatched_even_if_genre_defaulted_to_ocean(monkeypatch):
+    from unittest.mock import AsyncMock
+    from src.studios.director_dispatcher import dispatch_studio_director
+
+    mock_rain = AsyncMock(return_value={"director": "rain"})
+    monkeypatch.setattr("src.studios.director_dispatcher.generate_rain_screenplay", mock_rain)
+
+    # User left genre on relax/ocean, but typed "Beautiful Rain in a village"
+    res = await dispatch_studio_director(
+        genre="relax/ocean",
+        sub_genre="ocean_daytime_shore",
+        primary_archetype="ocean_daytime_shore",
+        channel_id="nature_rhythms",
+        custom_prompt="Beautiful Rain in a village",
+    )
+    assert mock_rain.called
+    assert res == {"director": "rain"}

@@ -78,6 +78,114 @@ BEACH_LOUNGE_ARCHETYPES: Dict[str, Dict[str, Any]] = {
         "domain": "landscape_solid",
         "audio_tags": "[deep delta sleep], warm 432Hz velvet sleep pads, distant rhythmic midnight ocean waves, soft sea shell chimes, calming stress relief, -21 LUFS",
     },
+    "beach_infinity_pool_terrace": {
+        "title": "Luxury Villa Infinity Pool Terrace & Panoramic Ocean View",
+        "diurnal_timing": "sunset",
+        "color_temp_kelvin": 2600,
+        "lighting_desc": "Warm 2600K glowing architectural terrace illumination, soft underwater pool glow, and deep golden sunset sky over the ocean",
+        "visual_prompt": (
+            "Masterpiece 4K photograph looking from an elevated ultra-luxury modern villa terrace across an illuminated crystal-clear "
+            "infinity swimming pool seamlessly blending into the panoramic open ocean horizon at golden twilight. Symmetrical 16:9 composition "
+            "on a locked tripod. In the foreground, smooth travertine marble decking with low designer loungers, glowing recessed architectural "
+            "floor LED lights, and soft turquoise underwater pool illumination. In the background, majestic rolling ocean swells, silhouette of "
+            "coastal palm trees, and a gradient twilight sky glowing with deep amber, lavender, and dusky rose. Pure architectural perfection, "
+            "zero people, pristine water caustics, cinematic luxury lounge ambiance."
+        ),
+        "motion_prompt": (
+            "Ultra-subtle living wallpaper cinemagraph. Completely stationary locked tripod framing. The modern villa terrace, loungers, "
+            "and infinity pool structure remain 100% frozen, rigid, and temporally stable. Gentle glassy water ripples gently across the illuminated "
+            "pool surface while calm rhythmic ocean waves roll in the distant sea under the sunset sky. Zero camera movement, zero panning."
+        ),
+        "domain": "water_fluid",
+        "audio_tags": "[chillout lounge], 432Hz deep relaxed velvet synth pads, gentle water ripples, soothing distant ocean swell, sophisticated chillout lounge guitar harmonics, -21 LUFS",
+    },
+    "pool_terrace": {
+        "title": "Luxury Villa Infinity Pool Terrace & Panoramic Ocean View",
+        "diurnal_timing": "twilight",
+        "color_temp_kelvin": 2400,
+        "lighting_desc": "Warm 2400K glowing architectural terrace illumination, soft turquoise underwater pool glow, and twilight sky",
+        "visual_prompt": (
+            "Masterpiece 4K photograph looking from an elevated ultra-luxury modern villa terrace across an illuminated crystal-clear "
+            "infinity swimming pool seamlessly blending into the panoramic open ocean horizon at golden twilight. Symmetrical 16:9 composition "
+            "on a locked tripod. In the foreground, smooth travertine marble decking with low designer loungers, glowing recessed architectural "
+            "floor LED lights, and soft turquoise underwater pool illumination. In the background, majestic rolling ocean swells and evening sky. "
+            "Pure architectural perfection, zero people, pristine luxury chillout lounge ambiance."
+        ),
+        "motion_prompt": (
+            "Ultra-subtle living wallpaper cinemagraph. Completely stationary locked tripod framing. The villa terrace and infinity pool remain "
+            "100% frozen and rigid. Gentle glassy water ripples across the illuminated pool surface while calm ocean swells roll in the background."
+        ),
+        "domain": "water_fluid",
+        "audio_tags": "[chillout lounge], 432Hz deep relaxed velvet synth pads, gentle water ripples, soothing ocean swells, -21 LUFS",
+    },
+    "pool_terrace_twilight": {
+        "title": "Twilight Infinity Pool Terrace & Ocean Horizon",
+        "diurnal_timing": "twilight",
+        "color_temp_kelvin": 2400,
+        "lighting_desc": "Blue-hour twilight sky with warm 2400K recessed architectural LED floor lights and soft turquoise underwater pool illumination",
+        "visual_prompt": (
+            "Masterpiece 4K photograph looking from an elevated ultra-luxury modern villa terrace across an illuminated crystal-clear "
+            "infinity swimming pool seamlessly blending into the panoramic open ocean horizon at deep blue-hour twilight. Symmetrical 16:9 composition "
+            "on a locked tripod. In the foreground, smooth polished stone decking with low designer chaise loungers, warm glowing floor LED uplights, "
+            "and glowing turquoise underwater pool lights. In the background, gentle rhythmic ocean waves glide past the coastline under a serene violet "
+            "and deep indigo evening sky. Zero people, pure tranquility, high-end chillout lounge aesthetic."
+        ),
+        "motion_prompt": (
+            "Ultra-subtle living wallpaper cinemagraph. Completely locked tripod. The terrace, loungers, and pool walls remain 100% still and rigid. "
+            "Soft glassy water caustics pulse gently on the pool surface, while slow rhythmic ocean waves roll smoothly in the distance. Zero camera motion."
+        ),
+        "domain": "water_fluid",
+        "audio_tags": "[chillout lounge], 432Hz deep relaxed velvet synth pads, gentle water ripples, soothing distant ocean swell, sophisticated chillout lounge guitar harmonics, -21 LUFS",
+    },
+    "pool_terrace_sunset": {
+        "title": "Sunset Infinity Pool Terrace & Molten Gold Horizon",
+        "diurnal_timing": "sunset",
+        "color_temp_kelvin": 2800,
+        "lighting_desc": "Molten gold sunset glowing directly on the ocean horizon with fiery amber reflections across the glassy pool surface",
+        "visual_prompt": (
+            "Masterpiece 4K photograph looking from a luxury clifftop villa terrace across an infinity swimming pool edge merging with the open sea horizon "
+            "during a breathtaking golden hour sunset. Warm 2800K molten amber sunlight reflects across the glassy pool surface and ocean waves. "
+            "Low teak loungers, frosted glass cocktail table, silhouette of swaying palm trees, and radiant crimson-gold sky. Symmetrical 16:9 framing, "
+            "locked tripod, Hasselblad medium format clarity."
+        ),
+        "motion_prompt": (
+            "Ultra-subtle living wallpaper cinemagraph. Stationary locked camera. The terrace and furniture remain completely still. "
+            "Subtle water reflections glint across the infinity pool edge and distant sunset ocean waves roll continuously."
+        ),
+        "domain": "water_fluid",
+        "audio_tags": "[sunset peace], warm nylon guitar chords, gentle rolling ocean swells, warm sunset velvet synth pads, 432Hz, -21 LUFS",
+    },
+    "pool_terrace_daylight": {
+        "title": "Daytime Infinity Pool & Turquoise Ocean View",
+        "diurnal_timing": "daytime",
+        "color_temp_kelvin": 5500,
+        "lighting_desc": "Brilliant 5500K crisp tropical sunlight, specular water caustics, and vivid turquoise ocean expanse",
+        "visual_prompt": (
+            "Masterpiece 4K photograph looking out from a sunlit luxury villa terrace over a pristine turquoise infinity swimming pool overflowing toward "
+            "a boundless turquoise ocean under bright natural daylight. Crisp white stone decking, luxury daybeds with cream parasols, and deep blue sky. "
+            "Pure tropical luxury, locked tripod, 16:9 aspect ratio."
+        ),
+        "motion_prompt": (
+            "Ultra-subtle living wallpaper cinemagraph. Locked tripod. Shimmering sunlight caustics dancing on the pool surface and rolling ocean waves."
+        ),
+        "domain": "water_fluid",
+        "audio_tags": "[tropical relaxation], gentle rhythmic ocean surf, 432Hz ambient pads, -21 LUFS",
+    },
+    "pool_terrace_starlit": {
+        "title": "Starlit Midnight Infinity Pool & Ambient Glow",
+        "diurnal_timing": "starlight",
+        "color_temp_kelvin": 2000,
+        "lighting_desc": "Deep velvet midnight sky with glittering Milky Way, soft underwater turquoise pool glow, and dark ocean horizon",
+        "visual_prompt": (
+            "Masterpiece 4K long-exposure photograph from an elevated luxury villa terrace overlooking a glowing turquoise infinity pool merging into a midnight ocean. "
+            "The Milky Way galaxy shines brilliantly above, reflected faintly in the still pool water. Recessed amber step lights, locked tripod, 16:9 framing."
+        ),
+        "motion_prompt": (
+            "Ultra-subtle living wallpaper cinemagraph. Locked tripod. Gentle pool water ripples and faint rhythmic dark ocean surf."
+        ),
+        "domain": "water_fluid",
+        "audio_tags": "[deep delta sleep], warm 432Hz velvet sleep pads, distant rhythmic midnight ocean waves, -21 LUFS",
+    },
 }
 
 

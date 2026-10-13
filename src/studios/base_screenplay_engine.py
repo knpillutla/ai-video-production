@@ -29,7 +29,8 @@ async def execute_directorial_screenplay(
     google_search_enabled: bool = False,
 ) -> RelaxScreenplay:
     """Execute Gemini prompt, persist raw JSON artifact, enforce zero fallbacks, and validate RelaxScreenplay."""
-    api_key = settings.llm.google_api_key or settings.llm.gemini_api_key
+    from src.providers.llm.gemini_adapter import get_live_gemini_api_key
+    api_key = get_live_gemini_api_key()
     if not api_key:
         raise RuntimeError("Production halted: Google Gemini API key is missing or not configured in environment.")
 
@@ -45,20 +46,21 @@ async def execute_directorial_screenplay(
     if google_search_enabled:
         payload["tools"] = [{"google_search": {}}]
 
+    masked_key = f"{api_key[:2]}...{api_key[-2:]}" if (api_key and len(api_key) >= 4) else "none"
     client = HTTPClientPool.get_client()
-    logger.info(f"gemini_screenplay_engine_request: tier='{eff_tier}' genre='{genre}' archetype='{primary_archetype}' search={google_search_enabled}")
+    logger.info(f"gemini_screenplay_engine_request: key='{masked_key}' tier='{eff_tier}' genre='{genre}' archetype='{primary_archetype}' search={google_search_enabled}")
 
     try:
         resp = await client.post(url, json=payload, timeout=180.0)
     except Exception as net_err:
         err_desc = f"{type(net_err).__name__}: {net_err}" if str(net_err) else type(net_err).__name__
-        logger.error(f"gemini_network_error: {err_desc}")
-        raise RuntimeError(f"Gemini API request failed due to network exception: {err_desc}") from net_err
+        logger.error(f"gemini_network_error: key='{masked_key}' {err_desc}")
+        raise RuntimeError(f"Gemini API request failed due to network exception (key: {masked_key}): {err_desc}") from net_err
 
     if resp.status_code != 200:
         err_msg = f"Gemini API error (HTTP {resp.status_code}): {resp.text[:500]}"
-        logger.error(f"gemini_api_failure: status={resp.status_code} body='{resp.text[:200]}'")
-        raise RuntimeError(f"Production halted: Screenplay formulation failed: {err_msg}")
+        logger.error(f"gemini_api_failure: key='{masked_key}' status={resp.status_code} body='{resp.text[:200]}'")
+        raise RuntimeError(f"Production halted: Screenplay formulation failed (key: {masked_key}): {err_msg}")
 
     data = resp.json()
     candidates = data.get("candidates", [])
@@ -66,6 +68,13 @@ async def execute_directorial_screenplay(
         raise RuntimeError("Production halted: Gemini returned empty candidates list with zero screenplay content.")
 
     raw_json = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+    if raw_json.startswith("```"):
+        lines = raw_json.splitlines()
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        raw_json = "\n".join(lines).strip()
     if not raw_json:
         raise RuntimeError("Production halted: Gemini returned empty content text in candidate.")
 

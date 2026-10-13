@@ -325,8 +325,10 @@ async def poll_production_artifacts(
 
     has_narr_master = "master_4k_narration.mp4" in files and files["master_4k_narration.mp4"].stat().st_size > 1000
     has_amb_master = "master_4k_ambient.mp4" in files and files["master_4k_ambient.mp4"].stat().st_size > 1000
+    has_nat_master = ("master_4k_nature.mp4" in files and files["master_4k_nature.mp4"].stat().st_size > 1000) or ("master_4k_ambient_nature_only.mp4" in files and files["master_4k_ambient_nature_only.mp4"].stat().st_size > 1000)
+    nat_f = files.get("master_4k_nature.mp4") or files.get("master_4k_ambient_nature_only.mp4")
     master_url = _file_url(files["master_4k_narration.mp4"]) if has_narr_master else (_file_url(files["master_4k_ambient.mp4"]) if has_amb_master else None)
-    nature_master_url = _file_url(files["master_4k_ambient.mp4"]) if has_amb_master else None
+    nature_master_url = _file_url(nat_f) if has_nat_master else (_file_url(files["master_4k_ambient.mp4"]) if has_amb_master else None)
 
     dur_str = f"{int(m_data.get('duration_seconds', 5))}s"
     editions = []
@@ -334,19 +336,26 @@ async def poll_production_artifacts(
         editions.append({"edition_id": "master_narration", "name": f"🎙️ 4K Narrated Master ({dur_str})", "label": "4K Narrated Master (Voiceover + BGM)", "format": "4K UHD", "duration": dur_str, "url": _file_url(files["master_4k_narration.mp4"])})
     if has_amb_master:
         editions.append({"edition_id": "master_music", "name": f"🎵 4K Music Edition ({dur_str})", "label": "4K Ambient Master (Music Only)", "format": "4K UHD", "duration": dur_str, "url": _file_url(files["master_4k_ambient.mp4"])})
+    if has_nat_master:
+        editions.append({"edition_id": "master_nature", "name": f"🌿 4K Pure Nature Edition ({dur_str})", "label": "4K Pure Nature ASMR (Zero Music)", "format": "4K Nature", "duration": dur_str, "url": _file_url(nat_f)})
     if "short_9x16_teaser.mp4" in files and files["short_9x16_teaser.mp4"].stat().st_size > 1000:
         editions.append({"edition_id": "short_teaser", "name": "📱 9:16 Vertical Short Teaser (20s)", "label": "9:16 Vertical YouTube Short / Reel", "format": "9:16 Short", "duration": "20s", "url": _file_url(files["short_9x16_teaser.mp4"])})
 
     long_play_editions = []
-    lp_patterns = [
-        (["master_4k_8hour_broadcast.mp4", "master_4k_8hour_sleep.mp4"], "8h_music", "8-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "8:00:00 (8h)", "16:9 Long-Play"),
-        (["master_4k_3hour_broadcast.mp4", "master_4k_3hour_sleep.mp4"], "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3h)", "16:9 Long-Play"),
-    ]
-    for fn_list, eid, name, icon, mode, dur, fmt in lp_patterns:
-        target_f = next((files[fn] for fn in fn_list if fn in files and files[fn].stat().st_size > 1000), None)
-        if target_f:
-            sz_mb = round(target_f.stat().st_size / (1024 * 1024), 1)
-            long_play_editions.append({"edition_id": eid, "name": name, "icon": icon, "audio_mode": mode, "duration": dur, "format": fmt, "status": "completed", "url": _file_url(target_f), "size_str": f"{sz_mb} MB" if sz_mb < 1000 else f"{round(sz_mb/1024, 2)} GB", "filename": target_f.name})
+    fmt_val = str(m_data.get("format") or "").lower()
+    is_relax_fmt = fmt_val in ("relaxation", "relax") or "relax" in str(m_data.get("genre", "")).lower() or "/relaxation/" in c_dir.as_posix().lower()
+    if is_relax_fmt:
+        lp_patterns = [
+            (["master_4k_8hour_broadcast.mp4", "master_4k_8hour_sleep.mp4"], "8h_music", "8-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "8:00:00 (8h)", "16:9 Long-Play"),
+            (["master_4k_8hour_nature_only_broadcast.mp4", "master_4k_8hour_nature_only.mp4"], "8h_nature", "8-Hour 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature Foley ASMR", "8:00:00 (8h)", "16:9 Long-Play"),
+            (["master_4k_3hour_broadcast.mp4", "master_4k_3hour_sleep.mp4"], "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3h)", "16:9 Long-Play"),
+            (["master_4k_3hour_nature_only_broadcast.mp4", "master_4k_3hour_nature_only.mp4"], "3h_nature", "3-Hour 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature Foley ASMR", "3:00:00 (3h)", "16:9 Long-Play"),
+        ]
+        for fn_list, eid, name, icon, mode, dur, fmt in lp_patterns:
+            target_f = next((files[fn] for fn in fn_list if fn in files and files[fn].stat().st_size > 1000), None)
+            if target_f:
+                sz_mb = round(target_f.stat().st_size / (1024 * 1024), 1)
+                long_play_editions.append({"edition_id": eid, "name": name, "icon": icon, "audio_mode": mode, "duration": dur, "format": fmt, "status": "completed", "url": _file_url(target_f), "size_str": f"{sz_mb} MB" if sz_mb < 1000 else f"{round(sz_mb/1024, 2)} GB", "filename": target_f.name})
 
     screenplay_file = c_dir / "screenplay.json"
     screenplay_data = json.loads(screenplay_file.read_text("utf-8")) if screenplay_file.exists() else None

@@ -22,45 +22,7 @@ if TYPE_CHECKING:
     from src.studios.screenplay_models import AmbientStoryboard
 
 
-def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf: int = 22) -> Path:
-    """Transform short 5s/10s AI diffusion motion clip into an infinitely loopable cineloop."""
-    if clip_path.name.endswith("_fwd_seamless.mp4") and clip_path.is_file():
-        return clip_path
-
-    base_stem = clip_path.stem.replace("_fwd_seamless", "")
-    out_seamless = clip_path.parent / f"{base_stem}_fwd_seamless.mp4"
-    duration = get_media_duration(clip_path)
-    if duration <= xfade_dur + 0.5 or duration >= 25.0:
-        return clip_path
-
-    ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-    has_audio = False
-    try:
-        check = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, errors="ignore")
-        has_audio = "Audio:" in check.stderr
-    except Exception:
-        pass
-
-    if out_seamless.is_file() and out_seamless.stat().st_size > 1000 and out_seamless.stat().st_mtime >= clip_path.stat().st_mtime:
-        return out_seamless
-
-    split_offset = max(0.1, duration - xfade_dur)
-    v_xf = f"[0:v]split=2[h][t];[t]trim=start={split_offset:.2f}:end={duration:.2f},setpts=PTS-STARTPTS,fps=24[t1];[h]trim=start=0:end={split_offset:.2f},setpts=PTS-STARTPTS,fps=24[h1];[t1][h1]xfade=transition=fade:duration={xfade_dur:.2f}:offset=0,fps=24,format=yuv420p[v]"
-    f_graph = f"{v_xf};[0:a]atrim=0:{split_offset:.2f},asetpts=PTS-STARTPTS[a]" if has_audio else v_xf
-    cmd = [
-        ffmpeg_bin, "-y", "-nostats", "-loglevel", "error", "-i", str(clip_path),
-        "-filter_complex", f_graph, "-map", "[v]",
-        *(["-map", "[a]"] if has_audio else []),
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
-        *(["-c:a", "aac", "-b:a", "320k", "-ar", "48000"] if has_audio else []),
-        str(out_seamless),
-    ]
-    try:
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, check=True)
-    except subprocess.CalledProcessError as err:
-        logger.warning(f"failed_to_build_seamless_loop: {(err.stderr or str(err)).strip()}")
-        return clip_path
-    return out_seamless
+from src.services.cineloop_service import build_seamless_forward_cineloop
 
 
 def assemble_4k_master(
@@ -119,8 +81,9 @@ def assemble_4k_master(
         for i in range(1, n):
             out_tag = f"v{i}" if i < n - 1 else "v"
             filter_parts.append(f"[{prev_tag}][s{i}]xfade=transition=fade:duration={x_dur:.2f}:offset={max(0.1, curr_offset):.2f}[{out_tag}]")
-            prev_tag, curr_offset = out_tag, curr_offset + hold_list[i]
-        target_dur = max(target_dur, curr_offset + x_dur)
+            prev_tag = out_tag
+            curr_offset += max(0.1, (hold_list[i] - x_dur) if i < n - 1 else hold_list[i])
+        target_dur = round(curr_offset, 2)
 
         if audio_path and audio_path.is_file():
             inputs.extend(["-i", str(audio_path)])
@@ -223,21 +186,61 @@ def assemble_dual_masters(
         else:
             log_pipeline_step("checking master", "4K Ambient Master", "completed", "master_4k_ambient.mp4 exists, render not recreated", {"file": master_music.name, "cost": "$0.00"})
         master_narr = master_music
+        master_nature = ep_dir / "master_4k_nature.mp4"
+        foley_audio = kwargs.get("foley_audio_path") or (ep_dir / "foley_ambient.mp3")
+        f_dur = get_media_duration(master_music) or eff_target_dur or 60.0
+        if not (foley_audio and Path(foley_audio).is_file() and Path(foley_audio).stat().st_size > 1000):
+            foley_audio = ep_dir / "foley_ambient.mp3"
+            if not foley_audio.is_file():
+                try:
+                    subprocess.run([
+                        imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error",
+                        "-f", "lavfi", "-i", "anoisesrc=color=brown:amplitude=0.06:sample_rate=48000,lowpass=f=450,highpass=f=35,volume=0.9",
+                        "-t", f"{f_dur:.2f}", "-c:a", "libmp3lame", "-b:a", "320k", "-ar", "48000", str(foley_audio),
+                    ], check=True)
+                except Exception:
+                    foley_audio = None
+
+        needs_nature = force_rerun or not master_nature.is_file() or master_nature.stat().st_size < 1000 or (master_music.is_file() and master_music.stat().st_mtime > master_nature.stat().st_mtime)
+        log_pipeline_step("checking master", "4K Pure Nature Master", "started", metadata={"file": master_nature.name})
+        if needs_nature and master_music.is_file():
+            cmd_nat = [
+                imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error", "-i", str(master_music),
+                *(["-i", str(foley_audio), "-map", "0:v:0", "-map", "1:a:0", "-c:a", "aac", "-b:a", "320k", "-ar", "48000"] if foley_audio and Path(foley_audio).is_file() else ["-map", "0:v:0", "-an"]),
+                "-c:v", "copy", "-t", f"{f_dur:.2f}", "-movflags", "+faststart", str(master_nature),
+            ]
+            try:
+                subprocess.run(cmd_nat, check=True)
+                log_pipeline_step("checking master", "4K Pure Nature Master", "completed", "remuxed master_4k_nature.mp4", {"file": master_nature.name, "cost": "$0.00"})
+            except Exception as n_err:
+                logger.warning(f"remux_nature_master_failed: {n_err}")
+                master_nature = master_music
+        else:
+            log_pipeline_step("checking master", "4K Pure Nature Master", "completed", "master_4k_nature.mp4 exists", {"file": master_nature.name, "cost": "$0.00"})
 
     primary = master_narr if has_narration else master_music
+    nat_primary = master_music if has_narration else master_nature
     return {
         "master_4k": primary, "master_video_path": primary, "music_master": master_music,
         "narrative_master": master_narr, "narration_master": master_narr,
-        "nature_master": master_music, "master_nature": master_music, "master_1080p": primary,
+        "nature_master": nat_primary, "master_nature": nat_primary, "master_1080p": primary,
     }
 
-def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], fade_hours: Optional[float]) -> Optional[Path]:
-    """Export long-play multi-hour stream loop for primary 4K broadcast master."""
+def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], fade_hours: Optional[float], nature_master: Optional[Path] = None) -> Optional[Path]:
+    """Export long-play multi-hour stream loop for primary 4K broadcast master and pure nature edition."""
     eff_hours = hours if (hours and hours > 0) else 3.0
     suffix = f"_{int(fade_hours)}h_black" if fade_hours else ""
-    lp_path = ep_dir / f"master_4k_{int(eff_hours) if eff_hours.is_integer() else eff_hours}hour{suffix}_broadcast.mp4"
+    hour_label = int(eff_hours) if eff_hours.is_integer() else eff_hours
+    lp_path = ep_dir / f"master_4k_{hour_label}hour{suffix}_broadcast.mp4"
     if master.is_file() and (not lp_path.is_file() or lp_path.stat().st_size < 1000):
         export_long_play_broadcast(master, lp_path, eff_hours * 3600.0, fade_to_black_hours=fade_hours)
+
+    if nature_master and nature_master.is_file() and nature_master.resolve() != master.resolve():
+        nat_sfx = "_music_only" if "ambient" in nature_master.name or "music" in nature_master.name else "_nature_only"
+        lp_nat_path = ep_dir / f"master_4k_{hour_label}hour{nat_sfx}{suffix}_broadcast.mp4"
+        if not lp_nat_path.is_file() or lp_nat_path.stat().st_size < 1000:
+            export_long_play_broadcast(nature_master, lp_nat_path, eff_hours * 3600.0, fade_to_black_hours=fade_hours)
+
     return lp_path if lp_path.is_file() else None
 
 def export_metadata_packages(sb: Any, ep_dir: Path) -> Dict[str, Any]:

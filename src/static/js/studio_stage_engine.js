@@ -328,24 +328,26 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           if (g.includes("travel") || a.includes("cit") || a.includes("skylin") || a.includes("wonder") || a.includes("remote") || a.includes("iconic")) return "slow_drone_forward";
           return "locked_tripod";
         })(),
-        genre: (!isPhotosOnly && !isMotionOnly && !isAudioOnly && !isMasterOnly && document.getElementById("studio-genre-selector")?.value)
-          ? document.getElementById("studio-genre-selector").value
-          : (vid.genre || document.getElementById("studio-genre-selector")?.value || "relax/nature"),
-        genre_label: (!isPhotosOnly && !isMotionOnly && !isAudioOnly && !isMasterOnly && document.getElementById("studio-genre-selector")?.selectedOptions?.[0]?.textContent?.trim())
-          ? document.getElementById("studio-genre-selector").selectedOptions[0].textContent.trim()
-          : (vid.genreLabel || vid.genre_label || document.getElementById("studio-genre-selector")?.selectedOptions?.[0]?.textContent?.trim() || ""),
-        sub_genre: (!isPhotosOnly && !isMotionOnly && !isAudioOnly && !isMasterOnly && document.getElementById("studio-subgenre-selector")?.value)
-          ? document.getElementById("studio-subgenre-selector").value
-          : (vid.sub_genre || vid.subGenre || document.getElementById("studio-subgenre-selector")?.value || null),
-        sub_genre_label: (!isPhotosOnly && !isMotionOnly && !isAudioOnly && !isMasterOnly && document.getElementById("studio-subgenre-selector")?.selectedOptions?.[0]?.textContent?.trim())
-          ? document.getElementById("studio-subgenre-selector").selectedOptions[0].textContent.trim()
-          : (vid.subGenreLabel || vid.sub_genre_label || document.getElementById("studio-subgenre-selector")?.selectedOptions?.[0]?.textContent?.trim() || ""),
-        primary_archetype: (!isPhotosOnly && !isMotionOnly && !isAudioOnly && !isMasterOnly && document.getElementById("studio-archetype-selector")?.value)
-          ? document.getElementById("studio-archetype-selector").value
-          : (vid.primary_archetype || vid.primaryArchetype || document.getElementById("studio-archetype-selector")?.value || null),
-        primary_archetype_label: (!isPhotosOnly && !isMotionOnly && !isAudioOnly && !isMasterOnly && document.getElementById("studio-archetype-selector")?.selectedOptions?.[0]?.textContent?.trim())
-          ? document.getElementById("studio-archetype-selector").selectedOptions[0].textContent.trim()
-          : (vid.primaryArchetypeLabel || vid.primary_archetype_label || document.getElementById("studio-archetype-selector")?.selectedOptions?.[0]?.textContent?.trim() || ""),
+        genre: vid.genre || document.getElementById("studio-genre-selector")?.value || "relax/nature",
+        genre_label: (function() {
+          const g = vid.genre || document.getElementById("studio-genre-selector")?.value || "relax/nature";
+          const genresDict = (typeof ALL_STUDIO_GENRES !== "undefined") ? ALL_STUDIO_GENRES : {};
+          return vid.genreLabel || vid.genre_label || genresDict[g] || document.getElementById("studio-genre-selector")?.selectedOptions?.[0]?.textContent?.trim() || "";
+        })(),
+        sub_genre: vid.sub_genre || vid.subGenre || document.getElementById("studio-subgenre-selector")?.value || null,
+        sub_genre_label: (function() {
+          const g = vid.genre || document.getElementById("studio-genre-selector")?.value || "relax/nature";
+          const sg = vid.sub_genre || vid.subGenre || document.getElementById("studio-subgenre-selector")?.value || null;
+          const subMap = (typeof STUDIO_SUBOPTIONS_MAP !== "undefined") ? STUDIO_SUBOPTIONS_MAP : {};
+          return vid.subGenreLabel || vid.sub_genre_label || (subMap[g]?.find(x => x.val === sg)?.label) || document.getElementById("studio-subgenre-selector")?.selectedOptions?.[0]?.textContent?.trim() || "";
+        })(),
+        primary_archetype: vid.primary_archetype || vid.primaryArchetype || document.getElementById("studio-archetype-selector")?.value || null,
+        primary_archetype_label: (function() {
+          const g = vid.genre || document.getElementById("studio-genre-selector")?.value || "relax/nature";
+          const arch = vid.primary_archetype || vid.primaryArchetype || document.getElementById("studio-archetype-selector")?.value || null;
+          const archMap = (typeof STUDIO_ARCHETYPES_MAP !== "undefined") ? STUDIO_ARCHETYPES_MAP : {};
+          return vid.primaryArchetypeLabel || vid.primary_archetype_label || (archMap[g]?.find(x => x.val === arch)?.label) || document.getElementById("studio-archetype-selector")?.selectedOptions?.[0]?.textContent?.trim() || "";
+        })(),
         weather: (document.querySelector('input[name="studio_weather"]:checked')?.value || "normal"),
         production_name: (vid.production_name || document.getElementById("studio-production-name")?.value?.trim() || null),
         format: (vid.format_slug || (vid.format && !["16:9", "9:16"].includes(vid.format) ? vid.format : null) || document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "documentary")),

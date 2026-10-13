@@ -118,9 +118,9 @@ class KineticSpriteSpec(BaseModel):
 
 class KineticMicroSpec(BaseModel):
     """Tier-0 micro-kinetic zones for wide architectural & landscape shots."""
-    sprites: List[KineticSpriteSpec] = Field(default_factory=list)
-    tree_sway_zones: List[List[float]] = Field(default_factory=list)
-    water_zones: List[List[float]] = Field(default_factory=list)
+    sprites: List[Any] = Field(default_factory=list)
+    tree_sway_zones: List[Any] = Field(default_factory=list)
+    water_zones: List[Any] = Field(default_factory=list)
     celestial_zone: Optional[Dict[str, Any]] = None
 
 class CameraWaypointDirective(BaseModel):

@@ -77,21 +77,33 @@ async def generate_long_play_for_episode(episode_id: str, req: LongPlayStretchRe
 
     ambient_src = target_dir / "master_4k_ambient.mp4"
     if not ambient_src.is_file():
-        masters = [f for f in target_dir.glob("master_4k*.mp4") if "hour" not in f.name and "short" not in f.name]
-        ambient_src = masters[0] if masters else None
+        if (target_dir / "master_4k_ambient.mp4").is_file():
+            ambient_src = target_dir / "master_4k_ambient.mp4"
+        elif (target_dir / "master_4k_narration.mp4").is_file():
+            ambient_src = target_dir / "master_4k_narration.mp4"
+        else:
+            masters = [f for f in target_dir.glob("master_4k*.mp4") if "hour" not in f.name and "short" not in f.name]
+            ambient_src = masters[0] if masters else None
 
-    nature_src = target_dir / "master_4k_ambient_nature_only.mp4"
+    if (target_dir / "master_4k_nature.mp4").is_file():
+        nature_src = target_dir / "master_4k_nature.mp4"
+    elif (target_dir / "master_4k_ambient_nature_only.mp4").is_file():
+        nature_src = target_dir / "master_4k_ambient_nature_only.mp4"
+    elif ambient_src and ambient_src.name == "master_4k_narration.mp4" and (target_dir / "master_4k_ambient.mp4").is_file():
+        nature_src = target_dir / "master_4k_ambient.mp4"
+    else:
+        nature_src = None
     if not ambient_src or not ambient_src.is_file():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No 4K master video found on disk to stretch.")
 
-    # Verify format: Long-play multi-hour broadcasts (3h/8h) are strictly for relaxation format
+    # Verify format: Long-play multi-hour broadcasts (3h/8h) are strictly for relaxation format productions
     user_inputs_file = target_dir / "user_inputs.json"
     if user_inputs_file.is_file():
         try:
             u_data = json.loads(user_inputs_file.read_text("utf-8"))
             ep_fmt = str(u_data.get("format", "")).lower()
-            if ep_fmt and ep_fmt not in ("relaxation", "relax", "16:9"):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Long-play 3h/8h broadcast is only supported for relaxation format (current: '{ep_fmt}').")
+            if ep_fmt and ep_fmt not in ("relaxation", "relax"):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Long-play 3h broadcast is only supported for relaxation format productions (current: '{ep_fmt}').")
         except HTTPException:
             raise
         except Exception:
@@ -113,7 +125,9 @@ async def generate_long_play_for_episode(episode_id: str, req: LongPlayStretchRe
     hours_label = int(req.hours) if req.hours.is_integer() else req.hours
     suffix = f"_{int(req.fade_to_black_hours)}h_black" if req.fade_to_black_hours else ""
     out_ambient = target_dir / f"master_4k_{hours_label}hour{suffix}_broadcast.mp4"
-    out_nature = target_dir / f"master_4k_{hours_label}hour_nature_only{suffix}_broadcast.mp4"
+    is_doc = ambient_src and ambient_src.name == "master_4k_narration.mp4"
+    sec_suffix = "_music_only" if is_doc else "_nature_only"
+    out_nature = target_dir / f"master_4k_{hours_label}hour{sec_suffix}{suffix}_broadcast.mp4"
 
     job_state = {
         "episode_id": episode_id,
@@ -159,7 +173,7 @@ async def generate_long_play_for_episode(episode_id: str, req: LongPlayStretchRe
                     fade_to_black_hours=req.fade_to_black_hours,
                 )
                 job_state["nature_progress"] = 60
-                out_30m_nature = target_dir / "master_4k_30min_nature_only_broadcast.mp4"
+                out_30m_nature = target_dir / f"master_4k_30min{sec_suffix}_broadcast.mp4"
                 await asyncio.to_thread(
                     export_long_play_broadcast,
                     source_4k_video=nature_src,

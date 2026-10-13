@@ -114,27 +114,10 @@ async def generate_ocean_screenplay_gemini(
     )
 
     try:
-        from src.core.config import settings
-        from src.providers.base import HTTPClientPool
-        api_key = settings.llm.google_api_key or settings.llm.gemini_api_key
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
-        payload = {
-            "contents": [{"parts": [{"text": sys_prompt}]}],
-            "generationConfig": {
-                "responseMimeType": "application/json",
-                "temperature": 0.7,
-            },
-        }
-        client = HTTPClientPool.get_client()
-        logger.info(f"gemini_ocean_director_request: archetype='{eff_arch}'")
-        resp = await client.post(url, json=payload, timeout=45.0)
-        if resp.status_code != 200:
-            raise RuntimeError(f"Gemini API error (HTTP {resp.status_code}): {resp.text[:500]}")
-        data = resp.json()
-        candidates = data.get("candidates", [])
-        if not candidates:
-            raise RuntimeError("Gemini returned no candidates")
-        raw_json = candidates[0]["content"]["parts"][0]["text"].strip()
+        from src.providers.llm.gemini_adapter import GeminiLLMAdapter
+        llm = GeminiLLMAdapter(strict=True)
+        data = await llm.generate_structured(sys_prompt)
+        raw_json = json.dumps(data, indent=2, ensure_ascii=False)
 
         # Save raw Gemini response JSON for permanent reference
         if raw_output_path:
@@ -146,8 +129,7 @@ async def generate_ocean_screenplay_gemini(
             except Exception as raw_save_err:
                 logger.warning(f"failed_to_save_raw_gemini_json: {raw_save_err}")
 
-        parsed = json.loads(raw_json)
-        screenplay = RelaxScreenplay.model_validate(parsed)
+        screenplay = RelaxScreenplay.model_validate(data)
         screenplay.genre = "relax/ocean"
 
         # Culturally aligned & diurnal-permuted 432Hz audio master

@@ -178,7 +178,7 @@ function renderFormatChipsForActiveNetwork(channelSlug) {
   fetchAndPopulateExistingSeries(channelSlug, activeStudioFormat);
 }
 
-function selectStudioFormat(fmtKey) {
+function selectStudioFormat(fmtKey, preserveGenre = null) {
   activeStudioFormat = fmtKey;
   const hiddenInput = document.getElementById("studio-active-format-val");
   if (hiddenInput) hiddenInput.value = fmtKey;
@@ -196,11 +196,21 @@ function selectStudioFormat(fmtKey) {
   if (fmtKey === "documentary" && typeof selectProductionTier === "function") {
     selectProductionTier("balanced");
   }
+
+  // Automatically enforce 9:16 for Reels/Shorts and 16:9 for all other formats
+  if (typeof setStudioFormat === "function") {
+    if (fmtKey === "short" || fmtKey === "reels" || fmtKey === "shorts") {
+      setStudioFormat("9:16");
+    } else {
+      setStudioFormat("16:9");
+    }
+  }
+
   fetchAndPopulateExistingSeries(chSlug, fmtKey);
-  syncGenreDropdownOnly(chSlug);
+  syncGenreDropdownOnly(chSlug, preserveGenre);
 }
 
-function syncGenreDropdownOnly(channelSlug) {
+function syncGenreDropdownOnly(channelSlug, preserveGenre = null) {
   const gSelector = document.getElementById("studio-genre-selector");
   if (!gSelector) return;
 
@@ -232,10 +242,17 @@ function syncGenreDropdownOnly(channelSlug) {
   // Fallback if no specific format matches
   const genresToShow = normalized.length > 0 ? normalized : (activeStudioFormat === "documentary" ? ["documentary", "science"] : ["relax/nature"]);
 
-  gSelector.innerHTML = genresToShow.map(k => `<option value="${k}">${genresDict[k] || k}</option>`).join("");
-  const first = genresToShow[0] || "relax/nature";
-  gSelector.value = first;
-  onGenreChange(first);
+  // Preserve user's selection if valid in the active format list
+  const currentVal = preserveGenre || gSelector.value;
+  const targetGenre = (currentVal && genresToShow.includes(currentVal)) ? currentVal : (genresToShow[0] || "relax/nature");
+
+  gSelector.innerHTML = genresToShow.map(k => `<option value="${k}" ${k === targetGenre ? 'selected' : ''}>${genresDict[k] || k}</option>`).join("");
+  gSelector.value = targetGenre;
+
+  const subSelector = document.getElementById("studio-subgenre-selector");
+  if (currentVal !== targetGenre || !subSelector || subSelector.options.length === 0) {
+    onGenreChange(targetGenre);
+  }
 }
 
 function syncGenreDropdownForChannel(channelSlug) {
@@ -243,16 +260,21 @@ function syncGenreDropdownForChannel(channelSlug) {
   syncGenreDropdownOnly(channelSlug);
 }
 
-function onGenreChange(genreVal) {
+function onGenreChange(genreVal, preserveSubGenre = null, preserveArch = null) {
   const subSelector = document.getElementById("studio-subgenre-selector");
   if (!subSelector) return;
 
   const subMap = (typeof STUDIO_SUBOPTIONS_MAP !== "undefined") ? STUDIO_SUBOPTIONS_MAP : {};
   const list = subMap[genreVal] || subMap["relax/nature"] || [];
-  subSelector.innerHTML = list.map(item => `<option value="${item.val}">${item.label}</option>`).join("");
+
+  const currentSub = preserveSubGenre || subSelector.value;
+  const targetSub = (currentSub && list.some(x => x.val === currentSub)) ? currentSub : (list[0]?.val || "");
+
+  subSelector.innerHTML = list.map(item => `<option value="${item.val}" ${item.val === targetSub ? 'selected' : ''}>${item.label}</option>`).join("");
+  subSelector.value = targetSub;
   
-  updateArchetypeOptions(genreVal, subSelector.value);
-  onSubGenreChange(subSelector.value);
+  updateArchetypeOptions(genreVal, targetSub, preserveArch);
+  onSubGenreChange(targetSub);
 
   // Sync active channel audio defaults & stem modality
   const bgmToggle = document.getElementById("studio-toggle-bgm");
@@ -261,8 +283,11 @@ function onGenreChange(genreVal) {
   const fallbackToggle = document.getElementById("studio-toggle-fallback");
   const dualToggle = document.getElementById("studio-toggle-dual-editions");
   const dualRow = document.getElementById("studio-dual-editions-row");
+  const dualLabel = document.getElementById("studio-dual-editions-label");
 
   const isDoc = (activeStudioFormat === "documentary" || genreVal === "documentary" || genreVal === "science");
+  const isRelax = (activeStudioFormat === "relaxation" || activeStudioFormat === "relax" || genreVal.startsWith("relax") || !activeStudioFormat);
+
   if (isDoc) {
     if (bgmToggle) { bgmToggle.checked = true; bgmToggle.disabled = false; }
     if (voiceToggle) { voiceToggle.checked = true; voiceToggle.disabled = false; }
@@ -270,9 +295,19 @@ function onGenreChange(genreVal) {
     if (fallbackToggle) { fallbackToggle.disabled = false; }
     if (dualRow) dualRow.classList.remove("hidden");
     if (dualToggle) { dualToggle.checked = true; dualToggle.disabled = false; }
-  } else {
-    // Relaxation & non-documentary: Voiceover, TTS, Fallback disabled by default
+    if (dualLabel) dualLabel.textContent = "Dual Masters (Narration + Music)";
+  } else if (isRelax) {
+    // Relaxation: Dual Masters (Music Edition + Pure Nature ASMR Edition)
     if (bgmToggle) { bgmToggle.disabled = false; bgmToggle.checked = (genreVal !== "relax/hearth"); }
+    if (voiceToggle) { voiceToggle.checked = false; voiceToggle.disabled = true; }
+    if (ttsToggle) { ttsToggle.checked = false; ttsToggle.disabled = true; }
+    if (fallbackToggle) { fallbackToggle.checked = false; fallbackToggle.disabled = true; }
+    if (dualRow) dualRow.classList.remove("hidden");
+    if (dualToggle) { dualToggle.checked = true; dualToggle.disabled = false; }
+    if (dualLabel) dualLabel.textContent = "Dual Masters (Music + Nature)";
+  } else {
+    // Non-documentary, non-relaxation
+    if (bgmToggle) { bgmToggle.disabled = false; bgmToggle.checked = true; }
     if (voiceToggle) { voiceToggle.checked = false; voiceToggle.disabled = true; }
     if (ttsToggle) { ttsToggle.checked = false; ttsToggle.disabled = true; }
     if (fallbackToggle) { fallbackToggle.checked = false; fallbackToggle.disabled = true; }
@@ -294,10 +329,15 @@ function syncDualMastersVisibility() {
   const gSelector = document.getElementById("studio-genre-selector");
   const genreVal = gSelector ? gSelector.value : "";
   const isDoc = (activeStudioFormat === "documentary" || genreVal === "documentary" || genreVal === "science");
-  row.classList.toggle("hidden", !isDoc);
+  const isRelax = (activeStudioFormat === "relaxation" || activeStudioFormat === "relax" || genreVal.startsWith("relax") || !activeStudioFormat);
+  row.classList.toggle("hidden", !(isDoc || isRelax));
+  const dualLabel = document.getElementById("studio-dual-editions-label");
+  if (dualLabel) {
+    dualLabel.textContent = isDoc ? "Dual Masters (Narration + Music)" : "Dual Masters (Music + Nature)";
+  }
 }
 
-function updateArchetypeOptions(genreVal, subGenreVal) {
+function updateArchetypeOptions(genreVal, subGenreVal, preserveArch = null) {
   const archSelector = document.getElementById("studio-archetype-selector");
   if (!archSelector) return;
 
@@ -312,30 +352,23 @@ function updateArchetypeOptions(genreVal, subGenreVal) {
     }
   } else if (genreVal === "science") {
     list = archMap["science:" + subGenreVal] || archMap["science"] || [];
+  } else if (archMap[genreVal + ":" + subGenreVal]) {
+    list = archMap[genreVal + ":" + subGenreVal] || [];
   } else {
     list = archMap[genreVal] || archMap["relax/nature"] || [];
   }
   
-  archSelector.innerHTML = list.map(item => `<option value="${item.val}">${item.label}</option>`).join("");
-  
-  if (genreVal === "documentary") {
-    if (subGenreVal === "doc_architecture") {
-      const match = list.find(x => x.val === "ancient_civilizations_history");
-      if (match) archSelector.value = match.val;
-    } else if (subGenreVal === "travel_itinerary_tour") {
-      const match = list.find(x => x.val === "itinerary_map_tour");
-      if (match) archSelector.value = match.val;
-    } else {
-      archSelector.value = list[0]?.val || "";
-    }
-  } else if (genreVal === "science") {
-    archSelector.value = list[0]?.val || "";
-  } else if (subGenreVal && (subGenreVal.includes("bedroom") || subGenreVal.includes("cabin"))) {
-    const match = list.find(x => x.val.includes("bedroom") || x.val.includes("cabin"));
-    if (match) archSelector.value = match.val;
-  } else {
-    archSelector.value = list[0]?.val || "";
-  }
+  const currentArch = preserveArch || archSelector.value;
+  const targetArch = (currentArch && list.some(x => x.val === currentArch))
+    ? currentArch
+    : (genreVal === "documentary" && subGenreVal === "doc_architecture" && list.some(x => x.val === "ancient_civilizations_history")
+      ? "ancient_civilizations_history"
+      : (genreVal === "documentary" && subGenreVal === "travel_itinerary_tour" && list.some(x => x.val === "itinerary_map_tour")
+        ? "itinerary_map_tour"
+        : (subGenreVal && (subGenreVal.includes("bedroom") || subGenreVal.includes("cabin")) && list.find(x => x.val.includes("bedroom") || x.val.includes("cabin"))?.val) || list[0]?.val || ""));
+
+  archSelector.innerHTML = list.map(item => `<option value="${item.val}" ${item.val === targetArch ? 'selected' : ''}>${item.label}</option>`).join("");
+  archSelector.value = targetArch;
   onArchetypeChange(archSelector.value);
 }
 
