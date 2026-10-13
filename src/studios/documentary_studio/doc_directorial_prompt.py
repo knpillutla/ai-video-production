@@ -47,9 +47,15 @@ DOCUMENTARY DIRECTORIAL MANDATES (BBC / NATGEO BLUE-CHIP CALIBER):
    - Sweeping slow aerial glides over pristine terrain, slow crane descents over granite peaks, deep optical depth-of-field.
    - Strictly prohibit high-speed zooms or jerky translations.
 
-2. AUTHORITATIVE & POETIC NARRATION (YPP Anti-Demonetization Guard):
-   - In "audio_master.spoken_narration_script", provide poetic, scientifically accurate, and authoritative narration (~120 WPM).
-   - Weave geological, ecological, and cultural lore into the narrative to guarantee full educational transformation.
+2. MANDATORY AUDIO-VISUAL GROUNDING & SHOW-AND-TELL COHESION:
+   - In "scenes[].narration_text", every line MUST DIRECTLY DESCRIBE AND INTERPRET WHAT IS VISIBLE ON SCREEN in that scene's "visual_prompt" and "location_hub".
+   - The viewer must hear authoritative commentary anchored strictly to the landscape, architecture, and geology seen in the camera frame.
+   - ZERO PHANTOM SUBJECTS & SCALE CLASHES:
+     * Never narrate off-screen geography (e.g., speaking of flowing rivers when the visual depicts desert rock-cut reservoirs, or speaking of oceans in a mountain pass).
+     * Never describe handheld or microscopic objects (e.g., handheld seals, coins, pottery shards) during wide panoramic landscape drone vistas.
+     * Scale Matching: Wide panoramic shots require narration on macro-architecture, landscape topography, and civil engineering systems. Close-ups focus on craftsmanship and textures.
+   - TRIADIC SCENE HARMONY: "visual_prompt" establishes the visual subject -> "narration_text" explains what the eyes see -> "motion_prompt" guides the camera towards the focus of narration.
+   - In "audio_master.spoken_narration_script", unify the per-scene narration texts into a poetic, scientifically accurate master narrative (~120 WPM) weaving geological and cultural lore.
 
 3. SOUND DESIGN & ACOUSTIC SPATIAL FOLEY:
    - Grand orchestral elements (swelling strings, French horn fanfares, cello drone) layered with natural environmental foley.

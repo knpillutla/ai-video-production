@@ -44,13 +44,8 @@ def build_base_directorial_prompt(
     is_documentary = "doc" in g_lower or "documentary" in ch_lower or "doc" in (sub_genre or "").lower() or "documentary" in a_lower
 
     tour_archetypes = {
-        "itinerary_map_tour",
-        "travel_itinerary_tour",
-        "grand_tour",
-        "top_attractions_tour",
-        "local_neighborhood_tour",
-        "culinary_food_tour",
-        "architecture_design_tour",
+        "itinerary_map_tour", "travel_itinerary_tour", "grand_tour", "top_attractions_tour",
+        "local_neighborhood_tour", "culinary_food_tour", "architecture_design_tour",
     }
     is_tour = (a_lower in tour_archetypes) or ((sub_genre or "").lower().strip() in tour_archetypes)
     user_chose_fixed_shots = (num_shots is not None and num_shots > 0 and num_shots != -1)
@@ -190,10 +185,11 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
    - For Pure Wilderness: "clouds, cloudy, overcast sky, moving clouds, timelapse clouds, camera shake, jitter, rapid motion, flickering, temporal jump, parched, frozen ice, stagnant water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings".
    - For Architectural & Travel: "clouds, overcast sky, moving clouds, camera shake, jitter, rapid motion, morphing architecture, changing furniture, structural drift, flickering, temporal jump, gelatinous water, artifacts, humans, tourist, clutter, plastic junk, modern electronics".
 
-8. NARRATION ENGINE & DURATION WIRING CONTRACT (MANDATORY):
+8. NARRATION ENGINE & AUDIO-VISUAL GROUNDING CONTRACT (MANDATORY):
    - Active Narration Engine: {tts_provider_name} ({speech_cadence_wpm} WPM, ~{speech_words_per_sec:.2f} words/sec). Tail breathing pause: 1.5s.
    - Per-Scene Word Formula: Max words = (duration_seconds - 1.5s) * {speech_words_per_sec:.2f}. Total script ~{target_words} words.
    - Divide narration smoothly across 'scenes[].narration_text' perfectly matching each shot's 'duration_seconds'.
+   - MANDATORY AUDIO-VISUAL GROUNDING (SHOW-AND-TELL RULE): Every scene's 'narration_text' MUST DIRECTLY DESCRIBE AND INTERPRET WHAT IS VISIBLE ON SCREEN in that scene's 'visual_prompt'. Strictly prohibit phantom subjects (e.g., describing rivers when viewing desert reservoirs, or narrating handheld artifacts in wide drone vistas).
    - Continuous Camera Motion: Visual camera motion runs for the FULL duration of the scene, ensuring continuous flight while narration speaks with ZERO frozen frames.
    - "suno_musical_tags" & "suno_prompt": Autonomously compose bespoke cultural acoustic tags matching geography and mood.
 
