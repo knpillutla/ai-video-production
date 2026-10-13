@@ -10,14 +10,117 @@ function promptDeleteArtifact(type, idx, name, label) {
   if (typeof openModal === "function") openModal("delete-confirm-modal");
 }
 
+function promptDeleteEpisode(epId, channelId, formatSlug, productionName, storagePath, title) {
+  const normEpId = String(epId || "").trim().toUpperCase();
+  const vid = (typeof findStudioEpisodeById === "function") ? findStudioEpisodeById(normEpId, channelId, formatSlug, productionName) : null;
+  const effCh = channelId || vid?.channelId || vid?.channel_id || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : "nature_rhythms");
+  const effFmt = formatSlug || vid?.format || vid?.format_slug || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "Documentary");
+  const effProd = productionName || vid?.production_name || "Standalone";
+  const effTitle = title || vid?.title || vid?.story_topic || `Episode ${normEpId}`;
+  const effPath = storagePath || vid?.storage_path || vid?.storagePath || "";
+
+  pendingDeleteAction = () => executeDeleteEpisodeAction(normEpId, effCh, effFmt, effProd, effPath);
+
+  const titleEl = document.getElementById("delete-confirm-title");
+  const msgEl = document.getElementById("delete-confirm-message");
+  const fmtEl = document.getElementById("delete-confirm-format");
+  const prodEl = document.getElementById("delete-confirm-production");
+  const epEl = document.getElementById("delete-confirm-episode-id");
+  const nameEl = document.getElementById("delete-confirm-artifact-name");
+
+  if (titleEl) titleEl.textContent = "Confirm Episode Deletion";
+  if (msgEl) msgEl.textContent = "Are you sure you want to permanently delete this episode from disk?";
+  if (fmtEl) fmtEl.textContent = effFmt.charAt(0).toUpperCase() + effFmt.slice(1);
+  if (prodEl) prodEl.textContent = effProd.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  if (epEl) epEl.textContent = normEpId;
+  if (nameEl) nameEl.textContent = effTitle;
+
+  if (typeof openModal === "function") openModal("delete-confirm-modal");
+}
+
+async function executeDeleteEpisodeAction(epId, channelId, formatSlug, productionName, storagePath) {
+  const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
+  const chSlug = channelId || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : null);
+  const normEpId = String(epId || "").toLowerCase().trim();
+  const normFmt = String(formatSlug || "").toLowerCase().trim();
+  const normProd = String(productionName || "").toLowerCase().trim().replace(/\s+/g, "_");
+
+  let url = `/api/production/episodes/${epId}?user_id=${encodeURIComponent(uEmail)}`;
+  if (chSlug) url += `&channel_id=${encodeURIComponent(chSlug)}`;
+  if (normFmt) url += `&format=${encodeURIComponent(normFmt)}`;
+  if (normProd) url += `&production_name=${encodeURIComponent(normProd)}`;
+  if (storagePath) url += `&storage_path=${encodeURIComponent(storagePath)}`;
+
+  try {
+    await fetch(url, { method: "DELETE" });
+  } catch (e) {
+    console.warn("Delete episode request notice:", e);
+  }
+
+  const matchesTarget = (x) => {
+    if (!x) return false;
+    const xId = String(x.id || x.episode_id || "").toLowerCase().trim();
+    if (xId !== normEpId) return false;
+    const xCh = String(x.channelId || x.channel_id || "").toLowerCase().trim();
+    if (chSlug && chSlug !== "all" && xCh && xCh !== chSlug.toLowerCase()) return false;
+    if (storagePath) {
+      const xPath = String(x.storage_path || x.storagePath || "").replace(/\\/g, "/").toLowerCase();
+      const targetPath = String(storagePath).replace(/\\/g, "/").toLowerCase();
+      if (xPath && (xPath.includes(targetPath) || targetPath.includes(xPath))) return true;
+    }
+    if (normProd && normProd !== "standalone") {
+      const xProd = String(x.production_name || "").toLowerCase().trim().replace(/[\s_-]+/g, "");
+      const targetProd = normProd.replace(/[\s_-]+/g, "");
+      if (xProd && targetProd && !xProd.includes(targetProd) && !targetProd.includes(xProd)) return false;
+    }
+    return true;
+  };
+
+  // Immediate optimistic update on active memory lists
+  if (Array.isArray(studioVideos)) {
+    studioVideos = studioVideos.filter(x => !matchesTarget(x));
+  }
+  if (typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) {
+    channelArchiveEpisodes = channelArchiveEpisodes.filter(x => !matchesTarget(x));
+  }
+  if (typeof saveVideosState === "function") saveVideosState();
+  if (typeof renderStudioVideoHistory === "function") renderStudioVideoHistory();
+  if (typeof filterChannelArchive === "function") filterChannelArchive();
+
+  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) {
+    if (matchesTarget(currentActiveInspectorEpisode)) {
+      if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
+    }
+  }
+
+  // Authoritative live sync from backend (guarantees UI reflects disk without browser reload)
+  try {
+    if (typeof syncChannelEpisodesFromBackend === "function") {
+      await syncChannelEpisodesFromBackend();
+    }
+    if (typeof fetchAndRenderChannelArchive === "function") {
+      await fetchAndRenderChannelArchive();
+    }
+  } catch (syncErr) {
+    console.debug("Post-delete live sync notice:", syncErr);
+  }
+
+  if (typeof showProfileStatusToast === "function") {
+    showProfileStatusToast(`✓ Episode ${epId} (${formatSlug || 'Episode'}) deleted.`);
+  }
+}
+
 function closeDeleteConfirmModal() {
   if (typeof closeModal === "function") closeModal("delete-confirm-modal");
   pendingDeleteAction = null;
 }
 
-function executeDeleteConfirmAction() {
-  if (typeof pendingDeleteAction === "function") pendingDeleteAction();
+async function executeDeleteConfirmAction() {
+  const action = pendingDeleteAction;
   closeDeleteConfirmModal();
+  if (typeof action === "function") {
+    await action();
+  }
 }
 
 function executeArtifactDeletion(type, idx) {

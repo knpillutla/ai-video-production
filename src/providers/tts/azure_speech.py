@@ -63,6 +63,16 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
         # High-Fidelity Neural TTS fallback (Microsoft Edge Neural Engine)
         try:
             import edge_tts
+            import edge_tts.constants as etc
+            import edge_tts.communicate as etcomm
+
+            # Patch WSS endpoint to api.msedgeservices.com to avoid Microsoft 403 on speech.platform.bing.com
+            patched_wss = (
+                "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1"
+                f"?Ocp-Apim-Subscription-Key={etc.TRUSTED_CLIENT_TOKEN}"
+            )
+            etc.WSS_URL = patched_wss
+            etcomm.WSS_URL = patched_wss
 
             comm = edge_tts.Communicate(text, voice=voice_id, rate=speech_rate)
             chunks = []
@@ -131,9 +141,20 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
         if not self.api_key:
             try:
                 import edge_tts
+                import edge_tts.constants as etc
+                import edge_tts.communicate as etcomm
                 import subprocess
+                import sys
                 import tempfile
                 from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary, has_ffmpeg
+
+                # Patch WSS endpoint to api.msedgeservices.com to avoid Microsoft 403 on speech.platform.bing.com
+                patched_wss = (
+                    "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1"
+                    f"?Ocp-Apim-Subscription-Key={etc.TRUSTED_CLIENT_TOKEN}"
+                )
+                etc.WSS_URL = patched_wss
+                etcomm.WSS_URL = patched_wss
 
                 comm = edge_tts.Communicate(text, voice=voice_id, rate=speech_rate)
                 with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp_mp3:
@@ -142,8 +163,9 @@ class AzureSpeechTTSAdapter(TTSProviderProtocol):
 
                 # Convert to standard 48kHz mono 16-bit PCM WAV if FFmpeg is available
                 if has_ffmpeg():
+                    flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
                     conv_cmd = [get_ffmpeg_binary(), "-y", "-i", tmp_name, "-ar", "48000", "-ac", "1", str(out)]
-                    subprocess.run(conv_cmd, capture_output=True, timeout=15)
+                    subprocess.run(conv_cmd, capture_output=True, timeout=15, creationflags=flags)
                 try:
                     Path(tmp_name).unlink(missing_ok=True)
                 except Exception:

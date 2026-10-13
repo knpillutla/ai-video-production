@@ -77,9 +77,12 @@ class DocumentaryProducer:
                 "approx_leg_cost": getattr(nxt_tr, "approx_leg_cost", None) or getattr(s, "approx_leg_cost", None),
             })
 
+        from src.studios.documentary_studio.doc_directorial_prompt import is_tour_archetype
+        is_itinerary_tour = is_tour_archetype(getattr(sb, "archetype", "") or getattr(sb, "sub_genre", "") or "")
+
         for scene in sb.scenes:
             kf_file = ep_dir / f"keyframe_p{scene.scene_index}.jpg"
-            if getattr(scene, "is_vacation_scope", False):
+            if is_itinerary_tour and getattr(scene, "is_vacation_scope", False):
                 from src.services.map_route_engine import render_4k_leisure_vacation_card
                 render_4k_leisure_vacation_card(
                     tour_title=sb.title,
@@ -87,9 +90,8 @@ class DocumentaryProducer:
                     force_rerun=force_rerun,
                 )
                 map_rendered_paths[scene.scene_index] = kf_file
-            elif (
-                scene.scene_index == 1
-                or getattr(scene, "is_itinerary_overview", False)
+            elif is_itinerary_tour and (
+                getattr(scene, "is_itinerary_overview", False)
                 or getattr(scene, "is_itinerary_summary", False)
                 or getattr(scene, "shot_type", "") in ("itinerary_overview_card", "itinerary_summary_card")
             ) and (sb.itinerary_summary or tour_stops):
@@ -103,7 +105,7 @@ class DocumentaryProducer:
                     force_rerun=force_rerun,
                 )
                 map_rendered_paths[scene.scene_index] = kf_file
-            elif getattr(scene, "is_map_transition", False) and scene.origin_coords and scene.destination_coords:
+            elif is_itinerary_tour and getattr(scene, "is_map_transition", False) and scene.origin_coords and scene.destination_coords:
                 # 4K Google Maps route: complete circuit, green up to current stop, blue upcoming
                 prior_attrs = sum(1 for ps in sb.scenes[:scene.scene_index - 1] if not (getattr(ps, "is_map_transition", False) or getattr(ps, "is_itinerary_overview", False) or getattr(ps, "is_itinerary_summary", False) or getattr(ps, "is_vacation_scope", False)))
                 render_4k_route_map(

@@ -130,9 +130,16 @@ function populateProductionControlsFromEpisode(rawVid) {
   // 9. Duration & Stretch Hours Selectors (Test & Prod)
   let targetStretchVal = "0";
   if (lpHours >= 1.0) targetStretchVal = String(lpHours);
-  else if (durSec >= 110) targetStretchVal = "0.033"; // 120s / 2m
-  else if (durSec >= 50) targetStretchVal = "0.0167";  // 60s / 1m
-  else if (durSec >= 25) targetStretchVal = "0.0083";  // 30s preview
+  else if (durSec >= 110 && durSec <= 130) targetStretchVal = "0.033"; // 120s / 2m
+  else if (durSec >= 50 && durSec <= 70) targetStretchVal = "0.0167";  // 60s / 1m
+  else if (durSec >= 25 && durSec <= 35) targetStretchVal = "0.0083";  // 30s preview
+  else if (durSec > 0) {
+    targetStretchVal = "custom";
+    const customInput = document.getElementById("studio-custom-minutes-input");
+    if (customInput) customInput.value = String(Math.round((durSec / 60) * 10) / 10);
+    const customContainer = document.getElementById("studio-custom-duration-container");
+    if (customContainer) customContainer.classList.remove("hidden");
+  }
 
   const testStretchSel = document.getElementById("studio-test-stretch");
   if (testStretchSel) {
@@ -221,6 +228,7 @@ function setProductionControlsViewOnly(isViewOnly, episodeId) {
   const controlIds = [
     "studio-test-shots", "studio-test-stretch",
     "studio-prod-shots", "studio-stretch-hours",
+    "studio-custom-minutes-input",
     "studio-toggle-bgm", "studio-toggle-voice-over",
     "studio-toggle-tts", "studio-toggle-dual-editions",
     "studio-toggle-fallback", "studio-fps",

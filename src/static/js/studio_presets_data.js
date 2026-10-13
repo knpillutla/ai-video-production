@@ -150,14 +150,14 @@ const STUDIO_SUBOPTIONS_MAP = {
   "relax/healing": [{ val: "global_healing", label: "✨ Global Sacred Sanctuaries & 528Hz Solfeggio" }, { val: "himalayan_valley", label: "🏔️ Himalayan Singing Bowl Valley & Mist" }, { val: "geothermal_springs", label: "♨️ Geothermal Hot Springs & Travertine Pools" }, { val: "redwood_cathedral", label: "🌲 Ancient Redwood Grove Sanctuary" }],
   "relax/zen": [{ val: "zen_garden", label: "🪷 Kyoto Zen Temple & Raked Rock Garden" }, { val: "bamboo_grove", label: "🎋 Sagano Bamboo Grove & Tsukubai Basin" }, { val: "lotus_pond", label: "🪷 Sacred Lotus Pond & Water Basin Flow" }],
   "documentary": [
-    { val: "doc_places", label: "🌍 Countries, Cities & Travel Tours (Oslo, London, Paris, Rome)" },
-    { val: "doc_beaches", label: "🏖️ Coastal Wonders, Beaches & Shorelines (Whitehaven, Seychelles, Amalfi)" },
-    { val: "doc_mountains", label: "🏔️ Mountains, Glaciers & Alpine Sanctuaries (Matterhorn, Dolomites, Rockies)" },
-    { val: "doc_nature", label: "🌲 Ancient Canopies, Rainforests & Ecology (Redwoods, Amazon, Olympic)" },
-    { val: "doc_ocean", label: "🌊 Oceans, Coral Reefs & Deep Abyssal Life (Coral Sea, Midnight Trench)" },
-    { val: "doc_desert", label: "🏜️ Deserts, Canyons & Arid Dunes (Sahara, Grand Canyon, Atacama)" },
-    { val: "doc_wildlife", label: "🦁 Wildlife, Predators & Animal Migrations (Serengeti, Arctic, Galápagos)" },
-    { val: "doc_architecture", label: "🏛️ Ancient Civilizations, Megaliths & Heritage (Pyramids, Dravidian, Petra)" }
+    { val: "blue_chip_doc", label: "🎥 Blue-Chip Documentary (Open / Any Topic • Pure Narrative Storytelling)" },
+    { val: "doc_architecture", label: "🏛️ Ancient Civilizations, History & Lost Empires" },
+    { val: "doc_nature", label: "🌲 Earth, Wilderness & Living Biospheres" },
+    { val: "doc_mountains", label: "🏔️ Mountains, Glaciers & Extreme Frontiers" },
+    { val: "doc_ocean", label: "🌊 Oceans, Coral Reefs & Deep Abyssal Life" },
+    { val: "doc_wildlife", label: "🦁 Wildlife, Predators & Animal Migrations" },
+    { val: "doc_desert", label: "🏜️ Deserts, Canyons & Arid Dunes" },
+    { val: "travel_itinerary_tour", label: "🗺️ Travel Itinerary Tour (Ordered Route, Day Plan & Connecting Map)" }
   ],
   "travel_walking": [{ val: "alpine_village_walk", label: "🏡 Swiss Alpine Countryside Walk (1.5 km/h)" }, { val: "rain_walking_tour", label: "🌧️ 4K Rain Walking Tour (Puddles & Wet Street Reflections)" }, { val: "city_walk_pov", label: "🏙️ 4K 60fps Historic City & Night Walk" }, { val: "coastal_promenade", label: "🏖️ Secluded Ocean Bluff Walk" }],
   "dance/folk": [{ val: "mass_folk_dance", label: "💃 High-Energy Mass Folk Dance (30fps)" }, { val: "classical_dance", label: "🪘 Cultural Classical Choreography" }],
@@ -202,6 +202,8 @@ const STUDIO_SUBGENRE_PLACEHOLDERS = {
   redwood_cathedral: "e.g. Ancient giant California Redwood grove cathedral with sunbeams piercing morning mist...",
   ambient_soundscape: "e.g. Majestic 4K nature living wallpaper with tranquil mountain valley morning glow...",
   twilight_sanctuary: "e.g. Ethereal twilight mountain sanctuary under soft purple skies and velvet stars...",
+  blue_chip_doc: "e.g. Enter any documentary topic: Indus Valley Civilization, The Roman Empire, Apollo 11 Lunar Missions, Deep Sea Trenches...",
+  travel_itinerary_tour: "e.g. London Tour, 3 Days (or Oslo Highlights, 2 Days) - Gemini curates top attractions, transit & day itinerary...",
   doc_places: "e.g. Oslo Tour, 2 Days (or London Tour, 3 Days - Gemini autonomously curates top attractions & route)...",
   doc_beaches: "e.g. Whitehaven Beach, Whitsunday Islands: 98% pure silica sands, shifting turquoise tides, and pristine barrier reefs...",
   doc_mountains: "e.g. Matterhorn & Zermatt, Swiss Alps: Titanic granite pyramid, glacial seracs, and high alpine weather frontiers...",
@@ -238,22 +240,25 @@ const STUDIO_ARCHETYPES_MAP = {
   "relax/zen": [{ val: "karesansui_temple", label: "🪷 Kyoto Raked Stone Garden" }, { val: "sagano_bamboo_basin", label: "🎋 Bamboo Grove & Basin" }, { val: "sacred_lotus_pond", label: "🪷 Sacred Lotus Pond & Koi" }],
   "relax/ambient": [{ val: "nordic_aurora_fjord", label: "🌌 Nordic Aurora Borealis" }, { val: "twilight_alpine_valley", label: "✨ Velvet Twilight Cabin" }, { val: "desert_oasis_starlight", label: "🏜️ Desert Oasis & Milky Way" }, { val: "biophilic_greenhouse", label: "🌿 Greenhouse & Velvet Rain" }],
   "documentary": [
+    { val: "open_topic_documentary", label: "🌐 Universal / Open Topic (Type anything in prompt box)" },
+    { val: "ancient_civilizations_history", label: "🏛️ Ancient Civilizations & World History (Indus Valley, Rome, Egypt, etc.)" },
+    { val: "giza_megalithic_pyramids", label: "🏛️ Ancient Giza & Megalithic Engineering" },
+    { val: "scotland_highlands_isles", label: "🏰 Scottish Highlands, Castles & Historic Isles" },
+    { val: "swiss_alps_valleys", label: "🏔️ Swiss Alps & Glacial Valleys (Lauterbrunnen / Zermatt)" },
+    { val: "iceland_volcanic_coasts", label: "🌋 Iceland: Land of Fire & Glacial Ice" },
+    { val: "pacific_northwest_redwoods", label: "🌲 Olympic Rainforest & Redwood Giants" },
+    { val: "serengeti_savannah_predators", label: "🦁 Serengeti Great Migration & Savannah" },
+    { val: "whitehaven_barrier_reef", label: "🏖️ Great Barrier Reef & Whitehaven Beach" },
+    { val: "amalfi_cliffside_mediterranean", label: "🌊 Amalfi Coast & Azure Sea Cliffs" },
+    { val: "sahara_dunes_canyons", label: "🏜️ Sahara Monumental Star Dunes" }
+  ],
+  "documentary:tour": [
     { val: "itinerary_map_tour", label: "🗺️ Itinerary Tour (Ordered Route, Day Plan & Connecting Map)" },
     { val: "grand_tour", label: "🏛️ Grand Tour (City Highlights, Plazas & Defining Vistas)" },
     { val: "top_attractions_tour", label: "⭐ Top Attractions Tour (Must-See Landmarks in Sequence)" },
     { val: "local_neighborhood_tour", label: "🏘️ Local Neighborhood Tour (Squares, Local Cafes & Hidden Gems)" },
     { val: "culinary_food_tour", label: "🍽️ Culinary & Food Tour (Historic Markets, Bakeries & Eateries)" },
-    { val: "heritage_history_tour", label: "🏰 Heritage & History Tour (Ancient Citadels, Fortresses & Old Towns)" },
-    { val: "architecture_design_tour", label: "📐 Architecture & Design Tour (Classical to Modernist Marvels)" },
-    { val: "swiss_alps_valleys", label: "🏔️ Swiss Alps & Glacial Valleys (Lauterbrunnen / Zermatt)" },
-    { val: "iceland_volcanic_coasts", label: "🌋 Iceland: Land of Fire & Glacial Ice" },
-    { val: "scotland_highlands_isles", label: "🏰 Scottish Highlands & Isle of Skye" },
-    { val: "whitehaven_barrier_reef", label: "🏖️ Great Barrier Reef & Whitehaven Beach" },
-    { val: "amalfi_cliffside_mediterranean", label: "🌊 Amalfi Coast & Azure Sea Cliffs" },
-    { val: "serengeti_savannah_predators", label: "🦁 Serengeti Great Migration & Savannah" },
-    { val: "pacific_northwest_redwoods", label: "🌲 Olympic Rainforest & Redwood Giants" },
-    { val: "sahara_dunes_canyons", label: "🏜️ Sahara Monumental Star Dunes" },
-    { val: "giza_megalithic_pyramids", label: "🏛️ Ancient Giza & Megalithic Egypt" }
+    { val: "architecture_design_tour", label: "📐 Architecture & Design Tour (Classical to Modernist Marvels)" }
   ],
   "travel_walking": [{ val: "rain_city_walk", label: "🌧️ 4K Rain Walking Tour" }, { val: "swiss_village_walk", label: "🏡 Swiss Alpine Village Lane" }, { val: "historic_old_town", label: "🏙️ Historic Old Town Street" }, { val: "coastal_bluff_trail", label: "🏖️ Coastline Cliffside Trail" }, { val: "bamboo_forest_path", label: "🎋 Bamboo Grove Walking Path" }],
   "dance/folk": [{ val: "village_jathara_square", label: "🎪 Village Fairground Stage" }, { val: "lush_paddy_fields", label: "🌾 Verdant Paddy Fields" }, { val: "historic_fort_courtyard", label: "🏛️ Ancient Stone Fort" }, { val: "modern_city_rooftop", label: "🌆 Neon City Rooftop Stage" }],
@@ -261,6 +266,8 @@ const STUDIO_ARCHETYPES_MAP = {
 };
 
 const STUDIO_ARCHETYPE_HINTS = {
+  open_topic_documentary: "e.g. Enter any documentary topic: Space Exploration, Quantum Computing, Renaissance Philosophy, Deep Ocean Trenches, Silk Road...",
+  ancient_civilizations_history: "e.g. Indus Valley Civilization 2500 BCE: Mohenjo-daro & Harappa urban planning, Great Bath, trade networks...",
   living_impressionism: "e.g. Masterpiece living oil painting with visible textured brushstrokes, gently rippling water lilies, and Debussy piano...",
   grand_gallery: "e.g. Elegant high-ceilinged museum gallery at twilight, warm gallery spotlights illuminating gilded oil canvases, peaceful reverb...",
   artist_atelier: "e.g. Sunbeams cutting through a Paris rooftop artist loft, wooden easels, paint palettes, resting oil canvases, warm dust motes...",

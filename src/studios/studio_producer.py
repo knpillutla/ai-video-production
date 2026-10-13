@@ -123,9 +123,12 @@ class StudioProducer:
                 "approx_leg_cost": getattr(nxt_tr, "approx_leg_cost", None) or getattr(s, "approx_leg_cost", None),
             })
 
+        from src.studios.documentary_studio.doc_directorial_prompt import is_tour_archetype
+        is_itinerary_tour = is_tour_archetype(getattr(sb, "archetype", "") or getattr(sb, "sub_genre", "") or "")
+
         for idx, s in enumerate(sb.scenes, 1):
             target_kf = ep_dir / f"keyframe_p{idx}.jpg"
-            if getattr(s, "is_vacation_scope", False):
+            if is_itinerary_tour and getattr(s, "is_vacation_scope", False):
                 from src.services.map_route_engine import render_4k_leisure_vacation_card
                 render_4k_leisure_vacation_card(
                     tour_title=sb.title,
@@ -133,9 +136,8 @@ class StudioProducer:
                     force_rerun=force_rerun,
                 )
                 map_rendered_paths[idx] = target_kf
-            elif (
-                idx == 1
-                or getattr(s, "is_itinerary_summary", False)
+            elif is_itinerary_tour and (
+                getattr(s, "is_itinerary_summary", False)
                 or getattr(s, "is_itinerary_overview", False)
                 or getattr(s, "shot_type", "") in ("itinerary_overview_card", "itinerary_summary_card")
             ) and (getattr(sb, "itinerary_summary", None) or tour_stops):
@@ -148,7 +150,7 @@ class StudioProducer:
                     force_rerun=force_rerun,
                 )
                 map_rendered_paths[idx] = target_kf
-            elif getattr(s, "is_map_transition", False) and getattr(s, "origin_coords", None) and getattr(s, "destination_coords", None):
+            elif is_itinerary_tour and getattr(s, "is_map_transition", False) and getattr(s, "origin_coords", None) and getattr(s, "destination_coords", None):
                 prior_attrs = sum(1 for ps in sb.scenes[:idx - 1] if not (getattr(ps, "is_map_transition", False) or getattr(ps, "is_itinerary_overview", False) or getattr(ps, "is_itinerary_summary", False) or getattr(ps, "is_vacation_scope", False)))
                 render_4k_route_map(
                     origin_name=s.origin_name or "Origin",
@@ -231,10 +233,13 @@ class StudioProducer:
                         sc.duration_seconds = max(float(sc.duration_seconds or 0.0), float(n_dur))
                     tot_d = sum(float(sc.duration_seconds) for sc in sb.scenes)
                     if hasattr(sb, "total_duration"): sb.total_duration = tot_d
-                    if hasattr(sb, "total_duration_seconds"): sb.total_duration_seconds = tot_d
+                if not voice_path.is_file() or voice_path.stat().st_size < 1000:
+                    raise RuntimeError(f"Narration voiceover master '{voice_path.name}' was not created or is empty.")
                 log_pipeline_step("checking audio", "Spoken Narration Voiceover", "completed", "narration synchronized and shot durations locked", {"file": voice_path.name, "total_duration": getattr(sb, "total_duration", None)})
             except Exception as tts_err:
-                logger.warning(f"tts_voiceover_failed: {tts_err}")
+                log_pipeline_step("checking audio", "Spoken Narration Voiceover", "failed", str(tts_err), {"file": voice_path.name})
+                logger.error(f"tts_voiceover_failed: {tts_err}")
+                raise RuntimeError(f"Documentary voiceover narration synthesis failed: {tts_err}") from tts_err
 
         # Acoustic Foley & Brown Noise Mastering Gate
         audio_stems = []
@@ -373,7 +378,7 @@ class StudioProducer:
                             "transit_text": trans_t,
                         }
 
-                        choreo = local_cfg.get("movement") or s.motion_prompt or "slow_pan"
+                        choreo = local_cfg.get("movement") or getattr(s, "drone_choreography", None) or getattr(s, "camera_movement", None) or "dollyin"
                         coro = render_perspective_drone_clip(
                             image_path=kf,
                             output_path=out_clip,

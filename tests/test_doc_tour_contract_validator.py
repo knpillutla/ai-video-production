@@ -175,3 +175,19 @@ def test_tour_contract_fails_when_attraction_cost_missing():
 
     with pytest.raises(ValueError, match="Missing 'attraction_cost'"):
         validate_tour_screenplay_contract(invalid_payload)
+
+
+def test_tour_archetype_restriction():
+    from src.studios.documentary_studio.doc_directorial_prompt import is_tour_archetype
+
+    # Only itinerary_map_tour should be a tour archetype requiring maps and routes
+    assert is_tour_archetype("itinerary_map_tour") is True
+    assert is_tour_archetype("ITINERARY_MAP_TOUR") is True
+
+    # History, grand tour, attractions, nature, etc. must NOT be tour map archetypes
+    assert is_tour_archetype("heritage_history_tour") is False
+    assert is_tour_archetype("grand_tour") is False
+    assert is_tour_archetype("top_attractions_tour") is False
+    assert is_tour_archetype("architecture_design_tour") is False
+    assert is_tour_archetype("wildlife") is False
+    assert is_tour_archetype("ancient_structures") is False

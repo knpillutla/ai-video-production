@@ -43,7 +43,8 @@ def build_base_directorial_prompt(
     )
     is_documentary = "doc" in g_lower or "documentary" in ch_lower or "doc" in (sub_genre or "").lower() or "documentary" in a_lower
 
-    is_tour = "tour" in a_lower or "itinerary" in a_lower or "doc_places" in (sub_genre or "").lower()
+    tour_archetypes = {"itinerary_map_tour", "travel_itinerary_tour"}
+    is_tour = (a_lower in tour_archetypes) or ((sub_genre or "").lower().strip() in tour_archetypes)
     user_chose_fixed_shots = (num_shots is not None and num_shots > 0 and num_shots != -1)
     if user_chose_fixed_shots:
         eff_shots = num_shots
@@ -137,13 +138,12 @@ def build_base_directorial_prompt(
         ex_rationale = "100% local 4K perspective drone flight via ken_burns compound choreography ($0.00 compute)."
         rig_palette = '["heavy_lift_cine_drone", "technocrane_jib", "stabilized_steadicam_gimbal", "motorized_cine_slider"]'
         default_rig = "heavy_lift_cine_drone"
-        default_cam_move = "slow_drone_forward"
+        default_cam_move = "stay" if is_nature_relax else "dollyin"
         cam_contract = (
-            "4. CAMERA RIG & TRAJECTORY DIRECTORIAL CONTRACT (ANTI-MONOTONY):\n"
-            "   - Gemini autonomously directs 'camera_rig' and 'camera_movement' based on architectural lines and vista scale.\n"
-            "   - 'camera_rig': heavy_lift_cine_drone, technocrane_jib, stabilized_steadicam_gimbal, motorized_cine_slider.\n"
-            "   - 'camera_movement': compound 3D flight (e.g. 'dollyin', 'orbit_wrap_left', parallel ['dollyin', 'pan-left'], or stages).\n"
-            "   - ANTI-MONOTONY GUARD: Rotate rigs and trajectories across consecutive scenes to eliminate visual repetition."
+            "4. CAMERA RIG & MOTION DIRECTORIAL CONTRACT:\n"
+            "   - For AI diffusion models (kling, wan), camera motion is directed in natural language in their prompts.\n"
+            "   - For local drone ('model_configs.local_drone'), motion MUST use supported engine movements: 'stay', 'dollyin', 'dollyout', 'pan-left', 'pan-right', 'tilt-up', 'tilt-down', 'drift-up-right', 'drift-up-left', 'drift-down-right', 'drift-down-left', 'orbit-left', 'orbit-right', or stage arrays.\n"
+            "   - Root 'camera_movement' MUST mirror the primary movement string ('stay', 'dollyin', 'pan-right', etc.)."
         )
 
     root_ext = f"{extra_root_schema.strip()}\n" if extra_root_schema and extra_root_schema.strip() else ""
@@ -174,7 +174,9 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
    - DIRECTORIAL RULE: If a scene requires more narrative context or transit explanation, Gemini MUST INCREASE 'duration_seconds' to match: required_duration = (word_count / {speech_words_per_sec:.2f}) + 1.5s pause. Never truncate narration or rush speech!
 
 6. MULTI-MODEL PROMPTS ("image_model_configs" & "model_configs"):
-   - Author model-tailored positive/negative prompts for "kling_v1_6_pro", "wan_2_1", and "local_drone". For relaxation, "local_drone" MUST be pure locked: {{"movement": "stay"}}. For documentary/travel, "local_drone" MUST specify dynamic movements: "dollyin", "zoomin", "pan-right", or parallel compound stages [{{"stage": 1, "duration": 5.0, "movements": ["dollyin", "pan-right"]}}].
+   - For AI models ("kling_v1_6_pro", "wan_2_1"): camera/atmospheric motion is directed in natural language within their prompt text.
+   - For "local_drone": camera flight capabilities MUST be specified inside "model_configs.local_drone":
+     * Single movement: "movement": "dollyin"|"pan-right"|"orbit-left" (or stage arrays), "start_pan": "center"|"left"|"right", "start_zoom": "normal"|"wide"|"in", "curve": "cosine". For relaxation format, strictly "movement": "stay".
 
 7. MANDATORY NEGATIVE PROMPT:
    - For Pure Wilderness: "clouds, cloudy, overcast sky, moving clouds, timelapse clouds, camera shake, jitter, rapid motion, flickering, temporal jump, parched, frozen ice, stagnant water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings".
@@ -259,15 +261,11 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
       "model_configs": {{
         "wan_2_1": {{"model": "fal-ai/wan-i2v", "prompts": {{"positive_prompt": "Smooth fluid motion.", "negative_prompt": "camera shake, artifacts"}}, "settings": {{"guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9"}}}},
         "kling_v1_6_pro": {{"model": "fal-ai/kling-video/v1.6/pro/image-to-video", "prompts": {{"positive_prompt": "Cinematic visual grandeur.", "negative_prompt": "camera shake, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}},
-        "local_drone": {{"model": "local_perspective_drone", "movement": "stay", "start_pan": "center", "start_zoom": "normal", "curve": "cosine", "rationale": "Pure locked stationary tripod framing"}}
+        "local_drone": {{"model": "local_perspective_drone", "movement": "{'stay' if is_nature_relax else 'dollyin'}", "start_pan": "center", "start_zoom": "normal", "curve": "cosine", "rationale": "{ex_rationale}"}}
       }},
       "domain": "landscape_solid",
       "motion_type": "{ex_motion_type}",
       "camera_movement": "{default_cam_move}",
-      "camera_waypoints": [
-        {{"motion": "slow_drone_forward", "duration_seconds": 6.0}},
-        {{"motion": "orbit_wrap_left", "duration_seconds": 4.0}}
-      ],
       "kinetic_micro_zones": {{ "sprites": [], "tree_sway_zones": [], "water_zones": [] }},
       "motion_rationale": "{ex_rationale}",
       "duration_seconds": {per_shot_dur},

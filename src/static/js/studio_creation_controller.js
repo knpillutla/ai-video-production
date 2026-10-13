@@ -300,11 +300,31 @@ function updateArchetypeOptions(genreVal, subGenreVal) {
   if (!archSelector) return;
 
   const archMap = (typeof STUDIO_ARCHETYPES_MAP !== "undefined") ? STUDIO_ARCHETYPES_MAP : {};
-  const list = archMap[genreVal] || archMap["relax/nature"] || [];
+  let list = [];
+
+  if (genreVal === "documentary") {
+    if (subGenreVal === "travel_itinerary_tour" || subGenreVal === "doc_places") {
+      list = archMap["documentary:tour"] || [];
+    } else {
+      list = archMap["documentary"] || [];
+    }
+  } else {
+    list = archMap[genreVal] || archMap["relax/nature"] || [];
+  }
   
   archSelector.innerHTML = list.map(item => `<option value="${item.val}">${item.label}</option>`).join("");
   
-  if (subGenreVal && (subGenreVal.includes("bedroom") || subGenreVal.includes("cabin"))) {
+  if (genreVal === "documentary") {
+    if (subGenreVal === "doc_architecture") {
+      const match = list.find(x => x.val === "ancient_civilizations_history");
+      if (match) archSelector.value = match.val;
+    } else if (subGenreVal === "travel_itinerary_tour") {
+      const match = list.find(x => x.val === "itinerary_map_tour");
+      if (match) archSelector.value = match.val;
+    } else {
+      archSelector.value = list[0]?.val || "";
+    }
+  } else if (subGenreVal && (subGenreVal.includes("bedroom") || subGenreVal.includes("cabin"))) {
     const match = list.find(x => x.val.includes("bedroom") || x.val.includes("cabin"));
     if (match) archSelector.value = match.val;
   } else {
@@ -569,7 +589,7 @@ function filterChannelArchive() {
           </div>
           <div class="flex items-center gap-1 shrink-0">
             ${badge}
-            <button type="button" onclick="event.stopPropagation(); deleteStudioEpisode('${ep.episode_id}', event, '${ep.channel_id}', '${ep.format || ''}', '${ep.production_name || ''}');" class="p-1 text-slate-400 hover:text-red-600 rounded transition" title="Delete Episode"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+            <button type="button" onclick="event.stopPropagation(); deleteStudioEpisode('${ep.episode_id}', event, '${ep.channel_id}', '${ep.format || ''}', '${ep.production_name || ''}', '${ep.storage_path || ''}', '${(ep.title || '').replace(/'/g, "\\'")}');" class="p-1 text-slate-400 hover:text-red-600 rounded transition" title="Delete Episode"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
           </div>
         </div>
         <div>
@@ -704,47 +724,24 @@ function selectArchiveEpisode(epId, chId, formatSlug, prodName) {
   filterChannelArchive();
 }
 
-async function deleteStudioEpisode(epId, event, channelId) {
+function deleteStudioEpisode(epId, event, channelId, formatSlug, productionName, storagePath, title) {
   if (event) event.stopPropagation();
-  const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
-  const vid = findStudioEpisodeById(epId, channelId);
-  const chSlug = channelId || vid?.channelId || vid?.channel_id || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : null);
-  if (!chSlug) return;
-  const normEpId = String(epId || "").toLowerCase().trim();
-  try {
-    await fetch(`/api/production/episodes/${epId}?channel_id=${chSlug}&user_id=${encodeURIComponent(uEmail)}`, { method: "DELETE" });
-  } catch (e) { console.warn("Delete episode request notice:", e); }
-  if (Array.isArray(studioVideos)) {
-    studioVideos = studioVideos.filter(x => {
-      const xId = String(x.id || x.episode_id || "").toLowerCase().trim();
-      const xCh = x.channelId || x.channel_id || "earth_serenade";
-      return !(xId === normEpId && (xCh === chSlug || chSlug === "all"));
-    });
+  if (typeof promptDeleteEpisode === "function") {
+    promptDeleteEpisode(epId, channelId, formatSlug, productionName, storagePath, title);
   }
-  channelArchiveEpisodes = channelArchiveEpisodes.filter(x => {
-    const xId = String(x.id || x.episode_id || "").toLowerCase().trim();
-    const xCh = x.channelId || x.channel_id;
-    return !(xId === normEpId && (xCh === chSlug || chSlug === "all"));
-  });
-  if (typeof saveVideosState === "function") saveVideosState();
-  if (typeof renderStudioVideoHistory === "function") renderStudioVideoHistory();
-  filterChannelArchive();
-  if (currentActiveInspectorEpisode) {
-    const curId = String(currentActiveInspectorEpisode.id || currentActiveInspectorEpisode.episode_id || "").toLowerCase().trim();
-    if (curId === normEpId) {
-      if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
-    }
-  }
-  if (typeof fetchAndPopulateExistingSeries === "function" && typeof activeStudioFormat !== "undefined") {
-    fetchAndPopulateExistingSeries(chSlug, activeStudioFormat);
-  }
-  if (typeof showProfileStatusToast === "function") showProfileStatusToast(`Episode ${epId} deleted.`);
 }
 
 function deleteActiveInspectorEpisode() {
   if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) {
     const epId = currentActiveInspectorEpisode.id || currentActiveInspectorEpisode.episode_id;
-    if (epId && epId !== "NEW") deleteStudioEpisode(epId, null, currentActiveInspectorEpisode.channelId || currentActiveInspectorEpisode.channel_id);
+    const chSlug = currentActiveInspectorEpisode.channelId || currentActiveInspectorEpisode.channel_id;
+    const fmt = currentActiveInspectorEpisode.format || currentActiveInspectorEpisode.format_slug;
+    const prod = currentActiveInspectorEpisode.production_name;
+    const path = currentActiveInspectorEpisode.storage_path || currentActiveInspectorEpisode.storagePath;
+    const ttl = currentActiveInspectorEpisode.title || currentActiveInspectorEpisode.story_topic;
+    if (epId && epId !== "NEW") {
+      deleteStudioEpisode(epId, null, chSlug, fmt, prod, path, ttl);
+    }
   }
 }
 

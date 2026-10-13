@@ -98,10 +98,16 @@ def validate_tour_screenplay_contract(data: Dict[str, Any]) -> None:
 
         # Coordinate checks
         if is_info_slide:
-            if not sc.get("origin_coords") and first_coords:
-                sc["origin_coords"] = first_coords
-            if not sc.get("destination_coords") and last_coords:
-                sc["destination_coords"] = last_coords
+            origin_coords = sc.get("origin_coords")
+            if not origin_coords or not isinstance(origin_coords, (list, tuple)) or len(origin_coords) < 2:
+                raise ValueError(
+                    f"Tour Contract Violation in Scene {idx}: 'origin_coords' is missing or invalid (expected [lat, lon] floats, got {origin_coords})."
+                )
+            destination_coords = sc.get("destination_coords")
+            if not destination_coords or not isinstance(destination_coords, (list, tuple)) or len(destination_coords) < 2:
+                raise ValueError(
+                    f"Tour Contract Violation in Scene {idx}: 'destination_coords' is missing or invalid (expected [lat, lon] floats, got {destination_coords})."
+                )
         elif is_map_trans:
             origin_coords = sc.get("origin_coords")
             if not origin_coords or not isinstance(origin_coords, (list, tuple)) or len(origin_coords) < 2:

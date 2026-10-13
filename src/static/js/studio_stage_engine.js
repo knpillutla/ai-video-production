@@ -319,7 +319,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
             : (typeof activeShotsCount !== "undefined" ? activeShotsCount : -1);
         })(),
         long_play_hours: (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "prod")
-          ? parseFloat(document.getElementById("studio-stretch-hours")?.value || "3.0")
+          ? ((typeof getEffectiveProductionDuration === "function") ? getEffectiveProductionDuration().lpHours : (parseFloat(document.getElementById("studio-stretch-hours")?.value) || 0.0))
           : (typeof activeBroadcastHours !== "undefined" ? activeBroadcastHours : (vid.longPlayHours || 0)),
         camera_motion: (function() {
           const g = ((document.getElementById("studio-genre-selector")?.value) || vid.genre || "").toLowerCase();

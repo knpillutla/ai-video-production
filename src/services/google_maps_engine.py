@@ -1,9 +1,9 @@
 """Google Maps 4K Itinerary & Route Cartography Engine.
 
 Renders broadcast-grade 4K travel maps exclusively via Google Maps Static API.
-Overlays glowing route paths, strictly sequenced pins starting at 1, non-overlapping
-name callout tags (top/bottom outside the pin), and on-route transit badges with
-walk/drive distance (km and miles) and local Uber cost.
+Overlays glowing route paths, sequenced pins starting at 1, collision-free
+cardinal attraction callout cards (outside route and pins), and perpendicular
+on-route transit badges.
 Strict Zero-Fallback Policy: Any API key failure or HTTP error raises RuntimeError.
 """
 
@@ -24,24 +24,12 @@ from src.services.google_maps_client import (
     get_google_maps_api_key,
     lat_lon_to_canvas_pixel,
 )
-
-
-def format_dual_distance(dist_str_or_val: Any) -> str:
-    """Formats distance with both kilometers and miles, e.g. '2.8 km (1.7 mi)'."""
-    if not dist_str_or_val:
-        return "1.5 km (0.9 mi)"
-    txt = str(dist_str_or_val).strip()
-    if "mi" in txt.lower():
-        return txt
-    m = re.search(r"([\d\.]+)\s*(?:km)?", txt, re.IGNORECASE)
-    if m:
-        try:
-            km = float(m.group(1))
-            miles = km * 0.621371
-            return f"{km:.1f} km ({miles:.1f} mi)"
-        except Exception:
-            pass
-    return f"{txt} km"
+from src.services.map_callout_layout import (
+    filter_valid_tour_stops,
+    format_dual_distance,
+    solve_callout_positions,
+    solve_transit_badge_position,
+)
 
 
 def render_4k_google_itinerary_map(
@@ -67,48 +55,7 @@ def render_4k_google_itinerary_map(
     api_key = get_google_maps_api_key()
     w, h = target_res
 
-    # Deduplicate and extract physical stops starting strictly at 1
-    coords: List[Tuple[float, float]] = []
-    valid_stops: List[Dict[str, Any]] = []
-    seen = set()
-
-    for s in stops:
-        if (
-            s.get("is_itinerary_overview")
-            or s.get("is_itinerary_summary")
-            or s.get("is_vacation_scope")
-            or s.get("is_map_transition")
-        ):
-            continue
-        c = s.get("coords") or s.get("origin_coords")
-        if c and isinstance(c, (list, tuple)) and len(c) >= 2:
-            try:
-                lat, lon = round(float(c[0]), 5), round(float(c[1]), 5)
-                name = s.get("name") or s.get("attraction_name") or s.get("origin_name")
-                key = (lat, lon)
-                if not name or key in seen:
-                    continue
-                seen.add(key)
-                coords.append((lat, lon))
-                valid_stops.append({**s, "coords": (lat, lon), "name": name})
-            except (ValueError, TypeError):
-                continue
-
-    # Fallback to direct coords if strict filter returned fewer than 2 stops
-    if len(valid_stops) < 2:
-        coords.clear()
-        valid_stops.clear()
-        seen.clear()
-        for s in stops:
-            c = s.get("coords") or s.get("origin_coords")
-            if c and isinstance(c, (list, tuple)) and len(c) >= 2:
-                lat, lon = round(float(c[0]), 5), round(float(c[1]), 5)
-                if (lat, lon) in seen:
-                    continue
-                seen.add((lat, lon))
-                coords.append((lat, lon))
-                valid_stops.append({**s, "coords": (lat, lon)})
-
+    coords, valid_stops = filter_valid_tour_stops(stops)
     if not coords:
         raise ValueError("Google Maps Error: No valid GPS coordinates found in tour stops.")
 
@@ -116,17 +63,12 @@ def render_4k_google_itinerary_map(
     completed_coords = coords[:curr_idx] if curr_idx > 1 else []
     upcoming_coords = coords[curr_idx - 1:] if curr_idx <= len(coords) else []
 
-    # 1. Compute bounds & zoom
     center_lat, center_lon, zoom = calculate_bounds_and_zoom(coords, map_w=640, map_h=360)
-
-    # 2. Fetch Google Maps base layer with progressive two-tone paths
     base_bgr = fetch_google_static_map(
         center_lat, center_lon, zoom,
         path_coords=coords, api_key=api_key,
         completed_coords=completed_coords, upcoming_coords=upcoming_coords,
     )
-
-    # 3. Super-resolve base layer to 4K
     canvas = cv2.resize(base_bgr, (w, h), interpolation=cv2.INTER_CUBIC)
 
     pixel_pts: List[Tuple[int, int]] = [
@@ -134,7 +76,7 @@ def render_4k_google_itinerary_map(
         for lat, lon in coords
     ]
 
-    # 4. Draw glowing route polylines on 4K canvas (Green = Completed, Blue = Upcoming)
+    # Draw glowing route polylines on 4K canvas (Green = Completed, Blue = Upcoming)
     if curr_idx > 1 and len(pixel_pts[:curr_idx]) >= 2:
         cv_comp = np.array(pixel_pts[:curr_idx], dtype=np.int32)
         cv2.polylines(canvas, [cv_comp], isClosed=False, color=(50, 180, 80), thickness=24, lineType=cv2.LINE_AA)
@@ -147,124 +89,129 @@ def render_4k_google_itinerary_map(
         cv2.polylines(canvas, [cv_upc], isClosed=False, color=(240, 120, 20), thickness=14, lineType=cv2.LINE_AA)
         cv2.polylines(canvas, [cv_upc], isClosed=False, color=(255, 245, 220), thickness=5, lineType=cv2.LINE_AA)
 
-    # 5. PIL Typography setup
     pil_img = Image.fromarray(cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(pil_img)
 
     try:
-        font_large = ImageFont.truetype("arialbd.ttf", 46)
-        font_card_title = ImageFont.truetype("arialbd.ttf", 34)
-        font_card_sub = ImageFont.truetype("arial.ttf", 26)
-        font_badge_num = ImageFont.truetype("arialbd.ttf", 28)
-        font_header_sub = ImageFont.truetype("arialbd.ttf", 28)
-        font_leg_badge = ImageFont.truetype("arialbd.ttf", 26)
+        font_large = ImageFont.truetype("arialbd.ttf", 44)
+        font_card_title = ImageFont.truetype("arialbd.ttf", 22)
+        font_card_sub = ImageFont.truetype("arial.ttf", 16)
+        font_badge_num = ImageFont.truetype("arialbd.ttf", 24)
+        font_header_sub = ImageFont.truetype("arialbd.ttf", 24)
+        font_leg_badge = ImageFont.truetype("arialbd.ttf", 20)
     except Exception:
         font_large = font_card_title = font_card_sub = font_badge_num = font_header_sub = font_leg_badge = ImageFont.load_default()
 
-    # 6. Render On-Route Transit Badges Between Consecutive Stops
-    for idx in range(len(pixel_pts) - 1):
-        p1, p2 = pixel_pts[idx], pixel_pts[idx + 1]
-        mid_x, mid_y = int((p1[0] + p2[0]) / 2.0), int((p1[1] + p2[1]) / 2.0)
-        curr_stop = valid_stops[idx]
+    hud_x, hud_y, hud_w, hud_h = 100, 80, 1040, 240
+    hud_box = (hud_x, hud_y, hud_x + hud_w, hud_y + hud_h)
 
-        dist_raw = curr_stop.get("distance_local") or "1.5 km"
-        dual_dist = format_dual_distance(dist_raw)
-        t_mode = str(curr_stop.get("transit_mode") or "walk").lower()
-        t_dur = str(curr_stop.get("transit_duration") or "").lower()
-
-        dist_m = re.search(r"([\d\.]+)", str(dist_raw))
-        dist_km_val = float(dist_m.group(1)) if dist_m else 1.0
-        dur_m = re.search(r"(\d+)\s*min", t_dur)
-        walk_mins_val = int(dur_m.group(1)) if (dur_m and "walk" in t_dur) else int(dist_km_val * 12.5)
-
-        # Enforce Hard 10-min / 0.8 km walk ceiling: switch to Drive if exceeded
-        if "walk" in t_mode and (dist_km_val > 0.8 or walk_mins_val > 10):
-            t_mode = "drive"
-
-        mode_icon = "🚶 Walk" if "walk" in t_mode else "🚕 Drive"
-        leg_cost = curr_stop.get("approx_leg_cost") or ("Free (walk)" if "walk" in t_mode else "£8–£12 Uber")
-        if "walk" not in t_mode and ("free" in leg_cost.lower() or not any(ch.isdigit() for ch in leg_cost)):
-            leg_cost = "£8–£12 Uber"
-        elif "uber" not in leg_cost.lower() and "free" not in leg_cost.lower() and "walk" not in leg_cost.lower():
-            leg_cost = f"{leg_cost} Uber"
-
-        is_done_leg = idx < (curr_idx - 1)
-        is_act_leg = idx == (curr_idx - 1)
-        prefix = "✓ " if is_done_leg else ("▶ " if is_act_leg else "")
-        badge_border = (46, 204, 113) if is_done_leg else ((0, 210, 255) if is_act_leg else (50, 75, 105))
-        badge_str = f"{prefix}{mode_icon} • {dual_dist} • {leg_cost}"
-
-        bbox = draw.textbbox((0, 0), badge_str, font=font_leg_badge)
-        bw, bh = bbox[2] - bbox[0] + 36, bbox[3] - bbox[1] + 18
-        bx1 = max(100, min(w - bw - 100, mid_x - bw // 2))
-        by1 = max(100, min(h - bh - 100, mid_y - bh // 2 - 16))
-        bx2, by2 = bx1 + bw, by1 + bh
-
-        draw.rectangle([bx1, by1, bx2, by2], fill=(16, 22, 34), outline=badge_border, width=2)
-        txt_fill = (220, 255, 230) if is_done_leg else ((255, 235, 140) if is_act_leg else (200, 215, 235))
-        draw.text((bx1 + 18, by1 + 8), badge_str, fill=txt_fill, font=font_leg_badge)
-
-    # 7. Render Pins & Smart Non-Overlapping Callout Tags (Starting Strictly at 1)
-    pin_radius = 32
+    # Prepare labels and measure card dimensions
+    card_sizes: List[Tuple[int, int]] = []
+    card_data: List[Tuple[str, str]] = []
+    pin_radius = 28
     for idx, (px, py) in enumerate(pixel_pts):
-        stop_data = valid_stops[idx]
         stop_num = idx + 1
-        stop_name = (
-            stop_data.get("name")
-            or stop_data.get("attraction_name")
-            or stop_data.get("origin_name")
-            or f"Stop {stop_num}"
-        )
-        cost_str = stop_data.get("attraction_cost") or ""
-        duration_str = stop_data.get("visit_duration") or stop_data.get("start_time") or ""
+        sdata = valid_stops[idx]
+        sname = sdata.get("name") or sdata.get("attraction_name") or f"Stop {stop_num}"
+        cost_str = sdata.get("attraction_cost") or ""
+        dur_str = sdata.get("visit_duration") or sdata.get("start_time") or ""
 
+        tag_title = f"{stop_num}. {sname[:30]}"
+        detail_line = " • ".join(filter(None, [dur_str, cost_str]))[:34]
+
+        tb = draw.textbbox((0, 0), tag_title, font=font_card_title)
+        tw = tb[2] - tb[0]
+        if detail_line:
+            sb = draw.textbbox((0, 0), detail_line, font=font_card_sub)
+            tw = max(tw, sb[2] - sb[0])
+        cw = max(220, min(420, tw + 36))
+        ch = 60 if detail_line else 42
+        card_sizes.append((cw, ch))
+        card_data.append((tag_title, detail_line))
+
+    route_segments = [(pixel_pts[i], pixel_pts[i + 1]) for i in range(len(pixel_pts) - 1)]
+
+    # Compute optimal collision-free placements outside the route and outside all pins
+    placements = solve_callout_positions(
+        pixel_pts, pin_radius, card_sizes, route_segments, hud_box, canvas_w=w, canvas_h=h
+    )
+    placed_boxes = [p[0] for p in placements]
+
+    # Render on-route transit badge for active leg, offset perpendicularly so route remains 100% visible
+    act_leg_idx = (curr_idx - 2) if curr_idx > 1 else 0
+    if 0 <= act_leg_idx < len(pixel_pts) - 1:
+        p1, p2 = pixel_pts[act_leg_idx], pixel_pts[act_leg_idx + 1]
+        c_stop = valid_stops[act_leg_idx]
+        d_raw = c_stop.get("distance_local") or "1.5 km"
+        dual_d = format_dual_distance(d_raw)
+        t_m = str(c_stop.get("transit_mode") or "walk").lower()
+        t_d = str(c_stop.get("transit_duration") or "").lower()
+
+        dm = re.search(r"([\d\.]+)", str(d_raw))
+        d_km = float(dm.group(1)) if dm else 1.0
+        dur_m = re.search(r"(\d+)\s*min", t_d)
+        w_mins = int(dur_m.group(1)) if (dur_m and "walk" in t_d) else int(d_km * 12.5)
+
+        if "walk" in t_m and (d_km > 0.8 or w_mins > 10):
+            t_m = "drive"
+
+        m_icon = "🚶 Walk" if "walk" in t_m else "🚕 Drive"
+        l_cost = c_stop.get("approx_leg_cost") or ("Free (walk)" if "walk" in t_m else "£8–£12 Uber")
+        if "walk" not in t_m and ("free" in l_cost.lower() or not any(ch.isdigit() for ch in l_cost)):
+            l_cost = "£8–£12 Uber"
+        elif "uber" not in l_cost.lower() and "free" not in l_cost.lower() and "walk" not in l_cost.lower():
+            l_cost = f"{l_cost} Uber"
+
+        badge_str = f"▶ {m_icon} • {dual_d} • {l_cost}"
+        b_box = draw.textbbox((0, 0), badge_str, font=font_leg_badge)
+        bw, bh = b_box[2] - b_box[0] + 30, b_box[3] - b_box[1] + 16
+
+        transit_badge_box = solve_transit_badge_position(
+            p1, p2, bw, bh, route_segments, pin_radius, pixel_pts, placed_boxes, hud_box, canvas_w=w, canvas_h=h
+        )
+        if transit_badge_box:
+            bx1, by1, bx2, by2 = transit_badge_box
+            draw.rectangle([bx1, by1, bx2, by2], fill=(16, 22, 34), outline=(0, 210, 255), width=2)
+            draw.text((bx1 + 15, by1 + 6), badge_str, fill=(255, 235, 140), font=font_leg_badge)
+
+    # Render Anchor Lines and Attraction Callout Boxes
+    for idx, (px, py) in enumerate(pixel_pts):
+        stop_num = idx + 1
         is_done = stop_num < curr_idx
         is_curr = stop_num == curr_idx
-        pin_color_rgb = (46, 204, 113) if (is_done or is_curr) else (37, 99, 235)
-        ring_color = (255, 215, 0) if is_curr else (255, 255, 255)
+        pin_rgb = (46, 204, 113) if (is_done or is_curr) else (37, 99, 235)
+        ring_col = (255, 215, 0) if is_curr else (255, 255, 255)
 
-        # Draw Pin Badge Circle (Never covered by tags)
-        draw.ellipse([px - pin_radius - 6, py - pin_radius - 6, px + pin_radius + 6, py + pin_radius + 6], fill=(0, 0, 0, 180))
-        draw.ellipse([px - pin_radius, py - pin_radius, px + pin_radius, py + pin_radius], fill=pin_color_rgb, outline=ring_color, width=5 if is_curr else 4)
+        (bx1, by1, bx2, by2), (sx, sy), (ex, ey) = placements[idx]
+        tag_title, detail_line = card_data[idx]
+
+        draw.line([(sx, sy), (ex, ey)], fill=ring_col if is_curr else pin_rgb, width=3)
+
+        tag_border = (255, 215, 0) if is_curr else ((46, 204, 113) if is_done else (0, 210, 255))
+        draw.rectangle([bx1, by1, bx2, by2], fill=(16, 22, 34), outline=tag_border, width=2)
+        draw.rectangle([bx1, by1, bx1 + 6, by2], fill=pin_rgb)
+
+        draw.text((bx1 + 14, by1 + 8), tag_title, fill=(255, 255, 255), font=font_card_title)
+        if detail_line:
+            draw.text((bx1 + 14, by1 + 33), detail_line, fill=(255, 215, 0), font=font_card_sub)
+
+    # Render Pins (Circles with Numbers strictly starting at 1)
+    for idx, (px, py) in enumerate(pixel_pts):
+        stop_num = idx + 1
+        is_done = stop_num < curr_idx
+        is_curr = stop_num == curr_idx
+        pin_rgb = (46, 204, 113) if (is_done or is_curr) else (37, 99, 235)
+        ring_col = (255, 215, 0) if is_curr else (255, 255, 255)
+
+        draw.ellipse([px - pin_radius - 5, py - pin_radius - 5, px + pin_radius + 5, py + pin_radius + 5], fill=(0, 0, 0, 180))
+        draw.ellipse([px - pin_radius, py - pin_radius, px + pin_radius, py + pin_radius], fill=pin_rgb, outline=ring_col, width=4 if is_curr else 3)
 
         num_str = str(stop_num)
         bbox = draw.textbbox((0, 0), num_str, font=font_badge_num)
         nw, nh = bbox[2] - bbox[0], bbox[3] - bbox[1]
         draw.text((px - nw / 2.0, py - nh / 2.0 - 2), num_str, fill=(255, 255, 255), font=font_badge_num)
 
-        # Smart Non-Overlapping Position (Alternate Top and Bottom outside pin)
-        tag_w = 460
-        tag_h = 92 if (cost_str or duration_str) else 62
-
-        place_top = (idx % 2 == 0)
-        if py < 350:
-            place_top = False
-        elif py > h - 350:
-            place_top = True
-
-        tag_x = int(px - tag_w / 2)
-        tag_y = (py - pin_radius - tag_h - 22) if place_top else (py + pin_radius + 22)
-        tag_x = max(120, min(w - tag_w - 120, tag_x))
-        tag_y = max(120, min(h - tag_h - 120, tag_y))
-
-        # Anchor Line connecting pin edge to tag
-        anchor_y = tag_y + tag_h if place_top else tag_y
-        draw.line([px, py + (-pin_radius if place_top else pin_radius), px, anchor_y], fill=ring_color if is_curr else pin_color_rgb, width=3)
-
-        # Callout Tag Box
-        tag_border = (255, 215, 0) if is_curr else ((46, 204, 113) if is_done else (0, 210, 255))
-        draw.rectangle([tag_x, tag_y, tag_x + tag_w, tag_y + tag_h], fill=(16, 22, 34), outline=tag_border, width=2)
-        draw.rectangle([tag_x, tag_y, tag_x + 6, tag_y + tag_h], fill=pin_color_rgb)
-
-        tag_title = f"{stop_num}. {stop_name[:22]}" + (" ★" if is_curr else "")
-        draw.text((tag_x + 18, tag_y + 10), tag_title, fill=(255, 255, 255), font=font_card_title)
-        if cost_str or duration_str:
-            detail_line = " • ".join(filter(None, [duration_str, cost_str]))[:34]
-            draw.text((tag_x + 18, tag_y + 52), detail_line, fill=(255, 215, 0), font=font_card_sub)
-
-    # 8. Render Master HUD Header Card (Top Left)
-    hud_w, hud_h = 1040, 240
-    hud_x, hud_y = 120, 100
+    # Render Master HUD Header Card (Top Left)
     draw.rectangle([hud_x, hud_y, hud_x + hud_w, hud_y + hud_h], fill=(18, 24, 36), outline=(50, 75, 105), width=3)
     draw.rectangle([hud_x, hud_y, hud_x + 8, hud_y + hud_h], fill=(0, 210, 255))
 
@@ -279,7 +226,6 @@ def render_4k_google_itinerary_map(
         stats_text += f"   •   Transit: {transit_mode.title()}"
     draw.text((hud_x + 36, hud_y + 155), stats_text, fill=(210, 225, 245), font=font_card_title)
 
-    # 9. Save output 4K JPEG
     final_bgr = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
     cv2.imwrite(str(out), final_bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
     logger.info(f"google_maps_4k_rendered: '{tour_title}' ({len(valid_stops)} stops) -> {out.name}")

@@ -286,7 +286,7 @@ function renderStudioVideoHistory() {
           <div class="flex items-center justify-center gap-1.5">
             <button onclick="viewEpisodeArtifacts('${v.id}', '${channelId}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-purple-700 dark:text-purple-300 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 shadow-sm transition"><i class="fa-solid fa-box-archive text-[9px]"></i> Artifacts</button>
             ${actionCell}
-            <button type="button" onclick="event.stopPropagation(); deleteLedgerEpisode('${v.id}', event, '${channelId}');" class="p-1.5 bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-900/40 border border-slate-300 dark:border-slate-700 hover:border-rose-400 text-slate-500 hover:text-rose-600 dark:text-gray-400 dark:hover:text-rose-400 rounded-lg text-xs transition" title="Delete Episode from disk">
+            <button type="button" onclick="event.stopPropagation(); deleteLedgerEpisode('${v.id}', event, '${channelId}', '${v.format || ''}', '${v.production_name || ''}', '${v.storage_path || ''}', '${(v.title || '').replace(/'/g, "\\'")}');" class="p-1.5 bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-900/40 border border-slate-300 dark:border-slate-700 hover:border-rose-400 text-slate-500 hover:text-rose-600 dark:text-gray-400 dark:hover:text-rose-400 rounded-lg text-xs transition" title="Delete Episode from disk">
               <i class="fa-solid fa-trash-can text-[10px]"></i>
             </button>
           </div>
@@ -296,32 +296,11 @@ function renderStudioVideoHistory() {
   }).join("");
 }
 
-async function deleteLedgerEpisode(epId, event, channelId) {
+function deleteLedgerEpisode(epId, event, channelId, formatSlug, productionName, storagePath, title) {
   if (event) event.stopPropagation();
-  const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
-  const vid = findStudioEpisodeById(epId, channelId);
-  const chSlug = channelId || vid?.channelId || vid?.channel_id;
-  if (!chSlug) return;
-
-  try {
-    await fetch(`/api/production/episodes/${epId}?channel_id=${chSlug}&user_id=${encodeURIComponent(uEmail)}`, { method: "DELETE" });
-  } catch (e) {
-    console.warn("Delete episode notice:", e);
+  if (typeof promptDeleteEpisode === "function") {
+    promptDeleteEpisode(epId, channelId, formatSlug, productionName, storagePath, title);
   }
-
-  const idx = studioVideos.findIndex(x => (x.id === epId || x.episode_id === epId) && (x.channelId || x.channel_id || "earth_serenade") === chSlug);
-  if (idx >= 0) studioVideos.splice(idx, 1);
-  if (typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) {
-    channelArchiveEpisodes = channelArchiveEpisodes.filter(x => x.episode_id !== epId || x.channel_id !== chSlug);
-  }
-
-  saveVideosState();
-  renderStudioVideoHistory();
-  if (typeof filterChannelArchive === "function") filterChannelArchive();
-  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id === epId || currentActiveInspectorEpisode.episode_id === epId) && (currentActiveInspectorEpisode.channelId || currentActiveInspectorEpisode.channel_id) === chSlug) {
-    if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
-  }
-  if (typeof showProfileStatusToast === "function") showProfileStatusToast(`Episode ${epId} deleted.`);
 }
 
 function onLedgerRowClick(event, id, channelId) {

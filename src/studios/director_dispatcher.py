@@ -59,12 +59,14 @@ async def dispatch_studio_director(
             "ocean": DocGenre.OCEAN, "doc_ocean": DocGenre.OCEAN, "desert": DocGenre.DESERT, "doc_desert": DocGenre.DESERT,
             "wildlife": DocGenre.WILDLIFE, "doc_wildlife": DocGenre.WILDLIFE, "art": DocGenre.ART, "doc_art": DocGenre.ART,
             "ancient_structures": DocGenre.ANCIENT_STRUCTURES, "doc_architecture": DocGenre.ANCIENT_STRUCTURES,
+            "ancient_civilizations_history": DocGenre.ANCIENT_STRUCTURES, "heritage_history_tour": DocGenre.ANCIENT_STRUCTURES,
+            "open_topic_documentary": DocGenre.PLACES, "blue_chip_doc": DocGenre.PLACES,
             "itinerary_map_tour": DocGenre.PLACES, "grand_tour": DocGenre.PLACES, "top_attractions_tour": DocGenre.PLACES,
             "local_neighborhood_tour": DocGenre.PLACES, "culinary_food_tour": DocGenre.PLACES,
-            "heritage_history_tour": DocGenre.ANCIENT_STRUCTURES, "architecture_design_tour": DocGenre.ANCIENT_STRUCTURES,
+            "travel_itinerary_tour": DocGenre.PLACES, "architecture_design_tour": DocGenre.ANCIENT_STRUCTURES,
         }
         eff_doc_genre = doc_genre_map.get(sub_lower, doc_genre_map.get(arch_lower, DocGenre.PLACES))
-        eff_archetype_name = primary_archetype or sub_genre or arch_lower or sub_lower or "grand_tour"
+        eff_archetype_name = primary_archetype or sub_genre or arch_lower or sub_lower or "open_topic_documentary"
         sb = await generate_documentary_storyboard_gemini(
             genre=eff_doc_genre,
             theme_seed=custom_prompt or "Swiss Alps: Majestic Glaciers & Granite Titans",

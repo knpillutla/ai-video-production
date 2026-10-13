@@ -381,7 +381,9 @@ VALID_ACTIONS = {
     "--tilt-up": "tilt-up",
     "--tilt-down": "tilt-down",
     "--zoom-in": "dollyin",
+    "--zoomin": "dollyin",
     "--zoom-out": "dollyout",
+    "--zoomout": "dollyout",
     "--roll-left": "roll-left",
     "--roll-right": "roll-right",
     "--level": "level",
@@ -444,10 +446,13 @@ def parse_action_sequence(raw_args: list) -> list:
     return sequence
 
 
-def normalize_choreography_sequence(choreography: Union[list, str, None], default_duration: float = 5.0) -> list:
+def normalize_choreography_sequence(choreography: Union[list, dict, str, None], default_duration: float = 5.0) -> list:
     """Converts structured dicts, tuples, or legacy strings into sequence tuples."""
     if not choreography:
         return [("dollyin", max(2.0, min(14.0, default_duration)))]
+
+    if isinstance(choreography, dict):
+        choreography = [choreography]
 
     if isinstance(choreography, str):
         mov = choreography.lower().strip()

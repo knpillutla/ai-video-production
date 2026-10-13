@@ -1,5 +1,6 @@
 inside palaces
-
+history - has lot of views
+science and discovery - lots of views
 create live channels for the below
 -- music channel
 -- relaxing rain channel

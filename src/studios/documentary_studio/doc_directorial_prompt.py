@@ -12,17 +12,12 @@ from src.studios.base_directorial_prompt import build_base_directorial_prompt
 
 TOUR_ARCHETYPES = {
     "itinerary_map_tour",
-    "grand_tour",
-    "top_attractions_tour",
-    "local_neighborhood_tour",
-    "culinary_food_tour",
-    "heritage_history_tour",
-    "architecture_design_tour",
+    "travel_itinerary_tour",
 }
 
 
 def is_tour_archetype(archetype: str) -> bool:
-    """Check if an archetype belongs to the dedicated Tour Director domain."""
+    """Check if an archetype belongs to the dedicated Tour Map Itinerary Director."""
     return (archetype or "").lower().strip() in TOUR_ARCHETYPES
 
 
@@ -61,10 +56,11 @@ DOCUMENTARY DIRECTORIAL MANDATES (BBC / NATGEO BLUE-CHIP CALIBER):
 
 5. LOCAL DRONE CAMERA MOVEMENTS ("model_configs.local_drone"):
    - For documentary and travel shots, model_configs["local_drone"] MUST specify dynamic camera flight matching the scene:
-     * Simple movements: "movement": "dollyin", "dollyout", "pan-left", "pan-right", "drift-up-right", "drift-down-left"
-     * Sequential timeline array: "movement": [{{"movement": "dollyin", "duration": 6.0}}, {{"movement": "zoomin", "duration": 4.0}}] (e.g. first 6s dolly in, then next 4s zoom in)
+     * Supported primitives: "dollyin", "dollyout", "pan-left", "pan-right", "tilt-up", "tilt-down", "drift-up-right", "drift-up-left", "drift-down-right", "drift-down-left", "orbit-left", "orbit-right", "stay".
+     * Sequential timeline array: "movement": [{{"movement": "dollyin", "duration": 6.0}}, {{"movement": "pan-right", "duration": 4.0}}]
      * Parallel compound movements: "movement": [{{"stage": 1, "duration": 5.0, "movements": ["dollyin", "pan-right"]}}]
-     * Framing: "start_pan": "center", "start_zoom": "normal", "curve": "cosine"
+     * Framing: "start_pan": "center"|"left"|"right", "start_zoom": "normal"|"wide"|"in", "curve": "cosine"
+   - Camera movements for AI diffusion models (kling, wan) are part of their prompt text, not mechanical commands.
 """
     return build_base_directorial_prompt(
         genre="documentary",
@@ -126,6 +122,14 @@ TOUR & ITINERARY DIRECTORIAL MANDATES (RICK STEVES & BBC TRAVEL CALIBER):
 
 4. MASTER ITINERARY SUMMARY (ROOT FIELD):
    - Supply the master daily summary array in "itinerary_summary" with "total_attraction_time", "total_travel_time", "total_walk_time", "total_drive_time", "transit_distance", "total_travel_cost", and "meal_break".
+
+5. LOCAL DRONE CAMERA MOVEMENTS ("model_configs.local_drone"):
+   - For all attraction scenes, camera motion is handled by our Tier-0 local perspective drone engine ($0.00 compute).
+   - In "model_configs.local_drone", "movement" MUST specify supported engine actions:
+     * Primitives: "dollyin", "dollyout", "pan-left", "pan-right", "tilt-up", "tilt-down", "drift-up-right", "drift-up-left", "drift-down-right", "drift-down-left", "orbit-left", "orbit-right", "stay".
+     * Multi-stage compound: [{{"stage": 1, "duration": 5.0, "movements": ["dollyin", "pan-right"]}}, ...]
+     * Framing: "start_pan": "center"|"left"|"right", "start_zoom": "normal"|"wide"|"in", "curve": "cosine".
+   - Camera movements for AI diffusion models (kling, wan) are written into their prompt text, not mechanical flight names.
 """
     tour_root_schema = """  "itinerary_summary": [
     {

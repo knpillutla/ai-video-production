@@ -374,4 +374,6 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
         "duration_seconds": float(user_inputs_data.get("duration_seconds") or screenplay_data.get("total_duration_seconds") or 120.0),
         "youtube_packaging": yt_pack,
         "youtube_packaging_nature_only": yt_pack_nature,
+        "storage_path": str(ep_path.relative_to(storage_dir)).replace("\\", "/"),
+        "storagePath": str(ep_path.relative_to(storage_dir)).replace("\\", "/"),
     }

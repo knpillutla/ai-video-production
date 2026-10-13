@@ -16,6 +16,7 @@ from src.core.telemetry import logger
 from src.domain.repo import repo
 from src.mcp.topic_memory.server import check_topic_duplicate, remember_topic
 from src.providers.fal_storage import _fal_api_key
+from src.services.storage_cleanup_service import cleanup_empty_parent_production, robust_remove_directory
 
 router = APIRouter(prefix="/api/production", tags=["Local Production Engine"])
 
@@ -404,27 +405,90 @@ async def approve_episode(episode_id: str, channel_id: Optional[str] = None, use
 
 
 @router.delete("/episodes/{episode_id}")
-async def delete_episode_artifacts(episode_id: str, channel_id: Optional[str] = None, user_id: str = "knpillutla@gmail.com"):
-    """Delete all synthesized artifacts and folders for a specific episode from disk."""
+async def delete_episode_artifacts(
+    episode_id: str,
+    channel_id: Optional[str] = None,
+    format: Optional[str] = None,
+    production_name: Optional[str] = None,
+    storage_path: Optional[str] = None,
+    user_id: str = "knpillutla@gmail.com",
+):
+    """Delete synthesized artifacts and folder for a specific scoped episode from disk."""
     clean_ep = re.sub(r"[^a-zA-Z0-9_-]", "_", str(episode_id).lower()).strip("_")
     user_container = storage_service.get_user_container_path(user_id)
+    deleted_paths = []
+
+    # 1. Exact storage path if provided
+    if storage_path:
+        rel_clean = storage_path.replace("\\", "/").strip("/.")
+        for base_root in (user_container.parent, user_container):
+            candidate = (base_root / rel_clean).resolve()
+            if (str(user_container.parent) in str(candidate)) and candidate.is_dir() and candidate.name.lower() in (episode_id.lower(), clean_ep):
+                p_dir = candidate.parent
+                robust_remove_directory(candidate)
+                cleanup_empty_parent_production(p_dir, user_container)
+                deleted_paths.append(str(candidate))
+                return {"success": True, "episode_id": episode_id, "deleted_paths": deleted_paths, "message": f"Episode {episode_id} deleted."}
+
+    # 2. Targeted search using channel_id, format, and production_name
+    search_dirs = []
+    if channel_id:
+        net_dir = storage_service.get_network_path(user_id, channel_id)
+        chan_dir = user_container / "channels" / channel_id
+        for base in (net_dir, chan_dir):
+            if not base.exists():
+                continue
+            if format and production_name and production_name != "standalone":
+                p_clean = production_name.replace(" ", "_").lower()
+                for f_name in (format, format.lower()):
+                    search_dirs.extend([base / f_name / p_clean / episode_id, base / f_name / p_clean / clean_ep])
+            elif format:
+                for f_name in (format, format.lower()):
+                    search_dirs.extend([base / f_name / episode_id, base / f_name / clean_ep])
+                    f_dir = base / f_name
+                    if f_dir.is_dir():
+                        for p_sub in f_dir.iterdir():
+                            if p_sub.is_dir():
+                                search_dirs.extend([p_sub / episode_id, p_sub / clean_ep])
+
+    matched = [d for d in search_dirs if d.is_dir()]
+    if matched:
+        for m in matched:
+            p_dir = m.parent
+            robust_remove_directory(m)
+            cleanup_empty_parent_production(p_dir, user_container)
+            deleted_paths.append(str(m))
+        return {"success": True, "episode_id": episode_id, "deleted_paths": deleted_paths, "message": f"Episode {episode_id} deleted."}
+
+    # 3. Scoped search across roots with strict format/production filtering
     scan_roots = []
     if channel_id:
         scan_roots.extend([storage_service.get_network_path(user_id, channel_id), user_container / "channels" / channel_id])
     else:
         scan_roots.extend([user_container / "networks", user_container / "channels", user_container / "productions"])
 
-    deleted_paths = []
+    candidates = []
     for root in scan_roots:
         if not root.exists():
             continue
         try:
             for sub in list(root.rglob("*")):
                 if sub.is_dir() and sub.name.lower() in (episode_id.lower(), clean_ep):
-                    shutil.rmtree(sub, ignore_errors=True)
-                    deleted_paths.append(str(sub))
+                    sub_str = str(sub).replace("\\", "/").lower()
+                    if format and format.lower() not in sub_str:
+                        continue
+                    if production_name and production_name != "standalone" and production_name.lower().replace(" ", "_") not in sub_str:
+                        continue
+                    candidates.append(sub)
         except Exception as e:
             logger.warning(f"delete_episode_artifacts scan warning: {e}")
+
+    for c in candidates:
+        p_dir = c.parent
+        robust_remove_directory(c)
+        cleanup_empty_parent_production(p_dir, user_container)
+        deleted_paths.append(str(c))
+
     return {"success": True, "episode_id": episode_id, "deleted_paths": deleted_paths, "message": f"Episode {episode_id} deleted."}
 
 

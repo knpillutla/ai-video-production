@@ -173,6 +173,17 @@ async def generate_documentary_storyboard_gemini(
                 if not attr_name and not is_info_slide:
                     attr_name = sc.get("origin_name")
 
+                ld_cfg = (sc.get("model_configs") or {}).get("local_drone") or {}
+                drone_choreo = ld_cfg.get("movement") or sc.get("camera_movement") or sc.get("drone_choreography")
+                start_framing = sc.get("start_framing") or {
+                    "pan": ld_cfg.get("start_pan", "center"),
+                    "zoom": ld_cfg.get("start_zoom", "normal"),
+                    "tilt": ld_cfg.get("start_tilt", "center"),
+                }
+                motion_curve = ld_cfg.get("curve") or sc.get("motion_curve", "cosine")
+                if isinstance(drone_choreo, str) and not is_info_slide:
+                    cam_move = drone_choreo
+
                 doc_scenes.append(
                     DocScene(
                         scene_index=idx + 1,
@@ -184,9 +195,9 @@ async def generate_documentary_storyboard_gemini(
                         motion_prompt=m_prompt,
                         narration_text=n_text,
                         motion_engine=sc.get("motion_engine", "local_drone"),
-                        drone_choreography=sc.get("camera_movement") or sc.get("drone_choreography"),
-                        start_framing=sc.get("start_framing"),
-                        motion_curve=sc.get("motion_curve", "cosine"),
+                        drone_choreography=drone_choreo,
+                        start_framing=start_framing,
+                        motion_curve=motion_curve,
                         weather=sc.get("weather", "none"),
                         is_map_transition=is_map_trans,
                         attraction_name=attr_name,

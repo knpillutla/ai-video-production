@@ -651,6 +651,16 @@ async def produce_channel_video(
                             pass
 
     # Update operational pipeline state in pipeline_state.json ONLY
+    has_narr_stem = any(s.get("filename") == "spoken_narration.mp3" for s in audio_stems)
+    audio_stage_ok = current_stage >= 3 and len(audio_stems) > 0 and (not eff_voiceover or has_narr_stem)
+
+    if current_stage == 3 and not audio_stage_ok:
+        eff_stage_status = "failed"
+    elif current_stage < 5:
+        eff_stage_status = "ready"
+    else:
+        eff_stage_status = "completed"
+
     pipeline_state_payload = {
         "episode_id": ep_id,
         "channel_id": channel_id,
@@ -658,18 +668,18 @@ async def produce_channel_video(
         "execution_mode": execution_mode,
         "tier": eff_tier,
         "current_stage": current_stage,
-        "stage_status": "ready" if current_stage < 5 else "completed",
+        "stage_status": eff_stage_status,
         "stage_approvals": {
             "script": True,
             "keyframes": current_stage >= 2 and len(keyframes) > 0,
-            "audio": current_stage >= 3 and len(audio_stems) > 0,
+            "audio": audio_stage_ok,
             "motion": current_stage >= 4 and len(motion_clips) > 0,
             "master": current_stage >= 5 and bool(master_v),
         },
         "stages_completed": {
             "script": True,
             "keyframes": current_stage >= 2 and len(keyframes) > 0,
-            "audio": current_stage >= 3 and len(audio_stems) > 0,
+            "audio": audio_stage_ok,
             "motion": current_stage >= 4 and len(motion_clips) > 0,
             "master": current_stage >= 5 and bool(master_v),
         },

@@ -72,6 +72,11 @@ class GeminiLLMAdapter(LLMProviderProtocol):
                 )
                 if resp.status_code == 200:
                     return resp.json()
+                if resp.status_code in (500, 502, 503, 504) and attempt <= max_retries:
+                    backoff_s = attempt * 2.0
+                    logger.warning(f"gemini_api_transient_retry: status={resp.status_code}. Retrying in {backoff_s:.1f}s...")
+                    await asyncio.sleep(backoff_s)
+                    continue
                 if resp.status_code == 429:
                     err_msg = "Google AI Studio prepayment credits depleted (HTTP 429 RESOURCE_EXHAUSTED)."
                     logger.error(f"gemini_api_quota_exhausted: {err_msg}")

@@ -9,6 +9,7 @@ import json
 import logging
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 import imageio_ffmpeg
@@ -83,6 +84,11 @@ async def synthesize_shot_aligned_narration(
             sents = [s.strip() for s in re.split(r'(?<=[.!?])\s+', fallback_script) if s.strip()]
             if len(sents) == len(scenes):
                 scene_texts = sents
+            elif len(sents) > 0:
+                scene_texts = [""] * len(scenes)
+                for idx_s, sent in enumerate(sents):
+                    target_idx = min(idx_s * len(scenes) // len(sents), len(scenes) - 1)
+                    scene_texts[target_idx] = f"{scene_texts[target_idx]} {sent}".strip()
             elif len(paras) > 0:
                 scene_texts = paras[:len(scenes)]
                 while len(scene_texts) < len(scenes):
@@ -184,7 +190,8 @@ async def synthesize_shot_aligned_narration(
                 "-c:a", "libmp3lame", "-b:a", "320k", "-ar", "48000",
                 str(part_padded),
             ]
-        subprocess.run(cmd, check=True)
+        flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        subprocess.run(cmd, check=True, creationflags=flags)
         padded_part_paths.append(part_padded)
         log_pipeline_step("checking audio", f"Shot {idx + 1} Narration Stem", "completed", "narration stem synthesized", {"file": part_padded.name, "duration": final_shot_dur})
 
@@ -202,7 +209,8 @@ async def synthesize_shot_aligned_narration(
             "-c", "copy",
             str(out_master),
         ]
-        subprocess.run(cmd_concat, check=True)
+        flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        subprocess.run(cmd_concat, check=True, creationflags=flags)
         log_pipeline_step("checking audio", "Master Narration Concat", "completed", "concatenated spoken_narration.mp3 from padded stems", {"file": out_master.name, "total_duration": round(total_master_dur, 2), "cost": "$0.00"})
 
     logger.info(
