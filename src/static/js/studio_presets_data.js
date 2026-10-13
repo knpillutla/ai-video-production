@@ -121,12 +121,13 @@ const ALL_STUDIO_GENRES = {
   "relax/art": "🎨 Living Art, Museum Galleries & Ateliers (relax/art)",
   "travel_walking": "🚶 Travel & 4K 60fps Walking Tours (travel_walking)",
   "dance/folk": "💃 Dance, Folk & Music Videos (dance/folk)",
-  "comedy/satire": "🎭 Telugu Comedy & Satire Shorts (comedy/satire)"
+  "comedy/satire": "🎭 Telugu Comedy & Satire Shorts (comedy/satire)",
+  "science": "🔬 Science, Discovery & Cosmos (science)"
 };
 
 const DEFAULT_CHANNEL_GENRES = {
-  "nature_rhythms": ["relax/ocean", "relax/beach_lounge", "relax/desert", "relax/mountain", "relax/valley", "relax/blizzard", "relax/forest", "relax/rain", "relax/nature", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient", "relax/hearth", "relax/cozy", "travel/scenic", "documentary", "travel_walking"],
-  "earth_serenade": ["relax/ocean", "relax/beach_lounge", "relax/desert", "relax/mountain", "relax/valley", "relax/blizzard", "relax/forest", "relax/rain", "relax/nature", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient", "travel/scenic", "relax/art"],
+  "nature_rhythms": ["relax/ocean", "relax/beach_lounge", "relax/desert", "relax/mountain", "relax/valley", "relax/blizzard", "relax/forest", "relax/rain", "relax/nature", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient", "relax/hearth", "relax/cozy", "travel/scenic", "documentary", "science", "travel_walking"],
+  "earth_serenade": ["relax/ocean", "relax/beach_lounge", "relax/desert", "relax/mountain", "relax/valley", "relax/blizzard", "relax/forest", "relax/rain", "relax/nature", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient", "travel/scenic", "relax/art", "science"],
   "silent_hearth": ["relax/hearth", "relax/rain", "relax/cozy", "relax/blizzard"],
   "skylinediariesindia4k": ["travel/scenic"]
 };
@@ -161,7 +162,15 @@ const STUDIO_SUBOPTIONS_MAP = {
   ],
   "travel_walking": [{ val: "alpine_village_walk", label: "🏡 Swiss Alpine Countryside Walk (1.5 km/h)" }, { val: "rain_walking_tour", label: "🌧️ 4K Rain Walking Tour (Puddles & Wet Street Reflections)" }, { val: "city_walk_pov", label: "🏙️ 4K 60fps Historic City & Night Walk" }, { val: "coastal_promenade", label: "🏖️ Secluded Ocean Bluff Walk" }],
   "dance/folk": [{ val: "mass_folk_dance", label: "💃 High-Energy Mass Folk Dance (30fps)" }, { val: "classical_dance", label: "🪘 Cultural Classical Choreography" }],
-  "comedy/satire": [{ val: "satirical_short", label: "🎭 Modern Satire & Relatable Comedy Short" }]
+  "comedy/satire": [{ val: "satirical_short", label: "🎭 Modern Satire & Relatable Comedy Short" }],
+  "science": [
+    { val: "science_space", label: "🪐 Space, Astronomy & Astrophysics" },
+    { val: "science_earth", label: "🌍 Earth & Planetary Sciences" },
+    { val: "human_evolution", label: "🦴 Human Evolution & Deep Ancestry" },
+    { val: "science_medicine", label: "🧬 Medicine, Biology & Genetics" },
+    { val: "science_physics", label: "⚛️ Physics, Quantum & Microcosm" },
+    { val: "science_tech", label: "⚡ Extreme Engineering, Fusion & Tech" }
+  ]
 };
 
 const STUDIO_SUBGENRE_PLACEHOLDERS = {
@@ -218,7 +227,13 @@ const STUDIO_SUBGENRE_PLACEHOLDERS = {
   alpine_village_walk: "e.g. Ultra-slow 1.5 km/h human walking tour through Swiss alpine village and meadow path...",
   city_walk_pov: "e.g. 4K 60fps tranquil historic European cobblestone street walk at twilight...",
   mass_folk_dance: "e.g. High-energy festive village celebration with dynamic troupe choreography...",
-  satirical_short: "e.g. Relatable everyday comedy satire with sharp comedic timing and witty dialogue..."
+  satirical_short: "e.g. Relatable everyday comedy satire with sharp comedic timing and witty dialogue...",
+  science_space: "e.g. James Webb infrared deep field galaxies, supermassive black hole accretion disk, Europa subsurface ocean...",
+  science_earth: "e.g. Mariana Trench hydrothermal vents, Hadal zone bioluminescence, mantle plumes, supervolcano calderas...",
+  human_evolution: "e.g. East African Rift Valley hominin origins, Neanderthal ice age survival, Lascaux cave art...",
+  science_medicine: "e.g. Synaptic connectome of the human brain, CRISPR Cas9 editing molecular DNA strands, cellular mitosis...",
+  science_physics: "e.g. Quantum superposition & entanglement, CERN Large Hadron Collider proton collisions, atomic lattice microscopy...",
+  science_tech: "e.g. Tokamak nuclear fusion reactor magnetic confinement, superconducting quantum computing cryostats, ion drives..."
 };
 
 const STUDIO_ARCHETYPES_MAP = {
@@ -262,7 +277,50 @@ const STUDIO_ARCHETYPES_MAP = {
   ],
   "travel_walking": [{ val: "rain_city_walk", label: "🌧️ 4K Rain Walking Tour" }, { val: "swiss_village_walk", label: "🏡 Swiss Alpine Village Lane" }, { val: "historic_old_town", label: "🏙️ Historic Old Town Street" }, { val: "coastal_bluff_trail", label: "🏖️ Coastline Cliffside Trail" }, { val: "bamboo_forest_path", label: "🎋 Bamboo Grove Walking Path" }],
   "dance/folk": [{ val: "village_jathara_square", label: "🎪 Village Fairground Stage" }, { val: "lush_paddy_fields", label: "🌾 Verdant Paddy Fields" }, { val: "historic_fort_courtyard", label: "🏛️ Ancient Stone Fort" }, { val: "modern_city_rooftop", label: "🌆 Neon City Rooftop Stage" }],
-  "comedy/satire": [{ val: "it_wfh_apartment", label: "💻 Modern Apartment WFH Office" }, { val: "street_chai_stall", label: "☕ Bustling Street Chai Stall" }, { val: "village_panchayat_tree", label: "🌳 Village Banyan Tree Chhavadi" }, { val: "corporate_meeting_room", label: "🏢 Corporate Conference Room" }]
+  "comedy/satire": [{ val: "it_wfh_apartment", label: "💻 Modern Apartment WFH Office" }, { val: "street_chai_stall", label: "☕ Bustling Street Chai Stall" }, { val: "village_panchayat_tree", label: "🌳 Village Banyan Tree Chhavadi" }, { val: "corporate_meeting_room", label: "🏢 Corporate Conference Room" }],
+  "science": [
+    { val: "deep_space_webb", label: "🪐 James Webb Deep Field & Cosmic Dawn" },
+    { val: "deep_ocean_abyss", label: "🌊 Mariana Trench & Abyssal Hydrothermal Vents" },
+    { val: "neuroscience_brain_connectome", label: "🧠 Human Connectome & Synaptic Mind" },
+    { val: "quantum_superposition", label: "⚛️ Quantum Superposition & Entanglement" },
+    { val: "fusion_energy_tokamak", label: "⚡ Tokamak Fusion Energy & Magnetic Fields" }
+  ],
+  "science:science_space": [
+    { val: "deep_space_webb", label: "🪐 James Webb Deep Field & Cosmic Dawn" },
+    { val: "black_holes_gravity", label: "🕳️ Black Hole Singularities & Gravitational Waves" },
+    { val: "solar_system_moons", label: "🌕 Subsurface Oceans: Europa & Enceladus" },
+    { val: "exoplanets_alien_worlds", label: "🔭 Exoplanets & The Goldilocks Zone" }
+  ],
+  "science:science_earth": [
+    { val: "deep_ocean_abyss", label: "🌊 Mariana Trench & Abyssal Hydrothermal Vents" },
+    { val: "plate_tectonics_volcano", label: "🌋 Mantle Plumes & Supervolcano Calderas" },
+    { val: "paleontology_fossil_epochs", label: "🦕 Deep Time & The Cambrian Explosion" },
+    { val: "extreme_meteorology", label: "🌪️ Atmospheric Supercells & Jet Streams" }
+  ],
+  "science:human_evolution": [
+    { val: "hominin_origins_rift_valley", label: "🦴 Rift Valley Hominins & Bipedal Dawn" },
+    { val: "ice_age_neanderthals", label: "❄️ Neanderthals & Denisovans: Ice Age Survival" },
+    { val: "mastery_of_fire_stone_tools", label: "🔥 Fire Mastery & Acheulean Tool Flaking" },
+    { val: "cognitive_revolution_cave_art", label: "🎨 Lascaux Cave Art & Shamanic Rituals" }
+  ],
+  "science:science_medicine": [
+    { val: "neuroscience_brain_connectome", label: "🧠 Human Connectome & Synaptic Mind" },
+    { val: "cellular_microbiology", label: "🔬 Nanomachines of Life: Cellular Mitosis" },
+    { val: "genetics_crispr_dna", label: "🧬 CRISPR Gene Editing & Double Helix DNA" },
+    { val: "immunology_body_defense", label: "🛡️ The Immune Fortress & T-Cell Warfare" }
+  ],
+  "science:science_physics": [
+    { val: "quantum_superposition", label: "⚛️ Quantum Superposition & Entanglement" },
+    { val: "particle_accelerator_cern", label: "💥 Inside CERN: Large Hadron Collider & Higgs" },
+    { val: "atomic_lattice_microscopy", label: "🔬 Atomic Lattice & Scanning Tunneling Microscopy" },
+    { val: "thermodynamics_entropy", label: "⏳ Arrow of Time: Entropy & Absolute Zero" }
+  ],
+  "science:science_tech": [
+    { val: "fusion_energy_tokamak", label: "⚡ Tokamak Fusion Energy & Magnetic Confinement" },
+    { val: "quantum_computing", label: "💻 Quantum Supremacy & Cryostat Qubits" },
+    { val: "deep_space_propulsion", label: "🚀 Interstellar Propulsion: Ion Thrusters & Sails" },
+    { val: "megastructures_future", label: "🏗️ Megastructures: Orbital Rings & Dyson Swarms" }
+  ]
 };
 
 const STUDIO_ARCHETYPE_HINTS = {
@@ -336,6 +394,30 @@ const STUDIO_ARCHETYPE_HINTS = {
   serengeti_savannah_predators: "e.g. Serengeti Plains at Dawn: Golden grass whispering in morning breeze, lioness stalking acacia shadows, and dust billowing from the Great Migration...",
   pacific_northwest_redwoods: "e.g. Hoh Rainforest & Redwood Coast: 300ft ancient conifers draped in velvet club moss, crystal glacial riverbeds, and soft volumetric god rays piercing fog...",
   sahara_dunes_canyons: "e.g. Erg Chebbi & Grand Canyon: Monumental 500ft terracotta sand crests carved by desert wind, sharp razor-edge shadows, and infinite arid horizon...",
-  giza_megalithic_pyramids: "e.g. Giza Plateau at Golden Dawn: Khufu's Great Pyramid towering against desert sky, weathering limestone courses, and low desert wind sweeping golden sands..."
+  giza_megalithic_pyramids: "e.g. Giza Plateau at Golden Dawn: Khufu's Great Pyramid towering against desert sky, weathering limestone courses, and low desert wind sweeping golden sands...",
+  deep_space_webb: "e.g. Cosmic Dawn: James Webb Space Telescope infrared vista of redshifted early galaxies 13.4 billion years ago...",
+  black_holes_gravity: "e.g. Event Horizon: Supermassive black hole accretion disk glowing with relativistic Doppler beaming and gravitational lensing...",
+  solar_system_moons: "e.g. Subsurface Oceans: Europa's icy fractured crust, cryovolcanic water vapor geysers, and hydrothermal vents...",
+  exoplanets_alien_worlds: "e.g. Exoplanetary Atmospheres: Atmospheric transmission spectroscopy of TRAPPIST-1e in the habitable Goldilocks zone...",
+  deep_ocean_abyss: "e.g. The Hadal Zone: Mariana Trench 11,000m abyssal plain, hydrothermal black smoker chimneys, and chemotrophic microbes...",
+  plate_tectonics_volcano: "e.g. Earth's Molten Engine: Subducting tectonic plates, mantle plume upwelling, and Yellowstone caldera magma chamber...",
+  paleontology_fossil_epochs: "e.g. Deep Time: Burgess Shale fossil beds, Cambrian explosion multicellular life forms, and primordial seas...",
+  extreme_meteorology: "e.g. Atmospheric Supercells: Mesocyclone rotation, jet stream shear, and lightning dynamics in tornadic storm systems...",
+  neuroscience_brain_connectome: "e.g. The Human Connectome: Fluorescent synaptic firing pathways, neocortex neural plasticity, and neurotransmitter diffusion...",
+  cellular_microbiology: "e.g. Nanomachines of Life: Cryo-electron microscopy of ATP synthase molecular motors, ribosome translation, and mitosis...",
+  genetics_crispr_dna: "e.g. The Genetic Code: CRISPR-Cas9 ribonucleoprotein navigating double-helix DNA chromatin in cell nucleus...",
+  immunology_body_defense: "e.g. The Immune Fortress: Cytotoxic T-cells hunting viral pathogens, macrophage engulfment, and antibody binding cascades...",
+  quantum_superposition: "e.g. Quantum Superposition: Single-photon double slit wave-particle interference patterns and quantum entanglement states...",
+  particle_accelerator_cern: "e.g. Inside CERN: Superconducting quad magnets, 13 TeV proton-proton bunch crossings, and Higgs boson decay signatures...",
+  atomic_lattice_microscopy: "e.g. Imaging the Atom: Sub-angstrom scanning tunneling microscopy showing individual silicon crystal atomic lattice points...",
+  thermodynamics_entropy: "e.g. The Arrow of Time: Thermodynamic entropy increase, cosmic microwave background, and asymptotic heat death of the universe...",
+  fusion_energy_tokamak: "e.g. Harnessing Star Power: 100-million-degree deuterium-tritium plasma swirling within superconducting tokamak magnetic fields...",
+  quantum_computing: "e.g. Quantum Supremacy: Golden chandelier dilution refrigerator cryostat cooled to 15 millikelvin with superconducting transmon qubits...",
+  deep_space_propulsion: "e.g. Interstellar Propulsion: Hall effect xenon ion thruster glowing electric blue, interstellar solar sail accelerated by orbital laser...",
+  megastructures_future: "e.g. Planetary Megastructures: Geosynchronous orbital ring tethered to planetary space elevators and circumstellar Dyson swarm collector arrays...",
+  hominin_origins_rift_valley: "e.g. East African Rift Valley: Australopithecus hominins walking upright across ancient savannah, Olduvai Gorge basalt strata...",
+  ice_age_neanderthals: "e.g. Pleistocene Ice Age Eurasia: Neanderthal clan sheltering in limestone cave, woolly mammoth hunt in blizzard, Denisovan lineage...",
+  mastery_of_fire_stone_tools: "e.g. The Dawn of Fire: Early hominins knapping flint Acheulean handaxes, striking pyrites to spark hearth fires, communal cooking...",
+  cognitive_revolution_cave_art: "e.g. Chauvet & Lascaux Caves: Flickering animal fat lamp illuminating red ochre bison murals, hand stencils, deep cavern ritualism..."
 };
 

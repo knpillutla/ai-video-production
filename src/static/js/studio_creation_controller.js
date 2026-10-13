@@ -220,17 +220,17 @@ function syncGenreDropdownOnly(channelSlug) {
   if (activeStudioFormat === "relaxation") {
     normalized = normalized.filter(g => g.startsWith("relax/") || g === "travel/scenic");
   } else if (activeStudioFormat === "documentary") {
-    normalized = normalized.filter(g => g === "documentary" || g.includes("doc"));
+    normalized = normalized.filter(g => g === "documentary" || g.includes("doc") || g === "science");
   } else if (activeStudioFormat === "walking_tour") {
     normalized = normalized.filter(g => g === "travel_walking");
   } else if (activeStudioFormat === "music_video") {
     normalized = normalized.filter(g => g.startsWith("dance/"));
   } else if (activeStudioFormat === "short" || activeStudioFormat === "movie") {
-    normalized = normalized.filter(g => g.startsWith("comedy/") || g === "documentary" || g === "travel/scenic");
+    normalized = normalized.filter(g => g.startsWith("comedy/") || g === "documentary" || g === "travel/scenic" || g === "science");
   }
 
   // Fallback if no specific format matches
-  const genresToShow = normalized.length > 0 ? normalized : (activeStudioFormat === "documentary" ? ["documentary"] : ["relax/nature"]);
+  const genresToShow = normalized.length > 0 ? normalized : (activeStudioFormat === "documentary" ? ["documentary", "science"] : ["relax/nature"]);
 
   gSelector.innerHTML = genresToShow.map(k => `<option value="${k}">${genresDict[k] || k}</option>`).join("");
   const first = genresToShow[0] || "relax/nature";
@@ -262,7 +262,7 @@ function onGenreChange(genreVal) {
   const dualToggle = document.getElementById("studio-toggle-dual-editions");
   const dualRow = document.getElementById("studio-dual-editions-row");
 
-  const isDoc = (activeStudioFormat === "documentary");
+  const isDoc = (activeStudioFormat === "documentary" || genreVal === "documentary" || genreVal === "science");
   if (isDoc) {
     if (bgmToggle) { bgmToggle.checked = true; bgmToggle.disabled = false; }
     if (voiceToggle) { voiceToggle.checked = true; voiceToggle.disabled = false; }
@@ -291,7 +291,9 @@ function onGenreChange(genreVal) {
 function syncDualMastersVisibility() {
   const row = document.getElementById("studio-dual-editions-row");
   if (!row) return;
-  const isDoc = (activeStudioFormat === "documentary");
+  const gSelector = document.getElementById("studio-genre-selector");
+  const genreVal = gSelector ? gSelector.value : "";
+  const isDoc = (activeStudioFormat === "documentary" || genreVal === "documentary" || genreVal === "science");
   row.classList.toggle("hidden", !isDoc);
 }
 
@@ -308,6 +310,8 @@ function updateArchetypeOptions(genreVal, subGenreVal) {
     } else {
       list = archMap["documentary"] || [];
     }
+  } else if (genreVal === "science") {
+    list = archMap["science:" + subGenreVal] || archMap["science"] || [];
   } else {
     list = archMap[genreVal] || archMap["relax/nature"] || [];
   }
@@ -324,6 +328,8 @@ function updateArchetypeOptions(genreVal, subGenreVal) {
     } else {
       archSelector.value = list[0]?.val || "";
     }
+  } else if (genreVal === "science") {
+    archSelector.value = list[0]?.val || "";
   } else if (subGenreVal && (subGenreVal.includes("bedroom") || subGenreVal.includes("cabin"))) {
     const match = list.find(x => x.val.includes("bedroom") || x.val.includes("cabin"));
     if (match) archSelector.value = match.val;

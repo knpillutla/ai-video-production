@@ -16,6 +16,7 @@ class DocGenre(str, Enum):
     WILDLIFE = "wildlife"
     ART = "art"
     ANCIENT_STRUCTURES = "ancient_structures"
+    SCIENCE = "science"
 
 
 @dataclass
@@ -165,6 +166,16 @@ DOC_TEMPLATES: Dict[DocGenre, Dict[str, Any]] = {
             ("Twilight silhouette of the ancient citadel over looking the historic horizon", "Majestic slow pull-back revealing the fortress walls against the deep indigo twilight", "Standing as sentinels of history, these ancient sanctuaries guard the memory of human civilization."),
         ]
     },
+    DocGenre.SCIENCE: {
+        "title": "Cosmic Frontiers: The Architecture of Reality",
+        "audio_tags": "interstellar cinematic synth score, cosmic sub-bass, shimmering crystal pads, -14 LUFS broadcast master",
+        "scenes": [
+            ("Panoramic wide space vista of a glowing infrared nebula stellar nursery", "Slow deep space forward glide looking through luminous cosmic dust filaments", "Across the boundless expanse of the cosmos, gravity and radiation sculpt the building blocks of reality."),
+            ("Ultra-macro scientific visualization of a laser-cooled atomic crystal lattice", "Smooth microscopic tracking across undulating atomic orbitals and electromagnetic field lines", "At the subatomic frontier, quantum mechanics challenges our fundamental concepts of space and time."),
+            ("Deep oceanic 4K submersible perspective of towering hydrothermal black smokers", "Slow steadycam descent into the abyssal midnight zone, mineral smoke billowing into sea", "In the crushing depths of the oceanic abyss, life thrives on chemical energy in an alien realm."),
+            ("Spectacular high-altitude view of the Earth against the velvet darkness of space", "Tranquil slow orbital pan across the glowing thin blue line of the atmosphere", "From the quantum to the cosmic, the quest for scientific discovery reveals our fragile place in the universe."),
+        ]
+    },
 }
 
 GENRE_MODEL_DEFAULTS: Dict[DocGenre, tuple[str, str]] = {
@@ -177,6 +188,7 @@ GENRE_MODEL_DEFAULTS: Dict[DocGenre, tuple[str, str]] = {
     DocGenre.WILDLIFE: ("wildlife_animal", "kling_v3"),
     DocGenre.ART: ("art_macro", "hunyuan"),
     DocGenre.ANCIENT_STRUCTURES: ("architecture_solid", "hunyuan"),
+    DocGenre.SCIENCE: ("cosmos_particle", "wan"),
 }
 
 

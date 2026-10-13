@@ -50,26 +50,79 @@ async def dispatch_studio_director(
         tier=tier,
     )
 
-    # 0. Dedicated Blue-Chip Documentary Studio Dispatch
-    if "doc" in genre_lower or "documentary" in ch_lower or "doc" in sub_lower:
+    # 0. Dedicated Blue-Chip Documentary & Science Studio Dispatch
+    is_science = "science" in genre_lower or "science" in sub_lower or "science" in arch_lower
+    if "doc" in genre_lower or "documentary" in ch_lower or "doc" in sub_lower or is_science:
         from src.studios.documentary_studio.doc_storyboard import generate_documentary_storyboard_gemini, DocGenre
         doc_genre_map = {
             "places": DocGenre.PLACES, "doc_places": DocGenre.PLACES, "beaches": DocGenre.BEACHES, "doc_beaches": DocGenre.BEACHES,
             "mountains": DocGenre.MOUNTAINS, "doc_mountains": DocGenre.MOUNTAINS, "nature": DocGenre.NATURE, "doc_nature": DocGenre.NATURE,
             "ocean": DocGenre.OCEAN, "doc_ocean": DocGenre.OCEAN, "desert": DocGenre.DESERT, "doc_desert": DocGenre.DESERT,
             "wildlife": DocGenre.WILDLIFE, "doc_wildlife": DocGenre.WILDLIFE, "art": DocGenre.ART, "doc_art": DocGenre.ART,
-            "ancient_structures": DocGenre.ANCIENT_STRUCTURES, "doc_architecture": DocGenre.ANCIENT_STRUCTURES,
+            "ancient_structures": DocGenre.ANCIENT_STRUCTURES, "doc_architecture": DocGenre.ANCIENT_STRUCTURES, "architecture_design_tour": DocGenre.ANCIENT_STRUCTURES,
             "ancient_civilizations_history": DocGenre.ANCIENT_STRUCTURES, "heritage_history_tour": DocGenre.ANCIENT_STRUCTURES,
-            "open_topic_documentary": DocGenre.PLACES, "blue_chip_doc": DocGenre.PLACES,
-            "itinerary_map_tour": DocGenre.PLACES, "grand_tour": DocGenre.PLACES, "top_attractions_tour": DocGenre.PLACES,
-            "local_neighborhood_tour": DocGenre.PLACES, "culinary_food_tour": DocGenre.PLACES,
-            "travel_itinerary_tour": DocGenre.PLACES, "architecture_design_tour": DocGenre.ANCIENT_STRUCTURES,
+            "open_topic_documentary": DocGenre.PLACES, "blue_chip_doc": DocGenre.PLACES, "itinerary_map_tour": DocGenre.PLACES, "grand_tour": DocGenre.PLACES,
+            "top_attractions_tour": DocGenre.PLACES, "local_neighborhood_tour": DocGenre.PLACES, "culinary_food_tour": DocGenre.PLACES, "travel_itinerary_tour": DocGenre.PLACES,
+            "science": DocGenre.SCIENCE, "science_discovery": DocGenre.SCIENCE, "doc_science": DocGenre.SCIENCE, "human_evolution": DocGenre.SCIENCE, "science_evolution": DocGenre.SCIENCE,
+            "science_earth": DocGenre.SCIENCE, "science_medicine": DocGenre.SCIENCE, "science_space": DocGenre.SCIENCE, "science_physics": DocGenre.SCIENCE, "science_tech": DocGenre.SCIENCE,
         }
-        eff_doc_genre = doc_genre_map.get(sub_lower, doc_genre_map.get(arch_lower, DocGenre.PLACES))
-        eff_archetype_name = primary_archetype or sub_genre or arch_lower or sub_lower or "open_topic_documentary"
+        eff_doc_genre = doc_genre_map.get(sub_lower, doc_genre_map.get(arch_lower, DocGenre.SCIENCE if is_science else DocGenre.PLACES))
+        eff_archetype_name = primary_archetype or sub_genre or arch_lower or sub_lower or ("deep_space_webb" if is_science else "open_topic_documentary")
+        default_doc_themes = {
+            "ancient_civilizations_history": "Ancient Civilizations: Lost Metropolises & Monumental World History",
+            "giza_megalithic_pyramids": "Ancient Giza: Megalithic Engineering & The Great Pyramids",
+            "scotland_highlands_isles": "Scottish Highlands: Ancient Castles & Mist-Veiled Isles",
+            "swiss_alps_valleys": "Swiss Alps: Majestic Glaciers & Granite Titans",
+            "iceland_volcanic_coasts": "Iceland: Land of Fire & Glacial Ice",
+            "pacific_northwest_redwoods": "Olympic Rainforest & Ancient Redwood Giants",
+            "serengeti_savannah_predators": "Serengeti: Untamed Predators & The Great Migration",
+            "whitehaven_barrier_reef": "Great Barrier Reef & Whitehaven Beach",
+            "amalfi_cliffside_mediterranean": "Amalfi Coast: Azure Cliffs & Mediterranean Heritage",
+            "sahara_dunes_canyons": "Sahara: Monumental Star Dunes & Desert Horizons",
+            "open_topic_documentary": "Wonders of the World: Architectural & Natural Marvels",
+            # Science & Discovery Archetype Concept Seeds
+            "deep_space_webb": "Cosmic Dawn: James Webb Deep Field & The First Galaxies",
+            "black_holes_gravity": "Event Horizon: Black Hole Singularities & Gravitational Waves",
+            "solar_system_moons": "Subsurface Oceans: Europa, Enceladus & Alien Cryovolcanism",
+            "exoplanets_alien_worlds": "Exoplanetary Atmospheres & The Habitable Goldilocks Zone",
+            "deep_ocean_abyss": "The Hadal Zone: Mariana Trench & Hydrothermal Chemosynthesis",
+            "plate_tectonics_volcano": "Mantle Plumes & Supervolcano Calderas: Earth's Molten Engine",
+            "paleontology_fossil_epochs": "Deep Time & The Cambrian Explosion: Earth's Lost Epochs",
+            "extreme_meteorology": "Atmospheric Supercells & Jet Stream Physics: Extreme Weather",
+            "neuroscience_brain_connectome": "The Human Connectome: Synaptic Architecture & The Mind",
+            "cellular_microbiology": "Nanomachines of Life: Cellular Mitosis & Molecular Biology",
+            "genetics_crispr_dna": "The Genetic Code: CRISPR Precision & Chromatin Dynamics",
+            "immunology_body_defense": "The Immune Fortress: T-Cell Defense & Pathogen Warfare",
+            "quantum_superposition": "Quantum Superposition, Entanglement & Wave-Particle Duality",
+            "particle_accelerator_cern": "Inside CERN: Hadron Collider Collisions & The Higgs Boson",
+            "atomic_lattice_microscopy": "Imaging the Atom: Scanning Tunneling Microscopy & Lattices",
+            "thermodynamics_entropy": "The Arrow of Time: Entropy, Heat Death & Absolute Zero",
+            "fusion_energy_tokamak": "Harnessing Star Power: Tokamak Magnetic Confinement Fusion",
+            "quantum_computing": "Quantum Supremacy: Dilution Cryostats & Superconducting Qubits",
+            "deep_space_propulsion": "Interstellar Propulsion: Ion Thrusters & Relativistic Sails",
+            "megastructures_future": "Megastructures: Orbital Rings, Dyson Swarms & Future Engineering",
+            # Human Evolution & Deep Ancestry Archetypes
+            "hominin_origins_rift_valley": "Rift Valley Hominins: Australopithecus & The Dawn of Bipedalism",
+            "ice_age_neanderthals": "Ice Age Neanderthals & Denisovans: Mammoth Hunters & Ancient DNA",
+            "mastery_of_fire_stone_tools": "The Fire Revolution: Acheulean Flint Knapping & Primal Hearths",
+            "cognitive_revolution_cave_art": "The Cognitive Dawn: Lascaux Ochre Murals & Deep Cave Mysticism",
+        }
+        genre_fallbacks = {
+            DocGenre.ANCIENT_STRUCTURES: "Ancient Civilizations: Lost Metropolises & World History Architecture",
+            DocGenre.WILDLIFE: "Untamed Majesty: Predators of the Serengeti",
+            DocGenre.OCEAN: "Abyssal Realms: Secrets of the Deep Coral Sea",
+            DocGenre.NATURE: "Ancient Canopies: Whispers of the Temperate Rainforest",
+            DocGenre.MOUNTAINS: "Granite Sanctuaries: Titans of the Swiss Alps",
+            DocGenre.ART: "The Master's Touch: Secrets of Renaissance Frescoes",
+            DocGenre.BEACHES: "Untamed Shorelines: Coastal Wonders of the World",
+            DocGenre.DESERT: "Silent Dunes: Mysteries of the Living Sands",
+            DocGenre.PLACES: "Earth's Geographic Sanctuaries: Wonders of the World",
+            DocGenre.SCIENCE: "Cosmic Frontiers: The Architecture of Reality & Deep Space",
+        }
+        theme_seed = custom_prompt or default_doc_themes.get(eff_archetype_name.lower()) or genre_fallbacks.get(eff_doc_genre, "Cosmic Frontiers: Deep Space & Science")
         sb = await generate_documentary_storyboard_gemini(
             genre=eff_doc_genre,
-            theme_seed=custom_prompt or "Swiss Alps: Majestic Glaciers & Granite Titans",
+            theme_seed=theme_seed,
             duration_seconds=duration_seconds,
             language="en",
             num_shots=num_shots,
@@ -128,10 +181,10 @@ async def dispatch_studio_director(
             itinerary_summary=sb.itinerary_summary,
             scenes=relax_scenes,
             total_duration_seconds=sb.total_duration,
-            cluster="documentary",
-            genre="documentary",
-            sub_genre=sub_genre or "doc_mountains",
-            primary_archetype=primary_archetype or "swiss_alps_valleys",
+            cluster="science" if is_science else "documentary",
+            genre="science" if is_science else "documentary",
+            sub_genre=sub_genre or eff_archetype_name,
+            primary_archetype=primary_archetype or eff_archetype_name,
         )
 
     # 0. Dedicated Ocean Studio Dispatch (All 6 Diurnal Timings under genre 'relax/ocean')
