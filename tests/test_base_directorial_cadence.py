@@ -100,3 +100,22 @@ def test_directorial_configs_backward_compatibility():
     vid_cfg = build_default_video_model_configs("rushing stream")
     assert "wan_2_1" in vid_cfg
     assert "kling_v1_6_pro" in vid_cfg
+    assert "kling_v3_4k" in vid_cfg
+
+
+def test_base_directorial_prompt_contains_zimage_and_kling_v3_4k():
+    prompt = build_base_directorial_prompt(
+        genre="relax/nature",
+        sub_genre="waterfall",
+        archetype="waterfall",
+        cluster="Cascadia",
+        custom_prompt="Multnomah Falls",
+        duration_seconds=30.0,
+    )
+    # Target models
+    assert "zimage" in prompt
+    assert "kling_v3_4k" in prompt
+    assert "fal-ai/z-image/turbo" in prompt
+    assert "fal-ai/kling-video/v3/4k/image-to-video" in prompt
+    assert "ZERO FALLBACKS" in prompt
+

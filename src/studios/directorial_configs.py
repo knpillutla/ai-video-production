@@ -32,6 +32,14 @@ def build_default_image_model_configs(prompt: str, landmark_name: str = "Landmar
 
 def build_default_video_model_configs(fluid_motion: str, static_elements: str = "Rock cliffs and landscape structure") -> Dict[str, Any]:
     """Universal multi-model video diffusion directives for Wan 2.1 and Kling Pro."""
+    is_rain = any(k in fluid_motion.lower() for k in ("rain", "downpour", "storm", "eaves", "torrent"))
+    if is_rain:
+        kling_pos = f"Cinematic masterpiece, locked camera. A blinding torrential rainstorm, thick solid white sheets of heavy downpour obscuring the view, intense splashing water exploding off timber eaves. Wet, glistening wooden railings dripping with water. Heavy fog and a dense wall of rain completely blurring the distant mountains. High-contrast dramatic storm atmosphere, {fluid_motion}, photorealistic 8k."
+        kling_4k_pos = f"Cinematic masterpiece, locked stationary camera. A blinding torrential rainstorm, thick solid white sheets of heavy downpour obscuring the view, intense splashing water exploding off timber eaves. Wet, glistening wooden railings dripping with water. Heavy fog and a dense wall of rain completely blurring the distant mountains. Native 4K UHD atmospheric depth, high-contrast dramatic mood, {fluid_motion}, photorealistic 8k."
+    else:
+        kling_pos = f"Cinematic visual grandeur, locked stationary camera. {static_elements} remain 100% frozen and static. {fluid_motion}, soft rising vapor mist, seamless cyclic motion, pristine untouched nature, zero humans."
+        kling_4k_pos = f"Cinematic visual grandeur, locked stationary camera. {static_elements} remain 100% frozen and static. {fluid_motion}, soft rising vapor mist, seamless cyclic motion, native 4K UHD atmospheric depth, pristine untouched nature, zero humans."
+
     return {
         "wan_2_1": {
             "model": "fal-ai/wan-i2v",
@@ -45,10 +53,22 @@ def build_default_video_model_configs(fluid_motion: str, static_elements: str = 
                 "aspect_ratio": "16:9",
             },
         },
+        "kling_v3_4k": {
+            "model": "fal-ai/kling-video/v3/4k/image-to-video",
+            "prompts": {
+                "positive_prompt": kling_4k_pos,
+                "negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, shifting rocks, altering cliff structures, structural drift, changing perspective, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water",
+            },
+            "settings": {
+                "mode": "pro",
+                "duration": "5",
+                "aspect_ratio": "16:9",
+            },
+        },
         "kling_v1_6_pro": {
             "model": "fal-ai/kling-video/v1.6/pro/image-to-video",
             "prompts": {
-                "positive_prompt": f"Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. {static_elements} remain 100% frozen and static. {fluid_motion}, soft rising vapor mist, seamless cyclic motion, pristine untouched nature, zero humans.",
+                "positive_prompt": kling_pos,
                 "negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing trees, shifting rocks, altering cliff structures, structural drift, changing perspective, flickering, temporal jump, sunny sky, rainbow, changing lighting, sunlight shifts, altering colors, parched, frozen ice, stagnant water",
             },
             "settings": {

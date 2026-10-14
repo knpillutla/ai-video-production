@@ -65,6 +65,15 @@ def export_long_play_broadcast(
             str(out)
         ]
     else:
+        # Estimate if faststart second pass can safely run without double-buffering disk exhaustion
+        import shutil
+        free_bytes = shutil.disk_usage(out.parent).free
+        src_dur = _probe_clip_duration(src)
+        src_size = src.stat().st_size
+        est_out_bytes = (src_size / max(1.0, src_dur)) * target_duration_seconds
+        can_faststart = free_bytes > (est_out_bytes * 2.2)
+        faststart_flags = ["-movflags", "+faststart"] if can_faststart else []
+
         # Lossless fast 4K video stream copy + monotonic 48kHz AAC audio to prevent browser timestamp resets
         cmd = [
             ffmpeg_bin, "-y",
@@ -76,7 +85,7 @@ def export_long_play_broadcast(
             "-t", str(target_duration_seconds),
             "-c:v", "copy",
             "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-            "-movflags", "+faststart",
+            *faststart_flags,
             str(out)
         ]
 

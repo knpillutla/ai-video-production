@@ -88,7 +88,10 @@ class CinematicRainEngine:
     def __init__(self, width: int, height: int, intensity: str = "light", wind_tilt: float = 4.0, source_img: Optional[np.ndarray] = None):
         self.w, self.h = width, height
         self.wind_tilt = wind_tilt
-        self.intensity = intensity.lower()
+        norm_int = intensity.lower()
+        if norm_int in ("heavy", "high"):
+            norm_int = "heavy"
+        self.intensity = norm_int
         scale_factor = width / 1920.0
         self.scale = scale_factor
 
@@ -183,7 +186,10 @@ class CinematicSnowEngine:
 
     def __init__(self, width: int, height: int, intensity: str = "medium", source_img: Optional[np.ndarray] = None):
         self.w, self.h = width, height
-        self.intensity = intensity.lower()
+        norm_int = intensity.lower()
+        if norm_int in ("heavy", "high"):
+            norm_int = "heavy"
+        self.intensity = norm_int
         scale_factor = width / 1920.0
         self.scale = scale_factor
 
@@ -690,7 +696,8 @@ def get_ffmpeg_writer(output_path: str, width: int, height: int, fps: float):
     cmd = [
         FFMPEG_BIN, "-y", "-f", "rawvideo", "-vcodec", "rawvideo",
         "-s", f"{width}x{height}", "-pix_fmt", "bgr24", "-r", str(fps), "-i", "-",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-tune", "film",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
+        "-maxrate", "16M", "-bufsize", "32M",
         "-threads", "4", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(output_path),
     ]
     flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
@@ -855,7 +862,7 @@ def render_perspective_drone_clip_sync(
             video_writer.release()
             # Transcode fallback
             temp_raw = out.parent / f"_raw_{out.stem}.mp4"
-            cmd_h264 = [FFMPEG_BIN, "-y", "-i", str(temp_raw), "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out)]
+            cmd_h264 = [FFMPEG_BIN, "-y", "-i", str(temp_raw), "-c:v", "libx264", "-crf", "22", "-maxrate", "16M", "-bufsize", "32M", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out)]
             subprocess.run(cmd_h264, capture_output=True, text=True)
             temp_raw.unlink(missing_ok=True)
 
@@ -929,9 +936,9 @@ if __name__ == "__main__":
     parser.add_argument("--start-tilt", choices=["center", "up", "down"], default="center")
     parser.add_argument("--curve", choices=["cosine", "cubic", "linear", "ramp-up", "ramp-down", "whip"], default="cosine")
     parser.add_argument("--rain", action="store_true", help="Add procedural rainfall")
-    parser.add_argument("--rain-intensity", choices=["light", "medium", "heavy"], default="light")
+    parser.add_argument("--rain-intensity", choices=["light", "medium", "heavy", "high"], default="light")
     parser.add_argument("--snow", action="store_true", help="Add procedural snowfall")
-    parser.add_argument("--snow-intensity", choices=["light", "medium", "heavy"], default="medium")
+    parser.add_argument("--snow-intensity", choices=["light", "medium", "heavy", "high"], default="medium")
     parser.add_argument("--remove-objects", action="store_true")
     args, unknown = parser.parse_known_args()
 

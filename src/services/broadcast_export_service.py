@@ -52,31 +52,36 @@ def assemble_4k_master(
     afade_filter = f"afade=t=out:st={fade_start:.2f}:d={fade_dur:.2f}"
 
     if n == 1:
-        v_filter_padded = f"{v_filter},tpad=stop_mode=clone:stop=-1"
+        c_dur = get_media_duration(seamless_clips[0]) or 5.0
+        v_loops = max(1, int(target_dur / max(1.0, c_dur)) + 2)
+        in_args = ["-stream_loop", str(v_loops), "-i", str(seamless_clips[0])]
         if audio_path and audio_path.is_file():
             cmd = [
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
-                "-i", str(seamless_clips[0]),
-                "-i", str(audio_path), "-map", "0:v:0", "-map", "1:a:0",
-                "-af", afade_filter, "-t", f"{target_dur:.2f}", "-vf", v_filter_padded,
+                *in_args, "-i", str(audio_path), "-map", "0:v:0", "-map", "1:a:0",
+                "-af", afade_filter, "-t", f"{target_dur:.2f}", "-vf", v_filter,
                 "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
                 "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)
             ]
         else:
             cmd = [
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
-                "-i", str(seamless_clips[0]),
-                "-map", "0:v:0", "-t", f"{target_dur:.2f}", "-vf", v_filter_padded,
+                *in_args, "-map", "0:v:0", "-t", f"{target_dur:.2f}", "-vf", v_filter,
                 "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
                 "-movflags", "+faststart", str(out_master)
             ]
     else:
         hold_list = [float(d) for d in shot_durations] if (shot_durations and len(shot_durations) == n) else [max(6.0, (target_dur + ((n - 1) * x_dur)) / n)] * n
         inputs = []
-        for c in seamless_clips:
+        for i, c in enumerate(seamless_clips):
+            c_dur = get_media_duration(c) or 5.0
+            c_hold = hold_list[i] if i < len(hold_list) else c_dur
+            if c_dur < c_hold - 0.5:
+                v_loops = max(1, int(c_hold / max(1.0, c_dur)) + 2)
+                inputs.extend(["-stream_loop", str(v_loops)])
             inputs.extend(["-i", str(c)])
 
-        filter_parts = [f"[{i}:v]{build_adaptive_resolution_filter(c, 3840, 2160)},tpad=stop_mode=clone:stop=-1[s{i}]" for i, c in enumerate(seamless_clips)]
+        filter_parts = [f"[{i}:v]{build_adaptive_resolution_filter(c, 3840, 2160)}[s{i}]" for i, c in enumerate(seamless_clips)]
         prev_tag, curr_offset = "s0", max(0.1, hold_list[0] - x_dur)
         for i in range(1, n):
             out_tag = f"v{i}" if i < n - 1 else "v"
@@ -92,6 +97,7 @@ def assemble_4k_master(
                 *inputs, "-filter_complex", ";".join(filter_parts),
                 "-map", "[v]", "-map", f"{n}:a", "-af", afade_filter, "-t", f"{target_dur:.2f}",
                 "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
+                "-maxrate", "16M", "-bufsize", "32M",
                 "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)
             ]
         else:
@@ -100,13 +106,14 @@ def assemble_4k_master(
                 *inputs, "-filter_complex", ";".join(filter_parts),
                 "-map", "[v]", "-t", f"{target_dur:.2f}",
                 "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
+                "-maxrate", "16M", "-bufsize", "32M",
                 "-movflags", "+faststart", str(out_master)
             ]
 
     try:
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, check=True)
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
     except subprocess.CalledProcessError as err:
-        err_msg = (err.stderr or str(err)).strip()
+        err_msg = (err.stderr or err.stdout or str(err)).strip()
         logger.error(f"failed_to_assemble_4k_master: {err_msg}")
         raise RuntimeError(f"FFmpeg assembly failed: {err_msg}") from err
     return out_master
@@ -130,7 +137,7 @@ def assemble_dual_masters(
 
     eff_target_dur = target_duration_sec or kwargs.get("target_duration")
     sd_custom = kwargs.get("shot_durations")
-    seamless_clips = video_clips if len(video_clips) > 1 else [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
+    seamless_clips = [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
     master_narr = ep_dir / "master_4k_narration.mp4"
     master_music = ep_dir / "master_4k_ambient.mp4"
     narr_audio = kwargs.get("narration_audio_path") or (ep_dir / "spoken_narration.mp3")
@@ -193,11 +200,9 @@ def assemble_dual_masters(
             foley_audio = ep_dir / "foley_ambient.mp3"
             if not foley_audio.is_file():
                 try:
-                    subprocess.run([
-                        imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error",
-                        "-f", "lavfi", "-i", "anoisesrc=color=brown:amplitude=0.06:sample_rate=48000,lowpass=f=450,highpass=f=35,volume=0.9",
-                        "-t", f"{f_dur:.2f}", "-c:a", "libmp3lame", "-b:a", "320k", "-ar", "48000", str(foley_audio),
-                    ], check=True)
+                    from src.services.procedural_foley import synthesize_foley_stem
+                    w_type = "heavy rain" if any(k in str(ep_dir).lower() for k in ("rain", "storm", "downpour")) else "gentle wind"
+                    synthesize_foley_stem(w_type, "village", "outdoor", float(f_dur), foley_audio)
                 except Exception:
                     foley_audio = None
 

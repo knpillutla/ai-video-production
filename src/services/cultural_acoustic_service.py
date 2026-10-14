@@ -29,8 +29,15 @@ def resolve_cultural_acoustic_profile(
     """Resolve culturally authentic instruments and hummable melody specifications for any relax scene."""
     combo = f"{archetype} {sub_genre} {title} {tags}".lower()
 
+    eff_w = (weather or "").lower().strip()
+    is_rain = eff_w in ("rain", "storm", "downpour") or any(k in combo for k in ["rain", "storm", "downpour", "droplet", "monsoon", "river asmr", "umbrella", "relax/rain"])
+
     if any(k in combo for k in ["party", "beach club", "cocktail", "upbeat", "energetic", "summer beats"]):
         key = "party_lounge"
+    elif is_rain:
+        key = "rain"
+    elif any(k in combo for k in ["hearth", "fireplace", "blizzard", "winter snow", "cozy cabin"]):
+        key = "hearth"
     elif any(k in combo for k in ["pool_terrace", "beach_lounge", "chillout", "lounge", "infinity pool", "villa terrace"]):
         key = "beach_lounge"
     elif any(k in combo for k in ["waterfall", "cataract", "cascade"]):
@@ -43,10 +50,6 @@ def resolve_cultural_acoustic_profile(
         key = "zen"
     elif any(k in combo for k in ["himalaya", "tibet", "ladakh", "monastery", "bansuri"]):
         key = "himalayas"
-    elif any(k in combo for k in ["rain", "storm", "droplet", "river asmr", "umbrella"]):
-        key = "rain"
-    elif any(k in combo for k in ["hearth", "fireplace", "cabin", "blizzard", "winter", "snow", "cozy", "shelter"]):
-        key = "hearth"
     elif any(k in combo for k in ["forest", "woodland", "trees", "komorebi", "river glade", "redwood"]):
         key = "forest"
     elif any(k in combo for k in ["ocean", "beach", "coastal", "lagoon", "maldives", "amalfi", "cabana", "sea", "wave", "island"]):

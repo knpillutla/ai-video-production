@@ -33,6 +33,8 @@ def detect_lighting_directive(
 
     # 1. User Prompt takes absolute priority
     if text:
+        if any(re.search(rf"\b{re.escape(kw)}\b", text) for kw in ("rain", "heavy rain", "downpour", "storm", "thunderstorm", "overcast", "cloudy", "monsoon")):
+            return (5200, "storm_overcast", "Dramatic cool overcast storm sky (5000K-5400K), dense slate-gray rainclouds, atmospheric mist, zero direct sunlight, zero harsh shadows")
         if any(re.search(rf"\b{re.escape(kw)}\b", text) for kw in SUNRISE_KEYWORDS):
             return (3800, "sunrise_dawn", "Soft golden morning sunrise and pastel alpenglow (3800K)")
         if any(re.search(rf"\b{re.escape(kw)}\b", text) for kw in SUNSET_KEYWORDS):

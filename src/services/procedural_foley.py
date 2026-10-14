@@ -48,14 +48,19 @@ def synthesize_foley_stem(
     s_lower = (setting_type or "").lower()
     is_indoor = (space or "").lower() == "indoor"
 
-    # 1. Weather & Environmental Layer Synthesis
-    if any(k in w_lower for k in ("water", "stream", "river", "creek", "brook", "cascade", "alpine", "mountain", "lake", "ocean", "waves")):
-        noise = _generate_pink_noise(num_samples, seed=105)
-        stream_gain = 0.22
+    # 1. Weather & Environmental Layer Synthesis (Rain & Storms prioritized first)
+    if any(k in w_lower for k in ("rain", "monsoon", "downpour", "drizzle", "storm", "torrent")):
+        noise = _generate_pink_noise(num_samples, seed=101)
+        rain_gain = 0.38 if any(k in w_lower for k in ("heavy", "downpour", "storm", "torrent")) else 0.20
+        if is_indoor:
+            rain_gain *= 0.35  # Muted through windows
+        rng = random.Random(202)
         for i in range(num_samples):
-            t = i / sample_rate
-            surge = 1.0 + 0.25 * math.sin(2 * math.pi * 0.35 * t) * math.cos(2 * math.pi * 0.12 * t)
-            n = noise[i] * stream_gain * surge
+            n = noise[i] * rain_gain
+            # Add realistic droplet impact clicks
+            if rng.random() < (0.020 if ("heavy" in w_lower or "downpour" in w_lower) else 0.008):
+                click = rng.uniform(-0.65, 0.65) * (0.45 if is_indoor else 0.90)
+                n += click
             left_channel[i] += n * 0.95
             right_channel[i] += n * 1.05
     elif any(k in w_lower for k in ("fire", "fireplace", "hearth", "campfire", "ember")):
@@ -69,18 +74,13 @@ def synthesize_foley_stem(
                 n += pop
             left_channel[i] += n
             right_channel[i] += n * 0.95
-    elif any(k in w_lower for k in ("rain", "monsoon", "downpour", "drizzle", "storm")):
-        noise = _generate_pink_noise(num_samples, seed=101)
-        rain_gain = 0.35 if "heavy" in w_lower or "downpour" in w_lower else 0.18
-        if is_indoor:
-            rain_gain *= 0.30  # Muted through windows
-        rng = random.Random(202)
+    elif any(k in w_lower for k in ("water", "stream", "river", "creek", "brook", "cascade", "alpine", "mountain", "lake", "ocean", "waves")):
+        noise = _generate_pink_noise(num_samples, seed=105)
+        stream_gain = 0.22
         for i in range(num_samples):
-            n = noise[i] * rain_gain
-            # Add sporadic droplet clicks
-            if rng.random() < (0.015 if "heavy" in w_lower else 0.006):
-                click = rng.uniform(-0.6, 0.6) * (0.4 if is_indoor else 0.85)
-                n += click
+            t = i / sample_rate
+            surge = 1.0 + 0.25 * math.sin(2 * math.pi * 0.35 * t) * math.cos(2 * math.pi * 0.12 * t)
+            n = noise[i] * stream_gain * surge
             left_channel[i] += n * 0.95
             right_channel[i] += n * 1.05
     elif any(k in w_lower for k in ("snow", "blizzard", "arctic", "winter")):

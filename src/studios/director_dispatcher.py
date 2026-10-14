@@ -48,7 +48,7 @@ async def dispatch_studio_director(
     eff_custom_prompt = custom_prompt
     if weather and weather != "normal":
         weather_modifiers = {
-            "rain": "gentle cinematic rainfall, mist plumes, wet reflections, and soothing rain soundscape",
+            "rain": "heavy dramatic downpour, thick vertical sheets of cascading rain, visible falling rain streaks filling the air, heavy rainwater streaming down eaves with explosive splashing water droplets, and rich deep rain ASMR soundscape",
             "snow": "serene snowfall, frosted surfaces, and calm winter atmospheric haze",
             "fog": "morning coastal mist, volumetric god rays, and soft atmospheric haze",
             "sunset": "glorious golden hour sunset, warm 2800K illumination, and long dusk shadows",
@@ -155,8 +155,9 @@ async def dispatch_studio_director(
         or (any(w in p_lower for w in ["rain", "rainfall", "village rain", "bamboo hut", "monsoon"]) and not any(w in p_lower for w in ["ocean", "sea", "lagoon", "beach", "coast"]))
     )
     if is_rain:
-        logger.info(f"dispatcher_route: target='RainRetreatStudio' genre='{genre}' sub_genre='{sub_genre}' archetype='{primary_archetype}' prompt='{custom_prompt}'")
-        return await generate_rain_screenplay(sub_genre=sub_genre or "tropical_village_rain", primary_archetype=primary_archetype, **base_kwargs)
+        eff_sub = sub_genre or primary_archetype or "heavy_rain_swiss_alps"
+        logger.info(f"dispatcher_route: target='RainRetreatStudio' genre='{genre}' sub_genre='{eff_sub}' archetype='{primary_archetype}' prompt='{custom_prompt}'")
+        return await generate_rain_screenplay(sub_genre=eff_sub, primary_archetype=primary_archetype, **base_kwargs)
 
     # 0.1 Dedicated Ocean Studio Dispatch (All 6 Diurnal Timings under genre 'relax/ocean')
     if genre_lower in {"relax/ocean", "ocean"} or "ocean" in arch_lower or "ocean" in sub_lower or "bioluminescent" in arch_lower or any(w in p_lower for w in ["ocean retreat", "ocean villa", "overwater villa", "turquoise lagoon"]):

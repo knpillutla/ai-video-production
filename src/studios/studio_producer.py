@@ -7,8 +7,10 @@ Velvet Anti-Fatigue Acoustic Mastering, AI Video Diffusion (Wan/Kling/Hunyuan), 
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from pathlib import Path
+import subprocess
 import time
 from typing import Any, Dict, List, Optional
 
@@ -32,7 +34,13 @@ from src.studios.screenplay_models import AmbientScenePrompt, AmbientStoryboard
 def _resolve_scene_negative_prompt(scene: Any, default_camera: str = "locked_tripod") -> str:
     neg = getattr(scene, "motion_negative_prompt", None)
     base_neg = neg.strip() if (neg and isinstance(neg, str)) else ""
-    return ", ".join([p for p in [base_neg, "camera movement, camera pan, panning, tilt, zoom, camera shake, jitter, rapid motion, flickering, temporal jump, loop seam, morphing, changing environment, clouds, overcast, storm clouds, gelatinous water, artifacts"] if p])
+    w_text = f"{getattr(scene, 'weather', '')} {getattr(scene, 'visual_prompt', '')} {getattr(scene, 'motion_prompt', '')}".lower()
+    weather_negs = ""
+    if any(k in w_text for k in ("rain", "storm", "downpour", "cyclone", "monsoon")):
+        weather_negs = "snow, snowfall, snowflakes, blizzard, ice, frost, frosty, frozen ground, snowy mountains, winter, sleet, hail, slush, white snow caps"
+    elif any(k in w_text for k in ("snow", "blizzard", "winter")):
+        weather_negs = "rain, rainfall, rain droplets, torrential rain, downpour, puddle reflections, wet water drops, monsoon, thunderstorm, liquid rain, summer rain"
+    return ", ".join([p for p in [base_neg, weather_negs, "camera movement, camera pan, panning, tilt, zoom, camera shake, jitter, rapid motion, flickering, temporal jump, loop seam, morphing, changing environment, clouds, overcast, storm clouds, gelatinous water, artifacts"] if p])
 
 
 class StudioProducer:
@@ -88,11 +96,14 @@ class StudioProducer:
         def _resolve_scene_image_prompt(s: AmbientScenePrompt) -> str:
             m_target = (image_model or "flux_dev").lower()
             cfgs = getattr(s, "image_model_configs", None) or {}
-            keys = ["flux_dev", "flux", "flux_pro", "zimage"] if "dev" in m_target else (["flux_pro", "flux_1_1_pro_ultra", "flux_dev", "zimage"] if "pro" in m_target or "ultra" in m_target else ["zimage", "flux_dev", "flux_pro"])
-            for k in keys:
+            key_map = {"zimage": ["zimage", "z_image"], "pro": ["flux_pro", "flux_1_1_pro_ultra"], "dev": ["flux_dev", "flux"]}
+            match_keys = next((v for k, v in key_map.items() if k in m_target), [m_target])
+            for k in match_keys:
                 if k in cfgs and isinstance(cfgs[k], dict) and cfgs[k].get("prompt"):
                     return str(cfgs[k]["prompt"]).strip()
-            return s.visual_prompt.strip()
+            if ("gemini" in m_target or "imagen" in m_target) and s.visual_prompt and s.visual_prompt.strip():
+                return s.visual_prompt.strip()
+            raise RuntimeError(f"Mandatory image_model_configs['{m_target}'] missing or empty. No fallbacks allowed.")
 
         keyframe_tasks = []
         map_rendered_paths = {}
@@ -320,8 +331,21 @@ class StudioProducer:
             video_clips = []
             from src.scripts.local_perspective_drone import render_perspective_drone_clip
 
+            u_inputs = {}
+            u_path = ep_dir / "user_inputs.json"
+            if u_path.is_file():
+                try:
+                    u_inputs = json.loads(u_path.read_text("utf-8"))
+                except Exception:
+                    pass
+            u_weather = str(u_inputs.get("weather", "")).lower()
+            u_genre = str(u_inputs.get("genre", "")).lower()
+            u_subgenre = str(u_inputs.get("sub_genre", "")).lower()
+            u_format = str(u_inputs.get("format", "")).lower()
+
             local_coros = []
             local_indices = []
+            local_weather_info = {}
 
             for idx, (s, kf) in enumerate(zip(sb.scenes, valid_keyframes), 1):
                 out_clip = ep_dir / f"motion_p{idx}.mp4"
@@ -334,8 +358,25 @@ class StudioProducer:
                     or getattr(s, "is_map_transition", False)
                     or getattr(s, "is_vacation_scope", False)
                 )
-                is_relax = str(getattr(sb, "genre", "")).lower().startswith("relax") or "relax" in str(getattr(sb, "cluster", "")).lower()
-                use_local = is_relax or is_tour_slide or (motion_model in ("locked_tripod", "local_drone", "local_zoompan", "local", "offline")) or (getattr(s, "motion_type", "") in ("ken_burns", "static", "local_drone", "locked_tripod"))
+                is_relax = (
+                    str(getattr(sb, "genre", "")).lower().startswith("relax")
+                    or "relax" in str(getattr(sb, "cluster", "")).lower()
+                    or u_genre.startswith("relax")
+                    or "relax" in u_format
+                )
+                is_diffusion_model = (motion_model or "").lower() in (
+                    "kling_v3_4k", "kling_v3", "kling_4k", "kling_pro", "kling_1_6", "kling_v1_6_pro",
+                    "wan", "wan_2_1", "wan_4k", "hunyuan",
+                )
+                is_local_requested = (
+                    (motion_model or "").lower() in ("locked_tripod", "local_drone", "local_zoompan", "local", "offline", "ken_burns")
+                    or (getattr(s, "motion_type", "") in ("ken_burns", "static", "local_drone", "locked_tripod"))
+                )
+                use_local = not is_diffusion_model and (
+                    is_tour_slide
+                    or is_local_requested
+                    or (is_relax and (motion_model or "").lower() in ("locked_tripod", "local_drone", "local", "ken_burns", None, ""))
+                )
 
                 if use_local:
                     raw_cfg = getattr(s, "model_configs", None) or {}
@@ -350,12 +391,21 @@ class StudioProducer:
                     cam_mov = str(getattr(s, "camera_movement", "") or getattr(s, "camera_rig", "") or motion_model or "").lower()
                     is_fixed_tripod = is_relax or any(w in cam_mov for w in ("locked", "tripod", "static", "fixed", "stay", "hold")) or (local_cfg.get("movement") == "stay")
 
+                    w_combo = f"{u_weather} {u_genre} {u_subgenre} {getattr(s, 'weather', '')} {getattr(sb, 'weather', '')} {getattr(sb, 'cluster', '')} {getattr(sb, 'title', '')}".lower()
+                    is_rain_scene = (u_weather == "rain") or any(k in w_combo for k in ("rain", "storm", "downpour", "cyclone", "monsoon", "relax/rain"))
+                    is_snow_scene = not is_rain_scene and ((u_weather == "snow") or any(k in w_combo for k in ("snow", "blizzard", "winter", "relax/blizzard")))
+                    rain_int = "heavy" if (u_weather == "rain" or any(k in w_combo for k in ("heavy", "high", "torrent", "cyclone", "storm", "downpour"))) else "light"
+                    snow_int = "heavy" if (u_weather == "snow" or any(k in w_combo for k in ("heavy", "high", "blizzard", "storm"))) else "medium"
+                    local_weather_info[idx] = {"rain": is_rain_scene, "snow": is_snow_scene}
+
+                    clip_dur = 5.0 if is_relax else (s.duration_seconds or 5.0)
+
                     if is_tour_slide or is_fixed_tripod:
                         # Static locked tripod hold: pure locked stationary frame ($0.00 compute)
                         coro = render_perspective_drone_clip(
                             image_path=kf,
                             output_path=out_clip,
-                            duration_seconds=s.duration_seconds,
+                            duration_seconds=clip_dur,
                             fps=sb.recommended_fps or 24,
                             target_res=(3840, 2160),
                             choreography="stay",
@@ -363,6 +413,10 @@ class StudioProducer:
                             start_zoom=local_cfg.get("start_zoom", "normal"),
                             start_tilt=local_cfg.get("start_tilt", "center"),
                             curve="linear",
+                            rain=is_rain_scene,
+                            rain_intensity=rain_int,
+                            snow=is_snow_scene,
+                            snow_intensity=snow_int,
                             lower_third_hud=None,
                         )
                     else:
@@ -388,7 +442,7 @@ class StudioProducer:
                         coro = render_perspective_drone_clip(
                             image_path=kf,
                             output_path=out_clip,
-                            duration_seconds=s.duration_seconds,
+                            duration_seconds=clip_dur,
                             fps=sb.recommended_fps or 24,
                             target_res=(3840, 2160),
                             choreography=choreo,
@@ -396,6 +450,10 @@ class StudioProducer:
                             start_zoom=local_cfg.get("start_zoom", "normal"),
                             start_tilt=local_cfg.get("start_tilt", "center"),
                             curve=local_cfg.get("curve", "cosine"),
+                            rain=is_rain_scene,
+                            rain_intensity=rain_int,
+                            snow=is_snow_scene,
+                            snow_intensity=snow_int,
                             lower_third_hud=hud_data,
                         )
                     local_coros.append(coro)
@@ -429,6 +487,68 @@ class StudioProducer:
                 local_results = await asyncio.gather(*local_coros)
                 for sc_idx, clip_p in zip(local_indices, local_results):
                     rendered_clips_map[sc_idx] = clip_p
+                    try:
+                        foley_stem = ep_dir / f"nature_foley_p{sc_idx}.wav"
+                        from src.services.procedural_foley import synthesize_foley_stem
+                        sc_w = local_weather_info.get(sc_idx, {})
+                        if sc_w.get("rain"):
+                            w_type = "heavy rain and river rapids"
+                        elif sc_w.get("snow"):
+                            w_type = "blizzard winter wind"
+                        elif any(k in u_genre for k in ("ocean", "beach", "coast")):
+                            w_type = "ocean rolling waves"
+                        elif any(k in u_genre for k in ("hearth", "fire", "cozy")):
+                            w_type = "fireplace campfire crackle embers"
+                        elif any(k in u_genre for k in ("waterfall", "river", "stream")):
+                            w_type = "water stream rapids"
+                        else:
+                            w_type = "mountain breeze"
+                        synthesize_foley_stem(w_type, "nature", "outdoor", 8.0, foley_stem)
+
+                        music_src = None
+                        if not no_bgm:
+                            if (ep_dir / "velvet_binaural_master_48k.mp3").is_file():
+                                music_src = ep_dir / "velvet_binaural_master_48k.mp3"
+                            elif (ep_dir / "raw_soundtrack.mp3").is_file():
+                                music_src = ep_dir / "raw_soundtrack.mp3"
+
+                        if clip_p.is_file():
+                            import imageio_ffmpeg
+                            ff_bin = imageio_ffmpeg.get_ffmpeg_exe()
+
+                            # 1. Dedicated Nature-Only Clip (100% Pure Nature ASMR, Zero BGM)
+                            nature_clip = clip_p.parent / f"motion_nature_p{sc_idx}.mp4"
+                            if foley_stem.is_file():
+                                cmd_nat = [
+                                    ff_bin, "-y", "-i", str(clip_p), "-i", str(foley_stem),
+                                    "-map", "0:v", "-map", "1:a",
+                                    "-c:v", "copy", "-c:a", "aac", "-b:a", "256k",
+                                    "-shortest", str(nature_clip)
+                                ]
+                                subprocess.run(cmd_nat, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+                            # 2. Dedicated BGM-Only Clip (100% Music, Zero Nature Foley)
+                            if music_src and music_src.is_file():
+                                tmp_bgm = clip_p.parent / f"_mux_{clip_p.name}"
+                                cmd_bgm = [
+                                    ff_bin, "-y", "-i", str(clip_p), "-i", str(music_src),
+                                    "-map", "0:v", "-map", "1:a",
+                                    "-c:v", "copy", "-c:a", "aac", "-b:a", "256k",
+                                    "-shortest", str(tmp_bgm)
+                                ]
+                                mux_res = subprocess.run(cmd_bgm, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                if mux_res.returncode == 0 and tmp_bgm.is_file() and tmp_bgm.stat().st_size > 1000:
+                                    tmp_bgm.replace(clip_p)
+                            elif foley_stem.is_file() and not nature_clip.is_file():
+                                cmd_nat = [
+                                    ff_bin, "-y", "-i", str(clip_p), "-i", str(foley_stem),
+                                    "-map", "0:v", "-map", "1:a",
+                                    "-c:v", "copy", "-c:a", "aac", "-b:a", "256k",
+                                    "-shortest", str(clip_p)
+                                ]
+                                subprocess.run(cmd_nat, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    except Exception as mux_err:
+                        logger.warning(f"local_drone_audio_mux_skipped: {mux_err}")
 
             if motion_tasks:
                 diff_clips = await visual_batch_service.render_motion_batch(tasks=motion_tasks)

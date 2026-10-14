@@ -33,9 +33,14 @@ async function renderDistributionPackaging(vid) {
   const cleanTitle = (vid.title || "Serene Nature Sanctuary").replace(/\s*-\s*4K.*$/i, "").trim();
 
   // 1. Resolve Thumbnails
-  const thumbUrl = `/storage/user-${sanitizedUser}/channels/${chSlug}/${epId}/keyframe_p1.jpg?t=${Date.now()}`;
-  setupThumbnailDisplay("dist-broadcast-thumb-img", "dist-broadcast-thumb-placeholder", "dist-broadcast-thumb-link", thumbUrl);
-  setupThumbnailDisplay("dist-short-thumb-img", "dist-short-thumb-placeholder", "dist-short-thumb-link", thumbUrl);
+  let thumbUrl = vid.thumbnail_url || vid.thumbnailUrl || vid.thumb_url || vid.keyframes?.[0]?.url;
+  if (!thumbUrl && vid.format && vid.production_name) {
+    thumbUrl = `/storage/user-${sanitizedUser}/networks/${chSlug}/${vid.format}/${vid.production_name}/${epId}/keyframe_p1.jpg?t=${Date.now()}`;
+  }
+  if (thumbUrl) {
+    setupThumbnailDisplay("dist-broadcast-thumb-img", "dist-broadcast-thumb-placeholder", "dist-broadcast-thumb-link", thumbUrl);
+    setupThumbnailDisplay("dist-short-thumb-img", "dist-short-thumb-placeholder", "dist-short-thumb-link", thumbUrl);
+  }
 
   // 2. Resolve Broadcast Trending Titles
   const defaultBroadcastTitles = [

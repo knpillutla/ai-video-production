@@ -18,7 +18,7 @@ const NICHE_RADIO_CONFIGS = {
     bgm: false, voice: false, pureNature: true, fps: "24", channel: "silent_hearth"
   },
   relax_rain: {
-    prompt: "Calming Forest River Rain & Distant Thunder - Gentle steady rain falling on broad leaves, tranquil stream ripples, cozy atmospheric soundscape",
+    prompt: "Calming Heavy Summer Rain & Distant Thunder - Dramatic torrential rainfall streaming from eaves, visible falling rain sheets, energetic water droplet ripples, cozy atmospheric ASMR soundscape",
     bgm: false, voice: false, pureNature: true, fps: "24", channel: "earth_serenade"
   },
   relax_serenity: {
@@ -151,7 +151,15 @@ const STUDIO_SUBOPTIONS_MAP = {
   "relax/blizzard": [{ val: "blizzard_cozy_cabin_window", label: "🪟 Cozy Timber Cabin Window & Blizzard Winds" }, { val: "blizzard_frosted_pine_forest", label: "🌲 Frosted Pine Forest & Heavy Snowdrift" }, { val: "blizzard_alpine_hearth_shelter", label: "🔥 Alpine Stone Shelter & Glowing Hearth Fire" }, { val: "blizzard_twilight_snowfall", label: "❄️ Twilight Alpine Cabin & Heavy Snowfall" }],
   "relax/forest": [{ val: "forest_mossy_canopy_day", label: "🌲 Emerald Mossy Canopy & Crystalline Stream" }, { val: "forest_babbling_brook", label: "💧 Babbling Forest Brook & Fern Glade" }, { val: "forest_morning_sunbeams", label: "✨ Morning Komorebi Sunbeams & Ancient Pines" }, { val: "forest_twilight_fireflies", label: "🌌 Twilight Enchanted Forest & Gentle Mist" }],
   "relax/nature": [{ val: "alpine_nature", label: "🏔️ Alpine Nature & Mountain Sanctuaries (Swiss Alps)" }, { val: "glacial_fjord_lake", label: "🛶 Glacial Mirror Lakes & Fjords" }, { val: "temperate_forest", label: "🌲 Temperate Mossy Rainforest & Streams" }],
-  "relax/rain": [{ val: "tropical_village_rain", label: "🛖 Tropical Bamboo Hut & Village Rain ASMR" }, { val: "veranda_rain", label: "🏡 Biophilic Glass Veranda Rain" }, { val: "rainy_bedroom", label: "🛏️ Rainy Forest Bedroom & Glass Cabin" }, { val: "forest_rain", label: "🌧️ Forest River Rainfall & ASMR" }, { val: "droplet_ripples", label: "💧 Water Droplet Ripples & Lake Reflections" }],
+  "relax/rain": [
+    { val: "heavy_rain_swiss_alps", label: "⛈️ Swiss Alps Heavy Rain & Chalet Torrent (Storm Clouds & River Rapids)" },
+    { val: "gentle_rain_swiss_alps", label: "🌧️ Swiss Alps Gentle Rain & Meadow Mist (Soft Overcast & Glistening Veranda)" },
+    { val: "heavy_rain_tropical_village", label: "🛖 Tropical Village Torrential Rain (Cascading Thatched Eaves)" },
+    { val: "gentle_rain_forest_river", label: "🌲 Forest River Gentle Rain (Delicate Droplets & Concentric Ripples)" },
+    { val: "gentle_rain_bedroom", label: "🛏️ Cozy Glass Bedroom Gentle Rain (Sleep ASMR & Windowpane Trickle)" },
+    { val: "heavy_rain_glass_cabin", label: "⛈️ Forest Glass Cabin Torrential Downpour (Glass Roof Deluge & Thunder)" },
+    { val: "droplet_ripples", label: "💧 Water Droplet Ripples & Lake Reflections" }
+  ],
   "relax/waterfall": [{ val: "waterfall_gorge", label: "🌊 Monumental Plunge Cataracts (Niagara / Iguazu)" }, { val: "tiered_cascade", label: "🏞️ Multi-Tiered Glacial Cascades (Plitvice)" }],
   "relax/hearth": [{ val: "cozy_hearth", label: "🔥 Open-Air Beach Campfire & Shoreline Hearth" }, { val: "stone_hearth", label: "🪵 Rustic Cabin Stone Fireplace" }, { val: "rainy_hearth_bedroom", label: "🛏️ Rainy Cabin Bedroom with Hearth Fireplace" }],
   "relax/cozy": [{ val: "cabin_bedroom", label: "🛏️ Cozy Glass Cabin Bedroom & Rain on Window" }, { val: "biophilic_living", label: "🪵 Biophilic Living Space & Terraces" }, { val: "rainy_patio", label: "☕ Rainy Garden Patio & Warm Hearth" }],
@@ -203,8 +211,12 @@ const STUDIO_SUBGENRE_PLACEHOLDERS = {
   tropical_village_rain: "e.g. Sheltered rustic bamboo pavilion in a peaceful tropical village during heavy torrential rainfall, thatched roof eaves with water cascading in continuous glassy sheets, warm glowing amber lantern (2700K), cozy outdoor bed...",
   cabin_bedroom: "e.g. Warm biophilic timber glass cabin bedroom overlooking rainy forest, plush duvet, and steaming tea mug...",
   rainy_hearth_bedroom: "e.g. Intimate timber bedroom with glowing stone hearth fireplace, soft bed, and steady rain on windowpanes...",
-  forest_rain: "e.g. Gentle rain falling on mossy temperate rainforest river and floating leaf ripples...",
-  veranda_rain: "e.g. Biophilic glass veranda overlooking misty mountain forest during gentle twilight rainfall...",
+  heavy_rain_swiss_alps: "e.g. Sheltered wooden chalet veranda overlooking emerald green Swiss alpine village during heavy torrential summer rainstorm, dark storm clouds, cascading eaves, roaring turquoise glacial river...",
+  gentle_rain_swiss_alps: "e.g. Swiss alpine chalet balcony during gentle steady rain, soft cool overcast daylight, glistening red geraniums, misty emerald valley...",
+  heavy_rain_tropical_village: "e.g. Sheltered rustic bamboo pavilion in tropical village during heavy torrential rainfall, cascading thatched eaves, warm amber lantern...",
+  gentle_rain_forest_river: "e.g. Temperate rainforest stream during gentle continuous rain, delicate droplets on mossy stones, expanding concentric ripples...",
+  gentle_rain_bedroom: "e.g. Cozy glass cabin bedroom in misty pine forest during gentle rain, warm 2700K bedside lamp, rain streaming on windowpane...",
+  heavy_rain_glass_cabin: "e.g. Forest glass cabin during torrential downpour, dramatic rain sheets pounding on glass ceiling, distant rolling thunder...",
   droplet_ripples: "e.g. Ultra-macro 4K raindrops creating concentric ripples on mirror-still mountain pond...",
   waterfall_gorge: "e.g. Monumental cascading cataract with heavy rising mist and turquoise plunge pool...",
   tiered_cascade: "e.g. Multi-tiered emerald forest cascades flowing gently over moss-covered limestone ledges...",
@@ -278,7 +290,7 @@ const STUDIO_ARCHETYPES_MAP = {
   "relax/blizzard": [{ val: "blizzard_cozy_cabin_window", label: "🪟 Cozy Cabin Window" }, { val: "blizzard_frosted_pine_forest", label: "🌲 Frosted Pine Forest" }, { val: "blizzard_alpine_hearth_shelter", label: "🔥 Alpine Hearth Shelter" }, { val: "blizzard_twilight_snowfall", label: "❄️ Twilight Snowfall" }],
   "relax/forest": [{ val: "forest_mossy_canopy_day", label: "🌲 Emerald Mossy Canopy" }, { val: "forest_babbling_brook", label: "💧 Babbling Forest Brook" }, { val: "forest_morning_sunbeams", label: "✨ Morning Sunbeams" }, { val: "forest_twilight_fireflies", label: "🌌 Twilight Fireflies" }],
   "relax/nature": [{ val: "alpine_peaks_meadow", label: "🏔️ Swiss Alps Peaks & Meadow" }, { val: "glacial_mirror_lake", label: "🛶 Glacial Mirror Lake" }, { val: "temperate_mossy_forest", label: "🌲 Mossy Rainforest & Stream" }, { val: "dolomites_panoramic", label: "⛰️ Dolomite Granite Spires" }],
-  "relax/rain": [{ val: "bamboo_hut_veranda", label: "🛖 Thatched Eaves Waterfall & Bamboo Veranda" }, { val: "peaceful_village_sleep", label: "🛌 Open-Air Veranda Bed & Heavy Village Rain" }, { val: "biophilic_veranda", label: "🏡 Biophilic Covered Veranda" }, { val: "rainy_cabin_bedroom", label: "🛏️ Glass Cabin Bedroom" }, { val: "misty_forest_stream", label: "🌲 Rainforest Glacial Stream" }, { val: "rainy_attic_loft", label: "🕯️ Rain on Skylight Attic" }, { val: "lake_reflection_rain", label: "💧 Mirror Mountain Pond" }],
+  "relax/rain": [{ val: "swiss_chalet_balcony", label: "🏡 Swiss Chalet Balcony & Village Rain" }, { val: "biophilic_veranda", label: "🏡 Biophilic Covered Veranda" }, { val: "misty_forest_stream", label: "🌲 Rainforest Glacial Stream" }, { val: "peaceful_village_sleep", label: "🛌 Open-Air Veranda Bed & Heavy Village Rain" }, { val: "bamboo_hut_veranda", label: "🛖 Thatched Eaves Waterfall & Bamboo Veranda" }, { val: "rainy_cabin_bedroom", label: "🛏️ Glass Cabin Bedroom" }, { val: "rainy_attic_loft", label: "🕯️ Rain on Skylight Attic" }, { val: "lake_reflection_rain", label: "💧 Mirror Mountain Pond" }],
   "relax/waterfall": [{ val: "monumental_plunge", label: "🌊 Roaring Cataract Plunge" }, { val: "tiered_mossy_cascade", label: "🏞️ Multi-Tiered Cascades" }, { val: "icelandic_canyon_fall", label: "🌋 Basalt Column Waterfall" }],
   "relax/hearth": [{ val: "pebble_beach_shore", label: "🏖️ Pebble Shore Fire Ring" }, { val: "cliffside_stone_hearth", label: "🌊 Cliffside Stone Hearth" }, { val: "driftwood_cove_fire", label: "🪵 Driftwood Cove Fire" }, { val: "rainy_hearth_bedroom", label: "🛏️ Cabin Hearth Bedroom" }],
   "relax/cozy": [{ val: "glass_cabin_bedroom", label: "🛏️ Biophilic Bedroom & Rain" }, { val: "mountain_chalet_living", label: "🪵 Chalet Living & Fireplace" }, { val: "rainy_patio_terrace", label: "☕ Garden Patio & Hearth" }, { val: "library_reading_nook", label: "📚 Reading Nook & Soft Rain" }],

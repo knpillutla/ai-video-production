@@ -592,6 +592,10 @@ function advanceToMotionStage(vid, motionModelOverride, forceRerun = false) {
   if (motionModelOverride) {
     target.motionModel = motionModelOverride;
   }
+  const checkedWeather = document.querySelector('input[name="studio_weather"]:checked')?.value;
+  if (checkedWeather) {
+    target.weather = checkedWeather;
+  }
   currentActiveInspectorEpisode = target;
   renderInspectorFromVideo(target);
   if (typeof filterChannelArchive === "function") filterChannelArchive();

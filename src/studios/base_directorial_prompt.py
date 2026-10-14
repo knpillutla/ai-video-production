@@ -10,11 +10,7 @@ from src.studios.directorial_configs import (
 from src.studios.lighting_director import detect_lighting_directive, format_universal_lighting_guardrails
 
 # Re-export configuration builders for backwards compatibility
-__all__ = [
-    "build_default_image_model_configs",
-    "build_default_video_model_configs",
-    "build_base_directorial_prompt",
-]
+__all__ = ["build_default_image_model_configs", "build_default_video_model_configs", "build_base_directorial_prompt"]
 
 
 def build_base_directorial_prompt(
@@ -44,8 +40,7 @@ def build_base_directorial_prompt(
     is_documentary = "doc" in g_lower or "documentary" in ch_lower or "doc" in (sub_genre or "").lower() or "documentary" in a_lower
 
     tour_archetypes = {
-        "itinerary_map_tour", "travel_itinerary_tour", "grand_tour", "top_attractions_tour",
-        "local_neighborhood_tour", "culinary_food_tour", "architecture_design_tour",
+        "itinerary_map_tour", "travel_itinerary_tour", "grand_tour", "top_attractions_tour", "local_neighborhood_tour", "culinary_food_tour", "architecture_design_tour",
     }
     is_tour = (a_lower in tour_archetypes) or ((sub_genre or "").lower().strip() in tour_archetypes)
     user_chose_fixed_shots = (num_shots is not None and num_shots > 0 and num_shots != -1)
@@ -94,10 +89,10 @@ def build_base_directorial_prompt(
     )
 
     if is_nature_relax:
-        d1 = ("1. PURE PRISTINE UNINHABITED NATURE & LIVING WALLPAPER (ZERO HUMANS, ZERO STRUCTURES):\n"
-              "   - Every scene MUST be 100% uninhabited, wild, raw, primordial nature overlooking a majestic scenery.\n"
-              "   - Strictly zero humans, tourists, swimmers, hikers, guides, voices, or faces.\n"
-              "   - Zero modern structures, buildings, cabins, paved roads, vehicles, fences, power lines, boats, or railings.\n"
+        d1 = ("1. PURE PRISTINE LIVING WALLPAPER SCENERY & NATURAL GRANDEUR:\n"
+              "   - Every scene MUST showcase exceptionally visually brilliant, pristine, awe-inspiring natural scenery.\n"
+              "   - Strictly zero clutter, tourists, power lines, or modern vehicles.\n"
+              "   - Contextual Architecture: Authentically incorporate requested architecture (e.g. rustic Swiss chalets, verandas, cabins).\n"
               "   - Living Wallpaper Framing: Compose as a tranquil living wallpaper overlooking the scenic expanse.")
         is_low = clean_tier in ("low_cost", "tier_0", "local")
         if is_low:
@@ -128,12 +123,12 @@ def build_base_directorial_prompt(
             "   - Relaxation format (across all genres, archetypes, and weathers) strictly mandates a FIXED LOCKED TRIPOD overlooking scenery.\n"
             "   - 'camera_rig': strictly 'locked_tripod_telephoto' overlooking the natural vista.\n"
             "   - 'camera_movement': strictly 'locked_stationary_cinemagraph' (or ['stay']) with 0 panning, tilting, or zooming.\n"
-            "   - Motion: Direct ONLY organic environmental micro-motion (water ripples, swaying leaves, drifting mist/snow).\n"
+            "   - Motion: Direct organic environmental motion (water ripples, swaying leaves, mist/snow, water cascades). For rain/storms, direct VISIBLE torrential falling rain sheets, cascading eaves, and splashing droplets rather than subtle light drizzle.\n"
             "   - Individual genres/archetypes/weather add their own unique atmospheric & sensory properties on top."
         )
     else:
         d1 = ("1. 4K CINEMATIC BLUE-CHIP DOCUMENTARY & DRONE SHOWCASE:\n"
-              "   - Dynamic Scenic Cadence: Curate distinct world-class natural landmarks, architecture, and habitats.\n"
+              "   - Exceptionally Visually Brilliant & Stunning Cinematography: Curate distinct world-class natural landmarks, architecture, and habitats.\n"
               "   - NO MOVING OBJECTS DIRECTIVE: Still, timeless landscape keyframes with ZERO moving objects.\n"
               "   - Authoritative Measured Narration: Measured, poetic, educational voiceover (~120 WPM).\n"
               "   - 100% Crisp Natural Lighting: Balanced daylight or dramatic authentic golden/blue hour.")
@@ -153,6 +148,7 @@ def build_base_directorial_prompt(
     scene_ext = f"{extra_scene_schema.strip()}\n" if extra_scene_schema and extra_scene_schema.strip() else ""
 
     return f"""You are the Master Visual Director and Senior Cinematic Storyboard Artist for CineAI Studio.
+Your absolute #1 mandate is to author an exceptionally visually brilliant, breathtaking, stunning visual production. Every scene must be designed to wow the viewer with awe-inspiring beauty, immaculate environmental composition, rich cinematic depth, and pristine optical fidelity.
 Your role is to author a complete, production-ready, broadcast-grade Screenplay for the "{genre}" channel genre.
 
 {channel_block}
@@ -163,7 +159,9 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
 ======================================================================
 {d1}
 
-2. LIVING WALLPAPER & BALANCED CINEMATIC COMPOSITION:
+2. EXCEPTIONAL, VISUALLY BRILLIANT & STUNNING CINEMATIC COMPOSITION:
+   - Every "visual_prompt" MUST craft an exceptionally visually brilliant, breathtaking, award-winning scenery.
+   - Describe rich environmental micro-details: specular water glints, atmospheric depth, volumetric light, lush natural textures, and photorealistic optical depth.
    - Format visual and motion framing as a LIVING WALLPAPER / CINEMAGRAPH with wide panoramic grandeur.
    - In "shot_type", use cinematic panoramic classifications: "wide_panoramic_picturesque", "aerial_grandeur_vista", "low_angle_monumental", or "architectural_perspective_50mm".
 
@@ -176,14 +174,20 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
    - Allocate duration based on shot grandeur: 4s-6s (detail/establishing), 8s-12s (orbit/lateral glide), 14s-20s (monumental hold / transit maps).
    - DIRECTORIAL RULE: If a scene requires more narrative context or transit explanation, Gemini MUST INCREASE 'duration_seconds' to match: required_duration = (word_count / {speech_words_per_sec:.2f}) + 1.5s pause. Never truncate narration or rush speech!
 
-6. MULTI-MODEL PROMPTS ("image_model_configs" & "model_configs"):
-   - For AI models ("kling_v1_6_pro", "wan_2_1"): camera/atmospheric motion is directed in natural language within their prompt text.
-   - For "local_drone": camera flight capabilities MUST be specified inside "model_configs.local_drone":
-     * Single movement: "movement": "dollyin"|"pan-right"|"orbit-left" (or stage arrays), "start_pan": "center"|"left"|"right", "start_zoom": "normal"|"wide"|"in", "curve": "cosine". For relaxation format, strictly "movement": "stay".
+6. MULTI-MODEL PROMPTS ("image_model_configs" & "model_configs") - MANDATORY NO FALLBACKS:
+   - For every scene, populate ALL target image models in "image_model_configs":
+     * "flux_dev": Photorealistic 16:9 cinematic framing (guidance_scale 3.5, 28 steps).
+     * "flux_pro": Ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c, 16:9, raw: true.
+     * "zimage": Sub-second high-detail photorealism via fal-ai/z-image/turbo, sharp natural lighting, 8 steps.
+   - For every scene, populate ALL target video models in "model_configs":
+     * "kling_v3_4k": Native 4K UHD video diffusion (fal-ai/kling-video/v3/4k/image-to-video). High-density optical kinetics (for rain: blinding torrential rainstorm, thick solid white sheets of heavy downpour, intense splashing water exploding off eaves), strictly locked camera, mode: "pro", duration: "5", aspect_ratio: "16:9". NEVER use "living wallpaper" in Kling positive prompts!
+     * "kling_v1_6_pro": Cinemagraph living wallpaper (fal-ai/kling-video/v1.6/pro/image-to-video), mode: "pro", duration: "5", aspect_ratio: "16:9".
+     * "wan_2_1": Continuous laminar fluid dynamics (fal-ai/wan-i2v), guide_scale 5.0, 30 steps.
+     * "local_drone": Camera flight capabilities ("movement": "dollyin"|"pan-right"|"orbit-left", "stay" for relax).
 
 7. MANDATORY NEGATIVE PROMPT:
-   - For Pure Wilderness: "clouds, cloudy, overcast sky, moving clouds, timelapse clouds, camera shake, jitter, rapid motion, flickering, temporal jump, parched, frozen ice, stagnant water, melting foam, rubbery water, artifacts, humans, tourist, boat, railings, buildings".
-   - For Architectural & Travel: "clouds, overcast sky, moving clouds, camera shake, jitter, rapid motion, morphing architecture, changing furniture, structural drift, flickering, temporal jump, gelatinous water, artifacts, humans, tourist, clutter, plastic junk, modern electronics".
+   - For Rain/Storms: "sunny, bright sun, direct sunlight, clear blue sky, lens flare, sunbeams, golden hour flare, camera shake, jitter, rapid motion, morphing architecture, gelatinous water, artifacts, humans, tourist".
+   - For Fair-Weather Nature: "moving clouds, timelapse clouds, camera shake, jitter, rapid motion, morphing architecture, changing furniture, structural drift, flickering, temporal jump, gelatinous water, artifacts, humans, tourist".
 
 8. NARRATION ENGINE & AUDIO-VISUAL GROUNDING CONTRACT (MANDATORY):
    - Active Narration Engine: {tts_provider_name} ({speech_cadence_wpm} WPM, ~{speech_words_per_sec:.2f} words/sec). Tail breathing pause: 1.5s.
@@ -207,8 +211,8 @@ PRODUCTION SPECIFICATIONS:
 - Motion & Quality Tier: {clean_tier}
 {cadence_spec}
 - Camera Rig Palette: {rig_palette}
-- Target Image Models: ["flux_dev", "flux_pro", "zimage"]
-- Target Video Models: ["kling_v1_6_pro", "wan_2_1", "local_drone"]
+- Target Image Models: ["flux_dev", "flux_pro", "zimage"] (ALL MANDATORY, ZERO FALLBACKS)
+- Target Video Models: ["kling_v3_4k", "kling_v1_6_pro", "wan_2_1", "local_drone"] (ALL MANDATORY, ZERO FALLBACKS)
 
 CRITICAL SCHEMA ENFORCEMENT:
 Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
@@ -258,13 +262,15 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
       "visual_prompt": "A photorealistic, symmetrical 16:9 cinematic landscape view of [Landmark Name], shot from {default_rig}. Crisp natural lighting.",
 {scene_ext}      "image_model_configs": {{
         "flux_dev": {{"model": "fal-ai/flux/dev", "prompt": "Photorealistic wide panoramic view, 16:9 cinematic.", "aspect_ratio": "16:9", "guidance_scale": 3.5, "num_inference_steps": 28}},
-        "flux_pro": {{"model": "fal-ai/flux-pro/v1.1-ultra", "prompt": "Ultra-photorealistic 8K UHD shot, 16:9.", "aspect_ratio": "16:9", "raw": true}}
+        "flux_pro": {{"model": "fal-ai/flux-pro/v1.1-ultra", "prompt": "Ultra-photorealistic 8K UHD shot, 16:9.", "aspect_ratio": "16:9", "raw": true}},
+        "zimage": {{"model": "fal-ai/z-image/turbo", "prompt": "Stunning photorealistic panoramic landscape, 16:9 locked tripod framing, sharp natural lighting.", "aspect_ratio": "16:9", "num_inference_steps": 8}}
       }},
       "motion_prompt": "Living wallpaper cinemagraph style. Smooth panoramic sweep across natural landscape.",
       "motion_negative_prompt": "camera shake, jitter, rapid motion, morphing landscape, artifacts",
       "model_configs": {{
+        "kling_v3_4k": {{"model": "fal-ai/kling-video/v3/4k/image-to-video", "prompts": {{"positive_prompt": "Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Topography 100% frozen. Fluid motion, native 4K UHD atmospheric depth, zero humans.", "negative_prompt": "camera shake, jitter, morphing landscape, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}},
+        "kling_v1_6_pro": {{"model": "fal-ai/kling-video/v1.6/pro/image-to-video", "prompts": {{"positive_prompt": "Cinematic visual grandeur, locked camera.", "negative_prompt": "camera shake, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}},
         "wan_2_1": {{"model": "fal-ai/wan-i2v", "prompts": {{"positive_prompt": "Smooth fluid motion.", "negative_prompt": "camera shake, artifacts"}}, "settings": {{"guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9"}}}},
-        "kling_v1_6_pro": {{"model": "fal-ai/kling-video/v1.6/pro/image-to-video", "prompts": {{"positive_prompt": "Cinematic visual grandeur.", "negative_prompt": "camera shake, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}},
         "local_drone": {{"model": "local_perspective_drone", "movement": "{'stay' if is_nature_relax else 'dollyin'}", "start_pan": "center", "start_zoom": "normal", "curve": "cosine", "rationale": "{ex_rationale}"}}
       }},
       "domain": "landscape_solid",
@@ -277,17 +283,12 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
     }}
   ],
   "publishing": {{
-    "ctr_titles": [
-      "3 HOURS of Deep Serenity in [Landmark] ⋄ 432Hz Healing Soundbath to Calm Your Mind - 4K UHD",
-      "Sleep Under [Landmark Sky/Nature] ✦ 432Hz Miracle Tone for Instant Anxiety Relief & Rest - 4K"
-    ],
-    "description_with_timestamps": "Immerse yourself in [Landmark Name]. Filmed with broadcast 4K clarity.\\n\\n⏱️ Chapters:\\n0:00 - Sanctuary Vista",
+    "ctr_titles": ["3 HOURS of Deep Serenity in [Landmark] ⋄ 432Hz Soundbath - 4K UHD", "Sleep Under [Landmark Sky] ✦ 432Hz Tone - 4K"],
+    "description_with_timestamps": "Immerse yourself in [Landmark Name]. Filmed with broadcast 4K clarity.\\n\\n⏱️ Chapters:\\n0:00 - Vista 1",
     "seo_tags": ["nature relaxation", "living wallpaper", "4k nature", "ambient nature"],
     "has_synthetic_media": true,
     "ypp_monetization_safety": "100% AdSense Advertiser-Friendly (Green Dollar Guarantee)",
-    "thumbnail_concept_prompts": [
-      "Ultra-crisp 16:9 cinematic shot of [Landmark Name], striking natural lighting, award-winning photography."
-    ]
+    "thumbnail_concept_prompts": ["Ultra-crisp 16:9 cinematic shot of [Landmark Name], striking natural lighting, award-winning photography."]
   }}
 }}
 Do NOT output markdown backticks or preamble. Output raw JSON only.

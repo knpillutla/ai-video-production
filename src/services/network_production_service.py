@@ -403,6 +403,8 @@ async def produce_channel_video(
 
     generated_sub_genre = getattr(universal_sp, "sub_genre", None) or eff_genre
     sb = relax_to_ambient_storyboard(universal_sp)
+    sb.weather = eff_weather
+    sb.genre = eff_genre_final
 
     generated_primary_archetype = getattr(universal_sp, "primary_archetype", None) or generated_sub_genre
     secondary_archetype = getattr(universal_sp, "secondary_archetype", None)

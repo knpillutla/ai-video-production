@@ -144,7 +144,7 @@ async def generate_long_play_for_episode(episode_id: str, req: LongPlayStretchRe
 
     async def _run_stretch():
         try:
-            job_state["ambient_progress"] = 20
+            job_state["ambient_progress"] = 30
             await asyncio.to_thread(
                 export_long_play_broadcast,
                 source_4k_video=ambient_src,
@@ -152,19 +152,11 @@ async def generate_long_play_for_episode(episode_id: str, req: LongPlayStretchRe
                 target_duration_seconds=req.hours * 3600.0,
                 fade_to_black_hours=req.fade_to_black_hours,
             )
-            job_state["ambient_progress"] = 60
-            out_30m = target_dir / "master_4k_30min_broadcast.mp4"
-            await asyncio.to_thread(
-                export_long_play_broadcast,
-                source_4k_video=ambient_src,
-                output_long_play=out_30m,
-                target_duration_seconds=1800.0,
-            )
             job_state["ambient_progress"] = 100
             job_state["ambient_url"] = _to_storage_url(out_ambient)
 
             if nature_src and nature_src.is_file():
-                job_state["nature_progress"] = 20
+                job_state["nature_progress"] = 30
                 await asyncio.to_thread(
                     export_long_play_broadcast,
                     source_4k_video=nature_src,
@@ -172,21 +164,13 @@ async def generate_long_play_for_episode(episode_id: str, req: LongPlayStretchRe
                     target_duration_seconds=req.hours * 3600.0,
                     fade_to_black_hours=req.fade_to_black_hours,
                 )
-                job_state["nature_progress"] = 60
-                out_30m_nature = target_dir / f"master_4k_30min{sec_suffix}_broadcast.mp4"
-                await asyncio.to_thread(
-                    export_long_play_broadcast,
-                    source_4k_video=nature_src,
-                    output_long_play=out_30m_nature,
-                    target_duration_seconds=1800.0,
-                )
                 job_state["nature_progress"] = 100
                 job_state["nature_url"] = _to_storage_url(out_nature)
             else:
                 job_state["nature_progress"] = 100
 
             job_state["status"] = "completed"
-            logger.info(f"long_play_dual_stretch_finished: {episode_id} ({req.hours}h & 30min)")
+            logger.info(f"long_play_dual_stretch_finished: {episode_id} ({req.hours}h)")
         except Exception as err:
             logger.error(f"long_play_stretch_failed: {err}", exc_info=True)
             job_state["status"] = "failed"

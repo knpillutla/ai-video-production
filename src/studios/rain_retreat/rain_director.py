@@ -19,6 +19,7 @@ from src.studios.rain_retreat.rain_prompt import (
     RAIN_BEDROOM_LANDMARK_POOL,
     RAIN_FOREST_LANDMARK_POOL,
     RAIN_LANDMARK_POOL,
+    SWISS_ALPS_RAIN_LANDMARK_POOL,
     build_rain_prompt,
 )
 
@@ -39,15 +40,27 @@ async def generate_rain_screenplay(
 ) -> RelaxScreenplay:
     """Synthesize dedicated rain retreat directorial screenplay via Gemini."""
     recent_topics = topic_memory.get_recent_topics(user_id=user_id, channel_id=channel_id, limit=20)
-    is_bedroom = ("bedroom" in (sub_genre or "").lower() or "cabin" in (sub_genre or "").lower() or "bedroom" in (primary_archetype or "").lower())
-    pool = RAIN_BEDROOM_LANDMARK_POOL if is_bedroom else RAIN_FOREST_LANDMARK_POOL
+    sub_l = (sub_genre or "").lower()
+    arch_l = (primary_archetype or "").lower()
+    p_l = (custom_prompt or "").lower()
+
+    is_swiss = any(k in sub_l or k in arch_l or k in p_l for k in ["swiss", "alps", "chalet", "alpine"])
+    is_bedroom = ("bedroom" in sub_l or "cabin" in sub_l or "bedroom" in arch_l) and not is_swiss
+    pool = SWISS_ALPS_RAIN_LANDMARK_POOL if is_swiss else (RAIN_BEDROOM_LANDMARK_POOL if is_bedroom else RAIN_FOREST_LANDMARK_POOL)
 
     if custom_prompt and custom_prompt.strip():
         eff_prompt = custom_prompt.strip()
     else:
         unseen = [lm for lm in pool if not any(lm.split(',')[0].lower() in t.lower() for t in recent_topics)]
         chosen = random.choice(unseen if unseen else pool)
-        if is_bedroom:
+        if is_swiss:
+            is_heavy = any(k in sub_l or k in arch_l for k in ["heavy", "torrent", "downpour", "storm"])
+            eff_prompt = (
+                f"Traditional Swiss alpine chalet veranda overlooking emerald green village during heavy torrential summer rainstorm at {chosen}"
+                if is_heavy else
+                f"Traditional Swiss alpine chalet veranda overlooking emerald green village during gentle steady summer rain at {chosen}"
+            )
+        elif is_bedroom:
             eff_prompt = f"Cozy luxury glass cabin bedroom with warm amber lamp and rain streaming on floor-to-ceiling panoramic window overlooking misty fir forest at {chosen}"
         else:
             eff_prompt = f"Lush temperate forest river during steady gentle rain at {chosen}"

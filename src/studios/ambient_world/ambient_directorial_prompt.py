@@ -157,13 +157,15 @@ STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
 
 {motion_contract}
 
-4. MODEL-SPECIFIC IMAGE PROMPTS ("image_model_configs"):
-   - For every scene, generate model-tailored image prompts inside "image_model_configs" for the target image model ("{image_model}"):
-     * "{image_model}": Use the dynamic ecosystem formulation derived in Section 1 matching the exact terrain (e.g. Alpine Mountains & Valleys for mountains, Panoramic Lakes for fjords/lakes, Ocean Beach for campfires, Cascades for waterfalls).
-       Settings: {{ "model": "fal-ai/flux-pro/v1.1-ultra", "aspect_ratio": "16:9", "raw": true }}
+4. MODEL-SPECIFIC IMAGE PROMPTS ("image_model_configs") - MANDATORY NO FALLBACKS:
+   - For every scene, generate model-tailored image prompts inside "image_model_configs" for ALL target image models ("flux_dev", "flux_pro", "zimage"):
+     * "flux_dev": fal-ai/flux/dev, 16:9 cinematic framing, guidance_scale 3.5, 28 steps.
+     * "flux_pro": fal-ai/flux-pro/v1.1-ultra, 8K UHD, 16:9, raw: true.
+     * "zimage": fal-ai/z-image/turbo, sub-second high-detail photorealism, sharp natural lighting, 8 steps.
 
-5. MODEL-SPECIFIC VIDEO DIFFUSION DIRECTIVES ("model_configs"):
+5. MODEL-SPECIFIC VIDEO DIFFUSION DIRECTIVES ("model_configs") - MANDATORY NO FALLBACKS:
    - For every scene, you MUST generate model-specific positive prompts, negative prompts, and optimal API settings inside "model_configs" for:
+     * "kling_v3_4k": Model "fal-ai/kling-video/v3/4k/image-to-video". Cinemagraph living wallpaper, strictly locked stationary camera with zero movement, 100% frozen topography, fluid water and atmospheric dynamics with 4K UHD spatial depth. Settings: {{ "mode": "pro", "duration": "5", "aspect_ratio": "16:9" }}
      * "kling_v1_6_pro": Model "fal-ai/kling-video/v1.6/pro/image-to-video". Directorial action command style: "Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Rock cliffs and horizon line remain 100% frozen and static. Continuous downward flowing water cascades directly matching the source image into the churning emerald basin, soft rising vapor mist, seamless cyclic motion, pristine untouched nature, zero humans." Settings: {{ "mode": "pro", "duration": "5", "aspect_ratio": "16:9" }}
      * "wan_2_1": Model "fal-ai/wan-i2v". Continuous fluid kinetic phrasing: "Living wallpaper cinemagraph, completely stationary static frame. Rock cliffs and landscape structure remain 100% frozen and unmoving. Smooth continuous laminar water cascades flowing steadily downwards into the basin, tranquil rising vapor mist. Stable uniform illumination, seamless loop compatible." Settings: {{ "guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9" }}
      * "local_drone": Model "local_perspective_drone". For relaxation format living wallpapers, camera movement MUST be strictly pure locked stationary frame: {{ "movement": "stay", "start_pan": "center", "start_zoom": "normal", "start_tilt": "center", "curve": "cosine", "speed_factor": 1.0, "rationale": "Pure locked stationary tripod living wallpaper framing with zero camera movement" }}.
@@ -192,8 +194,8 @@ PRODUCTION SPECIFICATIONS:
 - Total Duration: {duration_seconds} seconds
 - Shot Count: {num_shots} shots ({per_shot_dur}s per shot)
 - Camera Rig: {camera_motion}
-- Target Image Model: {image_model}
-- Target Video Models: ["kling_v1_6_pro", "wan_2_1", "local_drone"]
+- Target Image Models: ["flux_dev", "flux_pro", "zimage"] (ALL MANDATORY, ZERO FALLBACKS)
+- Target Video Models: ["kling_v3_4k", "kling_v1_6_pro", "wan_2_1", "local_drone"] (ALL MANDATORY, ZERO FALLBACKS)
 
 CRITICAL SCHEMA ENFORCEMENT:
 Return ONLY a valid JSON object matching RelaxScreenplay:
@@ -230,10 +232,19 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
       "camera_rig": "{camera_motion}",
       "color_temp_kelvin": 5500,
       "visual_prompt": "A photorealistic, wide panoramic landscape view of [Landmark Name]. Symmetrical 16:9 cinematic framing, shot on a locked tripod. In background, towering jagged mountain peaks; in foreground, lush alpine meadows with wildflowers frame a tranquil glacial stream. Pristine wilderness, zero buildings, zero tourists, zero modern structures.",
-      "image_model_configs": {{ "{image_model}": {{ "model": "fal-ai/flux-pro/v1.1-ultra", "prompt": "A photorealistic wide panoramic landscape of [Landmark Name], locked tripod, crisp natural daylight, pristine untouched wilderness.", "aspect_ratio": "16:9", "raw": true }} }},
+      "image_model_configs": {{
+        "flux_dev": {{ "model": "fal-ai/flux/dev", "prompt": "Photorealistic wide panoramic view, 16:9 cinematic.", "aspect_ratio": "16:9", "guidance_scale": 3.5, "num_inference_steps": 28 }},
+        "flux_pro": {{ "model": "fal-ai/flux-pro/v1.1-ultra", "prompt": "A photorealistic wide panoramic landscape of [Landmark Name], locked tripod, crisp natural daylight, pristine untouched wilderness.", "aspect_ratio": "16:9", "raw": true }},
+        "zimage": {{ "model": "fal-ai/z-image/turbo", "prompt": "Stunning photorealistic panoramic landscape, 16:9 locked tripod framing, sharp natural lighting.", "aspect_ratio": "16:9", "num_inference_steps": 8 }}
+      }},
       "motion_prompt": "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, zero panning, zero tilting, zero zooming. Landscape structure remains 100% frozen and static. Continuous downward flowing stream water, soft slow-moving vapor mist, zero humans.",
       "motion_negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing foliage, shifting rocks, flickering, temporal jump, sunny sky, rainbow, changing lighting, artifacts, humans, tourist, boat, buildings",
       "model_configs": {{
+        "kling_v3_4k": {{
+          "model": "fal-ai/kling-video/v3/4k/image-to-video",
+          "prompts": {{ "positive_prompt": "Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Topography 100% frozen. Fluid motion, native 4K UHD atmospheric depth, zero humans.", "negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing perspective, flickering, artifacts" }},
+          "settings": {{ "mode": "pro", "duration": "5", "aspect_ratio": "16:9" }}
+        }},
         "kling_v1_6_pro": {{
           "model": "fal-ai/kling-video/v1.6/pro/image-to-video",
           "prompts": {{ "positive_prompt": "Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Rock cliffs remain 100% frozen and static. Continuous downward flowing water cascades, soft rising vapor mist, seamless cyclic motion, zero humans.", "negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing perspective, flickering, artifacts" }},

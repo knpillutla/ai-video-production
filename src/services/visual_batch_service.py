@@ -27,18 +27,14 @@ class MotionClipTask:
     motion_prompt: str
     visual_prompt: str
     output_path: Path
-    duration_seconds: float = 30.0
-    model: str = "auto"
-    domain: str = "water_fluid"
+    duration_seconds: float = 30.0; model: str = "auto"; domain: str = "water_fluid"
     req_file: Optional[Path] = None
-    allow_fallback: bool = False
-    force_rerun: bool = False
+    allow_fallback: bool = False; force_rerun: bool = False
     negative_prompt: Optional[str] = None
     model_configs: Optional[dict[str, Any]] = None
     camera_waypoints: Optional[list] = None
     kinetic_micro_zones: Optional[dict] = None
-    camera_movement: Optional[Any] = None
-    interpolation: str = "cubic"
+    camera_movement: Optional[Any] = None; interpolation: str = "cubic"
 
 
 from src.core.step_logger import log_pipeline_step
@@ -156,8 +152,6 @@ class VisualBatchService:
                 task.output_path.unlink(missing_ok=True)
                 raw_diff = task.output_path.parent / f"raw_diff_{task.output_path.name}"
                 raw_diff.unlink(missing_ok=True)
-                if task.req_file and task.req_file.exists():
-                    task.req_file.unlink(missing_ok=True)
 
             chosen_model, rationale = resolve_motion_model(task.model, f"{task.visual_prompt} {task.motion_prompt}", total_shots=total_shots)
             logger.info(f"decision_motion_routing: {task.output_path.name} -> {chosen_model.upper()} ({rationale})")
@@ -180,42 +174,52 @@ class VisualBatchService:
             eff_neg = task.negative_prompt
             eff_settings: dict[str, Any] = {}
             if task.model_configs and isinstance(task.model_configs, dict):
-                m_key = "wan_2_1" if chosen_model == "wan" else ("kling_v1_6_pro" if chosen_model in ("kling", "kling_v3", "kling_4k") else chosen_model)
-                m_cfg = task.model_configs.get(m_key) or task.model_configs.get(chosen_model)
-                if m_cfg:
-                    prompts = m_cfg.get("prompts") if isinstance(m_cfg, dict) else getattr(m_cfg, "prompts", None)
-                    settings = m_cfg.get("settings") if isinstance(m_cfg, dict) else getattr(m_cfg, "settings", {})
-                    if prompts:
-                        p_pos = prompts.get("positive_prompt") if isinstance(prompts, dict) else getattr(prompts, "positive_prompt", None)
-                        p_neg = prompts.get("negative_prompt") if isinstance(prompts, dict) else getattr(prompts, "negative_prompt", None)
-                        if p_pos and p_pos.strip():
-                            eff_prompt = p_pos.strip()
-                        if p_neg and p_neg.strip():
-                            eff_neg = p_neg.strip()
-                    if settings and isinstance(settings, dict):
-                        eff_settings = settings
+                if chosen_model in ("kling_v3", "kling_4k", "kling_v3_4k"):
+                    m_cfg = task.model_configs.get("kling_v3_4k") or task.model_configs.get("kling_v3") or task.model_configs.get("kling_4k")
+                elif chosen_model in ("kling_pro", "kling"):
+                    m_cfg = task.model_configs.get("kling_v1_6_pro") or task.model_configs.get("kling_pro") or task.model_configs.get("kling")
+                elif chosen_model in ("wan", "wan_2_1", "wan_4k"):
+                    m_cfg = task.model_configs.get("wan_2_1") or task.model_configs.get("wan")
+                else:
+                    m_cfg = task.model_configs.get(chosen_model)
+                if not m_cfg:
+                    raise RuntimeError(f"Mandatory motion config for '{chosen_model}' missing from screenplay model_configs. No fallbacks allowed.")
+                prompts = m_cfg.get("prompts") if isinstance(m_cfg, dict) else getattr(m_cfg, "prompts", None)
+                settings = m_cfg.get("settings") if isinstance(m_cfg, dict) else getattr(m_cfg, "settings", {})
+                if prompts:
+                    p_pos = prompts.get("positive_prompt") if isinstance(prompts, dict) else getattr(prompts, "positive_prompt", None)
+                    p_neg = prompts.get("negative_prompt") if isinstance(prompts, dict) else getattr(prompts, "negative_prompt", None)
+                    if p_pos and p_pos.strip():
+                        eff_prompt = p_pos.strip()
+                    if p_neg and p_neg.strip():
+                        eff_neg = p_neg.strip()
+                if settings and isinstance(settings, dict):
+                    eff_settings = settings
 
             # Anti-Motion-Fatigue Clear Sky Standard & Realistic Fluid Physics Guard
             p_lower = f"{eff_prompt} {task.visual_prompt}".lower()
-            if any(k in p_lower for k in ("sky", "mountain", "valley", "alpine", "nature", "meadow", "landscape", "fjord", "lake", "forest")):
-                if "rain" not in p_lower and "monsoon" not in p_lower and "storm" not in p_lower:
-                    if "cloudless" not in eff_prompt.lower():
-                        eff_prompt = f"{eff_prompt}, crystal-clear static cloudless azure sky, zero clouds, tranquil motionless atmosphere"
-                    cloud_negs = "clouds, cloudy, overcast sky, overcast, cumulus, stratus, cirrus, storm clouds, dark clouds, moving clouds, timelapse clouds, rapid clouds, rolling clouds, cloud morphing, rapid cloud shadows, sky flickering"
-                    eff_neg = f"{eff_neg}, {cloud_negs}" if eff_neg else cloud_negs
+            if any(k in p_lower for k in ("rain", "storm", "downpour", "cyclone", "monsoon")):
+                eff_neg = f"{eff_neg}, snow, snowfall, snowflakes, blizzard, ice, frost, frozen ground, winter, sleet, hail" if eff_neg else "snow, snowfall, snowflakes, blizzard, ice, frost, frozen ground, winter, sleet, hail"
+            elif any(k in p_lower for k in ("snow", "blizzard", "winter")):
+                eff_neg = f"{eff_neg}, rain, rainfall, rain droplets, torrential rain, downpour, puddle reflections, wet water drops, monsoon" if eff_neg else "rain, rainfall, rain droplets, torrential rain, downpour, puddle reflections, wet water drops, monsoon"
+            elif any(k in p_lower for k in ("sky", "mountain", "valley", "alpine", "nature", "meadow", "landscape", "fjord", "lake", "forest")):
+                if "cloudless" not in eff_prompt.lower():
+                    eff_prompt = f"{eff_prompt}, crystal-clear static cloudless azure sky, zero clouds, tranquil motionless atmosphere"
+                cloud_negs = "clouds, cloudy, overcast sky, overcast, cumulus, stratus, cirrus, storm clouds, dark clouds, moving clouds, timelapse clouds, rapid clouds, rolling clouds, cloud morphing, rapid cloud shadows, sky flickering"
+                eff_neg = f"{eff_neg}, {cloud_negs}" if eff_neg else cloud_negs
 
             if chosen_model in ("hunyuan", "wan", "wan_4k", "kling", "kling_pro", "kling_v3", "kling_4k") and self.fal_key and task.image_path.is_file() and task.image_path.stat().st_size > 1000:
                 try:
                     raw_diff = task.output_path.parent / f"raw_diff_{task.output_path.name}"
                     if chosen_model in ("wan", "wan_4k"):
                         adapter = FalWan21Adapter(api_key=self.fal_key)
-                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, negative_prompt=eff_neg, settings=eff_settings)
+                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, negative_prompt=eff_neg, settings=eff_settings, req_file=task.req_file)
                     elif chosen_model in ("kling_v3", "kling_4k"):
                         adapter = FalKlingV3Adapter(api_key=self.fal_key)
-                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, negative_prompt=eff_neg, settings=eff_settings)
+                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, negative_prompt=eff_neg, settings=eff_settings, req_file=task.req_file)
                     elif chosen_model in ("kling_pro", "kling"):
                         adapter = FalKlingAdapter(api_key=self.fal_key)
-                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, negative_prompt=eff_neg, mode="pro")
+                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, negative_prompt=eff_neg, mode="pro", req_file=task.req_file)
                     else:
                         adapter = FalHunyuanAdapter(api_key=self.fal_key)
                         await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, req_file=task.req_file)

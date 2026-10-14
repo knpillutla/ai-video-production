@@ -259,6 +259,7 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
     fmt_val = str(user_inputs_data.get("format") or manifest_data.get("format") or "").lower()
     is_relax_fmt = fmt_val in ("relaxation", "relax") or "relax" in str(manifest_data.get("genre", "")).lower() or "/relaxation/" in ep_path.as_posix().lower()
     long_play_editions = [e for e in editions if "Long-Play" in e["format"]] if is_relax_fmt else []
+    master_editions = [e for e in editions if "Master" in e["format"] or "master" in e["edition_id"]]
 
     cost_by_stage = [
         {"stage": "Stage 1: Keyframe Visuals", "model": "FLUX.1 Dev (Fal AI)", "cost_usd": 0.075, "unit": "3 Keyframes"},
@@ -312,7 +313,8 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
         thumb_short_url = thumb_url
 
     total_cost = sum(item["cost_usd"] for item in cost_by_stage)
-    primary_master = master_editions[0]["url"] if master_editions else None
+    master_ed = [e for e in editions if "master" in e.get("edition_id", "")]
+    primary_master = master_ed[0]["url"] if master_ed else (editions[0]["url"] if editions else None)
 
     return {
         "episode_id": ep_id,
