@@ -696,8 +696,8 @@ def get_ffmpeg_writer(output_path: str, width: int, height: int, fps: float):
     cmd = [
         FFMPEG_BIN, "-y", "-f", "rawvideo", "-vcodec", "rawvideo",
         "-s", f"{width}x{height}", "-pix_fmt", "bgr24", "-r", str(fps), "-i", "-",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
-        "-maxrate", "16M", "-bufsize", "32M",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
+        "-maxrate", "4.5M", "-bufsize", "9M",
         "-threads", "4", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(output_path),
     ]
     flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
@@ -862,7 +862,7 @@ def render_perspective_drone_clip_sync(
             video_writer.release()
             # Transcode fallback
             temp_raw = out.parent / f"_raw_{out.stem}.mp4"
-            cmd_h264 = [FFMPEG_BIN, "-y", "-i", str(temp_raw), "-c:v", "libx264", "-crf", "22", "-maxrate", "16M", "-bufsize", "32M", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out)]
+            cmd_h264 = [FFMPEG_BIN, "-y", "-i", str(temp_raw), "-c:v", "libx264", "-crf", "24", "-maxrate", "4.5M", "-bufsize", "9M", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out)]
             subprocess.run(cmd_h264, capture_output=True, text=True)
             temp_raw.unlink(missing_ok=True)
 

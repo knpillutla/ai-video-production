@@ -60,15 +60,16 @@ def assemble_4k_master(
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
                 *in_args, "-i", str(audio_path), "-map", "0:v:0", "-map", "1:a:0",
                 "-af", afade_filter, "-t", f"{target_dur:.2f}", "-vf", v_filter,
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "24",
+                "-maxrate", "4.5M", "-bufsize", "9M",
                 "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)
             ]
         else:
             cmd = [
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
                 *in_args, "-map", "0:v:0", "-t", f"{target_dur:.2f}", "-vf", v_filter,
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
-                "-movflags", "+faststart", str(out_master)
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "24",
+                "-maxrate", "4.5M", "-bufsize", "9M", "-movflags", "+faststart", str(out_master)
             ]
     else:
         hold_list = [float(d) for d in shot_durations] if (shot_durations and len(shot_durations) == n) else [max(6.0, (target_dur + ((n - 1) * x_dur)) / n)] * n
@@ -96,8 +97,8 @@ def assemble_4k_master(
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
                 *inputs, "-filter_complex", ";".join(filter_parts),
                 "-map", "[v]", "-map", f"{n}:a", "-af", afade_filter, "-t", f"{target_dur:.2f}",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
-                "-maxrate", "16M", "-bufsize", "32M",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "24",
+                "-maxrate", "4.5M", "-bufsize", "9M",
                 "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)
             ]
         else:
@@ -105,8 +106,8 @@ def assemble_4k_master(
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
                 *inputs, "-filter_complex", ";".join(filter_parts),
                 "-map", "[v]", "-t", f"{target_dur:.2f}",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
-                "-maxrate", "16M", "-bufsize", "32M",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "24",
+                "-maxrate", "4.5M", "-bufsize", "9M",
                 "-movflags", "+faststart", str(out_master)
             ]
 
