@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from src.core.storage import storage_service
 from src.core.telemetry import logger
-from src.services.long_play_stretcher import export_long_play_broadcast
+from src.services.long_play_stretcher import export_long_play_broadcast, remux_long_play_audio
 
 router = APIRouter(prefix="/api/production", tags=["Long-Play Broadcast Engine"])
 
@@ -98,16 +98,37 @@ async def generate_long_play_for_episode(episode_id: str, req: LongPlayStretchRe
 
     # Verify format: Long-play multi-hour broadcasts (3h/8h) are strictly for relaxation format productions
     user_inputs_file = target_dir / "user_inputs.json"
+    manifest_file = target_dir / "episode_manifest.json"
+    ep_genre = ""
+    ep_fmt = ""
     if user_inputs_file.is_file():
         try:
             u_data = json.loads(user_inputs_file.read_text("utf-8"))
             ep_fmt = str(u_data.get("format", "")).lower()
-            if ep_fmt and ep_fmt not in ("relaxation", "relax"):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Long-play 3h broadcast is only supported for relaxation format productions (current: '{ep_fmt}').")
-        except HTTPException:
-            raise
+            ep_genre = str(u_data.get("genre", "")).lower()
         except Exception:
             pass
+    if manifest_file.is_file():
+        try:
+            m_data = json.loads(manifest_file.read_text("utf-8"))
+            ep_fmt = ep_fmt or str(m_data.get("format", "")).lower()
+            ep_genre = ep_genre or str(m_data.get("genre", "")).lower()
+        except Exception:
+            pass
+
+    is_relax = (
+        ep_fmt in ("relaxation", "relax")
+        or ep_fmt.startswith("relax")
+        or ep_genre.startswith("relax")
+        or "relax" in ep_genre
+        or "/relaxation/" in target_dir.as_posix().lower()
+        or "\\relaxation\\" in target_dir.as_posix().lower()
+    )
+    if not is_relax and ep_fmt and ep_fmt not in ("relaxation", "relax"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Long-play 3h broadcast is only supported for relaxation format productions (current: '{ep_fmt}', genre: '{ep_genre}')."
+        )
 
     # Mark episode as approved in manifest
     manifest_file = target_dir / "episode_manifest.json"
@@ -144,29 +165,59 @@ async def generate_long_play_for_episode(episode_id: str, req: LongPlayStretchRe
 
     async def _run_stretch():
         try:
-            job_state["ambient_progress"] = 30
-            await asyncio.to_thread(
-                export_long_play_broadcast,
-                source_4k_video=ambient_src,
-                output_long_play=out_ambient,
-                target_duration_seconds=req.hours * 3600.0,
-                fade_to_black_hours=req.fade_to_black_hours,
-            )
-            job_state["ambient_progress"] = 100
-            job_state["ambient_url"] = _to_storage_url(out_ambient)
+            target_sec = req.hours * 3600.0
+            primary_src = nature_src if (nature_src and nature_src.is_file()) else ambient_src
+            primary_out = out_nature if (nature_src and nature_src.is_file()) else out_ambient
+            secondary_src = ambient_src if (nature_src and nature_src.is_file()) else nature_src
+            secondary_out = out_ambient if (nature_src and nature_src.is_file()) else out_nature
 
-            if nature_src and nature_src.is_file():
+            primary_is_nat = (primary_out == out_nature)
+            if primary_is_nat:
                 job_state["nature_progress"] = 30
+            else:
+                job_state["ambient_progress"] = 30
+
+            # 1. Generate Primary 4K Broadcast
+            if not primary_out.is_file() or primary_out.stat().st_size < 1000:
                 await asyncio.to_thread(
                     export_long_play_broadcast,
-                    source_4k_video=nature_src,
-                    output_long_play=out_nature,
-                    target_duration_seconds=req.hours * 3600.0,
+                    source_4k_video=primary_src,
+                    output_long_play=primary_out,
+                    target_duration_seconds=target_sec,
                     fade_to_black_hours=req.fade_to_black_hours,
                 )
+
+            if primary_is_nat:
                 job_state["nature_progress"] = 100
                 job_state["nature_url"] = _to_storage_url(out_nature)
             else:
+                job_state["ambient_progress"] = 100
+                job_state["ambient_url"] = _to_storage_url(out_ambient)
+
+            # 2. Fast Audio Remux for Secondary Edition (under 60s)
+            if secondary_src and secondary_src.is_file():
+                if primary_is_nat:
+                    job_state["ambient_progress"] = 40
+                else:
+                    job_state["nature_progress"] = 40
+
+                if not secondary_out.is_file() or secondary_out.stat().st_size < 1000:
+                    await asyncio.to_thread(
+                        remux_long_play_audio,
+                        source_long_play_video=primary_out,
+                        alternate_audio_source=secondary_src,
+                        output_long_play=secondary_out,
+                        target_duration_seconds=target_sec,
+                    )
+
+                if primary_is_nat:
+                    job_state["ambient_progress"] = 100
+                    job_state["ambient_url"] = _to_storage_url(out_ambient)
+                else:
+                    job_state["nature_progress"] = 100
+                    job_state["nature_url"] = _to_storage_url(out_nature)
+            else:
+                job_state["ambient_progress"] = 100
                 job_state["nature_progress"] = 100
 
             job_state["status"] = "completed"

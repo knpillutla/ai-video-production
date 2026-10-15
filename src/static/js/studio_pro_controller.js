@@ -126,8 +126,22 @@ function renderProStage6LongPlay(ep) {
     c.innerHTML = `<div class="w-full text-center text-[8px] text-slate-500 font-mono py-4">Awaiting Master</div>`;
     return;
   }
-  const activeFmt = (ep?.format_slug || ep?.format || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : (document.getElementById("studio-active-format-val")?.value || "relaxation"))).toLowerCase();
-  const isRelaxFormat = (activeFmt === "relaxation" || activeFmt === "relax");
+  const genreSel = document.getElementById("studio-genre-selector")?.value || "";
+  const fmtSel = document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "");
+  const activeFmt = String(ep?.format_slug || ep?.format || fmtSel || "relaxation").toLowerCase();
+  const activeGenre = String(ep?.genre || ep?.subgenre || ep?.sub_genre || genreSel || "").toLowerCase();
+  const epStorageStr = String(ep?.storage_path || ep?.storagePath || ep?.video_url || ep?.videoUrl || "").toLowerCase();
+
+  const isRelaxFormat = (
+    activeFmt === "relaxation" ||
+    activeFmt === "relax" ||
+    activeFmt.startsWith("relax") ||
+    activeGenre.startsWith("relax") ||
+    activeGenre.includes("/relax") ||
+    activeGenre.includes("relax/") ||
+    epStorageStr.includes("/relaxation/") ||
+    epStorageStr.includes("\\relaxation\\")
+  );
   if (!isRelaxFormat) {
     c.innerHTML = `<div class="w-full text-center text-[8px] text-slate-500 font-mono py-4">N/A (Relaxation Only)</div>`;
     return;

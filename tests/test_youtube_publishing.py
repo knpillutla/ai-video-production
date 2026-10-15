@@ -80,3 +80,37 @@ def test_publish_bundle_idempotent_skips_when_published(tmp_path):
     result = publish_episode_bundle_idempotent(ep_dir=ep_dir, channel_slug="earth_serenade")
     assert result["status"] == "already_published"
     assert result["data"]["short"]["video_id"] == "s1"
+
+
+def test_publish_bundle_with_nature_asmr_idempotent(tmp_path):
+    """Verify dual broadcast (music + nature ASMR) manifest correctly marks published and skips re-upload."""
+    ep_dir = tmp_path / "EP-RELAX-RAIN"
+    ep_dir.mkdir(parents=True)
+    manifest = {
+        "published": True,
+        "published_at": 1791220000,
+        "channel_slug": "earth_serenade",
+        "short": {"video_id": "s1", "url": "https://youtube.com/shorts/s1"},
+        "broadcast": {"video_id": "b1", "url": "https://youtu.be/b1"},
+        "nature": {"video_id": "n1", "url": "https://youtu.be/n1"},
+    }
+    (ep_dir / "youtube_published.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (ep_dir / "master_4k_3hour_nature_only_broadcast.mp4").write_bytes(b"0" * 600000)
+
+    result = publish_episode_bundle_idempotent(ep_dir=ep_dir, channel_slug="earth_serenade", upload_nature=True)
+    assert result["status"] == "already_published"
+    assert result["data"]["nature"]["video_id"] == "n1"
+
+
+def test_find_episode_path_nested_network(tmp_path):
+    """Verify _find_episode_path resolves nested network trees like networks/nature_rhythms/relaxation/swiss_village_rain/ep-001."""
+    from src.api.routes.channel_youtube import _find_episode_path
+
+    nested_ep = tmp_path / "user-knpillutla-gmail-com" / "networks" / "nature_rhythms" / "relaxation" / "swiss_village_rain" / "ep-001"
+    nested_ep.mkdir(parents=True)
+
+    found = _find_episode_path(tmp_path, "knpillutla@gmail.com", "nature_rhythms", "ep-001")
+    assert found is not None
+    assert found == nested_ep
+
+

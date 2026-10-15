@@ -6,7 +6,7 @@ Self-contained contract for living wallpapers, soundscapes, and cinematic scenes
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Union
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 from src.services.audio_tag_service import normalize_audio_tags
 
 
@@ -183,7 +183,6 @@ class RelaxScreenplay(BaseModel):
 
 class BaseScenePrompt(BaseModel):
     """Universal scene prompt specification for studio pipeline execution."""
-    model_config = ConfigDict(extra="allow")
     scene_index: int = 1
     shot_type: Optional[str] = None
     perspective_type: str = "wide_panoramic"
@@ -198,7 +197,6 @@ class BaseScenePrompt(BaseModel):
     camera_movement: Union[List[Dict[str, Any]], List[Any], str] = "slow_zoom_in"
     motion_rationale: Optional[str] = None
     narration_text: Optional[str] = None
-    weather: Optional[str] = "normal"
     camera_waypoints: List[CameraWaypointDirective] = Field(default_factory=list)
     kinetic_micro_zones: Optional[KineticMicroSpec] = None
     image_model_configs: dict = Field(default_factory=dict)
@@ -222,11 +220,8 @@ class BaseScenePrompt(BaseModel):
 
 class BaseStoryboard(BaseModel):
     """Universal directorial storyboard representation across all channels and genres."""
-    model_config = ConfigDict(extra="allow")
     title: str = "Studio Production"
     story_topic: Optional[str] = ""
-    genre: Optional[str] = "relax/nature"
-    weather: Optional[str] = "normal"
     primary_archetype: str = "cities"
     secondary_archetype: Optional[str] = None
     cluster: str = "travel"
@@ -275,8 +270,10 @@ def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> BaseStoryboard:
                 is_itinerary_overview=getattr(s, "is_itinerary_overview", False),
                 is_map_transition=getattr(s, "is_map_transition", False),
                 is_itinerary_summary=getattr(s, "is_itinerary_summary", False),
-                day_number=getattr(s, "day_number", 1), start_time=getattr(s, "start_time", None),
-                end_time=getattr(s, "end_time", None), visit_duration=getattr(s, "visit_duration", None),
+                day_number=getattr(s, "day_number", 1),
+                start_time=getattr(s, "start_time", None),
+                end_time=getattr(s, "end_time", None),
+                visit_duration=getattr(s, "visit_duration", None),
                 transit_duration=getattr(s, "transit_duration", None),
                 origin_name=getattr(s, "origin_name", None), destination_name=getattr(s, "destination_name", None),
                 origin_coords=getattr(s, "origin_coords", None), destination_coords=getattr(s, "destination_coords", None),
@@ -285,12 +282,12 @@ def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> BaseStoryboard:
         )
     return BaseStoryboard(
         title=sp.title, story_topic=sp.story_topic,
-        genre=getattr(sp, "genre", "relax/nature"), weather=getattr(sp, "weather", "normal"),
         primary_archetype=sp.primary_archetype or sp.sub_genre or "cities",
         secondary_archetype=sp.secondary_archetype, cluster=sp.cluster or "travel",
         tier=getattr(sp, "tier", None) or "balanced",
         total_duration=sp.total_duration_seconds or sum(s.duration_seconds for s in sp.scenes) or 60.0,
-        recommended_fps=sp.recommended_fps or 24, audio_tags=sp.audio_master.suno_musical_tags if sp.audio_master else "",
+        recommended_fps=sp.recommended_fps or 24,
+        audio_tags=sp.audio_master.suno_musical_tags if sp.audio_master else "",
         spoken_narration_script=getattr(sp.audio_master, "spoken_narration_script", "") if sp.audio_master else "",
         itinerary_summary=getattr(sp, "itinerary_summary", None), scenes=scenes,
     )

@@ -19,7 +19,7 @@
     </div>
 
     <!-- Target Channel & Episode Summary -->
-    <div class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
+    <div class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-2">
       <div class="flex items-center justify-between">
         <span class="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold">Target YouTube Channel</span>
         <span id="yt-pub-auth-badge" class="px-2 py-0.5 rounded-full text-[9px] font-bold border flex items-center gap-1">
@@ -27,9 +27,14 @@
           <span id="yt-pub-auth-text">Authorized</span>
         </span>
       </div>
-      <div class="flex items-center justify-between">
-        <div class="font-bold text-[var(--text)] text-xs" id="yt-pub-channel-title">Earth Serenade</div>
-        <div class="text-[10px] font-mono text-[var(--accent)]" id="yt-pub-channel-slug">earth_serenade</div>
+      <div>
+        <select id="yt-pub-account-select" onchange="onPublishAccountSelectChange(this.value)" class="w-full text-xs font-semibold bg-[var(--card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[var(--text)] focus:border-red-500 outline-none">
+          <option value="">Loading attached channels...</option>
+        </select>
+      </div>
+      <div class="flex items-center justify-between text-[10px]">
+        <div class="text-[var(--text-muted)]">Active Network: <strong class="text-[var(--text)]" id="yt-pub-channel-title">Nature &amp; Rhythms</strong></div>
+        <div class="font-mono text-[var(--accent)]" id="yt-pub-channel-slug">nature_rhythms</div>
       </div>
       <div class="pt-1 border-t border-[var(--border)] text-[11px] text-[var(--text-muted)]">
         Episode: <strong class="text-[var(--text)] font-mono" id="yt-pub-episode-id">EP-001</strong> • <span id="yt-pub-episode-title">Rub' al Khali Oasis</span>
@@ -64,20 +69,24 @@
             <input type="checkbox" id="yt-pub-check-broadcast" checked class="accent-purple-500 rounded w-4 h-4 cursor-pointer">
             <i class="fa-solid fa-music text-purple-500"></i>
             <div>
-              <div class="font-bold text-[var(--text)]">2. 4K Broadcast Master (Music Edition)</div>
-              <div class="text-[9px] text-[var(--text-muted)]">Full soundtrack, chapters, timestamps &amp; A/B thumbnail</div>
+              <div class="font-bold text-[var(--text)]" id="yt-pub-label-broadcast">2. 4K Broadcast (Music Edition)</div>
+              <div class="text-[9px] text-[var(--text-muted)]">3h / 8h / Master with 432Hz Soundbath, timestamps &amp; tags</div>
             </div>
           </div>
           <span class="text-[10px] font-mono text-emerald-500 font-bold">READY</span>
         </label>
 
-        <div class="flex items-center justify-between p-1.5 rounded-lg bg-slate-900/30 border border-dashed border-[var(--border)] text-[10px] text-[var(--text-muted)]">
-          <span class="flex items-center gap-1">
-            <i class="fa-solid fa-ban text-amber-500"></i>
-            <span>Pure Nature Version (No Music):</span>
-          </span>
-          <span class="font-mono text-amber-500 font-semibold">Strictly Excluded</span>
-        </div>
+        <label class="flex items-center justify-between p-2 rounded-lg bg-[var(--card)] border border-[var(--border)] cursor-pointer hover:border-emerald-400 transition select-none">
+          <div class="flex items-center gap-2.5">
+            <input type="checkbox" id="yt-pub-check-nature" checked class="accent-emerald-500 rounded w-4 h-4 cursor-pointer">
+            <i class="fa-solid fa-leaf text-emerald-500"></i>
+            <div>
+              <div class="font-bold text-[var(--text)]" id="yt-pub-label-nature">3. 4K Broadcast (Pure Nature ASMR Edition)</div>
+              <div class="text-[9px] text-[var(--text-muted)]">3h / 8h / Master with Pure Environmental Foley (Zero Music)</div>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono text-emerald-500 font-bold">READY</span>
+        </label>
       </div>
     </div>
 

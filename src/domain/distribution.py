@@ -24,6 +24,7 @@ class ChannelBase(BaseModel):
     allowed_formats: list[str] = Field(default_factory=lambda: ["documentary", "relaxation", "walking_tour", "music_video", "short"])
     allowed_genres: list[str] = Field(default_factory=list)
     default_tags: list[str] = Field(default_factory=list)
+    linked_youtube_channels: list[dict] = Field(default_factory=list)
 
 
 class ChannelCreate(ChannelBase):
@@ -52,6 +53,7 @@ class ChannelUpdate(BaseModel):
     tag: str | None = None
     comments: str | None = None
     default_tags: list[str] | None = None
+    linked_youtube_channels: list[dict] | None = None
     is_active: bool | None = None
 
 

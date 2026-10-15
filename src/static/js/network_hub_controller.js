@@ -3,10 +3,7 @@ let allChannelEpisodes = [];
 let userChannels = [];
 let currentHubChannel = "all";
 let activeEnrichedProfile = null;
-
-// Aliases for Network terminology
-const userNetworks = userChannels;
-const fetchUserNetworks = fetchUserChannels;
+const userNetworks = userChannels, fetchUserNetworks = fetchUserChannels;
 
 async function fetchUserChannels() {
   try {
@@ -56,6 +53,7 @@ function openCreateChannelModal() {
   });
   const preview = document.getElementById("crud-enriched-preview");
   if (preview) preview.classList.add("hidden");
+  if (typeof initCrudYouTubeAccounts === "function") initCrudYouTubeAccounts(null);
   openModal("channel-crud-modal");
 }
 
@@ -99,6 +97,7 @@ async function openEditChannelModal(channelId) {
     activeEnrichedProfile = cachedChannelProfiles[slug];
     updateEnrichedPreviewUI(activeEnrichedProfile);
   }
+  if (typeof initCrudYouTubeAccounts === "function") initCrudYouTubeAccounts(ch);
   openModal("channel-crud-modal");
 }
 
@@ -209,6 +208,7 @@ async function saveChannelForm(event) {
     tag: document.getElementById("crud-channel-tag")?.value?.trim() || "",
     comments: document.getElementById("crud-channel-comments")?.value?.trim() || "",
     default_tags: tagsStr ? tagsStr.split(",").map(t => t.trim()).filter(Boolean) : [],
+    linked_youtube_channels: (typeof getCrudYouTubeAccounts === "function") ? getCrudYouTubeAccounts() : [],
     platform: "youtube"
   };
 
@@ -238,7 +238,8 @@ async function saveChannelForm(event) {
       allowed_genres: selectedGenres.length > 0 ? selectedGenres : ["relax/nature"],
       audio_profile: { bgm_enabled_by_default: !cleanSlug.includes("hearth"), style: "Harmonic Soundscape", target_lufs: -14.0 },
       visual_lighting_guardrails: { lighting_temperature: "Natural (5400K)", purity_rule: "Pure Scenery" },
-      youtube_seo_defaults: { primary_tags: payload.default_tags, category_id: "10" }
+      youtube_seo_defaults: { primary_tags: payload.default_tags, category_id: "10" },
+      linked_youtube_channels: payload.linked_youtube_channels
     };
     await fetch("/api/channels/save-profile", {
       method: "POST",

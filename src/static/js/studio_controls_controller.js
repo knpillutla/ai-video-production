@@ -165,7 +165,8 @@ function isTravelOrSkylineChannel() {
 
 function syncTravelShotUI() {
   const fmt = (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "relaxation").toLowerCase();
-  const isRelax = (fmt === "relaxation"), isDocOrTour = !isRelax && isTravelOrSkylineChannel();
+  const genreVal = (document.getElementById("studio-genre-selector")?.value || "").toLowerCase();
+  const isRelax = (fmt === "relaxation" || fmt.startsWith("relax") || genreVal.startsWith("relax") || genreVal.includes("relax/")), isDocOrTour = !isRelax && isTravelOrSkylineChannel();
   const testShotsEl = document.getElementById("studio-test-shots"), prodShotsEl = document.getElementById("studio-prod-shots");
   const testStretchEl = document.getElementById("studio-test-stretch"), prodStretchEl = document.getElementById("studio-stretch-hours");
   const cadenceCont = document.getElementById("relaxation-cadence-container"), btnProduceText = document.getElementById("btn-produce-text");
@@ -174,8 +175,8 @@ function syncTravelShotUI() {
   if (isRelax) {
     if (testShotsEl) { testShotsEl.style.display = ""; testShotsEl.value = "1"; testShotsEl.disabled = true; activeShotsCount = 1; }
     if (prodShotsEl) { prodShotsEl.style.display = ""; prodShotsEl.value = "1"; prodShotsEl.disabled = true; }
-    if (testStretchEl) { testStretchEl.disabled = true; testStretchEl.value = "0.0167"; activeBroadcastHours = 0.0167; activeTestDuration = 60; }
-    if (prodStretchEl) { prodStretchEl.disabled = true; prodStretchEl.value = "3.0"; activeBroadcastHours = 3.0; }
+    if (testStretchEl) { testStretchEl.disabled = false; }
+    if (prodStretchEl) { prodStretchEl.disabled = false; }
   } else if (isDocOrTour) {
     if (testShotsEl) { testShotsEl.style.display = "none"; testShotsEl.disabled = false; testShotsEl.value = "-1"; activeShotsCount = -1; }
     if (prodShotsEl) { prodShotsEl.style.display = "none"; prodShotsEl.disabled = false; prodShotsEl.value = "-1"; }

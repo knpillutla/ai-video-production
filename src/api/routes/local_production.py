@@ -366,10 +366,21 @@ async def poll_production_artifacts(
     is_approved_val = bool(pipeline_state_data.get("is_approved") if pipeline_state_data else m_data.get("is_approved", False))
     eff_stage = pipeline_state_data.get("current_stage") if pipeline_state_data else (m_data.get("current_stage", 1) if m_data else 1)
 
+    has_master_file = bool(master_url or ("master_4k_ambient.mp4" in files) or ("master_4k_nature.mp4" in files))
+    ep_status = "completed" if has_master_file else (pipeline_state_data.get("status") if pipeline_state_data else "ready")
+    eff_format = "relaxation" if is_relax_fmt else (m_data.get("format") or "relaxation")
+    eff_genre = m_data.get("genre") or ("relax/rain" if "rain" in c_dir.name else "relax/nature")
+
     return {
         "keyframes": kfs, "motion_clips": vids, "audio_stems": stems,
         "video_url": master_url or nature_master_url, "nature_video_url": nature_master_url,
         "editions": editions, "long_play_editions": long_play_editions, "stage": eff_stage,
+        "status": ep_status,
+        "currentStage": eff_stage,
+        "current_stage": eff_stage,
+        "format": eff_format,
+        "format_slug": eff_format,
+        "genre": eff_genre,
         "script": screenplay_data if screenplay_data else (m_data if m_data else None),
         "screenplay": screenplay_data,
         "pipeline_state": pipeline_state_data,

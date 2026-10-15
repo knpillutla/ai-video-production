@@ -2,6 +2,7 @@ inside palaces
 history - has lot of views
 science and discovery - lots of views
 create live channels for the below
+history of different islands like carribean with beautiful  girls on the thumbnail
 -- music channel
 -- relaxing rain channel
 -- relaxing zen channel

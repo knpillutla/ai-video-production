@@ -1,6 +1,30 @@
 <!-- VIEW B: YOUTUBE DISTRIBUTION & PACKAGING HUB (16:9 BROADCAST + 9:16 SHORT) -->
 <div id="inspector-view-distribution" class="space-y-3 flex-1 hidden text-xs overflow-y-auto max-h-[calc(100vh-270px)] pr-1 custom-scrollbar">
 
+  <!-- Network Attached YouTube Outlets Bar -->
+  <div class="p-2 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center justify-between gap-2 shadow-sm">
+    <div class="flex items-center gap-2 min-w-0 flex-1">
+      <div class="w-6 h-6 rounded-md bg-red-600/10 text-red-500 flex items-center justify-center shrink-0 text-xs font-bold border border-red-500/20">
+        <i class="fa-brands fa-youtube"></i>
+      </div>
+      <div class="flex items-center gap-1.5 min-w-0 flex-1">
+        <span class="font-bold text-[var(--text)] text-[11px] shrink-0">Channel:</span>
+        <select id="dist-target-yt-account" onchange="onStudioDistributionAccountChange(this.value)" class="w-full text-xs font-semibold bg-[var(--card-subtle)] border border-[var(--border)] rounded px-2 py-0.5 text-[var(--text)] focus:border-red-500 outline-none truncate">
+          <option value="">Loading network channels...</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex items-center gap-1.5 shrink-0">
+      <div id="dist-target-yt-auth-badge" class="flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
+        <span>● Awaiting Link</span>
+      </div>
+      <button type="button" onclick="openStudioTargetCredentialsModal()" class="px-2 py-0.5 rounded bg-red-600/10 hover:bg-red-600/20 text-red-500 text-[9px] font-bold border border-red-500/30 flex items-center gap-1 transition" title="Upload client_secret.json & Authorize OAuth">
+        <i class="fa-solid fa-key text-[8px]"></i>
+        <span>Credentials &amp; OAuth</span>
+      </button>
+    </div>
+  </div>
+
   <!-- ================================================================= -->
   <!-- 1. BROADCAST SECTION WITH MUSIC (16:9 4K)                        -->
   <!-- ================================================================= -->
@@ -9,9 +33,9 @@
       <label class="flex items-center gap-2 cursor-pointer font-bold text-[var(--text)] text-xs select-none">
         <input type="checkbox" id="dist-check-broadcast" checked class="w-4 h-4 rounded text-indigo-600 border-[var(--border)] bg-[var(--card-subtle)] focus:ring-0 cursor-pointer accent-indigo-600" onchange="syncDistributionCheckboxes()">
         <i class="fa-solid fa-film text-indigo-500"></i>
-        <span>Broadcast Section with Music (16:9 4K UHD)</span>
+        <span id="dist-broadcast-header-title">Broadcast Section with Music (16:9 4K UHD)</span>
       </label>
-      <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">4K Master • Music</span>
+      <span id="dist-broadcast-badge" class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">4K Master • Music</span>
     </div>
 
     <!-- 16:9 Thumbnail Preview + Trending Titles -->
@@ -80,7 +104,78 @@
   </div>
 
   <!-- ================================================================= -->
-  <!-- 2. SHORT SECTION (9:16 VERTICAL)                                 -->
+  <!-- 2. PURE NATURE / ASMR BROADCAST SECTION (16:9 4K UHD)             -->
+  <!-- ================================================================= -->
+  <div id="dist-section-nature-container" class="p-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-2.5 shadow-sm">
+    <div class="flex items-center justify-between pb-1 border-b border-[var(--border)]">
+      <label class="flex items-center gap-2 cursor-pointer font-bold text-[var(--text)] text-xs select-none">
+        <input type="checkbox" id="dist-check-nature" checked class="w-4 h-4 rounded text-emerald-600 border-[var(--border)] bg-[var(--card-subtle)] focus:ring-0 cursor-pointer accent-emerald-600" onchange="syncDistributionCheckboxes()">
+        <i class="fa-solid fa-leaf text-emerald-500"></i>
+        <span id="dist-nature-header-title">Pure Nature ASMR Broadcast (16:9 4K UHD)</span>
+      </label>
+      <span id="dist-nature-badge" class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">3h • Pure ASMR</span>
+    </div>
+
+    <!-- 16:9 Thumbnail Preview + Nature Titles -->
+    <div class="grid grid-cols-12 gap-2">
+      <div class="col-span-4 flex flex-col gap-1">
+        <label class="text-[10px] font-bold text-[var(--text-muted)] flex items-center justify-between">
+          <span>Thumbnail (16:9)</span>
+          <a id="dist-nature-thumb-link" href="#" target="_blank" class="text-emerald-500 hover:underline text-[9px] hidden" title="View Full Resolution"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        </label>
+        <div class="relative aspect-video rounded-lg overflow-hidden border border-[var(--border)] bg-black/40 group shadow-sm flex items-center justify-center">
+          <img id="dist-nature-thumb-img" src="" alt="Nature Broadcast Thumbnail" class="w-full h-full object-cover hidden">
+          <div id="dist-nature-thumb-placeholder" class="text-center p-2 text-slate-500 text-[10px]">
+            <i class="fa-solid fa-leaf text-lg block mb-0.5 text-emerald-500"></i>
+            <span>Pure Nature</span>
+          </div>
+          <span class="absolute bottom-1 right-1 px-1 py-0.2 rounded bg-black/70 text-white font-mono text-[8px] font-bold">16:9 ASMR</span>
+        </div>
+      </div>
+
+      <div class="col-span-8 flex flex-col justify-between space-y-1">
+        <div>
+          <div class="flex items-center justify-between mb-0.5">
+            <span class="text-[10px] font-bold text-[var(--text)] flex items-center gap-1">
+              <i class="fa-solid fa-arrow-trend-up text-emerald-500 text-[10px]"></i> Nature / ASMR Title
+            </span>
+            <span id="dist-nature-title-chars" class="font-mono text-[9px] text-[var(--text-muted)]">0/100</span>
+          </div>
+          <input type="text" id="dist-yt-title-nature" class="w-full px-2 py-1 bg-[var(--card-subtle)] border border-[var(--border)] rounded-md text-[var(--text)] text-xs font-semibold focus:border-emerald-500 outline-none transition" placeholder="Nature ASMR YouTube Title...">
+        </div>
+
+        <div class="space-y-0.5">
+          <span class="text-[9px] text-[var(--text-muted)] font-medium">Quick Nature Variants:</span>
+          <div id="dist-nature-title-variants" class="flex flex-col gap-1 max-h-[58px] overflow-y-auto custom-scrollbar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="space-y-0.5">
+      <div class="flex items-center justify-between">
+        <label class="text-[10px] font-bold text-[var(--text)]">Description &amp; Chapters (ASMR Edition):</label>
+        <button type="button" onclick="copyNatureDescription()" class="text-emerald-500 hover:text-emerald-400 text-[9px] font-mono flex items-center gap-1"><i class="fa-regular fa-copy"></i> Copy</button>
+      </div>
+      <textarea id="dist-yt-desc-nature" rows="2" class="w-full p-2 bg-[var(--card-subtle)] border border-[var(--border)] rounded-md text-[var(--text)] text-[11px] font-mono resize-none focus:border-emerald-500 outline-none leading-relaxed"></textarea>
+    </div>
+
+    <!-- SEO Tags -->
+    <div class="space-y-1">
+      <div class="flex items-center justify-between">
+        <label class="text-[10px] font-bold text-[var(--text)] flex items-center gap-1">
+          <i class="fa-solid fa-tags text-emerald-400 text-[10px]"></i>
+          <span>Nature ASMR SEO Tags</span>
+          <span id="dist-nature-tags-count" class="text-[9px] font-mono text-[var(--text-muted)]">(0)</span>
+        </label>
+        <button type="button" onclick="copyNatureTags()" class="text-emerald-500 hover:text-emerald-400 text-[9px] font-mono flex items-center gap-1"><i class="fa-regular fa-copy"></i> Copy All</button>
+      </div>
+      <div id="dist-nature-tags-container" class="flex flex-wrap gap-1 p-1.5 rounded-lg bg-[var(--card-subtle)] border border-[var(--border)] min-h-[30px] max-h-[58px] overflow-y-auto custom-scrollbar"></div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- 3. SHORT SECTION (9:16 VERTICAL)                                 -->
   <!-- ================================================================= -->
   <div class="p-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-2.5 shadow-sm">
     <div class="flex items-center justify-between pb-1 border-b border-[var(--border)]">

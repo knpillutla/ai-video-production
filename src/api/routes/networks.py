@@ -55,6 +55,7 @@ async def list_channels(current_user: User = Depends(get_current_user)):
                             allowed_formats=data.get("allowed_formats") or ["documentary", "relaxation", "walking_tour", "music_video", "short"],
                             allowed_genres=data.get("allowed_genres", []),
                             description=data.get("comments") or data.get("description", ""),
+                            linked_youtube_channels=data.get("linked_youtube_channels", []),
                         )
                         repo.save_channel(ch)
                     except Exception:
@@ -135,6 +136,7 @@ async def create_channel(
         tag=req.tag or "",
         comments=req.comments or "",
         default_tags=req.default_tags,
+        linked_youtube_channels=req.linked_youtube_channels or [],
     )
     saved = repo.save_channel(channel)
     user_chan_dir = storage_service.get_network_path(current_user.email, slug)
@@ -167,6 +169,7 @@ async def update_channel(
     if req.tag is not None: channel.tag = req.tag
     if req.comments is not None: channel.comments = req.comments
     if req.default_tags is not None: channel.default_tags = req.default_tags
+    if req.linked_youtube_channels is not None: channel.linked_youtube_channels = req.linked_youtube_channels
     if req.is_active is not None: channel.is_active = req.is_active
 
     saved = repo.save_channel(channel)

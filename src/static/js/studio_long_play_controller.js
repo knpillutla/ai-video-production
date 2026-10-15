@@ -16,14 +16,27 @@ function renderLongPlayStretchSection(vid) {
     vid.id !== "NEW" &&
     vid.status !== "failed" &&
     vid.status !== "processing" &&
-    (vid.currentStage >= 4 || vid.status === "completed") &&
-    (vid.videoUrl || vid.video_url || (vid.editions && vid.editions.length > 0))
+    (vid.currentStage >= 4 || vid.status === "completed" || vid.videoUrl || vid.video_url || (vid.editions && vid.editions.length > 0))
   );
 
-  const activeFmt = (vid?.format_slug || vid?.format || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : (document.getElementById("studio-active-format-val")?.value || "relaxation"))).toLowerCase();
-  const isRelaxFormat = (activeFmt === "relaxation" || activeFmt === "relax");
+  const genreSel = document.getElementById("studio-genre-selector")?.value || "";
+  const fmtSel = document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "");
+  const activeFmt = String(vid?.format_slug || vid?.format || fmtSel || "relaxation").toLowerCase();
+  const activeGenre = String(vid?.genre || vid?.subgenre || vid?.sub_genre || genreSel || "").toLowerCase();
+  const epStorageStr = String(vid?.storage_path || vid?.storagePath || vid?.video_url || vid?.videoUrl || "").toLowerCase();
 
-  if (!hasMaster || !isRelaxFormat) {
+  const isRelaxFormat = (
+    activeFmt === "relaxation" ||
+    activeFmt === "relax" ||
+    activeFmt.startsWith("relax") ||
+    activeGenre.startsWith("relax") ||
+    activeGenre.includes("/relax") ||
+    activeGenre.includes("relax/") ||
+    epStorageStr.includes("/relaxation/") ||
+    epStorageStr.includes("\\relaxation\\")
+  );
+
+  if (!isRelaxFormat) {
     container.classList.add("hidden");
     if (approvalCard) approvalCard.classList.add("hidden");
     dualGrid.innerHTML = "";
@@ -31,17 +44,25 @@ function renderLongPlayStretchSection(vid) {
   }
   container.classList.remove("hidden");
 
-  const epId = vid.id || vid.episode_id || "EP-001";
-  let lpEditions = (vid.long_play_editions && vid.long_play_editions.length > 0) 
-    ? [...vid.long_play_editions] 
-    : (vid.all_editions || vid.editions || []).filter(e => e.format?.includes("Long-Play") || e.edition_id?.includes("h_") || e.name?.includes("Hour"));
+  const hasMaster = Boolean(
+    vid &&
+    vid.id !== "NEW" &&
+    vid.status !== "failed" &&
+    vid.status !== "processing" &&
+    (vid.currentStage >= 4 || vid.status === "completed" || vid.videoUrl || vid.video_url || (vid.editions && vid.editions.length > 0))
+  );
 
-  const hoursVal = vid.long_play_hours || (vid.longPlayHours ? parseFloat(vid.longPlayHours) : 3.0);
+  const epId = vid?.id || vid?.episode_id || "EP-001";
+  let lpEditions = (vid?.long_play_editions && vid.long_play_editions.length > 0) 
+    ? [...vid.long_play_editions] 
+    : (vid?.all_editions || vid?.editions || []).filter(e => e.format?.includes("Long-Play") || e.edition_id?.includes("h_") || e.name?.includes("Hour"));
+
+  const hoursVal = vid?.long_play_hours || (vid?.longPlayHours ? parseFloat(vid.longPlayHours) : 3.0);
   if (hoursSelect && !hoursSelect.dataset.userModified) {
     hoursSelect.value = hoursVal ? `${parseFloat(hoursVal).toFixed(1)}` : "3.0";
   }
 
-  const posterUrl = vid.thumbnailUrl || (vid.keyframes?.[0]?.url) || (vid.artifacts?.keyframes?.[0]?.url) || "";
+  const posterUrl = vid?.thumbnailUrl || (vid?.keyframes?.[0]?.url) || (vid?.artifacts?.keyframes?.[0]?.url) || "";
   const bgStyle = posterUrl ? `background-image: url('${posterUrl}'); background-size: cover; background-position: center;` : "";
 
   // Check if live job is active
@@ -88,17 +109,21 @@ function renderLongPlayStretchSection(vid) {
   // Idle state before approval (Prompt user to generate multi-hour broadcasts)
   if (approvalCard) approvalCard.classList.remove("hidden");
   if (statusBadge) {
-    statusBadge.className = "px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40 text-[8px] font-mono font-bold";
-    statusBadge.textContent = "Awaiting Approval";
+    statusBadge.className = hasMaster
+      ? "px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40 text-[8px] font-mono font-bold"
+      : "px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[8px] font-mono font-bold";
+    statusBadge.textContent = hasMaster ? "Awaiting Approval" : "Awaiting 4K Master";
   }
   const btnApprove = document.getElementById("btn-approve-longplay-text");
-  if (btnApprove) btnApprove.textContent = "Approve & Generate Dual 4K Broadcasts";
+  if (btnApprove) {
+    btnApprove.textContent = hasMaster ? "Approve & Generate Dual 4K Broadcasts" : "Approve 3-Hour Broadcast (Ready After 4K Master)";
+  }
 
   dualGrid.innerHTML = `
     <div class="col-span-2 p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-800 text-center flex flex-col items-center gap-0.5">
       <i class="fa-solid fa-film text-indigo-400 text-xs"></i>
       <span class="text-[9px] font-bold text-slate-700 dark:text-slate-300">Dual Multi-Hour Masters (Music + Pure Nature)</span>
-      <span class="text-[8px] text-slate-500 dark:text-slate-400">Click Approve above to stretch lossless 4K broadcast masters.</span>
+      <span class="text-[8px] text-slate-500 dark:text-slate-400">${hasMaster ? 'Click Approve above to stretch lossless 4K broadcast masters.' : 'Will stretch into 3-Hour broadcast once Stage 5 4K Master is rendered.'}</span>
     </div>
   `;
 }

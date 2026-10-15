@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from src.core.telemetry import logger
-from src.services.long_play_stretcher import export_long_play_broadcast
+from src.services.long_play_stretcher import export_long_play_broadcast, remux_long_play_audio
 from src.services.notification import notification_service
 from src.studios.studio_producer import StudioProducer
 from src.studios.screenplay_models import AmbientStoryboard, BaseStoryboard
@@ -206,14 +206,18 @@ class BaseChannelPipeline:
                 or lp_nature_path.stat().st_mtime < nature_master_path.stat().st_mtime
             )
             if needs_nature_lp_rebuild:
-                print(f"[STAGE 3 AUTO-STRETCH] Auto-stretching Pure Nature master to {effective_hours} Hours (CRF {crf_val})...")
-                export_long_play_broadcast(
-                    source_4k_video=nature_master_path,
-                    output_long_play=lp_nature_path,
-                    target_duration_seconds=target_sec,
-                    fade_to_black_hours=effective_fade,
-                    crf=crf_val,
-                )
+                if long_play_path.is_file() and long_play_path.stat().st_size > 1000:
+                    print(f"[STAGE 3 AUTO-STRETCH] Fast audio remux of Pure Nature master to {effective_hours} Hours...")
+                    remux_long_play_audio(long_play_path, nature_master_path, lp_nature_path, target_sec)
+                else:
+                    print(f"[STAGE 3 AUTO-STRETCH] Auto-stretching Pure Nature master to {effective_hours} Hours (CRF {crf_val})...")
+                    export_long_play_broadcast(
+                        source_4k_video=nature_master_path,
+                        output_long_play=lp_nature_path,
+                        target_duration_seconds=target_sec,
+                        fade_to_black_hours=effective_fade,
+                        crf=crf_val,
+                    )
             result["long_play_nature_video_path"] = str(lp_nature_path)
 
         result["long_play_video_path"] = str(long_play_path)

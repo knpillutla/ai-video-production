@@ -115,6 +115,23 @@ function renderInspectorFromVideo(vid) {
             currentActiveInspectorEpisode.audio_stems = data.audio_stems;
             updated = true;
           }
+          if (data.video_url && !currentActiveInspectorEpisode.video_url) {
+            currentActiveInspectorEpisode.video_url = data.video_url;
+            currentActiveInspectorEpisode.videoUrl = data.video_url;
+            updated = true;
+          }
+          if (data.editions && data.editions.length > 0) {
+            currentActiveInspectorEpisode.editions = data.editions;
+            updated = true;
+          }
+          if (data.long_play_editions && data.long_play_editions.length > 0) {
+            currentActiveInspectorEpisode.long_play_editions = data.long_play_editions;
+            updated = true;
+          }
+          if (data.stage && (!currentActiveInspectorEpisode.currentStage || currentActiveInspectorEpisode.currentStage < data.stage)) {
+            currentActiveInspectorEpisode.currentStage = data.stage;
+            updated = true;
+          }
           if (data.screenplay && !currentActiveInspectorEpisode.screenplay) {
             currentActiveInspectorEpisode.screenplay = data.screenplay;
             updated = true;
@@ -123,6 +140,8 @@ function renderInspectorFromVideo(vid) {
             if (typeof renderKeyframesList === "function") renderKeyframesList(currentActiveInspectorEpisode);
             if (typeof renderAudioStemsList === "function") renderAudioStemsList(currentActiveInspectorEpisode);
             if (typeof renderMotionClipsList === "function") renderMotionClipsList(currentActiveInspectorEpisode);
+            if (typeof renderMasterVideosList === "function") renderMasterVideosList(currentActiveInspectorEpisode);
+            if (typeof renderLongPlayStretchSection === "function") renderLongPlayStretchSection(currentActiveInspectorEpisode);
             if (typeof updateStageGateDock === "function") updateStageGateDock(currentActiveInspectorEpisode);
           }
         }
@@ -287,8 +306,6 @@ function renderEmptyInspectorState() {
   document.getElementById("studio-panel-empty-overlay")?.classList.remove("hidden");
   document.getElementById("studio-panel-processing-overlay")?.classList.add("hidden");
   document.getElementById("studio-approval-container")?.classList.add("hidden");
-  document.getElementById("panel-section-longplay-container")?.classList.add("hidden");
-  document.getElementById("panel-longplay-approval-card")?.classList.add("hidden");
 
   const iC = document.getElementById("panel-section-images"), mC = document.getElementById("panel-section-raw-videos"), aC = document.getElementById("panel-section-audio");
   if (iC) iC.innerHTML = `<div class="col-span-4 h-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-3 shadow-sm"><i class="fa-solid fa-images text-blue-600 dark:text-blue-400 text-xs"></i><span class="text-[10px] font-bold text-slate-900 dark:text-white">No Keyframe Photos Yet</span><span class="text-[8px] text-slate-500 font-mono">(FLUX Dev / Pro / Z-Image)</span></div>`;
@@ -296,7 +313,7 @@ function renderEmptyInspectorState() {
   if (aC) aC.innerHTML = `<div class="col-span-3 h-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-3 shadow-sm"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><span class="text-[10px] font-bold text-slate-900 dark:text-white">No Audio Stems Yet</span><span class="text-[8px] text-slate-500 font-mono">(Suno v3.5 &amp; 3D Velvet DSP)</span></div>`;
   if (typeof renderScriptSection === "function") renderScriptSection(null);
   if (typeof renderMasterVideosList === "function") renderMasterVideosList(null);
-  if (typeof renderLongPlayStretchSection === "function") renderLongPlayStretchSection(null);
+  if (typeof renderLongPlayStretchSection === "function") renderLongPlayStretchSection({ id: "NEW" });
   document.getElementById("studio-stage-controls-dock")?.classList.add("hidden");
 }
 
@@ -308,7 +325,23 @@ function updateStageGateDock(vid) {
   if (!dock) return;
   const isManual = (vid?.pipelineStrategy === "manual") && (typeof activePipelineStrategy === "undefined" || activePipelineStrategy === "manual");
   const isGenerating = vid && ((vid.generatingPhotoIndex ?? -1) >= 0 || (vid.generatingMotionIndex ?? -1) >= 0);
-  if (!isManual || vid?.status === "completed" || isGenerating || !vid?.currentStage) { dock.classList.add("hidden"); return; }
+
+  const genreSel = document.getElementById("studio-genre-selector")?.value || "";
+  const fSelector = document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "");
+  const effFmt = String(vid?.format_slug || vid?.format || fSelector || "").toLowerCase();
+  const effGenre = String(vid?.genre || vid?.subgenre || vid?.sub_genre || genreSel || "").toLowerCase();
+  const isRelax = effGenre.startsWith("relax") || effGenre.includes("relax/") || effFmt === "relaxation" || effFmt.startsWith("relax");
+  const lpEds = (vid?.long_play_editions || []).filter(e => e.format?.includes("Long-Play") || e.name?.includes("Hour"));
+  const hasMaster = Boolean(vid?.videoUrl || vid?.video_url || (vid?.editions && vid.editions.length > 0));
+
+  if (!isManual || isGenerating || !vid?.currentStage) { dock.classList.add("hidden"); return; }
+
+  // If already completed and has long play, or non-relax completed, hide dock
+  if (vid?.status === "completed" && (!isRelax || lpEds.length > 0 || !hasMaster)) {
+    dock.classList.add("hidden");
+    return;
+  }
+
   dock.classList.remove("hidden");
   const title = document.getElementById("dock-stage-title"), counter = document.getElementById("dock-stage-counter");
   const rerollBtn = document.getElementById("btn-dock-reroll-text"), advBtn = document.getElementById("btn-dock-advance-text");
@@ -333,6 +366,17 @@ function updateStageGateDock(vid) {
     if (counter) counter.textContent = `${(vid.selectedMotionClipIds || []).length || (vid.motion_clips || []).length} Clips Ready`;
     if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Motion";
     if (advBtn) advBtn.textContent = `➡️ Next Stage: Render Final 4K Master ➔`;
+  } else if (isRelax && hasMaster && lpEds.length === 0) {
+    if (title) title.innerHTML = '<i class="fa-solid fa-hourglass-half text-indigo-400"></i><span>Stage 6: 3-Hour Broadcast Master</span>';
+    if (counter) counter.textContent = `4K Master Ready`;
+    if (rerollBtn) rerollBtn.textContent = "🔄 Re-render Master";
+    if (advBtn) {
+      advBtn.innerHTML = `<span>⚡ Approve &amp; Generate 3-Hour Broadcast ➔</span>`;
+      const btn = document.getElementById("btn-dock-advance");
+      if (btn) btn.onclick = () => { if (typeof approveAndGenerateLongPlay === "function") approveAndGenerateLongPlay(); };
+    }
+  } else {
+    dock.classList.add("hidden");
   }
 }
 

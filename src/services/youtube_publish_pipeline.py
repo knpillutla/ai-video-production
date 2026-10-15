@@ -42,6 +42,7 @@ def get_episode_publish_status(ep_dir: Path) -> Dict[str, Any]:
         "published": False,
         "short": None,
         "broadcast": None,
+        "nature": None,
         "upload_state": upload_state,
         "upload_in_progress": in_progress,
     }
@@ -70,12 +71,16 @@ def publish_episode_bundle_idempotent(
     custom_title: Optional[str] = None,
     custom_description: Optional[str] = None,
     custom_tags: Optional[List[str]] = None,
+    nature_title: Optional[str] = None,
+    nature_description: Optional[str] = None,
+    nature_tags: Optional[List[str]] = None,
     short_title: Optional[str] = None,
     short_description: Optional[str] = None,
     upload_short: bool = True,
     upload_broadcast: bool = True,
+    upload_nature: bool = True,
 ) -> Dict[str, Any]:
-    """Execute idempotent YouTube publication for Short and/or Broadcast Music master."""
+    """Execute idempotent YouTube publication for Short, Music Broadcast, and Nature ASMR Broadcast."""
     ep_dir = ep_dir.resolve()
     if not ep_dir.is_dir():
         raise FileNotFoundError(f"Episode directory not found: {ep_dir}")
@@ -84,10 +89,16 @@ def publish_episode_bundle_idempotent(
     existing_status = get_episode_publish_status(ep_dir)
     short_already_done = bool(existing_status.get("short"))
     broadcast_already_done = bool(existing_status.get("broadcast"))
+    nature_already_done = bool(existing_status.get("nature"))
+    has_nature_file = any(
+        (ep_dir / cand_name).is_file() and (ep_dir / cand_name).stat().st_size > 500000
+        for cand_name in ["master_4k_8hour_nature_only_broadcast.mp4", "master_4k_3hour_nature_only_broadcast.mp4", "master_4k_nature.mp4", "master_4k_ambient_nature_only.mp4"]
+    )
     needed_short = upload_short and not (short_already_done and not force_reupload)
     needed_broadcast = upload_broadcast and not (broadcast_already_done and not force_reupload)
+    needed_nature = upload_nature and has_nature_file and not (nature_already_done and not force_reupload)
 
-    if not needed_short and not needed_broadcast:
+    if not needed_short and not needed_broadcast and not needed_nature:
         logger.info(f"decision_youtube_publish_idempotent_hit: Episode in '{ep_dir.name}' already published")
         return {
             "status": "already_published",
@@ -131,12 +142,20 @@ def publish_episode_bundle_idempotent(
             thumbnail_path = candidate
             break
 
-    # 3. Locate Broadcast Master (strictly music)
+    # 3. Locate Broadcast Master (Music Edition)
     broadcast_file = None
-    for cand_name in ["master_4k_3hour_broadcast.mp4", "master_4k_30min_broadcast.mp4", "master_4k_ambient.mp4"]:
+    for cand_name in ["master_4k_8hour_broadcast.mp4", "master_4k_3hour_broadcast.mp4", "master_4k_30min_broadcast.mp4", "master_4k_ambient.mp4", "master_4k_narration.mp4", "master_4k.mp4"]:
         cand = ep_dir / cand_name
         if cand.is_file() and cand.stat().st_size > 500000:
             broadcast_file = cand
+            break
+
+    # 3b. Locate Pure Nature ASMR Broadcast Master
+    nature_file = None
+    for cand_name in ["master_4k_8hour_nature_only_broadcast.mp4", "master_4k_3hour_nature_only_broadcast.mp4", "master_4k_nature.mp4", "master_4k_ambient_nature_only.mp4"]:
+        cand = ep_dir / cand_name
+        if cand.is_file() and cand.stat().st_size > 500000:
+            nature_file = cand
             break
 
     # 4. Locate Short (9:16 vertical)
@@ -167,6 +186,7 @@ def publish_episode_bundle_idempotent(
         "channel_slug": channel_slug,
         "short": existing_status.get("short"),
         "broadcast": existing_status.get("broadcast"),
+        "nature": existing_status.get("nature"),
     }
 
     _write_state(ep_dir, "uploading", "Starting uploads...", 5)
@@ -192,10 +212,10 @@ def publish_episode_bundle_idempotent(
             "filename": short_file.name,
         }
 
-    # Upload 4K Broadcast Master if selected
+    # Upload 4K Broadcast Master (Music Edition) if selected
     if upload_broadcast and broadcast_file:
         def on_broadcast_pct(pct: int):
-            mapped = int(20 + (pct * 0.75))
+            mapped = int(20 + (pct * 0.40))
             _write_state(ep_dir, "uploading", f"Uploading 4K Broadcast ({pct}%)...", mapped)
 
         _write_state(ep_dir, "uploading", f"Uploading 4K Broadcast: {broadcast_file.name}...", 20)
@@ -214,6 +234,32 @@ def publish_episode_bundle_idempotent(
             "url": f"https://youtu.be/{res_broadcast.get('id')}" if res_broadcast.get("id") else None,
             "title": title,
             "filename": broadcast_file.name,
+        }
+
+    # Upload 4K Pure Nature ASMR Master if selected
+    if upload_nature and nature_file:
+        def on_nature_pct(pct: int):
+            mapped = int(60 + (pct * 0.35))
+            _write_state(ep_dir, "uploading", f"Uploading Nature ASMR Broadcast ({pct}%)...", mapped)
+
+        _write_state(ep_dir, "uploading", f"Uploading Nature Broadcast: {nature_file.name}...", 60)
+        n_title = (nature_title or f"{title[:75]} ⋄ Pure ASMR (No Music)").strip()
+        n_desc = (nature_description or f"Pure Nature ASMR edition with zero music.\n\n{description}").strip()
+        res_nature = upload_single_video(
+            youtube_client=yt,
+            video_path=nature_file,
+            title=n_title[:100],
+            description=n_desc,
+            tags=nature_tags or tags[:30],
+            privacy_status=privacy_status,
+            thumbnail_path=thumbnail_path,
+            progress_callback=on_nature_pct,
+        )
+        results["nature"] = {
+            "video_id": res_nature.get("id"),
+            "url": f"https://youtu.be/{res_nature.get('id')}" if res_nature.get("id") else None,
+            "title": n_title,
+            "filename": nature_file.name,
         }
 
     # Persist publication manifest

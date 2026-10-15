@@ -257,7 +257,15 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
             editions.append({"edition_id": eid, "name": name, "icon": icon, "audio_mode": mode, "duration": dur, "format": fmt, "status": st, "url": f"{rel_prefix}/{match_fn}?t={mtime}", "size_str": sz})
 
     fmt_val = str(user_inputs_data.get("format") or manifest_data.get("format") or "").lower()
-    is_relax_fmt = fmt_val in ("relaxation", "relax") or "relax" in str(manifest_data.get("genre", "")).lower() or "/relaxation/" in ep_path.as_posix().lower()
+    ep_genre_str = str(manifest_data.get("genre") or screenplay_data.get("genre") or user_inputs_data.get("genre") or "").lower()
+    is_relax_fmt = (
+        fmt_val in ("relaxation", "relax")
+        or fmt_val.startswith("relax")
+        or ep_genre_str.startswith("relax")
+        or "relax" in ep_genre_str
+        or "/relaxation/" in ep_path.as_posix().lower()
+        or "\\relaxation\\" in ep_path.as_posix().lower()
+    )
     long_play_editions = [e for e in editions if "Long-Play" in e["format"]] if is_relax_fmt else []
     master_editions = [e for e in editions if "Master" in e["format"] or "master" in e["edition_id"]]
 
@@ -316,8 +324,19 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
     master_ed = [e for e in editions if "master" in e.get("edition_id", "")]
     primary_master = master_ed[0]["url"] if master_ed else (editions[0]["url"] if editions else None)
 
+    has_master_file = bool(primary_master or ("master_4k_ambient.mp4" in files) or ("master_4k_nature.mp4" in files))
+    ep_status = "completed" if has_master_file else (pipeline_state_data.get("status") or manifest_data.get("status") or "ready")
+    curr_stage = 4 if has_master_file else int(pipeline_state_data.get("current_stage") or (3 if len(audio_stems) > 0 else (2 if len(keyframes) > 0 else 1)))
+    eff_format = "relaxation" if is_relax_fmt else (user_inputs_data.get("format") or manifest_data.get("format") or "relaxation")
+
     return {
         "episode_id": ep_id,
+        "id": ep_id,
+        "status": ep_status,
+        "currentStage": curr_stage,
+        "current_stage": curr_stage,
+        "format": eff_format,
+        "format_slug": eff_format,
         "channel_id": ch_meta["id"],
         "channel_name": ch_meta["name"],
         "channel_handle": ch_meta["handle"],

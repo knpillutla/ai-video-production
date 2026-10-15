@@ -60,16 +60,15 @@ def assemble_4k_master(
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
                 *in_args, "-i", str(audio_path), "-map", "0:v:0", "-map", "1:a:0",
                 "-af", afade_filter, "-t", f"{target_dur:.2f}", "-vf", v_filter,
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "24",
-                "-maxrate", "4.5M", "-bufsize", "9M",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
                 "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)
             ]
         else:
             cmd = [
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
                 *in_args, "-map", "0:v:0", "-t", f"{target_dur:.2f}", "-vf", v_filter,
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "24",
-                "-maxrate", "4.5M", "-bufsize", "9M", "-movflags", "+faststart", str(out_master)
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
+                "-movflags", "+faststart", str(out_master)
             ]
     else:
         hold_list = [float(d) for d in shot_durations] if (shot_durations and len(shot_durations) == n) else [max(6.0, (target_dur + ((n - 1) * x_dur)) / n)] * n
@@ -97,8 +96,7 @@ def assemble_4k_master(
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
                 *inputs, "-filter_complex", ";".join(filter_parts),
                 "-map", "[v]", "-map", f"{n}:a", "-af", afade_filter, "-t", f"{target_dur:.2f}",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "24",
-                "-maxrate", "4.5M", "-bufsize", "9M",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
                 "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)
             ]
         else:
@@ -106,8 +104,7 @@ def assemble_4k_master(
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
                 *inputs, "-filter_complex", ";".join(filter_parts),
                 "-map", "[v]", "-t", f"{target_dur:.2f}",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", "24",
-                "-maxrate", "4.5M", "-bufsize", "9M",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
                 "-movflags", "+faststart", str(out_master)
             ]
 
@@ -201,9 +198,11 @@ def assemble_dual_masters(
             foley_audio = ep_dir / "foley_ambient.mp3"
             if not foley_audio.is_file():
                 try:
-                    from src.services.procedural_foley import synthesize_foley_stem
-                    w_type = "heavy rain" if any(k in str(ep_dir).lower() for k in ("rain", "storm", "downpour")) else "gentle wind"
-                    synthesize_foley_stem(w_type, "village", "outdoor", float(f_dur), foley_audio)
+                    subprocess.run([
+                        imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error",
+                        "-f", "lavfi", "-i", "anoisesrc=color=brown:amplitude=0.06:sample_rate=48000,lowpass=f=450,highpass=f=35,volume=0.9",
+                        "-t", f"{f_dur:.2f}", "-c:a", "libmp3lame", "-b:a", "320k", "-ar", "48000", str(foley_audio),
+                    ], check=True)
                 except Exception:
                     foley_audio = None
 

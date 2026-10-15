@@ -99,6 +99,60 @@ def export_long_play_broadcast(
     return out
 
 
+def remux_long_play_audio(
+    source_long_play_video: Path | str,
+    alternate_audio_source: Path | str,
+    output_long_play: Path | str,
+    target_duration_seconds: Optional[float] = None,
+) -> Path:
+    """Fast stream-copy remux: takes an existing 4K long-play broadcast video stream
+    and swaps in an alternate audio track (looped seamlessly) in seconds with zero video re-encoding.
+    """
+    src_video = Path(source_long_play_video).resolve()
+    alt_src = Path(alternate_audio_source).resolve()
+    out = Path(output_long_play).resolve()
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    if not src_video.is_file():
+        raise FileNotFoundError(f"Source 4K long-play video not found: {src_video}")
+    if not alt_src.is_file():
+        raise FileNotFoundError(f"Alternate audio source not found: {alt_src}")
+
+    ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+    logger.info(f"fast_remux_long_play: {src_video.name} + audio from {alt_src.name} -> {out.name}")
+
+    import shutil
+    free_bytes = shutil.disk_usage(out.parent).free
+    can_faststart = free_bytes > (src_video.stat().st_size * 2.2)
+    faststart_flags = ["-movflags", "+faststart"] if can_faststart else []
+
+    dur_args = ["-t", str(target_duration_seconds)] if target_duration_seconds else []
+
+    cmd = [
+        ffmpeg_bin, "-y",
+        "-avoid_negative_ts", "make_zero",
+        "-fflags", "+genpts",
+        "-i", str(src_video),
+        "-stream_loop", "-1",
+        "-i", str(alt_src),
+        "-map", "0:v:0",
+        "-map", "1:a:0",
+        *dur_args,
+        "-c:v", "copy",
+        "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
+        *faststart_flags,
+        str(out)
+    ]
+    try:
+        subprocess.run(cmd, capture_output=True, check=True)
+        logger.info(f"fast_remux_complete: {out.name} ({round(out.stat().st_size / (1024*1024), 2)} MB)")
+    except subprocess.CalledProcessError as err:
+        logger.error(f"failed_to_fast_remux_long_play: {err}")
+        raise
+
+    return out
+
+
 def stretch_channel_episode_background(channel_name: str, episode_id: str) -> Path:
     """Find channel episode directory on disk and stretch master video to target long-play duration."""
     import json
