@@ -238,8 +238,8 @@ async def run_production(
             return results
 
     if not goto_production:
-        is_default_title = (title == "IT Employee WFH Confusions" or not title)
-        if idea or (theme and is_default_title) or prompt:
+        is_default_title = (title in ("IT Employee WFH Confusions", "Telugu Melody Song") or not title)
+        if is_default_title and (idea or theme or prompt):
             raw_input = idea or theme or prompt
             from src.services.creative_director import expand_creative_idea
             extracted_lang = classifier_agent.extract_language_from_text(raw_input)
@@ -469,7 +469,8 @@ async def run_production(
             "music_style": music_style, "num_images": num_images, "similar_to": similar_to,
             "country": country, "culture": culture, "gender": effective_voice_gender,
             "art_style": art_style or (ref_attrs.art_style if ref_attrs else ""),
-            "culture_ctx": culture_ctx, "character_name": character_name, "prompt": prompt,
+            "culture_ctx": culture_context, "character_name": character_name, "prompt": prompt,
+            "user_id": str(user.id), "network": network, "episode_number": episode_number,
         }
         with open(ep_ws / "gemini_inputs.json", "w", encoding="utf-8") as f:
             json.dump(gemini_inputs, f, indent=2, default=str)

@@ -163,3 +163,25 @@ def test_vocal_strategy_location_fidelity():
     assert "MULTI-SCENE ROTATION (3 SCENES" in prompt
 
 
+@pytest.mark.asyncio
+async def test_synthesize_vocal_scenes_4k_upscale(tmp_path: Path):
+    """Verify synthesize_vocal_scenes immediately upscales images to exact 3840x2160 4K UHD."""
+    import cv2
+    from src.compositor.vocal_image_service import synthesize_vocal_scenes
+
+    sb_data = {
+        "prompts_by_model": {"z_image": "Romantic couple in Swiss Alps"},
+        "scenes": [{"scene_index": 1, "visual_prompt": "Romantic couple near alpine lake"}],
+        "characters": [{"seed": 12345}],
+    }
+    scenes_dir = tmp_path / "scenes"
+    paths = await synthesize_vocal_scenes(storyboard_data=sb_data, scenes_dir=scenes_dir, num_images=1, force_live=False)
+    assert len(paths) == 1
+    assert paths[0].is_file()
+
+    img = cv2.imread(str(paths[0]))
+    assert img is not None
+    assert img.shape == (2160, 3840, 3), f"Expected 4K (2160, 3840, 3), got {img.shape}"
+
+
+

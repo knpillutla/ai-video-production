@@ -95,12 +95,10 @@ def build_vocal_subtitles(
     try:
         from src.scripts.local_subtitles import generate_srt, generate_vtt
         en_segs = [{"start": float(s["start"]), "end": min(total_duration, float(s["end"])), "text": str(s.get("text_en") or s.get("text")).strip()} for s in raw_segs if isinstance(s, dict)] or segments
-        subs_dir = out_ass_path.parent
-        generate_srt(segments=en_segs, output_path=subs_dir / "captions_en.srt")
-        generate_vtt(segments=en_segs, output_path=subs_dir / "captions_en.vtt")
-        generate_srt(segments=segments, output_path=subs_dir / f"captions_{language}.srt")
-        generate_vtt(segments=segments, output_path=subs_dir / f"captions_{language}.vtt")
-        logger.info(f"youtube_subtitles_generated: captions_en.srt/vtt and captions_{language}.srt/vtt ready for YouTube CC")
+        generate_srt(segments=en_segs, output_path=out_ass_path.parent / "captions_en.srt")
+        generate_vtt(segments=en_segs, output_path=out_ass_path.parent / "captions_en.vtt")
+        generate_srt(segments=segments, output_path=out_ass_path.parent / f"captions_{language}.srt")
+        generate_vtt(segments=segments, output_path=out_ass_path.parent / f"captions_{language}.vtt")
     except Exception as e: logger.warning(f"failed_generating_youtube_cc_files: {e}")
 
     return sub_file, fonts_dir
@@ -110,8 +108,9 @@ async def assemble_vocal_video(
     image_paths: list[Path] | Path, song_path: Path, sub_path: Path | None, out_video_path: Path,
     duration: float, fps: int = 30, timeline_cues: list[dict[str, Any]] | None = None,
     fonts_dir: Path | str | None = None, static_canvas: bool = True, enable_vfx: bool = True,
+    theme: str | None = None, episode_seed: int = 0,
 ) -> Path:
-    """Fast 2-Stage Assembly: Stage 1 Base Assembly (Images+xfade+audio+subtitles) -> Stage 2 Timeline VFX."""
+    """Fast 2-Stage Assembly: Stage 1 Base Assembly (Static Tripod + xfade + Audio) -> Stage 2 Scene VFX."""
     if out_video_path.is_file() and out_video_path.stat().st_size > 1000:
         logger.info(f"vocal_master_cached: reusing existing render {out_video_path.name}")
         return out_video_path
@@ -119,10 +118,10 @@ async def assemble_vocal_video(
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     imgs = [image_paths] if isinstance(image_paths, Path) else list(image_paths)
 
-    from src.compositor.vocal_fx import compile_vocal_base_filter_complex, ensure_fx_overlay
+    from src.compositor.vocal_fx import compile_vocal_base_filter_complex, ensure_fx_overlay, resolve_scene_vfx_type
     base_target = out_video_path.parent / f"_temp_base_{out_video_path.name}" if enable_vfx else out_video_path
 
-    # Stage 1: Fast Base Assembly (Images + xfade + Audio + Subtitles)
+    # Stage 1: Fast Base Assembly on Static Tripod (Images + xfade + Audio + Subtitles)
     base_filter = compile_vocal_base_filter_complex(len(imgs), duration, sub_path=sub_path, fonts_dir=fonts_dir, fps=fps)
     img_args = [arg for p in imgs for arg in ("-loop", "1", "-t", f"{duration:.2f}", "-i", str(p))]
     cmd_base = [
@@ -141,8 +140,10 @@ async def assemble_vocal_video(
     if not enable_vfx:
         return out_video_path
 
-    # Stage 2: Fast Single-Overlay VFX Pass across Timeline
-    vfx_clip = ensure_fx_overlay("vocal_decorators")
+    # Stage 2: Fast Single-Overlay VFX Pass across Timeline (Scene-Matched & Seed-Randomized)
+    fx_type = resolve_scene_vfx_type(theme=theme, timeline_cues=timeline_cues)
+    vfx_clip = ensure_fx_overlay(fx_type, seed=episode_seed)
+    logger.info(f"vocal_vfx_applied: fx_type={fx_type}, seed={episode_seed % 30}, clip={vfx_clip.name}")
     vfx_filter = "[1:v]colorkey=0x000000:0.04:0.12,format=yuva420p,scale=3840:2160:flags=fast_bilinear[ov];[0:v][ov]overlay=x=0:y=0:format=auto[v_out]"
     cmd_vfx = [
         ffmpeg, "-y", "-i", str(base_target), "-stream_loop", "-1", "-i", str(vfx_clip),
@@ -152,10 +153,7 @@ async def assemble_vocal_video(
     ]
     proc_vfx = await asyncio.create_subprocess_exec(*cmd_vfx, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     _, stderr_vfx = await proc_vfx.communicate()
-    try:
-        base_target.unlink(missing_ok=True)
-    except Exception:
-        pass
+    base_target.unlink(missing_ok=True)
     if proc_vfx.returncode != 0:
         err_msg = stderr_vfx.decode(errors="replace")
         logger.error(f"ffmpeg_vfx_render_failed: {err_msg[-1200:]}")
@@ -179,14 +177,8 @@ async def execute_vocal_pipeline(
     num_imgs = int(kwargs.get("num_images") or 1)
 
     if not sb_data:
-        eff_idea = idea or theme
-        eff_theme = theme or eff_idea
-        gem_in = {
-            "title": episode.title, "duration_seconds": int(episode.duration_seconds), "language": language,
-            "genre": "vocal", "idea": eff_idea, "art_style": art_style, "music_style": music_style,
-            "similar_to": similar_to, "country": country, "culture": culture, "gender": gender,
-            "theme": eff_theme, "num_images": num_imgs,
-        }
+        eff_idea, eff_theme = idea or theme, theme or idea or ""
+        gem_in = {"title": episode.title, "duration_seconds": int(episode.duration_seconds), "language": language, "genre": "vocal", "idea": eff_idea, "art_style": art_style, "music_style": music_style, "similar_to": similar_to, "country": country, "culture": culture, "gender": gender, "theme": eff_theme, "num_images": num_imgs}
         await storage_service.save_json(ep_dir / "gemini_inputs.json", gem_in)
         p = strategy.build_gemini_prompt(**gem_in)
         (ep_dir / "gemini_prompt.txt").write_text(p, encoding="utf-8")
@@ -264,10 +256,13 @@ async def execute_vocal_pipeline(
         return final_video
 
     full_conf = kwargs.get("full_confirmed", False)
+    ep_seed = abs(hash(str(episode.id))) % 30
+    eff_theme_vfx = theme or (sb_data.get("hook_thesis") if sb_data else None) or episode.title
+
     if not full_conf and actual_dur > 30.0 and not dry_run:
         if not (preview_video.is_file() and preview_video.stat().st_size > 1000):
             print(f"\n[~] Stage 1/2: Generating 30s fast preview video for review...")
-            await assemble_vocal_video(image_paths=img_paths, song_path=active_audio, sub_path=None, out_video_path=preview_video, duration=preview_dur, timeline_cues=anim_cues, fonts_dir=fonts_dir)
+            await assemble_vocal_video(image_paths=img_paths, song_path=active_audio, sub_path=None, out_video_path=preview_video, duration=preview_dur, timeline_cues=anim_cues, fonts_dir=fonts_dir, theme=eff_theme_vfx, episode_seed=ep_seed)
         print(f"\n[+] 30s Fast Preview Video Ready: {preview_video.name}")
         if kwargs.get("preview_only", False): return preview_video
         cg = kwargs.get("custom_gate_input_fn")
@@ -276,10 +271,11 @@ async def execute_vocal_pipeline(
             print(f"[i] Pausing at 30s preview. Pass --full-confirmed to render full {actual_dur:.0f}s master.")
             return preview_video
 
-    if dry_run: final_video.touch()
+    if dry_run:
+        final_video.touch()
     else:
         print(f"\n[~] Rendering full {actual_dur:.0f}s master video...")
-        await assemble_vocal_video(image_paths=img_paths, song_path=active_audio, sub_path=None, out_video_path=final_video, duration=actual_dur, timeline_cues=anim_cues, fonts_dir=fonts_dir)
+        await assemble_vocal_video(image_paths=img_paths, song_path=active_audio, sub_path=None, out_video_path=final_video, duration=actual_dur, timeline_cues=anim_cues, fonts_dir=fonts_dir, theme=eff_theme_vfx, episode_seed=ep_seed)
         if not (preview_video.is_file() and preview_video.stat().st_size > 1000):
             try: subprocess.run([ffmpeg_bin, "-y", "-i", str(final_video), "-t", f"{preview_dur:.2f}", "-c", "copy", str(preview_video)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
             except Exception: pass

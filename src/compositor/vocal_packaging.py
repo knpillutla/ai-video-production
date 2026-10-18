@@ -26,11 +26,19 @@ def format_chapter_time(seconds: float) -> str:
     return f"{m:02d}:{sec:02d}"
 
 
-def sanitize_text(text: str) -> str:
-    """Normalize any literal /n or escaped \\n into standard newlines."""
+def sanitize_text(text: str, strip_emojis: bool = True) -> str:
+    """Normalize text into clean, copy-pasteable plain text with real newlines, zero emojis, and zero /n or \\n."""
     if not text:
         return ""
-    t = text.replace("/n", "\n").replace("\\n", "\n")
+    import re
+    t = text.replace("/n", "\n").replace("\\\\n", "\n").replace("\\n", "\n").replace("\r\n", "\n")
+    t = t.replace("<", "").replace(">", "").replace("\u2022", "-")
+    if strip_emojis:
+        emoji_pattern = re.compile(r"[\U00010000-\U0010ffff\u2600-\u27bf\ufe00-\ufe0f\u200d]+", flags=re.UNICODE)
+        t = emoji_pattern.sub("", t)
+    t = re.sub(r"[ \t]+", " ", t)
+    t = re.sub(r" +\n", "\n", t)
+    t = re.sub(r"\n +", "\n", t)
     while "\n\n\n" in t:
         t = t.replace("\n\n\n", "\n\n")
     return t.strip()
@@ -90,25 +98,44 @@ def export_vocal_production_bundle(
     ch_p2 = max(10.0, actual_dur * 0.35)
     ch_p3 = max(20.0, actual_dur * 0.65)
     chapters = [
-        "00:00 🎵 Pallavi (Intro Groove & Melody Setup)",
-        f"{format_chapter_time(ch_p2)} ✨ Anupallavi (Emotional Verse & Swell)",
-        f"{format_chapter_time(ch_p3)} 💫 Charanam (Signature Climax & Harmony)",
+        "00:00 - Pallavi (Intro Groove & Melody Setup)",
+        f"{format_chapter_time(ch_p2)} - Anupallavi (Emotional Verse & Swell)",
+        f"{format_chapter_time(ch_p3)} - Charanam (Signature Climax & Harmony)",
     ]
     raw_desc = yt_meta.get("description") or (
         f"Official 4K lyrical video for '{sb_data.get('title_localized', '')} ({sb_data.get('title_en', episode.title)})'.\n\n"
-        f"🎵 Broadcast Chapters:\n" + "\n".join(chapters) + f"\n\nLyrics:\n{sb_data.get('lyrics', '')}\n\n"
+        f"Broadcast Chapters:\n" + "\n".join(chapters) + f"\n\nLyrics:\n{sb_data.get('lyrics', '')}\n\n"
         f"Mastered to -14.0 LUFS 48kHz Broadcast Audio.\n100% Commercial Master Rights | 4K UHD Visuals"
     )
     clean_desc = sanitize_text(raw_desc)
+
+    import re
+    # Strictly remove character names from description and title
+    char_names = [c.get("name") for c in sb_data.get("characters", []) if isinstance(c, dict) and c.get("name")]
+    for cn in char_names:
+        if cn and len(cn) > 1:
+            clean_desc = re.sub(rf"\bFeaturing\s+{re.escape(cn)}\s+and\s+\w+\s+in\s+a\b", "A", clean_desc, flags=re.IGNORECASE)
+            clean_desc = re.sub(rf"\bFeaturing\s+\w+\s+and\s+{re.escape(cn)}\s+in\s+a\b", "A", clean_desc, flags=re.IGNORECASE)
+            clean_desc = re.sub(rf"\bFeaturing\s+{re.escape(cn)}\s+in\s+a\b", "A", clean_desc, flags=re.IGNORECASE)
+            clean_desc = re.sub(rf"\bFeaturing\s+{re.escape(cn)}\b", "", clean_desc, flags=re.IGNORECASE)
+            clean_desc = re.sub(rf"\b{re.escape(cn)}\b", "", clean_desc)
+
+    clean_desc = re.sub(r"(\d{2}:\d{2})\s*[-–—]?\s*[^\w\s\(\)]*\s*", r"\1 - ", clean_desc)
     if "00:00" not in clean_desc:
-        clean_desc += "\n\n🎵 Broadcast Chapters:\n" + "\n".join(chapters)
+        clean_desc += "\n\nBroadcast Chapters:\n" + "\n".join(chapters)
     if "Lyrics:" not in clean_desc and sb_data.get("lyrics"):
-        clean_desc += f"\n\n📜 Lyrics:\n{sanitize_text(sb_data.get('lyrics', ''))}"
+        clean_desc += f"\n\nLyrics:\n{sanitize_text(sb_data.get('lyrics', ''))}"
     if "-14.0 LUFS" not in clean_desc:
-        clean_desc += "\n\n🎧 Audio & Visual Specs:\n• Mastered to -14.0 LUFS 48kHz Broadcast Stereo\n• 4K UHD Master (3840x2160) | 100% Commercial Master Rights"
+        clean_desc += "\n\nAudio & Visual Specs:\n- Mastered to -14.0 LUFS 48kHz Broadcast Stereo\n- 4K UHD Master (3840x2160) | 100% Commercial Master Rights"
+    clean_desc = sanitize_text(clean_desc)
 
     clean_title = sanitize_text(yt_meta.get("title") or f"{sb_data.get('title_localized', '')} - {sb_data.get('title_en', episode.title)} | 4K Lyrical Music Video".strip(" -"))
-    clean_pinned = sanitize_text(yt_meta.get("pinned_comment") or f"Enjoying '{sb_data.get('title_localized', '')}'? Share your favorite lyrical couplet in the comments! 🎵✨")
+    for cn in char_names:
+        if cn and len(cn) > 1:
+            clean_title = re.sub(rf"\b{re.escape(cn)}\b", "", clean_title)
+    clean_title = re.sub(r"\s*\|\s*\|+", " |", clean_title)
+    clean_title = re.sub(r"[ \t]+", " ", clean_title).strip(" -|")
+    clean_pinned = sanitize_text(yt_meta.get("pinned_comment") or f"Enjoying '{sb_data.get('title_localized', '')}'? Share your favorite lyrical couplet in the comments!")
     tags_list = yt_meta.get("tags") or ["music_video", "lyrical_video", "4k_music_video", language, "telugu_songs" if language == "te" else f"{language}_songs"]
     tags_str = ", ".join(tags_list)
 

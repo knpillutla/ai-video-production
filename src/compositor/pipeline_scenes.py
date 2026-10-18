@@ -78,6 +78,9 @@ async def _generate_single_keyframe(
             )
             img_path = generated_img_path
             recreated = True
+        if img_path.is_file():
+            from src.providers.visual.fal_aura_sr import FalAuraSRAdapter
+            await FalAuraSRAdapter().upscale_image(img_path, img_path, target_res=(3840, 2160), force_live=force_live)
 
     if idx == 0 and char_anchor and not getattr(char_anchor, "reference_image_path", None):
         char_anchor.reference_image_path = str(img_path)

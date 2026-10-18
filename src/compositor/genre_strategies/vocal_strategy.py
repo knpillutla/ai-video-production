@@ -19,59 +19,27 @@ def vocal_gemini_schema() -> dict:
     """Return strict JSON schema for vocal lyrical video structured output."""
     character = {
         "type": "OBJECT",
-        "properties": {
-            "name": {"type": "STRING"},
-            "gender": {"type": "STRING"},
-            "age": {"type": "INTEGER"},
-            "body_composition": {"type": "STRING"},
-            "outfit_description": {"type": "STRING"},
-        },
+        "properties": {"name": {"type": "STRING"}, "gender": {"type": "STRING"}, "age": {"type": "INTEGER"}, "body_composition": {"type": "STRING"}, "outfit_description": {"type": "STRING"}},
         "required": ["name", "gender", "age", "body_composition", "outfit_description"],
     }
     lyrics_seg = {
         "type": "OBJECT",
-        "properties": {
-            "start": {"type": "NUMBER"},
-            "end": {"type": "NUMBER"},
-            "text": {"type": "STRING"},
-            "text_en": {"type": "STRING"},
-        },
+        "properties": {"start": {"type": "NUMBER"}, "end": {"type": "NUMBER"}, "text": {"type": "STRING"}, "text_en": {"type": "STRING"}},
         "required": ["start", "end", "text", "text_en"],
     }
     prompts_model = {
         "type": "OBJECT",
-        "properties": {
-            "z_image": {"type": "STRING"},
-            "flux_dev": {"type": "STRING"},
-            "flux_pro_ultra": {"type": "STRING"},
-            "imagen3": {"type": "STRING"},
-            "midjourney": {"type": "STRING"},
-        },
+        "properties": {"z_image": {"type": "STRING"}, "flux_dev": {"type": "STRING"}, "flux_pro_ultra": {"type": "STRING"}, "imagen3": {"type": "STRING"}, "midjourney": {"type": "STRING"}},
         "required": ["z_image", "flux_dev", "flux_pro_ultra", "imagen3", "midjourney"],
     }
     youtube_meta = {
         "type": "OBJECT",
-        "properties": {
-            "title": {"type": "STRING"},
-            "description": {"type": "STRING"},
-            "tags": {"type": "ARRAY", "items": {"type": "STRING"}},
-            "pinned_comment": {"type": "STRING"},
-            "thumbnail_prompt": {"type": "STRING"},
-            "category_id": {"type": "STRING"},
-        },
+        "properties": {"title": {"type": "STRING"}, "description": {"type": "STRING"}, "tags": {"type": "ARRAY", "items": {"type": "STRING"}}, "pinned_comment": {"type": "STRING"}, "thumbnail_prompt": {"type": "STRING"}, "category_id": {"type": "STRING"}},
         "required": ["title", "description", "tags", "pinned_comment"],
     }
     anim_cue = {
         "type": "OBJECT",
-        "properties": {
-            "start_time": {"type": "NUMBER"},
-            "end_time": {"type": "NUMBER"},
-            "musical_phase": {"type": "STRING"},
-            "camera_motion": {"type": "STRING", "enum": ["slow_zoom_in", "slow_zoom_out", "pan_left_to_right", "pan_right_to_left", "subtle_breathe"]},
-            "effect_type": {"type": "STRING", "enum": ["floating_petals_up", "floating_petals_down", "golden_fireflies", "shimmering_sparkles", "golden_light_leak", "romantic_bokeh_drift", "monsoon_rain_mist"]},
-            "intensity": {"type": "STRING", "enum": ["subtle", "medium", "vibrant"]},
-            "rationale": {"type": "STRING"},
-        },
+        "properties": {"start_time": {"type": "NUMBER"}, "end_time": {"type": "NUMBER"}, "musical_phase": {"type": "STRING"}, "camera_motion": {"type": "STRING"}, "effect_type": {"type": "STRING"}, "intensity": {"type": "STRING"}, "rationale": {"type": "STRING"}},
         "required": ["start_time", "end_time", "camera_motion", "effect_type"],
     }
     return {
@@ -147,6 +115,19 @@ class VocalStrategy:
         eff_culture = culture or "South Indian"
         eff_theme = theme or kwargs.get("theme") or idea or "soulful romantic melody"
 
+        user_id = str(kwargs.get("user_id") or "default_user")
+        network = kwargs.get("network")
+        ep_num = kwargs.get("episode_number")
+
+        from src.services.character_archetypes import (
+            get_and_increment_production_slot,
+            resolve_cast_archetypes,
+            build_fresh_cast_prompt_directive,
+        )
+        slot = get_and_increment_production_slot(user_id=user_id, network=network, episode_number=ep_num)
+        fem_spec, male_spec = resolve_cast_archetypes(slot=slot, culture=eff_culture, language=language)
+        fresh_cast_directive = build_fresh_cast_prompt_directive(slot=slot, fem=fem_spec, male=male_spec, setting=eff_theme)
+
         ref_directive = (
             f"MUSICAL REFERENCE PATTERN: Infuse the tenderness, emotional cadence, softness, and acoustic depth "
             f"evocative of the famous classic '{similar_to}', but compose 100% brand-new original lyrics and melody."
@@ -196,19 +177,10 @@ class VocalStrategy:
             f"4. INSTRUMENTAL INTRO & VOCAL SYNC: The song begins with a 4.5s-5.5s acoustic intro (flute/guitar/tabla) before singing starts. First segment MUST start at ~4.5s, pacing segments smoothly across {duration_seconds}s.\n\n"
             f"{multi_scene_directive}"
             f"HIGH-CTR 4K IMAGE & CHARACTER SPECIFICATION (Rule 12):\n"
-            f"1. HIGH-CTR VIBRANT PALETTE: Depict rich, colorful, eye-catching jewel tones (deep crimson red, emerald green, royal peacock blue, glowing amber) "
-            f"with dramatic clean cinematic lighting to achieve maximum YouTube feed click-through rate. Zero washed-out or dull tones.\n"
-            f"2. FEMALE & MALE ANATOMICAL ACCURACY, CULTURAL IDENTITY & PHYSICALITY (Mid-20s, Ages 23-27):\n"
-            f"   - Cultural Authenticity: Both characters MUST be authentically {eff_culture} / {eff_country} with natural warm skin tones and regional features.\n"
-            f"   - Woman: Strikingly beautiful, cute, and stylish {eff_culture} woman, mid-20s (ages 23-26), graceful SLIM build with balanced medium feminine curves (neither too thin nor heavy, healthy natural fit proportions with defined trimmer waistline), delicate slender oval face with subtle defined cheekbones, cute dimpled smile, expressive sparkling dark eyes, delicate collarbones, elegant slender hands, wrists, and ankles, radiant skin.\n"
-            f"   - Man: Strikingly handsome {eff_culture} man, mid-20s (ages 24-27), MEDIUM BUILT, lean-athletic fit physique, sharp sculpted jawline.\n"
-            f"3. DIVERSE STAGING & POSES (Strict Ban on Default Hand-Holding):\n"
-            f"   - Strictly PROHIBIT repetitive, generic hand-holding poses. Feature dynamic, cute, emotional, connecting staging:\n"
-            f"     * Travel / Motion: Traveling in open-top vintage jeep, vespa, or train window enjoying warm breeze.\n"
-            f"     * Cafe / Bistro: Sitting across from each other at wooden cafe table or outdoor bistro, teasing smile with dimples.\n"
-            f"     * Lawn / Garden: Sitting back-to-back on lush grassy lawn with warm fairy lights, candid laughter.\n"
-            f"     * Patio / Balcony: Lounging on chic patio furniture, porch swing, or luxury high-rise balcony looking at city skyline.\n"
-            f"     * Candid Chemistry: Looking cute, emotional, connecting, sweet, and beautiful with genuine romantic expressions.\n"
+            f"{fresh_cast_directive}"
+            f"DIVERSE STAGING & CANDID CHEMISTRY (Strict Ban on Default Hand-Holding):\n"
+            f"- Feature dynamic, cute, emotional, connecting staging (cafe terrace, snowy observation deck, train window, scenic stroll).\n"
+            f"- Both characters must look completely in love, sweet, attractive, and expressing genuine romantic chemistry.\n"
             f"4. SETTING & SCENIC LOCATION FIDELITY (MANDATORY):\n"
             f"   - If '{eff_theme}' or art_style mentions a location/environment (e.g. Swiss Alps, Paris, Norway, Mediterranean), ALL scene backgrounds, location_hubs, and thumbnail_prompt MUST be set in picturesque sub-locations of THAT SPECIFIC setting (e.g. for Swiss Alps: snow-capped Eiger/Jungfrau peaks, green alpine meadows, Swiss chalets, glacial streams). Prohibit deviating to unrelated foreign locations.\n"
             f"5. AUTHENTIC 35MM OPTICAL AESTHETIC (Zero Plastic CGI Sheen):\n"
@@ -223,8 +195,10 @@ class VocalStrategy:
             f"     * Legs & Feet: Delicate gold/silver ankle chain (anklet) catching light, paired with strappy sandals or heels (modern); silver payal (festive).\n"
             f"   - MALE ANATOMICAL WATCH PLACEMENT (CRITICAL): Male lead's chronograph watch MUST be described as 'strapped securely to his left wrist'. Plain clean unadorned shirt front with zero badges, pins, or graphics.\n"
             f"   - MANDATORY SELF-CONTAINED SCENE PROMPTS: Every scene's 'visual_prompt' MUST repeat the woman's dress, slender-curvy build, and accessories, and the man's outfit and wrist-worn watch. NEVER drop or abbreviate wardrobe in later scenes!\n"
-            f"7. YOUTUBE 4K THUMBNAIL & NATIVE SCRIPT SPECIFICATION (youtube_metadata):\n"
-            f"   - 'thumbnail_prompt': High-CTR 4K thumbnail image prompt for the image model capturing the emotional climax, gorgeous character chemistry, dramatic lighting, and vibrant jewel tones.\n"
+            f"7. YOUTUBE 4K THUMBNAIL & METADATA SPECIFICATION (youtube_metadata):\n"
+            f"   - 'thumbnail_prompt': High-CTR 4K thumbnail image prompt for the image model capturing the emotional climax, gorgeous couple chemistry, dramatic lighting, and vibrant jewel tones.\n"
+            f"   - 'title': High-CTR clean video title. STRICT PROHIBITION: DO NOT include names of characters in title.\n"
+            f"   - 'description': High-CTR description celebrating the music, atmosphere, and lyrics. STRICT PROHIBITION: DO NOT include character names in description. ZERO emojis or symbols in timestamps or headings. Use clean real line breaks.\n"
             f"   - 'title_localized': Pure song title in the NATIVE SCRIPT of {language} (e.g. 'చిగురించే ప్రేమలా') rendered on the thumbnail banner with the native regional font (Mandali for Telugu)!\n"
             f"8. FAMILY-FRIENDLY & MONETIZATION SAFETY (Rule 11 - Strict Safe-Ad Guarantee):\n"
             f"   - Outfits must be dignified, classy, and culturally authentic. Zero revealing, provocative, or overly sexualized clothing. STRICTLY NO plunging necklines, NO sheer/exposed underwear, and NEVER nude / NSFW.\n\n"
@@ -237,7 +211,7 @@ class VocalStrategy:
             f"- 'midjourney': Stylized aesthetic prompt with aspect ratio flag --ar 16:9 and clean fashion lines.\n\n"
             f"CULTURALLY ALIGNED VISUAL EFFECTS & ANIMATIONS (animation_timeline - Rule 12):\n"
             f"Direct dynamic local visual animations authentic to the song's culture ({eff_culture}), setting, and mood across {duration_seconds}s. Provide 3-5 timed cues:\n"
-            f"- camera_motion: 'slow_zoom_in', 'slow_zoom_out', 'pan_left_to_right', 'pan_right_to_left', 'subtle_breathe'\n"
+            f"- camera_motion: 'static_tripod' (MANDATORY: Camera is locked on a static tripod with ZERO camera movement, zoom, or pan; characters are photographic stills, so the frame remains completely stationary while atmospheric particle VFX drifts naturally).\n"
             f"- effect_type: 'floating_petals_up', 'golden_fireflies', 'golden_light_leak', 'shimmering_sparkles', 'floating_petals_down', 'romantic_bokeh_drift', 'monsoon_rain_mist'.\n"
         )
 

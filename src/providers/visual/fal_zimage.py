@@ -108,9 +108,12 @@ class FalZImageAdapter:
 
     async def _fallback_local(self, prompt: str, out: Path, aspect_ratio: str) -> tuple[str, Path]:
         """Generate deterministic fallback keyframe."""
-        from src.services.local_video_producer import create_placeholder_image
-        w, h = (1920, 1080) if aspect_ratio == "16:9" else (1080, 1920)
-        create_placeholder_image(out, text=prompt[:80], width=w, height=h)
+        from PIL import Image, ImageDraw
+        target_size = (1920, 1080) if aspect_ratio == "16:9" else (1080, 1920)
+        image = Image.new("RGB", target_size, (15, 23, 42))
+        draw = ImageDraw.Draw(image)
+        draw.text((40, 40), f"Offline Fallback (Z-Image Turbo)\n{prompt[:100]}", fill=(226, 232, 240))
+        image.save(out, format="JPEG", quality=90)
         return f"file://{out}", out
 
 

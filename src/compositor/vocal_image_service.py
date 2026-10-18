@@ -11,6 +11,7 @@ from typing import Any
 
 from src.compliance.rights_ledger import AssetType, CommercialLicenseType, rights_ledger
 from src.core.telemetry import logger
+from src.providers.visual.fal_aura_sr import FalAuraSRAdapter
 from src.providers.visual.fal_flux_lora import FalFluxLoraAdapter
 from src.providers.visual.fal_zimage import FalZImageAdapter
 from src.services.network_lora_service import resolve_effective_loras
@@ -34,7 +35,7 @@ async def synthesize_vocal_scenes(
     effective_explicit = explicit_loras or script_loras
     loras = (
         resolve_effective_loras(user_id=str(user_id or "default_user"), network=network, explicit_loras=effective_explicit)
-        if (use_loras or count > 1 or effective_explicit)
+        if (use_loras or effective_explicit)
         else (effective_explicit or [])
     )
     trigger_words = " ".join(l.get("trigger_word", "") for l in loras if l.get("trigger_word")).strip()
@@ -46,12 +47,15 @@ async def synthesize_vocal_scenes(
     resolved_paths: list[Path] = []
     z_adapter = FalZImageAdapter()
     flux_adapter = FalFluxLoraAdapter()
-    song_seed = abs(hash(str(episode_id or scenes_dir.parent.name))) % 100000
+    aura_upscaler = FalAuraSRAdapter()
+    char_seed = int((storyboard_data.get("characters") or [{}])[0].get("seed", 0))
+    song_seed = (abs(hash(str(episode_id or scenes_dir.parent.name))) + char_seed * 137) % 900000
 
     for idx in range(1, count + 1):
         scene_path = scenes_dir / f"scene_{idx:02d}.jpg"
         if scene_path.is_file() and scene_path.stat().st_size > 1000:
-            logger.info(f"vocal_scene_cached: reusing existing scene {scene_path.name} ({scene_path.stat().st_size} bytes)")
+            logger.info(f"vocal_scene_cached: ensuring 4K for existing scene {scene_path.name}")
+            await aura_upscaler.upscale_image(scene_path, scene_path, target_res=(3840, 2160), force_live=force_live)
             resolved_paths.append(scene_path)
             continue
 
@@ -84,6 +88,10 @@ async def synthesize_vocal_scenes(
                 prompt=effective_prompt, output_path=scene_path, aspect_ratio="16:9", force_live=force_live, seed=scene_seed,
             )
             provider_name, model_name = "Fal.ai", "z-image-turbo"
+
+        if scene_path.is_file():
+            logger.info(f"upscaling_vocal_scene_{idx:02d}_to_4k: target=(3840, 2160)")
+            await aura_upscaler.upscale_image(scene_path, scene_path, target_res=(3840, 2160), force_live=force_live)
 
         if episode_id and scene_path.is_file():
             rights_ledger.record_asset(

@@ -45,6 +45,19 @@ class FalAuraSRAdapter:
             logger.info(f"fal_aura_sr_cache_hit: {dst.name} ({dst.stat().st_size} B) ($0.00 spend)")
             return dst
 
+        # Check if source is already target 4K resolution (Rule 3 Tier 1 check)
+        if src.is_file():
+            try:
+                probe = cv2.imread(str(src))
+                if probe is not None and (probe.shape[1], probe.shape[0]) == target_res:
+                    logger.info(f"fal_aura_sr_already_target_res: {src.name} is already {target_res[0]}x{target_res[1]} ($0.00 spend)")
+                    if dst != src:
+                        import shutil
+                        shutil.copy2(src, dst)
+                    return dst
+            except Exception:
+                pass
+
         # Mock / Offline mode fallback (Rule 8)
         if is_mock_mode() and not force_live:
             return self._fallback_local(src, dst, target_res)

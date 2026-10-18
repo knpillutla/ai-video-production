@@ -209,7 +209,7 @@ async def run_production(
 
     if not goto_production:
         is_default_title = (title == "IT Employee WFH Confusions" or not title)
-        if idea or (theme and is_default_title) or prompt:
+        if is_default_title and (idea or theme or prompt):
             raw_input = idea or theme or prompt
             from src.services.creative_director import expand_creative_idea
             extracted_lang = classifier_agent.extract_language_from_text(raw_input)

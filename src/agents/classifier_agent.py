@@ -249,7 +249,10 @@ class ClassifierAgent:
         dur = self.extract_duration_from_text(text)
         if dur:
             overrides["duration"] = dur
-        if any(k in t_low for k in ("documentary", "mountain", "wildlife", "alps", "nature", "survival")):
+        is_musical = any(k in t_low for k in ("song", "melody", "vocal", "singing", "lyrics", "music video"))
+        if is_musical:
+            overrides.update({"media_format": MediaFormat.VOCAL_SONG, "enable_bgm": True, "enable_lipsync": True, "is_voice_over": False})
+        elif any(k in t_low for k in ("documentary", "mountain", "wildlife", "alps", "nature", "survival")):
             if "survival" in t_low or "blizzard" in t_low:
                 overrides.update({"media_format": MediaFormat.MOUNTAIN_SURVIVAL, "enable_bgm": True, "is_voice_over": True, "enable_lipsync": False})
             elif "documentary" in t_low or "mountain" in t_low or "wildlife" in t_low:
