@@ -141,7 +141,8 @@ def _find_episode_path(storage_root: Path, user_email: str, channel_slug: str, e
     """Robustly resolve episode path across flat channels and hierarchical network trees."""
     norm_ep = episode_id.lower().strip()
     target_names = {norm_ep, re.sub(r"[^a-zA-Z0-9_-]", "_", norm_ep).strip("_"), episode_id.strip()}
-    clean_user = f"user-{user_email.replace('@', '-').replace('.', '-')}" if user_email else "user-knpillutla-gmail-com"
+    from src.core.storage import sanitize_container_name
+    clean_user = sanitize_container_name(user_email) if user_email else "user-knpillutla-gmail-com"
 
     candidate_roots = [
         storage_root / clean_user / "networks" / channel_slug,

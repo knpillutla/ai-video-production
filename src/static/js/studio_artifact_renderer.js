@@ -625,12 +625,16 @@ function renderAudioStemsList(vid) {
   const rawStems = (vid.audio_stems && vid.audio_stems.length > 0) ? vid.audio_stems : (vid.artifacts?.audio_stems || []);
 
   if (isFailed && vid.failedStage === 3) {
-    c.innerHTML = `<div class="col-span-3 p-3 bg-white border-2 border-red-500 rounded-xl flex flex-col gap-2 shadow-md">
-      <div class="flex items-center justify-between">
-        <span class="text-xs font-black text-red-700 flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-red-600"></i> Stage 3 Audio Error</span>
-        <button type="button" onclick="retryEpisodeWithFallback('${vid.id || vid.episode_id}')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-red-600 hover:bg-red-700 text-white transition flex items-center gap-1 shadow-sm">🔄 Retry</button>
+    c.innerHTML = `<div class="col-span-3 p-2.5 bg-white dark:bg-slate-950 border-2 border-red-500 rounded-xl flex flex-col gap-1.5 shadow-md">
+      <div class="flex items-center justify-between flex-wrap gap-1">
+        <span class="text-xs font-black text-red-700 dark:text-red-400 flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-red-600"></i> Stage 3 Audio Error</span>
+        <div class="flex items-center gap-1 flex-wrap">
+          <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, 'azure_speech', true)" class="px-2 py-1 text-[9px] font-bold rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition flex items-center gap-1 shadow-sm active:scale-95" title="Retry with Azure Speech / Edge Neural TTS">🎙️ Azure/Edge</button>
+          <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, 'gemini', true)" class="px-2 py-1 text-[9px] font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center gap-1 shadow-sm active:scale-95" title="Retry with Gemini 2.5 Flash Audio">✨ Gemini Audio</button>
+          <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, 'kokoro', true)" class="px-2 py-1 text-[9px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1 shadow-sm active:scale-95" title="Retry with Kokoro-82M Local CPU ($0.00)">⚡ Kokoro ($0)</button>
+        </div>
       </div>
-      <div class="text-[11px] font-mono font-semibold text-red-600 leading-normal break-words">${vid.errorMessage || 'Audio stem synthesis failed.'}</div>
+      <div class="text-[10px] font-mono font-semibold text-red-600 dark:text-red-400 leading-normal break-words">${vid.errorMessage || 'Audio stem synthesis failed.'}</div>
     </div>`;
     return;
   }
@@ -651,11 +655,15 @@ function renderAudioStemsList(vid) {
     const hasKfs = Boolean(completedKfs.length > 0 || rawKfs.length > 0);
     if (hasKfs) {
       c.innerHTML = `<div class="col-span-3 p-1.5 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/40 dark:to-blue-950/40 border border-cyan-300 dark:border-cyan-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
-        <div class="flex items-center gap-1.5"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-cyan-950 dark:text-white">Stage 2 Photos Ready</span><span class="text-[7px] text-cyan-700 dark:text-cyan-300">Ready to compose Suno &amp; 3D Velvet audio</span></div></div>
-        <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode)" class="px-2 py-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95"><i class="fa-solid fa-circle-check text-[7px]"></i><span>Approve &amp; Compose Audio ➔</span></button>
+        <div class="flex items-center gap-1.5"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-cyan-950 dark:text-white">Stage 2 Photos Ready</span><span class="text-[7px] text-cyan-700 dark:text-cyan-300">Choose voiceover engine:</span></div></div>
+        <div class="flex items-center gap-1 flex-wrap">
+          <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, 'azure_speech')" class="px-2 py-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Approve with Azure Speech / Edge Neural TTS">🎙️ Azure/Edge (Def)</button>
+          <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, 'gemini')" class="px-2 py-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Approve with Gemini 2.5 Flash Audio">✨ Gemini Audio</button>
+          <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, 'kokoro')" class="px-2 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Approve with Kokoro Local ($0.00)">⚡ Kokoro ($0)</button>
+        </div>
       </div>`;
     } else {
-      c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-2 shadow-sm"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><span class="text-[9px] font-bold text-slate-900 dark:text-white">No Audio Stems Yet</span><span class="text-[7px] text-slate-500 font-mono">(Azure TTS, Suno v3.5 &amp; 3D Velvet DSP)</span></div>`;
+      c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-2 shadow-sm"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><span class="text-[9px] font-bold text-slate-900 dark:text-white">No Audio Stems Yet</span><span class="text-[7px] text-slate-500 font-mono">(Azure TTS, Gemini Audio, Kokoro, Suno &amp; 3D Velvet DSP)</span></div>`;
     }
     return;
   }

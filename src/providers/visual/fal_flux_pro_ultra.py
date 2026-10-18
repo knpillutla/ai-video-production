@@ -39,6 +39,8 @@ class FalFluxProUltraAdapter:
         aspect_ratio: str = "16:9",
         force_live: bool = False,
         seed: int | None = None,
+        loras: list | None = None,
+        **kwargs: Any,
     ) -> tuple[str, Path]:
         """Generate and save an ultra-high-resolution photorealistic keyframe."""
         out = Path(output_path)

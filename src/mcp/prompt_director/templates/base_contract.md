@@ -14,6 +14,7 @@ The extracted context must remain consistent across the entire storyboard. Do no
 ### MANDATORY CAST & CHARACTER PHYSICALITY DIRECTIVE (Directive 12)
 All main characters (both male and female) MUST have a balanced, naturally fit, healthy medium-slender build (neither too skinny/bony nor too chubby, graceful feminine curves with toned midriff for women, lean-athletic fit build for men), strikingly beautiful / handsome, and in their mid-20s (ages 23–27) unless explicitly instructed otherwise.
 Autonomously derive setting aesthetics, background environment, and lighting directly from narrative context. Outfits and wardrobe MUST dynamically and authentically match the context of each scene in the story.
+Curated Accessories Harmony (Both Male & Female): Every visual prompt MUST explicitly specify coordinated accessories matching the outfit and context to ground wrists, necklines, and anatomy (Female: delicate necklace, earrings/jhumkas, slim watch/bracelets/bangles; Male: chronograph/leather watch, subtle neck chain or kada, eyewear/belt). Never leave character wrists or necks unstyled.
 
 ### DIRECTORIAL VOCAL GENDER & DELIVERY MANDATE
 Autonomously derive 'vocal_gender' ('female', 'male', 'duet', 'background_chorus', 'instrumental') and 'vocal_delivery_type' ('lead_lip_sync', 'background_song', 'voiceover_narration', 'instrumental_only').

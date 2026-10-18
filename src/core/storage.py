@@ -34,33 +34,54 @@ class MultiTenantStorageService:
 
     def get_user_container_path(self, user_id: str) -> Path:
         """Return root path for a user's isolated container."""
+        try:
+            from src.domain.repo import repo
+            from uuid import UUID
+            u = repo.users.get(UUID(str(user_id))) if str(user_id).count("-") == 4 else repo.get_user_by_email(str(user_id))
+            if u and getattr(u, "storage_container_name", None):
+                container_name = sanitize_container_name(u.storage_container_name)
+                container_path = self.root_dir / container_name
+                container_path.mkdir(parents=True, exist_ok=True)
+                return container_path
+        except Exception:
+            pass
         container_name = sanitize_container_name(user_id)
         container_path = self.root_dir / container_name
         container_path.mkdir(parents=True, exist_ok=True)
         return container_path
 
     def get_creative_vault_path(self, user_id: str, show_slug: str) -> Path:
-        """Return path for a user's specific show universe in the creative vault."""
-        clean_slug = re.sub(r"[^a-zA-Z0-9_-]", "_", str(show_slug).lower()).strip("_") or "default_show"
+        """Return path for a user's network universe (unified to networks/{network})."""
+        clean_slug = re.sub(r"[^a-zA-Z0-9_-]", "_", str(show_slug).lower()).strip("_") or "default_network"
         clean_slug = re.sub(r"_+", "_", clean_slug)[:64]
-        base = self.get_user_container_path(user_id)
-        vault_path = base / "creative_vault" / "shows_and_titles" / clean_slug
-        vault_path.mkdir(parents=True, exist_ok=True)
-        return vault_path
+        return self.get_network_path(user_id, clean_slug)
 
     def get_character_path(self, user_id: str, show_slug: str, character_id: str) -> Path:
-        """Return path for a character's IP assets within a show universe."""
-        base = self.get_creative_vault_path(user_id, show_slug)
+        """Return path for a character's IP assets within a network."""
+        base = self.get_network_path(user_id, show_slug)
         char_path = base / "characters" / character_id
         char_path.mkdir(parents=True, exist_ok=True)
         return char_path
 
-    def get_episode_path(self, user_id: str, show_slug: str, episode_id: str) -> Path:
-        """Return path for an episode's scripts, audio stems, and master renders."""
-        base = self.get_creative_vault_path(user_id, show_slug)
-        ep_path = base / "episodes" / episode_id
-        ep_path.mkdir(parents=True, exist_ok=True)
-        return ep_path
+    def get_episode_path(
+        self,
+        user_id: str,
+        show_slug: str,
+        episode_id: str,
+        format_slug: str = "general",
+        production_name: str | None = None,
+    ) -> Path:
+        """Return path for an episode organized under networks/{network}/{format}/{title}/{episode}."""
+        clean_ep = str(episode_id).lower()
+        if not clean_ep.startswith("ep-"):
+            clean_ep = f"ep-{int(clean_ep):03d}" if clean_ep.isdigit() else clean_ep
+        return self.get_channel_format_production_episode_path(
+            user_id=user_id,
+            channel_id=show_slug,
+            format_slug=format_slug,
+            production_name=production_name or show_slug,
+            episode_id=clean_ep,
+        )
 
     def get_network_path(self, user_id: str, network_id: str) -> Path:
         """Return path for a user's network under networks/{network}."""
@@ -112,7 +133,7 @@ class MultiTenantStorageService:
         """Return path for an episode organized under channel/{channel}/{format}/{production}/{episode}."""
         clean_format = re.sub(r"[^a-zA-Z0-9_-]", "_", str(format_slug).lower()).strip("_") or "documentary"
         clean_prod = re.sub(r"[^a-zA-Z0-9_-]", "_", str(production_name or 'standalone').lower()).strip("_") or "standalone"
-        clean_ep = re.sub(r"[^a-zA-Z0-9_-]", "_", str(episode_id).lower()).strip("_") or "ep_001"
+        clean_ep = re.sub(r"[^a-zA-Z0-9_-]", "_", str(episode_id).lower()).strip("_") or "ep-001"
 
         chan_path = self.get_channel_path(user_id, channel_id)
         ep_path = chan_path / clean_format / clean_prod / clean_ep

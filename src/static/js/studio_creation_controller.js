@@ -285,7 +285,7 @@ function onGenreChange(genreVal, preserveSubGenre = null, preserveArch = null) {
   const dualRow = document.getElementById("studio-dual-editions-row");
   const dualLabel = document.getElementById("studio-dual-editions-label");
 
-  const isDoc = (activeStudioFormat === "documentary" || genreVal === "documentary" || genreVal === "science");
+  const isDoc = (activeStudioFormat === "documentary" || genreVal === "documentary" || genreVal === "science" || genreVal === "doc/nations" || genreVal === "nations");
   const isRelax = (activeStudioFormat === "relaxation" || activeStudioFormat === "relax" || genreVal.startsWith("relax") || !activeStudioFormat);
 
   if (isDoc) {
@@ -328,7 +328,7 @@ function syncDualMastersVisibility() {
   if (!row) return;
   const gSelector = document.getElementById("studio-genre-selector");
   const genreVal = gSelector ? gSelector.value : "";
-  const isDoc = (activeStudioFormat === "documentary" || genreVal === "documentary" || genreVal === "science");
+  const isDoc = (activeStudioFormat === "documentary" || genreVal === "documentary" || genreVal === "science" || genreVal === "doc/nations" || genreVal === "nations");
   const isRelax = (activeStudioFormat === "relaxation" || activeStudioFormat === "relax" || genreVal.startsWith("relax") || !activeStudioFormat);
   row.classList.toggle("hidden", !(isDoc || isRelax));
   const dualLabel = document.getElementById("studio-dual-editions-label");
@@ -350,6 +350,8 @@ function updateArchetypeOptions(genreVal, subGenreVal, preserveArch = null) {
     } else {
       list = archMap["documentary"] || [];
     }
+  } else if (genreVal === "doc/nations" || genreVal === "nations") {
+    list = archMap["doc/nations"] || [];
   } else if (genreVal === "science") {
     list = archMap["science:" + subGenreVal] || archMap["science"] || [];
   } else if (archMap[genreVal + ":" + subGenreVal]) {

@@ -179,6 +179,18 @@
         <option value="60">60 fps (Fluid)</option>
       </select>
     </div>
+
+    <div class="space-y-0.5 pt-1">
+      <label class="text-[11px] font-bold text-[var(--text-muted)] flex items-center gap-1">
+        <i class="fa-solid fa-microphone-lines text-xs text-indigo-400"></i>
+        <span>Voiceover Engine (TTS):</span>
+      </label>
+      <select id="studio-tts-model" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:border-[var(--accent)]">
+        <option value="azure_speech" selected>🎙️ Azure Speech / Edge HD (Default)</option>
+        <option value="gemini">✨ Gemini 2.5 Audio (Flash TTS)</option>
+        <option value="kokoro">⚡ Kokoro-82M (Local CPU $0.00)</option>
+      </select>
+    </div>
   </div>
 
   <!-- SECTION 4: LIVE PRE-FLIGHT COST & ACTION BUTTON -->

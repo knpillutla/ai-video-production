@@ -281,17 +281,12 @@ async def synthesize_scenes(
 
         compiled_scenes.append({
             "scene_index": idx, "duration_seconds": dur, "image_path": str(img_path),
-            "video_path": str(vid_path) if vid_path else None,
-            "voice_path": str(voice_path) if voice_path else None,
+            "video_path": str(vid_path) if vid_path else None, "voice_path": str(voice_path) if voice_path else None,
             "shot_type": sc.get("shot_type", "medium"), "dialogue": dialogue,
         })
         speech_dur = get_audio_duration(voice_path) if voice_path else 0.0
         sub_dur = min(dur - 0.20, speech_dur + 0.45) if speech_dur > 0 else (dur - 0.20)
-        subtitle_segments.append({
-            "start": round(current_time, 2),
-            "end": round(current_time + max(0.5, sub_dur), 2),
-            "text": dialogue,
-        })
+        subtitle_segments.append({"start": round(current_time, 2), "end": round(current_time + max(0.5, sub_dur), 2), "text": dialogue})
         current_time += dur
 
     return compiled_scenes, subtitle_segments, current_time

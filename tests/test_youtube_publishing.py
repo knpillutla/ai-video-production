@@ -106,10 +106,10 @@ def test_find_episode_path_nested_network(tmp_path):
     """Verify _find_episode_path resolves nested network trees like networks/nature_rhythms/relaxation/swiss_village_rain/ep-001."""
     from src.api.routes.channel_youtube import _find_episode_path
 
-    nested_ep = tmp_path / "user-knpillutla-gmail-com" / "networks" / "nature_rhythms" / "relaxation" / "swiss_village_rain" / "ep-001"
+    nested_ep = tmp_path / "user-0000-0000-00000" / "networks" / "nature_rhythms" / "relaxation" / "swiss_village_rain" / "ep-001"
     nested_ep.mkdir(parents=True)
 
-    found = _find_episode_path(tmp_path, "knpillutla@gmail.com", "nature_rhythms", "ep-001")
+    found = _find_episode_path(tmp_path, "user-0000-0000-00000", "nature_rhythms", "ep-001")
     assert found is not None
     assert found == nested_ep
 

@@ -23,35 +23,38 @@ def test_sanitize_container_name():
 
 
 def test_user_container_isolation(temp_storage: MultiTenantStorageService):
-    """Verify physical air-gapping of separate user directories."""
-    u1_path = temp_storage.get_user_container_path("user-1")
-    u2_path = temp_storage.get_user_container_path("user-2")
+    """Verify physical air-gapping of separate user directories with user-0000-0000-00000."""
+    u1_path = temp_storage.get_user_container_path("0000-0000-00000")
+    u2_path = temp_storage.get_user_container_path("0000-0000-00001")
 
     assert u1_path != u2_path
     assert u1_path.exists()
     assert u2_path.exists()
-    assert "user-user-1" in str(u1_path)
-    assert "user-user-2" in str(u2_path)
+    assert "user-0000-0000-00000" in str(u1_path)
+    assert "user-0000-0000-00001" in str(u2_path)
 
 
-def test_decoupled_vault_and_distribution(temp_storage: MultiTenantStorageService):
-    """Verify creative vault is completely decoupled from distribution channels."""
-    vault = temp_storage.get_creative_vault_path("user-1", "delhi_wfh")
-    char_path = temp_storage.get_character_path("user-1", "delhi_wfh", "char_aaradhya")
-    ep_path = temp_storage.get_episode_path("user-1", "delhi_wfh", "ep001")
-    chan_path = temp_storage.get_channel_path("user-1", "yt_main")
+def test_network_format_production_episode_hierarchy(temp_storage: MultiTenantStorageService):
+    """Verify unified path storage/username/networks/network-name/format/title/episode-xxx."""
+    user_id = "0000-0000-00000"
+    ep_path = temp_storage.get_channel_format_production_episode_path(
+        user_id, "telugu_rhythms", "music_video", "madhura_bhavame", "ep-001"
+    )
+    assert ep_path.exists()
+    norm_path = str(ep_path).replace("\\", "/")
+    assert "user-0000-0000-00000/networks/telugu_rhythms/music_video/madhura_bhavame/ep-001" in norm_path
 
-    assert "creative_vault" in str(vault)
-    assert "characters" in str(char_path)
-    assert "episodes" in str(ep_path)
-    assert "distribution" in str(chan_path)
-    assert "channels" in str(chan_path)
+    # Also verify get_episode_path aliases directly to the same hierarchy
+    aliased_ep = temp_storage.get_episode_path(
+        user_id, "telugu_rhythms", "ep-001", format_slug="music_video", production_name="madhura_bhavame"
+    )
+    assert aliased_ep == ep_path
 
 
 @pytest.mark.asyncio
 async def test_atomic_json_save_load(temp_storage: MultiTenantStorageService):
-    """Verify atomic persistence and reading of JSON metadata."""
-    target_file = temp_storage.get_creative_vault_path("user-1", "show-a") / "meta.json"
+    """Verify atomic persistence and reading of JSON metadata under network hierarchy."""
+    target_file = temp_storage.get_network_path("0000-0000-00000", "show-a") / "meta.json"
     payload = {"title": "Test Show", "status": "active", "views": 1000}
 
     await temp_storage.save_json(target_file, payload)

@@ -34,6 +34,7 @@ def assemble_4k_master(
     crf: int = 22,
     target_duration_sec: Optional[float] = None,
     shot_durations: Optional[list[float]] = None,
+    no_loop: bool = False,
 ) -> Path:
     """Concatenate 4K cineloops into a master broadcast matching target_duration_sec or music track."""
     out_master.parent.mkdir(parents=True, exist_ok=True)
@@ -53,8 +54,8 @@ def assemble_4k_master(
 
     if n == 1:
         c_dur = get_media_duration(seamless_clips[0]) or 5.0
-        v_loops = max(1, int(target_dur / max(1.0, c_dur)) + 2)
-        in_args = ["-stream_loop", str(v_loops), "-i", str(seamless_clips[0])]
+        v_loops = 1 if no_loop else max(1, int(target_dur / max(1.0, c_dur)) + 2)
+        in_args = ["-i", str(seamless_clips[0])] if no_loop else ["-stream_loop", str(v_loops), "-i", str(seamless_clips[0])]
         if audio_path and audio_path.is_file():
             cmd = [
                 ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
@@ -71,17 +72,17 @@ def assemble_4k_master(
                 "-movflags", "+faststart", str(out_master)
             ]
     else:
-        hold_list = [float(d) for d in shot_durations] if (shot_durations and len(shot_durations) == n) else [max(6.0, (target_dur + ((n - 1) * x_dur)) / n)] * n
+        hold_list = [get_media_duration(c) or 5.0 for c in seamless_clips] if no_loop else ([float(d) for d in shot_durations] if (shot_durations and len(shot_durations) == n) else [max(6.0, (target_dur + ((n - 1) * x_dur)) / n)] * n)
         inputs = []
         for i, c in enumerate(seamless_clips):
             c_dur = get_media_duration(c) or 5.0
             c_hold = hold_list[i] if i < len(hold_list) else c_dur
-            if c_dur < c_hold - 0.5:
+            if not no_loop and c_dur < c_hold - 0.5:
                 v_loops = max(1, int(c_hold / max(1.0, c_dur)) + 2)
                 inputs.extend(["-stream_loop", str(v_loops)])
             inputs.extend(["-i", str(c)])
 
-        filter_parts = [f"[{i}:v]{build_adaptive_resolution_filter(c, 3840, 2160)}[s{i}]" for i, c in enumerate(seamless_clips)]
+        filter_parts = [f"[{i}:v]{build_adaptive_resolution_filter(c, 3840, 2160)},fps=24[s{i}]" for i, c in enumerate(seamless_clips)]
         prev_tag, curr_offset = "s0", max(0.1, hold_list[0] - x_dur)
         for i in range(1, n):
             out_tag = f"v{i}" if i < n - 1 else "v"
@@ -89,6 +90,8 @@ def assemble_4k_master(
             prev_tag = out_tag
             curr_offset += max(0.1, (hold_list[i] - x_dur) if i < n - 1 else hold_list[i])
         target_dur = round(curr_offset, 2)
+        fade_dur = min(3.0, target_dur)
+        afade_filter = f"afade=t=out:st={max(0.0, target_dur - fade_dur):.2f}:d={fade_dur:.2f}"
 
         if audio_path and audio_path.is_file():
             inputs.extend(["-i", str(audio_path)])
@@ -126,6 +129,7 @@ def assemble_dual_masters(
     force_rerun: bool = False,
     crf: int = 22,
     target_duration_sec: Optional[float] = None,
+    no_loop: bool = False,
     **kwargs,
 ) -> Dict[str, Path]:
     """Assemble 4K masters matching user requested duration or complete music track length."""
@@ -133,9 +137,10 @@ def assemble_dual_masters(
     if not ep_dir and video_clips:
         ep_dir = video_clips[0].parent
 
+    no_loop = no_loop or kwargs.get("is_documentary", False)
     eff_target_dur = target_duration_sec or kwargs.get("target_duration")
     sd_custom = kwargs.get("shot_durations")
-    seamless_clips = [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
+    seamless_clips = list(video_clips) if no_loop else [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
     master_narr = ep_dir / "master_4k_narration.mp4"
     master_music = ep_dir / "master_4k_ambient.mp4"
     narr_audio = kwargs.get("narration_audio_path") or (ep_dir / "spoken_narration.mp3")
@@ -143,12 +148,15 @@ def assemble_dual_masters(
 
     if has_narration:
         n_dur = get_media_duration(narr_audio) if (narr_audio and Path(narr_audio).is_file()) else None
-        t_dur = float(n_dur or eff_target_dur or sum(get_media_duration(c) or 10.0 for c in seamless_clips) or 60.0)
+        natural_v_dur = sum(get_media_duration(c) or 10.0 for c in seamless_clips) - max(0.0, (len(seamless_clips) - 1) * 1.0)
+        t_dur = float(eff_target_dur or (natural_v_dur if no_loop else n_dur) or 60.0)
         mixed_audio = ep_dir / "master_audio_narrated_ducked.mp3"
-        if force_rerun or not mixed_audio.is_file() or mixed_audio.stat().st_size < 1000:
+        raw_bed = ep_dir / "raw_soundtrack.mp3"
+        bed_input = raw_bed if (raw_bed.is_file() and raw_bed.stat().st_size > 1000) else eff_audio
+        if bed_input and Path(bed_input).resolve() != mixed_audio.resolve() and (force_rerun or not mixed_audio.is_file() or mixed_audio.stat().st_size < 1000):
             cmd_mix = [
                 imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error",
-                "-i", str(eff_audio), "-i", str(narr_audio),
+                "-i", str(bed_input), "-i", str(narr_audio),
                 "-filter_complex", f"[0:a]aloop=loop=-1:size=2e+09,volume=0.22,atrim=0:{t_dur:.2f}[bgm];[1:a]volume=1.0,apad,atrim=0:{t_dur:.2f}[vox];[bgm][vox]amix=inputs=2:duration=longest:dropout_transition=0,afade=t=out:st={max(0.0, t_dur - 3.0):.2f}:d=3.0[aout]",
                 "-map", "[aout]", "-c:a", "libmp3lame", "-b:a", "320k", "-ar", "48000",
                 "-t", f"{t_dur:.2f}", str(mixed_audio),
@@ -160,7 +168,7 @@ def assemble_dual_masters(
         needs_n = force_rerun or not master_narr.is_file() or master_narr.stat().st_size < 1000 or n_mis or any(sc.stat().st_mtime > master_narr.stat().st_mtime for sc in seamless_clips)
         log_pipeline_step("checking master", "4K Narration Master", "started", metadata={"file": master_narr.name, "target_duration": t_dur})
         if needs_n:
-            assemble_4k_master(seamless_clips, mixed_audio, master_narr, crf=crf, target_duration_sec=t_dur, shot_durations=sd_custom)
+            assemble_4k_master(seamless_clips, mixed_audio, master_narr, crf=crf, target_duration_sec=t_dur, shot_durations=sd_custom, no_loop=no_loop)
             log_pipeline_step("checking master", "4K Narration Master", "completed", "assembled master_4k_narration.mp4 as primary master", {"file": master_narr.name, "crf": crf, "cost": "$0.00"})
         else:
             log_pipeline_step("checking master", "4K Narration Master", "completed", "master_4k_narration.mp4 exists, render not recreated", {"file": master_narr.name, "cost": "$0.00"})
@@ -186,7 +194,7 @@ def assemble_dual_masters(
         needs_rebuild = force_rerun or not master_music.is_file() or master_music.stat().st_size < 1000 or d_mis or any(sc.stat().st_mtime > master_music.stat().st_mtime for sc in seamless_clips)
         log_pipeline_step("checking master", "4K Ambient Master", "started", metadata={"file": master_music.name, "target_duration": eff_target_dur})
         if needs_rebuild:
-            assemble_4k_master(seamless_clips, eff_audio, master_music, crf=crf, target_duration_sec=eff_target_dur)
+            assemble_4k_master(seamless_clips, eff_audio, master_music, crf=crf, target_duration_sec=eff_target_dur, no_loop=no_loop)
             log_pipeline_step("checking master", "4K Ambient Master", "completed", "assembled master_4k_ambient.mp4", {"file": master_music.name, "crf": crf, "cost": "$0.00"})
         else:
             log_pipeline_step("checking master", "4K Ambient Master", "completed", "master_4k_ambient.mp4 exists, render not recreated", {"file": master_music.name, "cost": "$0.00"})
@@ -234,42 +242,36 @@ def assemble_dual_masters(
 def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], fade_hours: Optional[float], nature_master: Optional[Path] = None) -> Optional[Path]:
     """Export long-play multi-hour stream loop for primary 4K broadcast master and pure nature edition."""
     eff_hours = hours if (hours and hours > 0) else 3.0
-    suffix = f"_{int(fade_hours)}h_black" if fade_hours else ""
-    hour_label = int(eff_hours) if eff_hours.is_integer() else eff_hours
+    suffix, hour_label = (f"_{int(fade_hours)}h_black" if fade_hours else ""), (int(eff_hours) if eff_hours.is_integer() else eff_hours)
     lp_path = ep_dir / f"master_4k_{hour_label}hour{suffix}_broadcast.mp4"
-    if master.is_file() and (not lp_path.is_file() or lp_path.stat().st_size < 1000):
-        export_long_play_broadcast(master, lp_path, eff_hours * 3600.0, fade_to_black_hours=fade_hours)
-
+    if master.is_file() and (not lp_path.is_file() or lp_path.stat().st_size < 1000): export_long_play_broadcast(master, lp_path, eff_hours * 3600.0, fade_to_black_hours=fade_hours)
     if nature_master and nature_master.is_file() and nature_master.resolve() != master.resolve():
         nat_sfx = "_music_only" if "ambient" in nature_master.name or "music" in nature_master.name else "_nature_only"
         lp_nat_path = ep_dir / f"master_4k_{hour_label}hour{nat_sfx}{suffix}_broadcast.mp4"
         if not lp_nat_path.is_file() or lp_nat_path.stat().st_size < 1000:
             export_long_play_broadcast(nature_master, lp_nat_path, eff_hours * 3600.0, fade_to_black_hours=fade_hours)
-
     return lp_path if lp_path.is_file() else None
 
 def export_metadata_packages(sb: Any, ep_dir: Path) -> Dict[str, Any]:
     """Generate YouTube SEO, Multi-Language, and A/B Thumbnail metadata."""
     arch = str(getattr(sb, "primary_archetype", None) or getattr(sb, "cluster", None) or "cities")
-    title = str(getattr(sb, "title", "Studio 4K Showcase"))
-    desc = str(getattr(sb, "story_topic", title) or title)
-    yt_pkg, loc_pkg, ab_pkg = generate_youtube_ambient_package(arch), localize_metadata_for_languages(arch, title, desc), generate_thumbnail_ab_variants(arch)
+    title, desc = str(getattr(sb, "title", "Studio 4K Showcase")), str(getattr(sb, "story_topic", "") or "")
+    yt_pkg, loc_pkg, ab_pkg = generate_youtube_ambient_package(arch), localize_metadata_for_languages(arch, title, desc or title), generate_thumbnail_ab_variants(arch)
     loc_dict = {k: (v.model_dump() if hasattr(v, "model_dump") else v) for k, v in loc_pkg.items()}
-    for name, data in [("youtube_packaging.json", yt_pkg.model_dump()), ("youtube_packaging_nature_only.json", yt_pkg.model_dump()), ("localized_metadata.json", loc_dict), ("thumbnail_ab_testing.json", ab_pkg.model_dump())]:
-        (ep_dir / name).write_text(json.dumps(data, indent=2), encoding="utf-8")
+    for name, data in [("youtube_packaging.json", yt_pkg.model_dump()), ("youtube_packaging_nature_only.json", yt_pkg.model_dump()), ("localized_metadata.json", loc_dict), ("thumbnail_ab_testing.json", ab_pkg.model_dump())]: (ep_dir / name).write_text(json.dumps(data, indent=2), encoding="utf-8")
     return {"youtube": yt_pkg.model_dump(), "youtube_nature_only": yt_pkg.model_dump(), "localized": loc_dict, "thumbnail_ab": ab_pkg.model_dump()}
 
 async def handle_short_export(
     sb: AmbientStoryboard, ep_dir: Path, video_clips: list[Path], audio_track: Path,
     t_start: float, hours: Optional[float], fade_h: Optional[float], force_rerun: bool,
     narration_audio_path: Optional[Path] = None, target_duration_sec: Optional[float] = None,
-    shot_durations: Optional[List[float]] = None, **kwargs: Any,
+    shot_durations: Optional[List[float]] = None, no_loop: bool = False, **kwargs: Any,
 ) -> Dict[str, Any]:
     """Export 9:16 vertical short and return completed artifact package."""
     dual_res = assemble_dual_masters(
         video_clips=video_clips, audio_path=audio_track, ep_dir=ep_dir,
         force_rerun=force_rerun, narration_audio_path=narration_audio_path,
-        target_duration_sec=target_duration_sec, shot_durations=shot_durations,
+        target_duration_sec=target_duration_sec, shot_durations=shot_durations, no_loop=no_loop, **kwargs,
     )
 
     short_path = ep_dir / "short_9x16_teaser.mp4"

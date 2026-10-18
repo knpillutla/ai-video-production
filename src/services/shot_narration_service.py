@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 import imageio_ffmpeg
 from src.core.step_logger import log_pipeline_step
-from src.providers.tts.azure_speech import AzureSpeechTTSAdapter
+from src.providers.tts.tts_router import get_tts_adapter
 from src.services.ambient_export_service import get_media_duration
 
 logger = logging.getLogger("video_studio")
@@ -31,6 +31,7 @@ async def synthesize_shot_aligned_narration(
     speech_rate: str = "-16%",
     force_rerun: bool = False,
     is_documentary: bool = False,
+    tts_model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Synthesize shot-aligned voiceover with anti-fatigue pauses and dynamic duration extension.
     
@@ -42,27 +43,33 @@ async def synthesize_shot_aligned_narration(
     """
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     out_master = ep_dir / "spoken_narration.mp3"
-    tts_adapter = AzureSpeechTTSAdapter()
+    tts_adapter = get_tts_adapter(tts_model)
+    eff_model = (tts_model or getattr(settings.voice, "default_tts_model", "gemini") or "gemini").lower()
 
-    # Default voice selection: Documentaries default to authoritative male voice (Ryan / Christopher)
+    # Default voice selection tailored per engine
     if not voice_id:
-        # Check ep_dir path or user_inputs.json to detect documentary format if not passed explicitly
-        if not is_documentary:
-            p_str = str(ep_dir).lower()
-            if "documentary" in p_str or "doc" in p_str:
-                is_documentary = True
-            else:
-                ui_file = ep_dir / "user_inputs.json"
-                if ui_file.is_file():
-                    try:
-                        u_d = json.loads(ui_file.read_text("utf-8"))
-                        fmt = str(u_d.get("format", "")).lower()
-                        gnr = str(u_d.get("genre", "")).lower()
-                        if "documentary" in fmt or "documentary" in gnr or "doc" in fmt or "doc" in gnr:
-                            is_documentary = True
-                    except Exception:
-                        pass
-        voice_id = "en-GB-RyanNeural" if is_documentary else "en-US-JennyNeural"
+        if "gemini" in eff_model:
+            voice_id = getattr(settings.voice, "gemini_tts_voice", "Charon")
+        elif "kokoro" in eff_model:
+            voice_id = getattr(settings.voice, "kokoro_voice", "bm_george")
+        else:
+            # Check ep_dir path or user_inputs.json to detect documentary format if not passed explicitly
+            if not is_documentary:
+                p_str = str(ep_dir).lower()
+                if "documentary" in p_str or "doc" in p_str:
+                    is_documentary = True
+                else:
+                    ui_file = ep_dir / "user_inputs.json"
+                    if ui_file.is_file():
+                        try:
+                            u_d = json.loads(ui_file.read_text("utf-8"))
+                            fmt = str(u_d.get("format", "")).lower()
+                            gnr = str(u_d.get("genre", "")).lower()
+                            if "documentary" in fmt or "documentary" in gnr or "doc" in fmt or "doc" in gnr:
+                                is_documentary = True
+                        except Exception:
+                            pass
+            voice_id = "en-GB-RyanNeural" if is_documentary else "en-US-JennyNeural"
 
     # Collect texts per scene
     scene_texts: List[str] = []
@@ -155,6 +162,8 @@ async def synthesize_shot_aligned_narration(
         if text:
             if not part_raw.is_file() or force_rerun:
                 await tts_adapter.synthesize_to_file(text, output_path=part_raw, voice_id=voice_id, speech_rate=speech_rate)
+                import asyncio
+                await asyncio.sleep(0.3)
             speech_dur = get_media_duration(part_raw) or 0.0
         else:
             speech_dur = 0.0

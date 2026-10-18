@@ -23,6 +23,7 @@ from src.api.routes import (
     shows,
     studio_orchestrator,
     trending,
+    core_assets_api,
 )
 from src.core.config import settings
 from src.core.telemetry import logger
@@ -92,6 +93,7 @@ def create_app() -> FastAPI:
     app.include_router(long_play_routes.router)
     app.include_router(logs.router)
     app.include_router(studio_orchestrator.router)
+    app.include_router(core_assets_api.router)
 
     @app.get("/health", tags=["Health"])
     async def health_check():

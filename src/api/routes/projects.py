@@ -43,8 +43,10 @@ async def create_project(req: EpisodeCreate, current_user: User = Depends(get_cu
         options=req.options,
     )
     saved_ep = repo.save_episode(episode)
-    # Ensure physical episode directory in user's creative vault
-    ep_path = storage_service.get_episode_path(str(current_user.id), show.slug, str(saved_ep.id))
+    # Ensure physical episode directory in user's network
+    clean_fmt = str(req.format.value if hasattr(req.format, "value") else req.format).lower()
+    clean_title = re.sub(r"[^a-zA-Z0-9_-]", "_", str(req.title).lower()).strip("_") or "standalone"
+    ep_path = storage_service.get_episode_path(str(current_user.id), show.slug, str(saved_ep.id), format_slug=clean_fmt, production_name=clean_title)
     manifest = saved_ep.model_dump(mode="json")
     manifest["topic_or_idea"] = req.topic_or_idea
     manifest["youtube_reference_url"] = req.youtube_reference_url
@@ -111,7 +113,9 @@ async def generate_episode_thumbnail(
     show = repo.get_show(current_user.id, episode.show_id)
     show_slug = show.slug if show else "default"
 
-    ep_path = storage_service.get_episode_path(str(current_user.id), show_slug, str(episode.id))
+    clean_fmt = str(episode.format.value if hasattr(episode.format, "value") else episode.format).lower()
+    clean_title = re.sub(r"[^a-zA-Z0-9_-]", "_", str(episode.title).lower()).strip("_") or "standalone"
+    ep_path = storage_service.get_episode_path(str(current_user.id), show_slug, str(episode.id), format_slug=clean_fmt, production_name=clean_title)
     out_thumb = ep_path / "thumbnails" / f"{req.language}_ep{episode.episode_number:02d}.jpg"
 
     badge_config = EpisodicBadgeConfig(

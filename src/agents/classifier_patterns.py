@@ -37,8 +37,11 @@ FORMAT_PATTERNS: list[tuple[MediaFormat, list[str]]] = [
         "dance video", "dance song", "dance", "hook step", "choreography", "beat drop", "song dance",
         "mass dance", "mass song", "mass jathara", "jathara", "folk dance", "party dance", "family dance", "dancers",
     ]),
+    (MediaFormat.VOCAL_SONG, [
+        "vocal", "vocal song", "melody", "soulful melody", "lyrical video", "romantic melody",
+    ]),
     (MediaFormat.MUSIC_VIDEO, [
-        "music video", "monsoon song", "love song", "melody song", "romantic song", "lyric video", "song video",
+        "music video", "monsoon song", "love song", "melody song", "romantic song", "lyric video", "song video", "song",
     ]),
     (MediaFormat.MOVIE_CINEMATIC, [
         "movie", "cinema", "feature film", "short film", "blockbuster", "trailer", "yodha", "the protector",

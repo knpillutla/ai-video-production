@@ -24,6 +24,7 @@ class MediaFormat(str, Enum):
     MOUNTAIN_SURVIVAL = "mountain_survival"
     MUSIC_VIDEO = "music_video"
     TOURIST_GUIDE = "tourist_guide"
+    VOCAL_SONG = "vocal"
 
 
 class VisualStyle(str, Enum):
@@ -58,6 +59,7 @@ class ThemeGenre(str, Enum):
     FANTASY = "fantasy"
     HISTORICAL_EPIC = "historical_epic"
     CULTURAL_FOLK = "cultural_folk"
+    VOCAL_MELODY = "vocal"
 
 
 class ContentClassification(BaseModel):

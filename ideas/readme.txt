@@ -2,6 +2,7 @@ inside palaces
 history - has lot of views
 science and discovery - lots of views
 create live channels for the below
+ai model - party photos on beach villa with jazz beats with humans light dance/music playing/ enjoying movements - 3-4 mins is good enough. you can call it as social gathering channel - beach lounge beats, jazz beats, morning coffee photos
 history of different islands like carribean with beautiful  girls on the thumbnail
 -- music channel
 -- relaxing rain channel

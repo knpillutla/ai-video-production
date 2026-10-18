@@ -69,6 +69,7 @@ class StudioProducer:
         enable_voiceover: bool = False,
         allow_fallback: bool = False,
         force_rerun: bool = False,
+        tts_model: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Execute 4-Stage Progressive Quality Gate with 100% Artifact Idempotency."""
         t_start = time.time()
@@ -242,6 +243,7 @@ class StudioProducer:
                 narr_res = await synthesize_shot_aligned_narration(
                     scenes=sb.scenes, ep_dir=ep_dir, fallback_script=spoken_text,
                     total_target_sec=float(sb.total_duration or 60.0), force_rerun=force_rerun and audio_only,
+                    tts_model=tts_model,
                 )
                 if narr_res.get("narration_path") and Path(narr_res["narration_path"]).is_file():
                     voice_path = Path(narr_res["narration_path"])
@@ -400,6 +402,7 @@ class StudioProducer:
 
                     clip_dur = 5.0 if is_relax else (s.duration_seconds or 5.0)
 
+                    is_water_scene = any(k in f"{getattr(s, 'visual_prompt', '')} {getattr(s, 'location_hub', '')}".lower() for k in ("water", "lake", "ocean", "river", "fjord", "sea", "pond", "waterfall", "stream", "bay", "coast"))
                     if is_tour_slide or is_fixed_tripod:
                         # Static locked tripod hold: pure locked stationary frame ($0.00 compute)
                         coro = render_perspective_drone_clip(
@@ -418,6 +421,7 @@ class StudioProducer:
                             snow=is_snow_scene,
                             snow_intensity=snow_int,
                             lower_third_hud=None,
+                            water=is_water_scene,
                         )
                     else:
                         attraction_name = getattr(s, "attraction_name", None) or getattr(s, "origin_name", None) or getattr(s, "location_hub", None) or f"Stop {idx}"
@@ -455,6 +459,7 @@ class StudioProducer:
                             snow=is_snow_scene,
                             snow_intensity=snow_int,
                             lower_third_hud=hud_data,
+                            water=is_water_scene,
                         )
                     local_coros.append(coro)
                     local_indices.append(idx)
@@ -572,6 +577,46 @@ class StudioProducer:
         # Stage 5: Broadcast Master Assembly Gate
         eff_shot_durs = [float(s.duration_seconds) for s in sb.scenes] if hasattr(sb, "scenes") else None
         target_dur = float(getattr(sb, "total_duration_seconds", None) or (sum(eff_shot_durs) if eff_shot_durs else 60.0))
+
+        from src.services.outro_slide_engine import is_documentary_or_tour, render_4k_outro_slide, render_4k_outro_video
+        sb_genre = getattr(sb, "genre", "") or ""
+        sb_subgenre = getattr(sb, "sub_genre", "") or ""
+        sb_arch = getattr(sb, "primary_archetype", "") or getattr(sb, "cluster", "") or ""
+        is_doc = is_documentary_or_tour(sb_genre, sb_subgenre, sb_arch)
+
+        if is_doc:
+            outro_img = ep_dir / "outro_slide.jpg"
+            outro_clip = ep_dir / "motion_outro.mp4"
+            last_kf = image_results[-1] if image_results else None
+            is_tour_mode = any(t in f"{sb_genre} {sb_subgenre} {sb_arch}".lower() for t in ("tour", "travel", "itinerary", "walking"))
+            tour_stops_data = getattr(sb, "itinerary_summary", None)
+
+            if force_rerun or not outro_img.is_file() or outro_img.stat().st_size < 1000:
+                render_4k_outro_slide(
+                    output_image_path=outro_img,
+                    title=sb.title,
+                    channel_name=getattr(sb, "channel_name", "Euro Discovery"),
+                    is_tour=is_tour_mode,
+                    tour_stops=tour_stops_data,
+                    base_keyframe_path=Path(last_kf) if last_kf else None,
+                )
+            if force_rerun or not outro_clip.is_file() or outro_clip.stat().st_size < 1000:
+                render_4k_outro_video(
+                    output_video_path=outro_clip,
+                    outro_image_path=outro_img,
+                    duration_seconds=4.5,
+                    fps=sb.recommended_fps or 24,
+                )
+
+            if outro_clip.is_file() and str(outro_clip) not in [str(c) for c in video_clips]:
+                video_clips.append(outro_clip)
+                if eff_shot_durs:
+                    eff_shot_durs.append(4.5)
+
+            # Natural documentary narrative ends when scenes conclude: do not loop!
+            narrative_dur = sum(eff_shot_durs[:-1]) if (eff_shot_durs and len(eff_shot_durs) > 1) else (sum(eff_shot_durs) if eff_shot_durs else target_dur)
+            target_dur = narrative_dur + 4.5
+
         if generate_short:
             return await handle_short_export(
                 sb, ep_dir, video_clips, spatial_audio_path, t_start,
@@ -579,6 +624,7 @@ class StudioProducer:
                 narration_audio_path=voice_path,
                 target_duration_sec=target_dur,
                 shot_durations=eff_shot_durs,
+                no_loop=is_doc,
             )
         dual_res = await asyncio.to_thread(
             assemble_dual_masters,
@@ -586,6 +632,7 @@ class StudioProducer:
             target_fps=sb.recommended_fps, force_rerun=force_rerun,
             narration_audio_path=voice_path, target_duration_sec=target_dur,
             shot_durations=eff_shot_durs,
+            no_loop=is_doc,
         )
         metadata_pkgs = export_metadata_packages(sb, ep_dir)
 

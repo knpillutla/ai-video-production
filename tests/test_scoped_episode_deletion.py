@@ -11,7 +11,7 @@ async def test_scoped_deletion_preserves_other_formats(tmp_path, monkeypatch):
     # Setup mock network structure:
     # user_container / networks / test_net / documentary / tour_a / ep-001
     # user_container / networks / test_net / relaxation / nature_b / ep-001
-    user_cont = tmp_path / "user_container"
+    user_cont = tmp_path / "user-0000-0000-00000"
     doc_ep = user_cont / "networks" / "test_net" / "documentary" / "tour_a" / "ep-001"
     rel_ep = user_cont / "networks" / "test_net" / "relaxation" / "nature_b" / "ep-001"
     doc_ep.mkdir(parents=True)
@@ -29,7 +29,7 @@ async def test_scoped_deletion_preserves_other_formats(tmp_path, monkeypatch):
         channel_id="test_net",
         format="documentary",
         production_name="tour_a",
-        user_id="test_user",
+        user_id="user-0000-0000-00000",
     )
 
     assert res["success"] is True
@@ -44,7 +44,7 @@ async def test_scoped_deletion_preserves_other_formats(tmp_path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_deletion_preserves_parent_if_other_episodes_exist(tmp_path, monkeypatch):
-    user_cont = tmp_path / "user_container"
+    user_cont = tmp_path / "user-0000-0000-00000"
     ep1 = user_cont / "networks" / "test_net" / "documentary" / "tour_a" / "ep-001"
     ep2 = user_cont / "networks" / "test_net" / "documentary" / "tour_a" / "ep-002"
     ep1.mkdir(parents=True)
@@ -61,7 +61,7 @@ async def test_deletion_preserves_parent_if_other_episodes_exist(tmp_path, monke
         channel_id="test_net",
         format="documentary",
         production_name="tour_a",
-        user_id="test_user",
+        user_id="user-0000-0000-00000",
     )
 
     assert res["success"] is True

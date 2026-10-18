@@ -258,99 +258,119 @@ class CinematicSnowEngine:
 class LivingEnvironmentEngine:
     """Procedural living world dynamics: water wave displacement, caustic glimmer, and smoke plumes."""
 
-    def __init__(self, img: np.ndarray, width: int, height: int, remove_objects: bool = False, remove_object_list: Optional[List[str]] = None):
+    def __init__(self, img: np.ndarray, width: int, height: int, remove_objects: bool = False, remove_object_list: Optional[List[str]] = None, enable_water: bool = False, enable_smoke: bool = False):
         self.w, self.h = width, height
         self.scale = width / 1920.0
         self.remove_objects = remove_objects
         self.clean_base_plate = None
 
-        resized = cv2.resize(img, (width, height), interpolation=cv2.INTER_LINEAR)
+        resized = cv2.resize(img, (width, height), interpolation=cv2.INTER_LANCZOS4)
         self.img_orig = resized
         hsv = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
         gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 
-        # Autonomous Precision Water Body Detection (Zero Land/Structure Bleed)
-        lower_hsv = hsv[int(height * 0.35):, :]
-        water_px = ((lower_hsv[:, :, 0] >= 90) & (lower_hsv[:, :, 0] <= 130) &
-                    (lower_hsv[:, :, 1] >= 40) & (lower_hsv[:, :, 2] >= 35)).astype(np.uint8) * 255
-        # Clean isolated noise and erode boundary so ripples never bleed into docks/buildings/shoreline
-        k_open = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-        water_clean = cv2.morphologyEx(water_px, cv2.MORPH_OPEN, k_open)
-        k_erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
-        water_inner = cv2.erode(water_clean, k_erode)
-        water_ratio = float(np.mean(water_inner > 0))
-
+        # Precision Water Body Detection (Multi-cue texture/edge boundary gating with inward buffer)
         self.water_mask = None
         self.cycle_plates: Optional[List[np.ndarray]] = None
         self.num_cycle_frames = 36
 
-        if water_ratio > 0.08:
-            full_w = np.zeros((height, width), dtype=np.float32)
-            full_w[int(height * 0.35):, :] = (water_inner > 0).astype(np.float32)
-            self.water_mask = cv2.GaussianBlur(full_w, (21, 21), 6)
+        if enable_water:
+            # 1. Texture gradient gate: mountains and rocky terrain have high spatial frequency edges
+            grad_x = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
+            grad_y = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
+            grad_mag = cv2.magnitude(grad_x, grad_y)
+            terrain_edges = (grad_mag > 28.0).astype(np.uint8)
+            terrain_zone = cv2.dilate(terrain_edges, cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9)))
 
-            ys = np.where(self.water_mask > 0.005)[0]
-            if len(ys) > 0:
-                self.water_y_min = int(ys.min())
-                self.water_y_max = int(ys.max()) + 1
-                roi_h = self.water_y_max - self.water_y_min
-                water_weight_roi = self.water_mask[self.water_y_min:self.water_y_max, :]
-                inv_water_weight_roi = 1.0 - water_weight_roi
+            # 2. Adaptive water color candidates (lower 75% of frame)
+            c_classic = (hsv[:, :, 0] >= 85) & (hsv[:, :, 0] <= 135) & (hsv[:, :, 1] >= 22) & (hsv[:, :, 2] >= 22)
+            c_turquoise = (hsv[:, :, 0] >= 70) & (hsv[:, :, 0] <= 90) & (hsv[:, :, 1] >= 22) & (hsv[:, :, 2] >= 25)
+            c_dark_ocean = (hsv[:, :, 0] >= 80) & (hsv[:, :, 0] <= 145) & (hsv[:, :, 1] >= 12) & (hsv[:, :, 2] >= 15) & (hsv[:, :, 2] <= 95)
+            c_specular = (hsv[:, :, 0] >= 70) & (hsv[:, :, 0] <= 145) & (hsv[:, :, 1] <= 35) & (hsv[:, :, 2] >= 165)
+            water_cand = (c_classic | c_turquoise | c_dark_ocean | c_specular)
+            water_cand[:int(height * 0.25), :] = False
+            water_cand[terrain_zone > 0] = False
 
-                base_plate = self.clean_base_plate if self.clean_base_plate is not None else resized
-                roi_in = base_plate[self.water_y_min:self.water_y_max, :]
+            # 3. Morphological cleaning & connected components (keep significant water bodies)
+            k_open = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+            water_clean = cv2.morphologyEx(water_cand.astype(np.uint8) * 255, cv2.MORPH_OPEN, k_open)
+            num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(water_clean)
+            min_area = int(0.012 * width * height)
+            water_body = np.zeros_like(water_clean)
+            for lbl in range(1, num_labels):
+                if stats[lbl, cv2.CC_STAT_AREA] >= min_area:
+                    water_body[labels == lbl] = 255
 
-                # Downsample ROI grid for lightning-fast 4K precomputation
-                sm_w = 1920
-                sm_h = max(16, int(round(roi_h * (1920.0 / width))))
-                roi_sm = cv2.resize(roi_in, (sm_w, sm_h), interpolation=cv2.INTER_LINEAR)
-                x_sm = np.arange(sm_w, dtype=np.float32)
-                y_sm = np.arange(sm_h, dtype=np.float32)
-                gx_sm, gy_sm = np.meshgrid(x_sm, y_sm)
+            # 4. Strict inward safety buffer (19px) + internal distance transform (guaranteed zero bleed onto mountains/land)
+            k_buffer = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (19, 19))
+            water_buffered = cv2.erode(water_body, k_buffer)
+            dist = cv2.distanceTransform(water_buffered, cv2.DIST_L2, 5)
+            max_d = 25.0 * self.scale
+            self.water_mask = np.clip(dist / max_d, 0.0, 1.0).astype(np.float32)
 
-                self.cycle_plates = []
-                for k in range(self.num_cycle_frames):
-                    t = k * (2.0 * np.pi / self.num_cycle_frames)
-                    dx = (0.5 * self.scale * np.sin(gx_sm * 0.03 + t)).astype(np.float32)
-                    dy = (0.6 * self.scale * np.cos(gy_sm * 0.04 - t)).astype(np.float32)
-                    map_x = gx_sm + dx
-                    map_y = gy_sm + dy
-                    wave_sm = cv2.remap(roi_sm, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-                    glimmer_sm = 1.0 + (0.035 * np.sin(gx_sm * 0.05 + gy_sm * 0.08 + t * 2.0))
-                    wave_sm = np.clip(wave_sm.astype(np.float32) * glimmer_sm[:, :, None], 0, 255).astype(np.uint8)
-                    wave_roi = cv2.resize(wave_sm, (width, roi_h), interpolation=cv2.INTER_LINEAR)
-                    blended = cv2.blendLinear(roi_in, wave_roi, inv_water_weight_roi, water_weight_roi)
-                    plate_k = base_plate.copy()
-                    plate_k[self.water_y_min:self.water_y_max, :] = blended
-                    self.cycle_plates.append(plate_k)
+            if float(np.mean(self.water_mask > 0.01)) > 0.008:
+                ys = np.where(self.water_mask > 0.005)[0]
+                if len(ys) > 0:
+                    self.water_y_min = int(ys.min())
+                    self.water_y_max = int(ys.max()) + 1
+                    roi_h = self.water_y_max - self.water_y_min
+                    water_weight_roi = self.water_mask[self.water_y_min:self.water_y_max, :]
+                    inv_water_weight_roi = 1.0 - water_weight_roi
 
-        # Autonomous Smoke Detection
-        upper_hsv = hsv[:int(height * 0.40), :]
-        upper_gray = gray[:int(height * 0.40), :]
-        smoke_candidates = (upper_hsv[:, :, 1] < 45) & (upper_gray > 165) & (upper_gray < 245)
-        plume_ratio = float(np.mean(smoke_candidates))
+                    base_plate = self.clean_base_plate if self.clean_base_plate is not None else resized
+                    roi_in = base_plate[self.water_y_min:self.water_y_max, :]
+
+                    # Downsample ROI grid for lightning-fast 4K precomputation
+                    sm_w = 1920
+                    sm_h = max(16, int(round(roi_h * (1920.0 / width))))
+                    roi_sm = cv2.resize(roi_in, (sm_w, sm_h), interpolation=cv2.INTER_LINEAR)
+                    x_sm = np.arange(sm_w, dtype=np.float32)
+                    y_sm = np.arange(sm_h, dtype=np.float32)
+                    gx_sm, gy_sm = np.meshgrid(x_sm, y_sm)
+
+                    self.cycle_plates = []
+                    for k in range(self.num_cycle_frames):
+                        t = k * (2.0 * np.pi / self.num_cycle_frames)
+                        # Dual-harmonic organic wave swell & surface ripple displacement
+                        dx = (1.8 * np.sin(gx_sm * 0.015 + t) + 1.0 * np.sin(gx_sm * 0.035 - 1.3 * t)).astype(np.float32)
+                        dy = (2.2 * np.cos(gy_sm * 0.018 - t) + 1.2 * np.cos(gy_sm * 0.042 + 1.1 * t)).astype(np.float32)
+                        map_x = gx_sm + dx
+                        map_y = gy_sm + dy
+                        wave_sm = cv2.remap(roi_sm, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+                        wave_roi = cv2.resize(wave_sm, (width, roi_h), interpolation=cv2.INTER_LANCZOS4)
+                        blended = cv2.blendLinear(roi_in, wave_roi, inv_water_weight_roi, water_weight_roi)
+                        plate_k = base_plate.copy()
+                        plate_k[self.water_y_min:self.water_y_max, :] = blended
+                        self.cycle_plates.append(plate_k)
+
+        # Smoke Detection (Only active when explicitly requested, preventing sky distortion)
         self.smoke_mask = None
         self.inv_smoke_mask = None
-        if 0.005 < plume_ratio < 0.10:
-            full_s = np.zeros((height, width), dtype=np.float32)
-            full_s[:int(height * 0.40), :] = smoke_candidates.astype(np.float32)
-            kernel_s = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
-            full_s = cv2.morphologyEx(full_s, cv2.MORPH_OPEN, kernel_s)
-            self.smoke_mask = cv2.GaussianBlur(full_s, (31, 31), 8)
-            self.inv_smoke_mask = 1.0 - self.smoke_mask
+        self.has_smoke = False
+        if enable_smoke:
+            upper_hsv = hsv[:int(height * 0.40), :]
+            upper_gray = gray[:int(height * 0.40), :]
+            smoke_candidates = (upper_hsv[:, :, 1] < 45) & (upper_gray > 165) & (upper_gray < 245)
+            plume_ratio = float(np.mean(smoke_candidates))
+            if 0.005 < plume_ratio < 0.10:
+                full_s = np.zeros((height, width), dtype=np.float32)
+                full_s[:int(height * 0.40), :] = smoke_candidates.astype(np.float32)
+                kernel_s = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+                full_s = cv2.morphologyEx(full_s, cv2.MORPH_OPEN, kernel_s)
+                self.smoke_mask = cv2.GaussianBlur(full_s, (31, 31), 8)
+                self.inv_smoke_mask = 1.0 - self.smoke_mask
 
-            ys_s = np.where(self.smoke_mask > 0.005)[0]
-            if len(ys_s) > 0:
-                self.smoke_y_min = int(ys_s.min())
-                self.smoke_y_max = int(ys_s.max()) + 1
-                s_roi_h = self.smoke_y_max - self.smoke_y_min
-                self.smoke_x = np.arange(width, dtype=np.float32)
-                self.smoke_y_rel = np.arange(s_roi_h, dtype=np.float32)
-                self.smoke_gx, self.smoke_gy = np.meshgrid(self.smoke_x, self.smoke_y_rel)
-                self.smoke_weight_roi = self.smoke_mask[self.smoke_y_min:self.smoke_y_max, :]
-                self.inv_smoke_weight_roi = self.inv_smoke_mask[self.smoke_y_min:self.smoke_y_max, :]
-            else:
-                self.has_smoke = False
+                ys_s = np.where(self.smoke_mask > 0.005)[0]
+                if len(ys_s) > 0:
+                    self.smoke_y_min = int(ys_s.min())
+                    self.smoke_y_max = int(ys_s.max()) + 1
+                    s_roi_h = self.smoke_y_max - self.smoke_y_min
+                    self.smoke_x = np.arange(width, dtype=np.float32)
+                    self.smoke_y_rel = np.arange(s_roi_h, dtype=np.float32)
+                    self.smoke_gx, self.smoke_gy = np.meshgrid(self.smoke_x, self.smoke_y_rel)
+                    self.smoke_weight_roi = self.smoke_mask[self.smoke_y_min:self.smoke_y_max, :]
+                    self.inv_smoke_weight_roi = self.inv_smoke_mask[self.smoke_y_min:self.smoke_y_max, :]
+                    self.has_smoke = True
 
     def get_source_plate(self, frame_idx: int) -> np.ndarray:
         """Returns source plate animated with natural fluid dynamics aligned with 3D camera space."""
@@ -731,6 +751,8 @@ def render_perspective_drone_clip_sync(
     remove_object_list: Optional[List[str]] = None,
     interpolation: str = "cubic",
     lower_third_hud: Optional[dict] = None,
+    water: bool = False,
+    smoke: bool = False,
 ) -> Path:
     """Render calm, cinematic 4K perspective drone shot on CPU via subpixel homography and procedural dynamics."""
     out = Path(output_path)
@@ -780,7 +802,7 @@ def render_perspective_drone_clip_sync(
         curve=curve,
     )
 
-    living_env = LivingEnvironmentEngine(img_enhanced, target_w, target_h, remove_objects=remove_objects, remove_object_list=remove_object_list)
+    living_env = LivingEnvironmentEngine(img_enhanced, target_w, target_h, remove_objects=remove_objects, remove_object_list=remove_object_list, enable_water=water, enable_smoke=smoke)
     rain_engine = CinematicRainEngine(target_w, target_h, intensity=rain_intensity, source_img=img_enhanced) if rain else None
     snow_engine = CinematicSnowEngine(target_w, target_h, intensity=snow_intensity, source_img=img_enhanced) if snow else None
 
@@ -893,6 +915,8 @@ async def render_perspective_drone_clip(
     remove_object_list: Optional[List[str]] = None,
     interpolation: str = "cubic",
     lower_third_hud: Optional[dict] = None,
+    water: bool = False,
+    smoke: bool = False,
 ) -> Path:
     """Asynchronously render calm 4K perspective drone shot on a worker thread."""
     return await asyncio.to_thread(
@@ -920,6 +944,8 @@ async def render_perspective_drone_clip(
         remove_object_list=remove_object_list,
         interpolation=interpolation,
         lower_third_hud=lower_third_hud,
+        water=water,
+        smoke=smoke,
     )
 
 

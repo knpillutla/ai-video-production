@@ -56,6 +56,7 @@ class ProductionPipelineCoordinator:
         idea: str | None = None, theme: str | None = None, refine_script: bool = False,
         enable_voice_over: bool = True, enable_bgm: bool | None = None, enable_lipsync: bool | None = None,
         auto_confirm: bool = False, custom_gate_input_fn: Any = None, profile: str = "development",
+        **kwargs: Any,
     ) -> Path | None:
         """Produce a complete broadcast-grade master video for an episode project."""
         self.llm.strict = strict
@@ -70,11 +71,19 @@ class ProductionPipelineCoordinator:
 
         show = repo.get_show(user_id, episode.show_id)
         show_slug = show.slug if show else "default_universe"
-        ep_dir = storage_service.get_episode_path(str(user_id), show_slug, str(episode_id))
+        import re
+        fmt_str = str(episode.format.value if hasattr(episode.format, "value") else episode.format).lower()
+        network = kwargs.get("network") or show_slug or "default_network"
+        clean_fmt = "music_video" if (fmt_str in ("vocal", "music_video", "vocal_song") or "music" in str(fmt_str).lower() or "vocal" in str(fmt_str).lower()) else (re.sub(r"[^a-zA-Z0-9_-]", "_", str(fmt_str).lower()).strip("_") or "music_video")
+        clean_name = re.sub(r"\s*[-–—]?\s*episode\s*\d+", "", str(episode.title), flags=re.IGNORECASE).strip()
+        clean_prod = re.sub(r"[^a-zA-Z0-9]+", "_", clean_name.lower()).strip("_") or "standalone"
+        ep_code = f"ep-{episode.episode_number:03d}" if episode.episode_number else "ep-001"
+        u_ent = repo.get_user(user_id)
+        u_target = getattr(u_ent, "storage_container_name", None) or getattr(u_ent, "email", None) or str(user_id)
+        ep_dir = storage_service.get_channel_format_production_episode_path(u_target, network, clean_fmt, clean_prod, ep_code)
         scenes_dir, stems_dir, renders_dir = ep_dir / "scenes", ep_dir / "audio_stems", ep_dir / "master_renders"
         for d in (scenes_dir, stems_dir, renders_dir): d.mkdir(parents=True, exist_ok=True)
 
-        fmt_str = str(episode.format.value if hasattr(episode.format, "value") else episode.format).lower()
         eff_script, eff_idea = custom_script or getattr(episode, "custom_script", None), idea or getattr(episode, "topic_or_idea", None)
         eff_theme, yt_url = theme or getattr(getattr(episode, "theme", None), "value", None), getattr(episode, "youtube_reference_url", None)
 
@@ -94,6 +103,7 @@ class ProductionPipelineCoordinator:
             "enable_voice_over": enable_voice_over, "enable_bgm": enable_bgm, "enable_lipsync": enable_lipsync,
             "reference_attributes": ref_attrs.model_dump(mode="json"),
             "refine_script": refine_script, "dry_run": dry_run, "created_at": time.time(),
+            "num_images": kwargs.get("num_images", 1), "use_loras": kwargs.get("use_loras", False),
         }
         await storage_service.save_json(ep_dir / "user_inputs.json", user_inputs)
         logger.info(f"starting_production_pipeline: ep={episode.title}, user={user_id}, tier={tier}, profile={profile}")
@@ -109,6 +119,25 @@ class ProductionPipelineCoordinator:
         eff_genre = show.genre if show else "comedy"
         strategy = resolve_strategy(media_format=fmt_str, genre=eff_genre, idea=eff_idea)
         logger.info(f"genre_strategy_resolved: {strategy.genre_id} (audio={strategy.audio_mode}, lipsync={strategy.lipsync_mode})")
+
+        if strategy.genre_id == "vocal":
+            from src.compositor.vocal_compositor import execute_vocal_pipeline
+            return await execute_vocal_pipeline(
+                pipeline=self, user_id=user_id, episode=episode, ep_dir=ep_dir,
+                scenes_dir=scenes_dir, stems_dir=stems_dir, renders_dir=renders_dir,
+                strategy=strategy, language=language, gender=gender,
+                force_live=force_live, dry_run=dry_run, show_slug=show_slug,
+                music_style=kwargs.get("music_style"), similar_to=kwargs.get("similar_to"),
+                country=kwargs.get("country"), culture=culture or kwargs.get("culture"),
+                idea=eff_idea, script=eff_script, theme=eff_theme,
+                art_style=effective_art_style, profile=profile,
+                num_images=kwargs.get("num_images") or 1,
+                network=kwargs.get("network"),
+                use_loras=kwargs.get("use_loras", False),
+                auto_confirm=auto_confirm,
+                preview_only=kwargs.get("preview_only", False),
+                full_confirmed=kwargs.get("full_confirmed", False),
+            )
 
         from src.providers.dance.fal_video_factory import resolve_video_motion_adapter
         video_motion_adapter = resolve_video_motion_adapter(profile=profile, scenario=strategy.genre_id)

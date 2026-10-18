@@ -8,6 +8,7 @@ Before writing any scene, first explicitly identify and preserve the exact creat
 - Match the script to the user’s specified environment exactly: village vs hotel ballroom vs home celebration vs temple courtyard vs festival ground.
 - Preserve the user’s regional identity: Telangana folk village energy is different from Hindi family party dance in a hotel setting.
 - Wardrobe, jewelry, props, background structures, and choreography must all match the same region and event type.
+- Curated Accessories Harmony (Both Leads): Explicitly describe coordinated accessories for BOTH male and female leads (earrings, necklaces, bangles/bracelets, watches, rings, stoles/kadas) to anchor anatomy and deliver polished cinematic realism.
 - Never swap or blend unrelated cultural contexts.
 - If the prompt says "Telangana village folk dance," stay in a Telangana village setting with appropriate Telangana folk costumes and environment. If the prompt says "Hindi family party dance in a hotel," stay in the hotel celebration environment with matching partywear and venue details.
 

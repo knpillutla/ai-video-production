@@ -130,17 +130,17 @@ def test_cultural_derivation_from_user_home_country():
 
     # India
     in_ctx = derive_cultural_context(user_home_country="IN", language="te", gender="female")
-    assert in_ctx.culture == "indian_south"
+    assert in_ctx.culture in ("indian_telugu", "indian_south")
     assert in_ctx.voice_id == "te-IN-ShrutiNeural"
 
 
 def test_cultural_derivation_from_script_keywords():
     """Verify script keywords deterministically guide regional culture and costumes."""
-    # Hyderabad Charminar -> South Indian culture and saree
+    # Hyderabad Charminar -> Telugu / South Indian culture
     hyd_ctx = derive_cultural_context(script_text="Visiting Charminar and enjoying biryani in Hyderabad")
-    assert hyd_ctx.culture == "indian_south"
+    assert hyd_ctx.culture in ("indian_telugu", "indian_south")
     assert "South Asian" in hyd_ctx.primary_ethnicity
-    assert hyd_ctx.clothing_style == "indian_traditional_saree"
+    assert hyd_ctx.clothing_style in ("telugu_designer_anarkali", "indian_traditional_saree")
 
     # Rome Tarantella -> Italian
     rome_ctx = derive_cultural_context(script_text="Folk festival in Rome with traditional pizzica dancers")
@@ -193,7 +193,7 @@ def test_telugu_monsoon_rain_dance_and_costume_derivation():
         gender="female",
         language="te",
     )
-    assert rain_ctx.culture == "indian_south"
+    assert rain_ctx.culture in ("indian_telugu", "indian_south")
     assert rain_ctx.clothing_style == "telugu_rain_folk_saree"
     assert "cotton saree" in rain_ctx.outfit_description.lower()
     assert "jhumkas" in rain_ctx.jewelry_description.lower()

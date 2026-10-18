@@ -199,12 +199,14 @@ def build_storyboard_prompt(
     )
     extras.append(
         "MANDATORY CAST & WARDROBE DIRECTIVE: All main characters (male and female) must have a balanced, "
-        "naturally fit medium-slender build (neither too skinny/bony nor too chubby, graceful feminine curves with toned midriff for women, "
-        "lean-athletic fit build for men), strikingly beautiful / handsome in their mid-20s (ages 23-27). "
-        "Autonomously derive setting aesthetics, background environment, and lighting directly from narrative context. "
-        "Outfits and wardrobe MUST dynamically and authentically match the context of each scene in the story (e.g. festive village "
-        "jathara -> vibrant traditional festive attire; modern IT office/WFH -> stylish smart-casual; rainy alpine trek -> "
-        "functional stylish waterproof alpine outdoor wear; romantic evening -> elegant evening wear)."
+        "naturally fit medium-slender build (graceful feminine curves with narrow waistline and cute/beautiful features for women, "
+        "lean-athletic fit build for men), in their mid-20s (ages 23-27). "
+        "Outfits and wardrobe MUST dynamically and authentically match the context of each scene in the story. "
+        "4-ZONE ACCESSORIES HARMONY (Both Leads): Autonomously style 4 zones for her (hair accessories, earrings/necklace, "
+        "wrist watch/bangles, and leg/ankle chain) matching the outfit. For him, style a premium wristwatch, neck chain or kada, and belt. "
+        "STRICT ANATOMICAL PLACEMENT & NEGATIVE CONSTRAINTS: Wristwatches must be described as 'strapped securely to left wrist' "
+        "(strictly on wrist, never on shirt or chest). All prompts must enforce negative constraints: 'watch on shirt, watch on chest, "
+        "floating watch, floating accessories, giant watch, misplaced jewelry, chest badge, unattached accessories, heavy thick waist, bulky torso'."
     )
     extras.append(
         "MANDATORY RICH, DELIGHTFUL & LUXURIOUS VISUAL AESTHETICS (Zero Pale / Drab Buildings Guard): "

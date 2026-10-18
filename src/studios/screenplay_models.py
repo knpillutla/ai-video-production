@@ -6,7 +6,7 @@ Self-contained contract for living wallpapers, soundscapes, and cinematic scenes
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Union
-from pydantic import AliasChoices, BaseModel, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 from src.services.audio_tag_service import normalize_audio_tags
 
 
@@ -220,8 +220,10 @@ class BaseScenePrompt(BaseModel):
 
 class BaseStoryboard(BaseModel):
     """Universal directorial storyboard representation across all channels and genres."""
+    model_config = ConfigDict(extra="allow")
     title: str = "Studio Production"
     story_topic: Optional[str] = ""
+    genre: Optional[Any] = None
     primary_archetype: str = "cities"
     secondary_archetype: Optional[str] = None
     cluster: str = "travel"
@@ -282,6 +284,7 @@ def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> BaseStoryboard:
         )
     return BaseStoryboard(
         title=sp.title, story_topic=sp.story_topic,
+        genre=getattr(sp, "genre", None),
         primary_archetype=sp.primary_archetype or sp.sub_genre or "cities",
         secondary_archetype=sp.secondary_archetype, cluster=sp.cluster or "travel",
         tier=getattr(sp, "tier", None) or "balanced",

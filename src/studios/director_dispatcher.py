@@ -68,7 +68,7 @@ async def dispatch_studio_director(
 
     # 0. Dedicated Blue-Chip Documentary & Science Studio Dispatch
     is_science = "science" in genre_lower or "science" in sub_lower or "science" in arch_lower
-    if "doc" in genre_lower or "documentary" in ch_lower or "doc" in sub_lower or is_science:
+    if "doc" in genre_lower or "documentary" in ch_lower or "doc" in sub_lower or is_science or "nations" in genre_lower:
         from src.studios.documentary_studio.doc_storyboard import generate_documentary_storyboard_gemini
         from src.studios.documentary_studio.doc_dispatch_helper import resolve_doc_dispatch_params
         eff_doc_genre, eff_archetype_name, theme_seed = resolve_doc_dispatch_params(
@@ -78,6 +78,8 @@ async def dispatch_studio_director(
             primary_archetype=primary_archetype,
             sub_genre=sub_genre,
             custom_prompt=custom_prompt,
+            user_id=user_id,
+            channel_id=channel_id or "earth_serenade",
         )
         sb = await generate_documentary_storyboard_gemini(
             genre=eff_doc_genre,

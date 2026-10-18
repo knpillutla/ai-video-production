@@ -140,7 +140,7 @@ class ClassifierAgent:
                 return True, True
 
         # 2. Format-Based Inference: character-driven vs ambient relaxation vs dance
-        if any(f in fmt_str for f in ("dance", "music_video", "song")) or any(k in combined for k in ("dance", "jathara", "mass dance", "folk dance", "dancers")):
+        if any(f in fmt_str for f in ("dance", "music_video", "vocal", "song")) or any(k in combined for k in ("dance", "jathara", "mass dance", "folk dance", "dancers", "vocal song", "melody")):
             return False, True
         if any(f in fmt_str for f in ("web_series", "sitcom", "movie", "dialogue", "skit", "interview", "podcast")):
             return True, True

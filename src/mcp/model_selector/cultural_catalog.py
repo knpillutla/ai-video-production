@@ -4,6 +4,7 @@ from typing import Any
 from src.mcp.model_selector.art_style_catalog import ART_STYLE_INTELLIGENCE_CATALOG, lookup_art_style
 from src.mcp.model_selector.costume_catalog import COSTUME_INTELLIGENCE_CATALOG, lookup_costume_stack
 from src.mcp.model_selector.cultural_matrix_global import GLOBAL_CULTURAL_MODELS
+from src.mcp.model_selector.cultural_matrix_south_asia import SOUTH_ASIAN_REGIONAL_MODELS
 from src.mcp.model_selector.dance_catalog import DANCE_MODEL_MATRIX, lookup_dance_stack
 
 CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
@@ -152,6 +153,7 @@ CULTURAL_MODEL_MATRIX: dict[str, dict[str, Any]] = {
     },
 }
 CULTURAL_MODEL_MATRIX.update(GLOBAL_CULTURAL_MODELS)
+CULTURAL_MODEL_MATRIX.update(SOUTH_ASIAN_REGIONAL_MODELS)
 
 
 def lookup_cultural_stack(culture: str | None = None, language: str = "en") -> dict[str, Any]:
@@ -170,7 +172,15 @@ def lookup_cultural_stack(culture: str | None = None, language: str = "en") -> d
         return CULTURAL_MODEL_MATRIX["mexican"]
     if "aust" in key or "oceania" in key:
         return CULTURAL_MODEL_MATRIX["australian"]
-    if "south" in key or lang in ("te", "ta", "kn", "ml"):
+    if "telugu" in key or lang == "te":
+        return CULTURAL_MODEL_MATRIX["indian_telugu"]
+    if "tamil" in key or lang == "ta":
+        return CULTURAL_MODEL_MATRIX["indian_tamil"]
+    if "malayalam" in key or "kerala" in key or lang == "ml":
+        return CULTURAL_MODEL_MATRIX["indian_malayalam"]
+    if "kannada" in key or lang == "kn":
+        return CULTURAL_MODEL_MATRIX["indian_kannada"]
+    if "south" in key:
         return CULTURAL_MODEL_MATRIX["indian_south"]
     if "north" in key or lang in ("hi", "pa", "gu", "bn"):
         return CULTURAL_MODEL_MATRIX["indian_north"]

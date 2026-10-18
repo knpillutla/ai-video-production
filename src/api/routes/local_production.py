@@ -80,6 +80,7 @@ class LocalProduceRequest(BaseModel):
     format: Optional[str] = None
     format_slug: Optional[str] = None
     aspect_ratio: Optional[str] = None
+    tts_model: Optional[str] = None
 
 
 class LocalProduceResponse(BaseModel):
@@ -221,6 +222,7 @@ async def produce_video_locally(req: LocalProduceRequest):
             weather=req.weather or "normal",
             production_name=req.production_name,
             format_slug=req.format_slug or (req.format if req.format and req.format not in ("16:9", "9:16") else None),
+            tts_model=req.tts_model,
         )
         eff_job_id = result.get("job_id") or job_id
         if eff_script_only:

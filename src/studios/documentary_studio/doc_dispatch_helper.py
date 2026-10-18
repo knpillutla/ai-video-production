@@ -31,6 +31,11 @@ DOC_GENRE_MAP = {
     "science_evolution": DocGenre.SCIENCE, "science_earth": DocGenre.SCIENCE,
     "science_medicine": DocGenre.SCIENCE, "science_space": DocGenre.SCIENCE,
     "science_physics": DocGenre.SCIENCE, "science_tech": DocGenre.SCIENCE,
+    "doc/nations": DocGenre.PLACES, "doc_nations": DocGenre.PLACES,
+    "nations": DocGenre.PLACES, "europe_nations": DocGenre.PLACES,
+    "asia_nations": DocGenre.PLACES, "africa_nations": DocGenre.PLACES,
+    "americas_nations": DocGenre.PLACES, "oceania_nations": DocGenre.PLACES,
+    "nordic_polar_nations": DocGenre.PLACES,
 }
 
 DEFAULT_DOC_THEMES = {
@@ -92,8 +97,33 @@ def resolve_doc_dispatch_params(
     primary_archetype: Optional[str] = None,
     sub_genre: Optional[str] = None,
     custom_prompt: Optional[str] = None,
+    user_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
 ) -> Tuple[DocGenre, str, str]:
     """Resolve documentary genre enum, effective archetype name, and theme seed."""
+    from src.studios.documentary_studio.doc_geo_rotation import (
+        is_geo_continent_subgenre,
+        resolve_autonomous_geo_theme,
+        ARCHETYPE_TEMPLATES,
+    )
+
+    eff_sub = (sub_genre or sub_lower or "").strip().lower()
+    eff_arch = (primary_archetype or arch_lower or "").strip().lower()
+
+    if (
+        is_geo_continent_subgenre(eff_sub)
+        or eff_arch in ARCHETYPE_TEMPLATES
+        or "nations" in eff_sub
+        or "nations" in eff_arch
+    ):
+        return resolve_autonomous_geo_theme(
+            sub_genre=eff_sub,
+            archetype=eff_arch,
+            user_id=user_id,
+            channel_id=channel_id,
+            custom_prompt=custom_prompt,
+        )
+
     eff_doc_genre = DOC_GENRE_MAP.get(
         sub_lower,
         DOC_GENRE_MAP.get(arch_lower, DocGenre.SCIENCE if is_science else DocGenre.PLACES)

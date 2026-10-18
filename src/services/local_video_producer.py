@@ -139,7 +139,9 @@ async def produce_local_video_episode(
             ref_attrs.color_palette_rgb = world_setting.palette_rgb
 
     # 1. Resolve storage directories and save user_inputs.json
-    ep_dir = storage_service.get_episode_path(user_id, show_slug, ep_slug)
+    clean_fmt = re.sub(r"[^a-zA-Z0-9_-]", "_", str(format_type).lower()).strip("_") or "general"
+    clean_prod = re.sub(r"[^a-zA-Z0-9_-]", "_", str(title).lower()).strip("_") or "standalone"
+    ep_dir = storage_service.get_episode_path(user_id, show_slug, ep_slug, format_slug=clean_fmt, production_name=clean_prod)
     scenes_dir, stems_dir, renders_dir = ep_dir / "scenes", ep_dir / "audio_stems", ep_dir / "master_renders"
     for d in (scenes_dir, stems_dir, renders_dir): d.mkdir(parents=True, exist_ok=True)
 
@@ -237,7 +239,7 @@ async def produce_local_video_episode(
         return f"{sz / 1024:.1f} KB" if sz < 1024 * 1024 else f"{sz / (1024 * 1024):.1f} MB"
 
     container_name = sanitize_container_name(user_id)
-    base_url = f"/storage/{container_name}/creative_vault/shows_and_titles/{show_slug}/episodes/{ep_slug}"
+    base_url = f"/storage/{container_name}/networks/{show_slug}/{clean_fmt}/{clean_prod}/{ep_slug}"
     artifacts = [
         {"name": out_mp4.name, "size": _fmt_size(out_mp4.stat().st_size), "type": "Video", "icon": "fa-film", "desc": "1080p Single-Pass FFmpeg Master Video", "url": f"{base_url}/master_renders/{out_mp4.name}"},
         {"name": "scene_01.jpg", "size": _fmt_size(scene1_img.stat().st_size), "type": "Image", "icon": "fa-images", "desc": "Keyframe Image Scene 1", "url": f"{base_url}/scenes/scene_01.jpg"},

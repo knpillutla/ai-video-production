@@ -73,9 +73,10 @@ class FalLatentSyncAdapter:
 
         async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=15.0)) as client:
             try:
-                # Upload audio to Fal storage so LatentSync can read it
-                audio_fal_url = await upload_to_fal(audio_path, self.api_key)
-                payload = {"video_url": video_url, "audio_url": audio_fal_url}
+                # Upload video and audio to Fal storage so LatentSync can read them
+                vid_fal_url = str(video_url) if str(video_url).startswith("http") else await upload_to_fal(Path(video_url), self.api_key)
+                audio_fal_url = str(audio_path) if str(audio_path).startswith("http") else await upload_to_fal(Path(audio_path), self.api_key)
+                payload = {"video_url": vid_fal_url, "audio_url": audio_fal_url}
 
                 sub_resp = await client.post(_LATENTSYNC_ENDPOINT, headers=headers, json=payload)
                 if sub_resp.status_code not in (200, 201):
@@ -98,15 +99,13 @@ class FalLatentSyncAdapter:
                         logger.info(f"fal_latentsync_ok: {out.name} ({out.stat().st_size} B)")
                         return out
                     if status in ("FAILED", "CANCELLED"):
-                        logger.warning(f"fal_latentsync_api_failed: {s} — using Kling raw video")
-                        break
+                        raise RuntimeError(f"LatentSync task failed: {s}")
                     if attempt % 3 == 0:
                         logger.info(f"fal_latentsync_poll: status={status} ({attempt * _POLL_INTERVAL_S:.0f}s)")
 
             except Exception as ex:
-                logger.warning(f"fal_latentsync_error: {ex} — falling back to LivePortrait")
-
-        return await self._fallback_liveportrait(video_url, audio_path, out)
+                logger.error(f"fal_latentsync_error: {ex}")
+                raise
 
     async def _fallback_liveportrait(
         self,

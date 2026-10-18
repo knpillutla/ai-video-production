@@ -251,26 +251,29 @@ class DocumentaryProducer:
                     curve=local_cfg.get("curve") or getattr(scene, "motion_curve", "cosine"),
                     rain=(getattr(scene, "weather", "none") == "rain"), snow=(getattr(scene, "weather", "none") == "snow"),
                     lower_third_hud=hud_data,
+                    water=any(w in f"{getattr(scene, 'visual_prompt', '')} {getattr(scene, 'location_hub', '')}".lower() for w in ("water", "lake", "ocean", "river", "fjord", "sea", "pond", "waterfall")),
                 )
             else:
                 eff_model = motion_model if motion_model != "auto" else scene.recommended_model
                 logger.info(f"doc_motion_dispatch: Scene {scene.scene_index} -> AI Video {eff_model}")
                 task = MotionClipTask(
-                    image_path=kf_path,
-                    motion_prompt=scene.motion_prompt,
-                    visual_prompt=scene.visual_prompt,
-                    output_path=out_clip,
-                    duration_seconds=scene.duration_seconds,
-                    model=eff_model,
-                    domain=scene.motion_domain,
-                    req_file=ep_dir / f"fal_diff_req_p{scene.scene_index}.json",
+                    image_path=kf_path, motion_prompt=scene.motion_prompt, visual_prompt=scene.visual_prompt,
+                    output_path=out_clip, duration_seconds=scene.duration_seconds, model=eff_model,
+                    domain=scene.motion_domain, req_file=ep_dir / f"fal_diff_req_p{scene.scene_index}.json",
                     allow_fallback=allow_fallback,
                 )
                 return await visual_batch_service.render_motion_clip(task)
 
         # Concurrently synthesize all motion clips across worker threads
         motion_coros = [_synthesize_scene_clip(sc, kp) for sc, kp in zip(sb.scenes, keyframe_paths)]
-        video_clip_paths = await asyncio.gather(*motion_coros)
+        video_clip_paths = list(await asyncio.gather(*motion_coros))
+
+        # Append 4K Outro Slide (Ends narrative cleanly with fade-to-black instead of looping)
+        from src.services.outro_slide_engine import render_4k_outro_slide, render_4k_outro_video
+        out_img = render_4k_outro_slide(ep_dir / "outro_slide.jpg", sb.title, is_tour=is_tour, tour_stops=tour_stops or None, base_keyframe_path=keyframe_paths[-1] if keyframe_paths else None)
+        out_clip = render_4k_outro_video(ep_dir / "motion_outro.mp4", out_img, duration_seconds=4.5)
+        if out_clip.is_file() and str(out_clip) not in [str(c) for c in video_clip_paths]:
+            video_clip_paths.append(out_clip)
 
         # Stage 5: Master Assembly & Packaging
         master_path = ep_dir / "master_4k_documentary.mp4"
@@ -281,16 +284,13 @@ class DocumentaryProducer:
         try:
             from src.studios.documentary_studio.doc_thumbnail_service import generate_documentary_thumbnail_variants
             thumb_pkg = generate_documentary_thumbnail_variants(sb, ep_dir, keyframe_paths)
-            if thumb_pkg:
-                yt_pkg["thumbnail_packaging"] = thumb_pkg
-                logger.info(f"high_ctr_thumbnails_created: {ep_dir.name}")
+            if thumb_pkg: yt_pkg["thumbnail_packaging"] = thumb_pkg
         except Exception as ex_t:
             logger.warning(f"failed_to_generate_tour_thumbnails: {ex_t}")
 
         await topic_memory.remember_topic(topic=sb.title, genre=f"doc_{sb.genre.value}", tags=[sb.genre.value, "documentary", sb.language], story_synopsis=f"4K Documentary on {sb.title} ({len(sb.scenes)} scenes)", episode_id=ep_dir.name)
         render_time = round(time.time() - t_start, 2)
         logger.info(f"documentary_production_ready: {ep_dir.name} in {render_time}s")
-
         return {
             "episode_id": ep_dir.name, "title": sb.title, "master_video_path": str(master_path),
             "voiceover_path": str(voice_path), "audio_track": str(mixed_audio), "subtitles_path": str(srt_path),

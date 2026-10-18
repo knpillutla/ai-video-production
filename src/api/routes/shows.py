@@ -32,7 +32,7 @@ async def create_show(req: ShowCreate, current_user: User = Depends(get_current_
     )
     saved_show = repo.save_show(show)
     # Ensure physical folder structure in user's container
-    vault_path = storage_service.get_creative_vault_path(str(current_user.id), slug)
+    vault_path = storage_service.get_network_path(str(current_user.id), slug)
     await storage_service.save_json(vault_path / "series_metadata.json", saved_show.model_dump(mode="json"))
     return saved_show
 

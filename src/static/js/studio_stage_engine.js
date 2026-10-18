@@ -293,6 +293,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         enable_bgm: vid.enableBgm !== false,
         enable_voiceover: Boolean(vid.enableVoiceOver),
         dual_editions: Boolean(vid.dual_editions ?? document.getElementById("studio-toggle-dual-editions")?.checked),
+        tts_model: document.getElementById("studio-tts-model")?.value || vid.ttsModel || "gemini",
         allow_fallback: vid.allowFallback || false,
         pipeline_strategy: vid.pipelineStrategy || "manual",
         script_only: isScriptOnly,
@@ -570,12 +571,18 @@ function advanceToKeyframesStage(vid, imageModelOverride, forceRerun = false) {
   startStudioLiveStageProgress(target, "manual", "photos");
 }
 
-function advanceToAudioStage(vid) {
+function advanceToAudioStage(vid, ttsModelOverride, forceRerun = false) {
   let target = vid || currentActiveInspectorEpisode;
   if (!target) return;
   target.currentStage = 3;
   target.status = "processing";
   target.progress = 50;
+  target.force_rerun = Boolean(forceRerun);
+  if (ttsModelOverride) {
+    target.ttsModel = ttsModelOverride;
+    const ttsSelect = document.getElementById("studio-tts-model");
+    if (ttsSelect) ttsSelect.value = ttsModelOverride;
+  }
   currentActiveInspectorEpisode = target;
   renderInspectorFromVideo(target);
   if (typeof filterChannelArchive === "function") filterChannelArchive();

@@ -49,6 +49,9 @@ async def run_production(
     voice_over: bool = False, narration_male: bool = False, narration_female: bool = False,
     bgm: bool = False, tts: bool = False, youtube_reference_link: str | None = None, prompt: str | None = None,
     restart_id: str | None = None, profile: str = "development",
+    music_style: str | None = None, similar_to: str | None = None,
+    user_id: str | None = None, network: str | None = None,
+    num_images: int = 1, use_loras: bool = False,
 ):
     """Execute the Phase 2 & 3 end-to-end video production and compliance pipeline."""
     duration = parse_duration(duration)
@@ -61,12 +64,27 @@ async def run_production(
         allow_fallback = False
         if not tier:
             tier = "cinematic"
-    user = repo.get_user_by_email("creator@cineai.studio")
-    if not user:
-        user = User(email="creator@cineai.studio", display_name="Studio Director", google_sub="cli_local_user", storage_container_name="user-cli-director", api_credit_balance_usd=50.00, home_country=country, cultural_heritage=culture)
+    if user_id:
+        from uuid import UUID, uuid5, NAMESPACE_DNS
+        from src.core.storage import sanitize_container_name
+        try:
+            uid = UUID(user_id)
+        except Exception:
+            uid = uuid5(NAMESPACE_DNS, user_id)
+        clean_email = user_id if "@" in user_id else f"user_{str(uid)[:8]}@cineai.studio"
+        d_name = user_id.split("@")[0] if "@" in user_id else "Studio Creator"
+        cont_name = sanitize_container_name(user_id)
+        user = repo.get_user_by_email(clean_email) or repo.users.get(uid) or User(
+            id=uid, email=clean_email, display_name=d_name, google_sub=f"cli_{str(uid)[:12]}",
+            storage_container_name=cont_name, api_credit_balance_usd=50.00, home_country=country, cultural_heritage=culture,
+        )
     else:
-        if country: user.home_country = country
-        if culture: user.cultural_heritage = culture
+        user = repo.get_user_by_email("creator@cineai.studio")
+        if not user:
+            user = User(email="creator@cineai.studio", display_name="Studio Director", google_sub="cli_local_user", storage_container_name="user-cli-director", api_credit_balance_usd=50.00, home_country=country, cultural_heritage=culture)
+        else:
+            if country: user.home_country = country
+            if culture: user.cultural_heritage = culture
     repo.save_user(user)
 
     # ---------------------------------------------------------------------------
@@ -120,7 +138,17 @@ async def run_production(
             fmt_str = str(resolved_format.value if hasattr(resolved_format, "value") else resolved_format).lower()
             
             # Load user_inputs if available to restore exact production intent
-            ep_ws = storage_service.get_episode_path(str(user.id), show.slug, str(existing_ep.id))
+            u_cont = getattr(user, "storage_container_name", None) or getattr(user, "email", None) or str(user.id)
+            found_dir = storage_service.find_episode_path(u_cont, network, str(existing_ep.id))
+            if found_dir and found_dir.is_dir():
+                ep_ws = found_dir
+            else:
+                eff_net = network or (show.slug if show else "default_network")
+                clean_fmt = "music_video" if (fmt_str in ("vocal", "music_video", "vocal_song") or "music" in str(fmt_str).lower() or "vocal" in str(fmt_str).lower() or genre in ("vocal", "vocal_song", "song")) else (re.sub(r"[^a-zA-Z0-9_-]", "_", str(fmt_str).lower()).strip("_") or "music_video")
+                clean_name = re.sub(r"\s*[-–—]?\s*episode\s*\d+", "", str(title), flags=re.IGNORECASE).strip()
+                clean_prod = re.sub(r"[^a-zA-Z0-9]+", "_", clean_name.lower()).strip("_") or "standalone"
+                ep_code = f"ep-{existing_ep.episode_number:03d}" if existing_ep.episode_number else "ep-001"
+                ep_ws = storage_service.get_channel_format_production_episode_path(u_cont, eff_net, clean_fmt, clean_prod, ep_code)
             inputs_json = ep_ws / "user_inputs.json"
             if inputs_json.exists():
                 try:
@@ -133,6 +161,10 @@ async def run_production(
                     enable_bgm = stored_inputs.get("enable_bgm", True)
                     enable_lipsync = stored_inputs.get("enable_lipsync", False)
                     active_sub = stored_inputs.get("subtitle_language", "en")
+                    if num_images == 1 and "num_images" in stored_inputs:
+                        num_images = int(stored_inputs["num_images"])
+                    if not use_loras and "use_loras" in stored_inputs:
+                        use_loras = bool(stored_inputs["use_loras"])
                 except Exception: pass
             
             # Clean stale master renders on resume to guarantee fresh recompilation with repaired/new assets
@@ -203,6 +235,10 @@ async def run_production(
                 theme = ref_info.art_style_display
         elif script and is_default_title:
             title = Path(script).stem.replace("_", " ").title() if Path(script).is_file() else "Custom Screenplay"
+        elif media_format.lower().replace("-", "_") in ("vocal", "vocal_song", "lyrical_video", "music_video") and is_default_title:
+            title = ""
+            if not theme:
+                theme = "Romantic Vocal Melody"
 
         active_sub = subtitle_language or ("en" if language.lower() != "en" else "en")
         script_text, script_label = None, None
@@ -220,16 +256,19 @@ async def run_production(
         effective_genre_cue = genre if (genre != "comedy" or not theme) else None
         creative_context = " ".join(filter(None, [effective_genre_cue, theme, idea, title, prompt, youtube_reference_link, script_text[:200] if script_text else None]))
         if not media_format or media_format.lower() == "auto":
-            detected = classifier_agent.detect(text=creative_context, title=title)
-            resolved_format = detected.media_format
-            if resolved_theme == ThemeGenre.AUTO and detected.theme != ThemeGenre.AUTO:
-                resolved_theme = detected.theme
-            if genre == "comedy" and detected.theme != ThemeGenre.TELUGU_COMEDY:
-                genre = "travel_tourism" if detected.theme == ThemeGenre.TRAVEL_TOURISM else (
-                    "nature_documentary" if detected.theme == ThemeGenre.NATURE_WILDLIFE else (
-                        "dance" if detected.theme == ThemeGenre.BOLLYWOOD_DANCE else detected.theme.value
+            if genre in ("vocal", "vocal_song", "song"):
+                resolved_format = MediaFormat.VOCAL_SONG
+            else:
+                detected = classifier_agent.detect(text=creative_context, title=title)
+                resolved_format = detected.media_format
+                if resolved_theme == ThemeGenre.AUTO and detected.theme != ThemeGenre.AUTO:
+                    resolved_theme = detected.theme
+                if genre == "comedy" and detected.theme != ThemeGenre.TELUGU_COMEDY:
+                    genre = "travel_tourism" if detected.theme == ThemeGenre.TRAVEL_TOURISM else (
+                        "nature_documentary" if detected.theme == ThemeGenre.NATURE_WILDLIFE else (
+                            "dance" if detected.theme == ThemeGenre.BOLLYWOOD_DANCE else detected.theme.value
+                        )
                     )
-                )
         else:
             fmt_raw = media_format.lower().replace("-", "_")
             if fmt_raw in ("movie", "film", "cinema", "cinematic", "epic_cinematic"):
@@ -244,6 +283,9 @@ async def run_production(
             elif fmt_raw in ("walk", "walking", "walk_tour", "walking_tour"):
                 resolved_format = MediaFormat.WALKING_TOUR
                 if genre == "comedy": genre = "walking_tour"
+            elif fmt_raw in ("vocal", "vocal_song", "lyrical_video", "music_video"):
+                resolved_format = MediaFormat.VOCAL_SONG
+                if genre == "comedy": genre = "vocal"
             else:
                 try:
                     resolved_format = MediaFormat(fmt_raw)
@@ -259,14 +301,6 @@ async def run_production(
         if "gender" in prompt_overrides and gender == "female": gender = prompt_overrides["gender"]
         if "duration" in prompt_overrides and duration == 480: duration = prompt_overrides["duration"]
 
-        user = repo.get_user_by_email("creator@cineai.studio")
-        if not user:
-            user = User(email="creator@cineai.studio", display_name="Studio Director", google_sub="cli_local_user", storage_container_name="user-cli-director", api_credit_balance_usd=50.00, home_country=country, cultural_heritage=culture)
-        else:
-            if country: user.home_country = country
-            if culture: user.cultural_heritage = culture
-        repo.save_user(user)
-
         # ---------------------------------------------------------------------------
         # Title derivation + duplicate check with up to 3 auto-retry attempts
         # ---------------------------------------------------------------------------
@@ -274,11 +308,17 @@ async def run_production(
         _t_hint = "dance" if prompt and "dance" in prompt.lower() else ("nature" if prompt and any(k in (prompt or "").lower() for k in ("mountain", "nature", "wildlife", "alps")) else ("comedy" if prompt and "comedy" in (prompt or "").lower() else None))
 
         for _attempt in range(1, _MAX_DUP_RETRIES + 1):
-            show_slug = re.sub(r"[^a-zA-Z0-9_-]", "_", title.lower()).strip("_")[:32] or "default_show"
-            show_slug = re.sub(r"_+", "_", show_slug)
+            if network:
+                clean_net = re.sub(r"[^a-zA-Z0-9_-]", "_", network.lower()).strip("_")[:32] or "default_network"
+                show_slug = clean_net
+                show_title = network.replace("_", " ").title()
+            else:
+                show_slug = re.sub(r"[^a-zA-Z0-9_-]", "_", title.lower()).strip("_")[:32] or "default_show"
+                show_slug = re.sub(r"_+", "_", show_slug)
+                show_title = title
             show = next((s for s in repo.list_shows(user.id) if s.slug == show_slug), None)
             if not show:
-                show = Show(user_id=user.id, title=title, slug=show_slug, genre=genre)
+                show = Show(user_id=user.id, title=show_title, slug=show_slug, genre=genre)
                 repo.save_show(show)
 
             existing_eps = repo.list_episodes(user.id, show.id) if show else []
@@ -286,7 +326,7 @@ async def run_production(
             if resolved_format == MediaFormat.WEB_SERIES:
                 if episode_number is None:
                     episode_number = max((ep.episode_number for ep in existing_eps), default=0) + 1
-                ep_title = f"{title} - Episode {episode_number}"
+                ep_title = f"{title} - Episode {episode_number:02d}"
                 badge_label, headline = "SERIES", f"{title} EP {episode_number:02d}!"
             else:
                 episode_number = 1
@@ -297,9 +337,10 @@ async def run_production(
                     MediaFormat.MOVIE_CINEMATIC: ("FILM", title, title),
                     MediaFormat.EPIC_CINEMATIC: ("EPIC FILM", title, title),
                     MediaFormat.DANCE_VIDEO: ("DANCE", title, f"{title}!"),
-                    MediaFormat.MUSIC_VIDEO: ("MUSIC VIDEO", title, f"{title}!"),
+                    MediaFormat.MUSIC_VIDEO: ("MUSIC VIDEO", title or "New Song", f"{title or 'New Song'}!"),
+                    MediaFormat.VOCAL_SONG: ("MUSIC VIDEO", title or "New Song", f"{title or 'New Song'}!"),
                 }
-                badge_label, ep_title, headline = fmt_labels.get(resolved_format, (resolved_format.value.upper().replace("_", " "), title, f"{title} 4K!"))
+                badge_label, ep_title, headline = fmt_labels.get(resolved_format, (resolved_format.value.upper().replace("_", " "), title or "New Production", f"{title or 'New Production'} 4K!"))
                 existing_ep = next((e for e in existing_eps if e.title == ep_title), None)
 
             # Pre-creation language-scoped duplicate check
@@ -331,6 +372,7 @@ async def run_production(
         script_label = f"Text: {script_text[:36]}..." if script_text else "None"
         active_sub = subtitle_language or "en"
 
+    effective_voice_gender = voice_gender or gender or "female"
     if voice_over or narration_male or narration_female or tts or goto_production:
         if not goto_production:
             is_voice_over = True
@@ -361,15 +403,21 @@ async def run_production(
     episode.options.enable_bgm, episode.options.enable_lipsync = enable_bgm, enable_lipsync
     episode.options.voice_gender = effective_voice_gender
     episode.options.target_languages = [language]
+    ep_code = f"ep-{episode.episode_number:03d}" if episode.episode_number else f"ep-001"
 
-    ep_ws = storage_service.get_episode_path(str(user.id), show.slug, str(episode.id))
+    eff_net = network or (show.slug if show else "default_network")
+    clean_fmt = "music_video" if (fmt_str in ("vocal", "music_video", "vocal_song") or "music" in str(fmt_str).lower() or "vocal" in str(fmt_str).lower() or genre in ("vocal", "vocal_song", "song")) else (re.sub(r"[^a-zA-Z0-9_-]", "_", str(fmt_str).lower()).strip("_") or "music_video")
+    clean_name = re.sub(r"\s*[-–—]?\s*episode\s*\d+", "", str(title), flags=re.IGNORECASE).strip()
+    clean_prod = re.sub(r"[^a-zA-Z0-9]+", "_", clean_name.lower()).strip("_") or "standalone"
+    u_cont = getattr(user, "storage_container_name", None) or getattr(user, "email", None) or str(user.id)
+    ep_ws = storage_service.get_channel_format_production_episode_path(u_cont, eff_net, clean_fmt, clean_prod, ep_code)
     ep_ws.mkdir(parents=True, exist_ok=True)
     user_inputs = {
         "user_id": str(user.id), "episode_id": str(episode.id), "title": ep_title, "duration_seconds": duration, "format": fmt_str, "genre": genre,
         "theme": theme or (resolved_theme.value if resolved_theme != ThemeGenre.AUTO else None), "idea": idea, "script": script_text, "youtube_reference_url": youtube_reference_link,
         "tier": tier, "profile": profile, "language": language, "subtitle_language": active_sub, "gender": effective_voice_gender, "character_name": character_name, "art_style": art_style,
         "enable_voice_over": is_voice_over, "enable_bgm": enable_bgm, "enable_lipsync": enable_lipsync, "reference_attributes": ref_attrs.model_dump(mode="json") if ref_attrs else None,
-        "target_languages": episode.options.target_languages, "created_at": time.time(),
+        "target_languages": episode.options.target_languages, "num_images": num_images, "use_loras": use_loras, "created_at": time.time(),
     }
     with open(ep_ws / "user_inputs.json", "w", encoding="utf-8") as f: json.dump(user_inputs, f, indent=2)
 
@@ -391,11 +439,24 @@ async def run_production(
         from src.compositor.genre_strategies import resolve_strategy
         strategy = resolve_strategy(media_format=fmt_str, genre=genre, idea=idea or title)
         culture_ctx = derive_cultural_context(script_text=script_text or idea or title, language=language, genre=genre, user_cultural_heritage=culture)
+        eff_idea = idea or (theme if theme else None) or prompt
+        eff_theme = theme or (resolved_theme.value if resolved_theme != ThemeGenre.AUTO else None) or eff_idea
+        gemini_inputs = {
+            "title": ep_title, "duration_seconds": duration, "language": language,
+            "genre": genre, "idea": eff_idea, "theme": eff_theme,
+            "music_style": music_style, "num_images": num_images, "similar_to": similar_to,
+            "country": country, "culture": culture, "gender": effective_voice_gender,
+            "art_style": art_style or (ref_attrs.art_style if ref_attrs else ""),
+            "culture_ctx": culture_ctx, "character_name": character_name, "prompt": prompt,
+        }
+        with open(ep_ws / "gemini_inputs.json", "w", encoding="utf-8") as f:
+            json.dump(gemini_inputs, f, indent=2, default=str)
+
         if script_text:
-            prompt = build_storyboard_prompt(
+            gemini_prompt = build_storyboard_prompt(
                 title=ep_title, duration_seconds=duration,
                 language=language, fmt_str=fmt_str, genre=genre,
-                custom_script=script_text, idea=idea, theme=theme or (resolved_theme.value if resolved_theme != ThemeGenre.AUTO else None),
+                custom_script=script_text, idea=eff_idea, theme=eff_theme,
                 refine_script=refine_script,
                 art_style=art_style or (ref_attrs.art_style if ref_attrs else ""),
                 architecture_style=ref_attrs.architecture_style if ref_attrs else None,
@@ -403,15 +464,18 @@ async def run_production(
             )
             schema = None
         else:
-            prompt = strategy.build_gemini_prompt(
-                title=ep_title, duration_seconds=duration, language=language,
-                genre=genre, idea=idea, art_style=art_style or (ref_attrs.art_style if ref_attrs else ""),
-                culture_ctx=culture_ctx, character_name=character_name,
-            )
+            gemini_prompt = strategy.build_gemini_prompt(**gemini_inputs)
             schema = strategy.build_gemini_schema()
+
+        with open(ep_ws / "gemini_prompt.txt", "w", encoding="utf-8") as f:
+            f.write(gemini_prompt)
+        if schema:
+            with open(ep_ws / "gemini_schema.json", "w", encoding="utf-8") as f:
+                json.dump(schema, f, indent=2)
+
         from src.providers.llm.gemini_adapter import GeminiLLMAdapter
         llm = GeminiLLMAdapter()
-        storyboard_data = await llm.generate_structured(prompt, schema=schema) if schema else await llm.generate_structured(prompt)
+        storyboard_data = await llm.generate_structured(gemini_prompt, schema=schema) if schema else await llm.generate_structured(gemini_prompt)
         strategy.validate_storyboard(storyboard_data)
         with open(storyboard_path, "w", encoding="utf-8") as f:
             json.dump(storyboard_data, f, indent=2)
@@ -421,6 +485,26 @@ async def run_production(
     if storyboard_data.get("title_en"):
         ep_title = storyboard_data["title_en"]
         episode.title = ep_title
+        headline = f"{ep_title}!"
+        if network:
+            clean_fmt = "music_video" if (fmt_str in ("vocal", "music_video", "vocal_song") or "music" in str(fmt_str).lower() or "vocal" in str(fmt_str).lower() or genre in ("vocal", "vocal_song", "song")) else (re.sub(r"[^a-zA-Z0-9_-]", "_", str(fmt_str).lower()).strip("_") or "music_video")
+            clean_name = re.sub(r"\s*[-–—]?\s*episode\s*\d+", "", str(ep_title), flags=re.IGNORECASE).strip()
+            clean_prod = re.sub(r"[^a-zA-Z0-9]+", "_", clean_name.lower()).strip("_") or "standalone"
+            new_ep_ws = storage_service.get_channel_format_production_episode_path(u_cont, network, clean_fmt, clean_prod, ep_code)
+            if new_ep_ws != ep_ws:
+                new_ep_ws.mkdir(parents=True, exist_ok=True)
+                import shutil
+                for item in ep_ws.iterdir():
+                    dst = new_ep_ws / item.name
+                    if not dst.exists():
+                        shutil.move(str(item), str(dst))
+                try:
+                    ep_ws.rmdir()
+                except Exception:
+                    pass
+                ep_ws = new_ep_ws
+                thumb_dir = ep_ws / "thumbnails"
+                storyboard_path = ep_ws / "storyboard.json"
 
     start_user_balance = float(user.api_credit_balance_usd)
     episode.cost_record = calculate_preflight_estimate(episode)
@@ -442,15 +526,16 @@ async def run_production(
     print(f"\n[1/4] Confirmed Episode Project: {episode.id} (Profile: {profile.upper()}, Tier: {selected_tier.upper()}, Mode: {decision_mode.upper()}, Budget: ${episode.estimated_cost_usd:.4f})")
     thumb_dir = ep_ws / "thumbnails"
     thumb_dir.mkdir(parents=True, exist_ok=True)
-    candidate_keyframes = [ep_ws / "scenes" / "scene_01.jpg", ep_ws / "scenes" / "scene_00.jpg"]
-    base_keyframe = next((p for p in candidate_keyframes if p.is_file() and p.stat().st_size > 1000), None)
+    all_imgs = sorted([p for p in (ep_ws / "scenes").glob("scene_*.jpg") if p.is_file() and p.stat().st_size > 1000])
+    base_keyframe = all_imgs[-1] if all_imgs else None
     generate_episodic_thumbnail(
         output_path=thumb_dir / f"thumb_ep{episode_number:02d}_{language}.jpg",
         base_image_path=base_keyframe,
         badge_config=EpisodicBadgeConfig(episode_number=episode_number, language=language, style="pill", position="top_left", custom_label=badge_label),
         headline=headline,
+        enable_vfx=True,
     )
-    print(f"[2/4] Rendered Top-Left Episodic Thumbnail: thumb_ep{episode_number:02d}_{language}.jpg")
+    print(f"[2/4] Rendered Top-Left Episodic Thumbnail with VFX: thumb_ep{episode_number:02d}_{language}.jpg")
 
     ffmpeg_available = has_ffmpeg()
     effective_dry_run = dry_run or not ffmpeg_available
@@ -464,24 +549,25 @@ async def run_production(
         character_name=character_name, culture=culture, costume_style=costume_style, dance_type=dance_type,
         gender=effective_voice_gender, art_style=art_style, custom_script=script_text, idea=idea, theme=theme,
         refine_script=refine_script, enable_voice_over=is_voice_over, enable_bgm=enable_bgm, enable_lipsync=enable_lipsync,
-        auto_confirm=auto_confirm, profile=profile,
+        auto_confirm=auto_confirm, profile=profile, music_style=music_style, similar_to=similar_to, country=country,
+        network=network, num_images=num_images, use_loras=use_loras,
     )
     if not final_video:
         print("[!] Production stopped at Image Quality Gate. No video rendered.\n")
         return None
 
-    # Refresh episodic thumbnail using the newly synthesized scene keyframe as the high-res background canvas
-    base_keyframe = next((p for p in candidate_keyframes if p.is_file() and p.stat().st_size > 1000), None)
-    if not base_keyframe:
-        all_imgs = sorted((ep_ws / "scenes").glob("scene_*.jpg"))
-        base_keyframe = all_imgs[0] if all_imgs else None
+    # Refresh episodic thumbnail using the LAST picture from scenes all the time with VFX
+    all_imgs = sorted([p for p in (ep_ws / "scenes").glob("scene_*.jpg") if p.is_file() and p.stat().st_size > 1000])
+    base_keyframe = all_imgs[-1] if all_imgs else None
     if base_keyframe:
         generate_episodic_thumbnail(
             output_path=thumb_dir / f"thumb_ep{episode_number:02d}_{language}.jpg",
             base_image_path=base_keyframe,
             badge_config=EpisodicBadgeConfig(episode_number=episode_number, language=language, style="pill", position="top_left", custom_label=badge_label),
             headline=headline,
+            enable_vfx=True,
         )
+        print(f"[4/4] Rendered Final 4K Thumbnail from last scene ({base_keyframe.name}) with VFX: thumb_ep{episode_number:02d}_{language}.jpg")
     print(f"[4/4] Master Video Generated: {final_video}")
 
     saved_episode = repo.get_episode(user.id, episode.id)
@@ -507,11 +593,18 @@ def main():
         ("--culture", None, str, "Culture", None), ("--costume", None, str, "Costume", "costume_style"),
         ("--dance", None, str, "Dance", "dance_type"), ("--character", None, str, "Char", "character_name"),
         ("--gender", "female", str, "Gender", None), ("--type", "auto", str, "Format", "media_format"),
+        ("--style", None, str, "Musical style (e.g. soft, energetic, poetic, festive, romantic)", "music_style"),
+        ("--similar-to", None, str, "Reference famous song for mood/tenderness/pattern", "similar_to"),
         ("--art-style", None, str, "Style", "art_style"), ("--voice-gender", None, str, "Voice gender", "voice_gender"),
         ("--youtube-reference-link", None, str, "YouTube URL", "youtube_reference_link"),
+        ("--user-id", None, str, "User ID scope", "user_id"),
+        ("--network", None, str, "Network or Channel universe name/slug", "network"),
+        ("--name", None, str, "Project / Episode name (alias for --title)", "name_alias"),
+        ("--format", None, str, "Media format (alias for --type)", "format_alias"),
         ("--languages", None, str, "Target Languages (e.g. en,te,hi)", "target_languages"),
         ("--target-languages", None, str, "Target Languages alias (e.g. en,te,hi)", "target_languages"),
         ("--prompt", None, str, "Prompt directive", None),
+        ("--images", 1, int, "Number of images to generate and rotate across song duration (default: 1)", "num_images"),
     ]:
         p.add_argument(fl, **{"type": t, "default": d, "help": h, **({"dest": dst} if dst else {})})
     for fls, h, dst in [
@@ -521,6 +614,7 @@ def main():
         (["--narration-male"], "Male voice", "narration_male"), (["--narration-female"], "Female voice", "narration_female"),
         (["--tts"], "Conversational TTS", "tts"), (["--bgm"], "Background music", "bgm"),
         (["--refine", "--refine-script"], "Refine screenplay", "refine_script"),
+        (["--loras", "--use-loras"], "Use persistent network LoRA models", "use_loras"),
     ]:
         p.add_argument(*fls, action="store_true", default=False, help=h, dest=dst)
     profile_group = p.add_mutually_exclusive_group()
@@ -528,6 +622,14 @@ def main():
     profile_group.add_argument("--dev", dest="profile", action="store_const", const="development", help="Live providers with development fallbacks")
     profile_group.add_argument("--live", dest="profile", action="store_const", const="production", help="Live production providers, strict fallback policy")
     args = vars(p.parse_args())
+    if args.get("name_alias"):
+        args["title"] = args.pop("name_alias")
+    else:
+        args.pop("name_alias", None)
+    if args.get("format_alias"):
+        args["media_format"] = args.pop("format_alias")
+    else:
+        args.pop("format_alias", None)
     profile = args.pop("profile") or "development"
     args["profile"] = profile
     args["local"] = profile == "local"

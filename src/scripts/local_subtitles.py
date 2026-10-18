@@ -81,20 +81,22 @@ def generate_kinetic_ass(
     output_path: Path | str,
     language: str = "en",
     font_size: int = 34,
+    alignment: int = 2,
+    font_name: str | None = None,
 ) -> Path:
     """Generate Hollywood cinematic broadcast-standard ASS subtitle file with clean typography and optical letter spacing."""
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    # Professional unicode font selection per regional language
-    font_name = "Arial"
-    if language == "te":
-        font_name = "Suranna"
-    elif language == "hi":
-        font_name = "Baloo 2"
-    elif language in ("ta", "kn", "ml"):
-        font_name = "Segoe UI"
+    if not font_name:
+        try:
+            from src.services.font_manager import ensure_language_font
+            font_name, _ = ensure_language_font(language)
+        except Exception:
+            font_name = "Nirmala UI" if language in ("te", "hi", "ta", "kn", "ml") else "Arial"
 
+    margin_v = 65 if alignment == 2 else 0
+    spacing_val = 0.0 if language in ("te", "hi", "ta", "kn", "ml") else 1.2
     ass_header = f"""[Script Info]
 Title: CineAI Studio Hollywood Cinematic Subtitles ({language})
 ScriptType: v4.00+
@@ -106,7 +108,7 @@ PlayResY: 1080
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: CinematicDefault,{font_name},{font_size},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,1.2,0,1,1.8,1.0,2,80,80,65,1
+Style: CinematicDefault,{font_name},{font_size},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,{spacing_val},0,1,2.2,1.0,{alignment},80,80,{margin_v},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -131,6 +133,7 @@ def generate_subtitle_bundle(
     base_language: str,
     output_dir: Path | str,
     default_subtitle_lang: str = "en",
+    alignment: int = 2,
 ) -> dict:
     """Generate complete multi-language subtitle tracks (.ass, .srt, .vtt) with manifest."""
     out_dir = Path(output_dir)
@@ -158,7 +161,7 @@ def generate_subtitle_bundle(
         srt_file = out_dir / f"{lang}.srt"
         vtt_file = out_dir / f"{lang}.vtt"
 
-        generate_kinetic_ass(translated_segments, ass_file, language=lang)
+        generate_kinetic_ass(translated_segments, ass_file, language=lang, alignment=alignment)
         generate_srt(translated_segments, srt_file)
         generate_vtt(translated_segments, vtt_file)
 

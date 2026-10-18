@@ -8,10 +8,14 @@ from src.compositor.genre_strategies.mountain_survival_strategy import MountainS
 from src.compositor.genre_strategies.music_video_strategy import MusicVideoStrategy
 from src.compositor.genre_strategies.nature_strategy import NatureDocumentaryStrategy
 from src.compositor.genre_strategies.tourist_guide_strategy import TouristGuideStrategy
+from src.compositor.genre_strategies.vocal_strategy import VocalStrategy
 from src.compositor.genre_strategies.walking_tour_strategy import WalkingTourStrategy
 
 # Singleton instances — strategies are stateless config, instantiated once
 _STRATEGIES: dict[str, GenreStrategy] = {
+    "vocal": VocalStrategy(),
+    "vocal_song": VocalStrategy(),
+    "lyrical_video": VocalStrategy(),
     "dance_video": DanceStrategy(),
     "music_video": MusicVideoStrategy(),
     "tourist_guide": TouristGuideStrategy(),
@@ -35,6 +39,7 @@ _STRATEGIES: dict[str, GenreStrategy] = {
 
 # Fallback keyword detection for when format string doesn't match directly
 _KEYWORD_FALLBACKS: list[tuple[list[str], str]] = [
+    (["vocal", "lyrical", "lyric video", "suno song", "audio song", "vocal song"], "vocal"),
     (["dance", "folk dance", "jathara", "choreography", "song dance", "mass dance"], "dance_video"),
     (["music video", "monsoon song", "love song", "melody song"], "music_video"),
     (["tourist attractions", "top 10 places", "places to see", "city guide", "in 3 days", "in 4 days"], "tourist_guide"),
@@ -81,5 +86,5 @@ __all__ = [
     "GenreStrategy", "resolve_strategy",
     "DanceStrategy", "NatureDocumentaryStrategy", "WalkingTourStrategy",
     "ComedyStrategy", "MountainSurvivalStrategy", "EpicCinematicStrategy",
-    "TouristGuideStrategy", "MusicVideoStrategy",
+    "TouristGuideStrategy", "MusicVideoStrategy", "VocalStrategy",
 ]

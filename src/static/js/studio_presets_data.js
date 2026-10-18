@@ -116,6 +116,7 @@ const ALL_STUDIO_GENRES = {
   "relax/cozy": "🪵 Cozy Living Spaces & Fireplace (relax/cozy)",
   "relax/ambient": "🌌 Velvet Ambient World 14 Archetypes (relax/ambient)",
   "documentary": "🦅 BBC-Style 24fps Wildlife & Documentary (documentary)",
+  "doc/nations": "🌍 Nations & Civilizations (doc/nations)",
   "travel/scenic": "✈️ Travel & Nature Scenic Wonders (travel/scenic)",
   "relax/scenic": "✈️ Travel & Nature Scenic Wonders (travel/scenic)",
   "relax/art": "🎨 Living Art, Museum Galleries & Ateliers (relax/art)",
@@ -126,13 +127,22 @@ const ALL_STUDIO_GENRES = {
 };
 
 const DEFAULT_CHANNEL_GENRES = {
-  "nature_rhythms": ["relax/nature", "relax/rain", "relax/forest", "relax/mountain", "relax/valley", "relax/ocean", "relax/beach_lounge", "relax/desert", "relax/blizzard", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient", "relax/hearth", "relax/cozy", "travel/scenic", "documentary", "science", "travel_walking"],
-  "earth_serenade": ["relax/nature", "relax/rain", "relax/forest", "relax/mountain", "relax/valley", "relax/ocean", "relax/beach_lounge", "relax/desert", "relax/blizzard", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient", "travel/scenic", "relax/art", "science"],
+  "nature_rhythms": ["relax/nature", "relax/rain", "relax/forest", "relax/mountain", "relax/valley", "relax/ocean", "relax/beach_lounge", "relax/desert", "relax/blizzard", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient", "relax/hearth", "relax/cozy", "travel/scenic", "documentary", "doc/nations", "science", "travel_walking"],
+  "earth_serenade": ["relax/nature", "relax/rain", "relax/forest", "relax/mountain", "relax/valley", "relax/ocean", "relax/beach_lounge", "relax/desert", "relax/blizzard", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient", "travel/scenic", "doc/nations", "relax/art", "science"],
   "silent_hearth": ["relax/hearth", "relax/rain", "relax/cozy", "relax/blizzard"],
-  "skylinediariesindia4k": ["travel/scenic"]
+  "skylinediariesindia4k": ["travel/scenic"],
+  "euro_discovery": ["doc/nations", "documentary", "travel/scenic", "travel_walking"]
 };
 
 const STUDIO_SUBOPTIONS_MAP = {
+  "doc/nations": [
+    { val: "europe_nations", label: "🇪🇺 Nations of Europe" },
+    { val: "asia_nations", label: "🌏 Nations of Asia" },
+    { val: "africa_nations", label: "🌍 Nations of Africa" },
+    { val: "americas_nations", label: "🌎 Nations of the Americas" },
+    { val: "oceania_nations", label: "🏝️ Nations of Oceania & the Pacific" },
+    { val: "nordic_polar_nations", label: "❄️ Nordic & Polar Realms" }
+  ],
   "relax/art": [{ val: "living_impressionism", label: "🎨 Living Impressionist Canvas (Monet/Van Gogh)" }, { val: "grand_gallery", label: "🏛️ Louvre & Uffizi Grand Gallery Walk" }, { val: "artist_atelier", label: "🖌️ Sunlit Parisian Artist Atelier & Loft" }, { val: "sumie_ukiyoe", label: "🪷 Japanese Ukiyo-e Woodblock & Sumi-e" }, { val: "stained_glass", label: "✨ Cathedral Rose Stained Glass & Light" }, { val: "klimt_gold_leaf", label: "🪙 Art Nouveau Gold Leaf & Fluid Marble" }, { val: "surrealist_dream", label: "🌌 Surrealist Dreamscape & Floating Gardens" }],
   "travel/scenic": [{ val: "cities", label: "🏙️ Metropolises & City Skylines" }, { val: "nature", label: "🌲 Wilderness & Nature Escapes" }, { val: "remote_places", label: "🧭 Remote Places & Untouched Frontiers" }, { val: "tourist_places", label: "🏖️ Tourist Havens & Vibrant Promenades" }, { val: "spiritual_places", label: "🪔 Spiritual Places, Shrines & Ghats" }, { val: "iconic_places", label: "🏛️ Iconic World Heritage & Historic Forts" }, { val: "natural_wonders", label: "🌋 Natural Wonders, Canyons & Cataracts" }],
   "relax/scenic": [{ val: "cities", label: "🏙️ Metropolises & City Skylines" }, { val: "nature", label: "🌲 Wilderness & Nature Escapes" }, { val: "remote_places", label: "🧭 Remote Places & Untouched Frontiers" }, { val: "tourist_places", label: "🏖️ Tourist Havens & Vibrant Promenades" }, { val: "spiritual_places", label: "🪔 Spiritual Places, Shrines & Ghats" }, { val: "iconic_places", label: "🏛️ Iconic World Heritage & Historic Forts" }, { val: "natural_wonders", label: "🌋 Natural Wonders, Canyons & Cataracts" }],
@@ -255,7 +265,13 @@ const STUDIO_SUBGENRE_PLACEHOLDERS = {
   human_evolution: "e.g. East African Rift Valley hominin origins, Neanderthal ice age survival, Lascaux cave art...",
   science_medicine: "e.g. Synaptic connectome of the human brain, CRISPR Cas9 editing molecular DNA strands, cellular mitosis...",
   science_physics: "e.g. Quantum superposition & entanglement, CERN Large Hadron Collider proton collisions, atomic lattice microscopy...",
-  science_tech: "e.g. Tokamak nuclear fusion reactor magnetic confinement, superconducting quantum computing cryostats, ion drives..."
+  science_tech: "e.g. Tokamak nuclear fusion reactor magnetic confinement, superconducting quantum computing cryostats, ion drives...",
+  europe_nations: "e.g. Leave empty for autonomous European country & topic rotation via TopicMemory, or specify (e.g. Poland, Austria, Greece)...",
+  asia_nations: "e.g. Leave empty for autonomous Asian country & topic rotation via TopicMemory, or specify (e.g. Japan, India, Vietnam)...",
+  africa_nations: "e.g. Leave empty for autonomous African country & topic rotation via TopicMemory, or specify (e.g. Egypt, Morocco, Kenya)...",
+  americas_nations: "e.g. Leave empty for autonomous Americas country & topic rotation via TopicMemory, or specify (e.g. Peru, Canada, Mexico)...",
+  oceania_nations: "e.g. Leave empty for autonomous Pacific nation & topic rotation via TopicMemory, or specify (e.g. New Zealand, Australia)...",
+  nordic_polar_nations: "e.g. Leave empty for autonomous Nordic realm & topic rotation via TopicMemory, or specify (e.g. Iceland, Norway, Svalbard)..."
 };
 
 const STUDIO_ARCHETYPES_MAP = {
@@ -309,6 +325,30 @@ const STUDIO_ARCHETYPES_MAP = {
     { val: "whitehaven_barrier_reef", label: "🏖️ Great Barrier Reef & Whitehaven Beach" },
     { val: "amalfi_cliffside_mediterranean", label: "🌊 Amalfi Coast & Azure Sea Cliffs" },
     { val: "sahara_dunes_canyons", label: "🏜️ Sahara Monumental Star Dunes" }
+  ],
+  "doc/nations": [
+    { val: "ancient_history_dynasties", label: "⏳ Deep History: Founding Dynasties & Eras" },
+    { val: "national_identity_heritage", label: "👑 Soul of the Nation: Identity & Heritage" },
+    { val: "great_cities_metropolises", label: "🏙️ Great Cities & Urban Marvels" },
+    { val: "natural_history_geology", label: "🌋 Natural History & Geological Marvels" },
+    { val: "spiritual_sanctuaries", label: "🪔 Spiritual Centers & Sacred Sanctuaries" },
+    { val: "cultural_entertainment_zones", label: "🎭 Cultural Life, Entertainment & Festivals" },
+    { val: "sports_arenas_legacy", label: "🏟️ Sports Heritage & Iconic Arenas" },
+    { val: "luminaries_pioneers", label: "📜 Famous Figures, Luminaries & Pioneers" },
+    { val: "modern_evolution_transformation", label: "🚀 Modern Evolution & Future Transformation" },
+    { val: "scenic_landscapes_horizons", label: "🌄 Scenic Beauty: Horizons & Postcard Vistas" },
+    { val: "provinces_regional_countryside", label: "🌾 Regional Landscapes, Provinces & Countryside" },
+    { val: "biodiversity_untamed_wildlife", label: "🌿 Biodiversity, National Parks & Living Nature" },
+    { val: "climate_seasons_weather", label: "⛅ Climate, Seasons & Atmospheric Weather" },
+    { val: "engineering_marvels", label: "📐 Engineering Feats & Architectural Wonders" },
+    { val: "history_architecture", label: "🏛️ Ancient History & Monumental Architecture" },
+    { val: "archaeological_ruins_lost_empires", label: "🏺 Ancient Ruins, Megaliths & Lost Civilizations" },
+    { val: "culinary_gastronomic_heritage", label: "🍷 Culinary Traditions, Food Markets & Gastronomy" },
+    { val: "living_traditions_artisan_crafts", label: "🎨 Living Traditions, Folk Festivals & Master Artisans" },
+    { val: "coastal_islands_maritime", label: "🏖️ Coastal Wonders, Historic Ports & Island Sanctuaries" },
+    { val: "historic_trade_routes_journeys", label: "🧭 Historic Trade Routes, Mountain Passes & Trails" },
+    { val: "geographic_regions_zones", label: "🗺️ Geographic Regions, Territories & Zones" },
+    { val: "cultural_mosaic_traditions", label: "🪕 Cultural Mosaic, Sub-Cultures & Traditions" }
   ],
   "documentary:tour": [
     { val: "itinerary_map_tour", label: "🗺️ Itinerary Tour (Ordered Route, Day Plan & Connecting Map)" },
@@ -463,6 +503,28 @@ const STUDIO_ARCHETYPE_HINTS = {
   hominin_origins_rift_valley: "e.g. East African Rift Valley: Australopithecus hominins walking upright across ancient savannah, Olduvai Gorge basalt strata...",
   ice_age_neanderthals: "e.g. Pleistocene Ice Age Eurasia: Neanderthal clan sheltering in limestone cave, woolly mammoth hunt in blizzard, Denisovan lineage...",
   mastery_of_fire_stone_tools: "e.g. The Dawn of Fire: Early hominins knapping flint Acheulean handaxes, striking pyrites to spark hearth fires, communal cooking...",
-  cognitive_revolution_cave_art: "e.g. Chauvet & Lascaux Caves: Flickering animal fat lamp illuminating red ochre bison murals, hand stencils, deep cavern ritualism..."
+  cognitive_revolution_cave_art: "e.g. Chauvet & Lascaux Caves: Flickering animal fat lamp illuminating red ochre bison murals, hand stencils, deep cavern ritualism...",
+  ancient_history_dynasties: "e.g. Chronicles of Poland: Piast dynasty foundations, Gniezno coronation cathedral, Teutonic knights...",
+  national_identity_heritage: "e.g. Soul of Japan: Shinto shrines, imperial Chrysanthemum throne, samurai code, and timeless national heritage...",
+  great_cities_metropolises: "e.g. Crowns of Italy: Rome, Florence, and Venice - marble piazzas, Renaissance palaces, and grand canals...",
+  natural_history_geology: "e.g. Earth & Deep Time: Iceland's rift valley tectonic boundary, basalt lava tubes, and subglacial caldera...",
+  spiritual_sanctuaries: "e.g. Sacred Sanctuaries of Greece: Meteora cliff-hanging monasteries, Mount Athos Byzantine frescoes, Delphi...",
+  cultural_entertainment_zones: "e.g. Cultural Life of Austria: Vienna State Opera, historic coffeehouse literary salons, and Salzburg music festival...",
+  sports_arenas_legacy: "e.g. Athletic Glory of the United Kingdom: Wimbledon grass courts, Wembley Stadium, and historic rowing boathouses...",
+  luminaries_pioneers: "e.g. Luminaries of France: Marie Curie, Louis Pasteur, Victor Hugo, and Claude Monet - visionary pioneers who shaped history...",
+  modern_evolution_transformation: "e.g. Modern Evolution of South Korea: From post-war recovery to Seoul high-tech digital metropolis and bullet trains...",
+  scenic_landscapes_horizons: "e.g. Vistas of New Zealand: Southern Alps snow peaks, Milford Sound fjord waterfalls, and turquoise glacial lakes...",
+  provinces_regional_countryside: "e.g. Hidden Provinces of Spain: Andalusia white villages, olive groves, Basque coastal fishing hamlets...",
+  biodiversity_untamed_wildlife: "e.g. Untamed Brazil: Amazon rainforest canopy, Pantanal jaguar wetlands, and endemic river dolphin habitats...",
+  climate_seasons_weather: "e.g. Four Seasons of Canada: Canadian Rockies autumn larches, winter blizzard icefields, and blooming alpine meadows...",
+  engineering_marvels: "e.g. Master Builders of the Netherlands: Delta Works storm surge barrier, historic windmills, and canal engineering...",
+  history_architecture: "e.g. Architectural Heritage of Germany: Neuschwanstein Castle, Cologne Cathedral Gothic spires, and Bauhaus design...",
+  archaeological_ruins_lost_empires: "e.g. Lost Civilizations of Peru: Machu Picchu Inca granite masonry, Nazca lines, and sacred Urubamba ruins...",
+  culinary_gastronomic_heritage: "e.g. Culinary Heritage of Vietnam: Hanoi street food alleyways, pho broth simmering over charcoal, and Mekong delta markets...",
+  living_traditions_artisan_crafts: "e.g. Living Traditions of India: Varanasi silk weavers, Jaipur block-printing guilds, and Rajasthan desert folk fairs...",
+  coastal_islands_maritime: "e.g. Maritime Wonders of Norway: Lofoten Islands fishing rorbuer, sheer fjord cliff walls, and Arctic cod drying racks...",
+  historic_trade_routes_journeys: "e.g. The Great Silk Road of Uzbekistan: Samarkand turquoise tile domes, Bukhara trading caravanserais, and Kyzylkum desert trails...",
+  geographic_regions_zones: "e.g. Regions of the United States: Pacific Northwest, American Southwest, New England, and Deep South...",
+  cultural_mosaic_traditions: "e.g. Cultural Mosaic of India: Kashmiri, Punjabi, Bengali, Rajasthani, and Tamil living customs & heritage..."
 };
 

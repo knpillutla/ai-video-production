@@ -93,6 +93,7 @@ async def produce_channel_video(
     weather: Optional[str] = "normal",
     production_name: Optional[str] = None,
     format_slug: Optional[str] = None,
+    tts_model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Execute live channel pipeline script for selected channel inside isolated user channel folder."""
     effective_user = user_id or "user_krishna_01"
@@ -403,7 +404,8 @@ async def produce_channel_video(
 
     generated_sub_genre = getattr(universal_sp, "sub_genre", None) or eff_genre
     sb = relax_to_ambient_storyboard(universal_sp)
-    sb.weather = eff_weather
+    if "relax" in str(eff_genre_final).lower():
+        sb.weather = eff_weather
     sb.genre = eff_genre_final
 
     generated_primary_archetype = getattr(universal_sp, "primary_archetype", None) or generated_sub_genre
@@ -537,6 +539,7 @@ async def produce_channel_video(
         allow_fallback=allow_fallback,
         long_play_hours=long_play_hours,
         force_rerun=force_rerun,
+        tts_model=tts_model,
     )
 
     ep_id = result.get("episode_id") or episode_id or "EP-001"

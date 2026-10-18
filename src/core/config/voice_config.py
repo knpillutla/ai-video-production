@@ -12,6 +12,9 @@ class VoiceSettings(BaseSettings):
 
 
     default_tts_provider: str = "azure_speech"
+    default_tts_model: str = "azure_speech"
+    gemini_tts_voice: str = "Charon"
+    kokoro_voice: str = "bm_george"
     default_sample_rate_hz: int = 48000
 
     model_config = SettingsConfigDict(

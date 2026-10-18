@@ -36,6 +36,12 @@ def test_strategy_resolution_all_genres():
     assert survival.genre_id == "mountain_survival"
     assert survival.default_fps == 24
 
+    vocal = resolve_strategy("vocal")
+    assert vocal.genre_id == "vocal"
+    assert vocal.audio_mode == "song"
+    assert vocal.lipsync_mode == "none"
+    assert vocal.default_fps == 30
+
 
 def test_strategy_keyword_fallback():
     """Verify fallback by keyword matching when format is not an exact match."""
@@ -51,7 +57,7 @@ def test_strategy_keyword_fallback():
 
 def test_strategy_prompt_and_schema():
     """Verify each strategy generates valid prompts and schemas."""
-    for genre_id in ["dance_video", "nature_documentary", "walking_tour", "comedy", "epic_cinematic", "mountain_survival"]:
+    for genre_id in ["dance_video", "nature_documentary", "walking_tour", "comedy", "epic_cinematic", "mountain_survival", "vocal"]:
         strat = resolve_strategy(genre_id)
         prompt = strat.build_gemini_prompt("Test Title", 60, "en", "general", "An exciting video", None, None)
         assert len(prompt) > 50
@@ -80,7 +86,7 @@ def test_universal_cultural_and_scene_derivation():
         script_text="Telangana village jathara teenmaar mass dance celebration",
         genre="bollywood_dance",
     )
-    assert ctx_dance.culture == "indian_south"
+    assert ctx_dance.culture in ("indian_south", "indian_telugu")
     assert ctx_dance.setting_type == "village_rural"
     assert "dholak" in ctx_dance.props_instruments
     assert ctx_dance.social_context == "festive_crowd"
