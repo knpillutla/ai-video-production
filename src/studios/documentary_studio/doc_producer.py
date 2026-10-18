@@ -243,7 +243,7 @@ class DocumentaryProducer:
                     "attraction_name": attraction_name, "timing_text": f"🕒 {start_t} – {end_t}  ({vis_dur})",
                     "day_badge": f"DAY {day_n} • STOP {scene.scene_index}", "cost_text": cost_t, "transit_text": trans_t,
                 } if is_tour else None
-                choreo = local_cfg.get("movement") or scene.drone_choreography or scene.motion_prompt
+                choreo = local_cfg.get("movement") or scene.drone_choreography or getattr(scene, "camera_movement", None) or "dollyin"
                 txt = f"{getattr(scene, 'visual_prompt', '')} {getattr(scene, 'location_hub', '')}".lower()
                 return await render_perspective_drone_clip(
                     image_path=kf_path, output_path=out_clip, duration_seconds=scene.duration_seconds,

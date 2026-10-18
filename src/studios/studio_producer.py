@@ -401,8 +401,20 @@ class StudioProducer:
                     elif not isinstance(local_cfg, dict):
                         local_cfg = {}
 
+                    target_choreo = local_cfg.get("movement") or getattr(s, "drone_choreography", None) or getattr(s, "camera_movement", None)
                     cam_mov = str(getattr(s, "camera_movement", "") or getattr(s, "camera_rig", "") or motion_model or "").lower()
-                    is_fixed_tripod = is_relax or any(w in cam_mov for w in ("locked", "tripod", "static", "fixed", "stay", "hold")) or (local_cfg.get("movement") == "stay")
+
+                    if is_tour_slide:
+                        eff_choreo = "stay"
+                    elif target_choreo:
+                        if any(w in str(target_choreo).lower() for w in ("stay", "hold", "static", "fixed", "cinemagraph")):
+                            eff_choreo = "stay"
+                        else:
+                            eff_choreo = str(target_choreo).lower()
+                    elif is_relax or any(w in cam_mov for w in ("locked", "tripod", "static", "fixed", "stay", "hold")):
+                        eff_choreo = "stay"
+                    else:
+                        eff_choreo = "dollyin"
 
                     w_combo = f"{u_weather} {u_genre} {u_subgenre} {getattr(s, 'weather', '')} {getattr(sb, 'weather', '')} {getattr(sb, 'cluster', '')} {getattr(sb, 'title', '')}".lower()
                     is_rain_scene = (u_weather == "rain") or any(k in w_combo for k in ("rain", "storm", "downpour", "cyclone", "monsoon", "relax/rain"))
@@ -414,7 +426,7 @@ class StudioProducer:
                     clip_dur = 5.0 if is_relax else (s.duration_seconds or 5.0)
 
                     is_water_scene = any(k in f"{getattr(s, 'visual_prompt', '')} {getattr(s, 'location_hub', '')}".lower() for k in ("water", "lake", "ocean", "river", "fjord", "sea", "pond", "waterfall", "stream", "bay", "coast"))
-                    if is_tour_slide or is_fixed_tripod:
+                    if eff_choreo == "stay":
                         # Static locked tripod hold: pure locked stationary frame ($0.00 compute)
                         coro = render_perspective_drone_clip(
                             image_path=kf,
@@ -453,14 +465,13 @@ class StudioProducer:
                             "transit_text": trans_t,
                         } if is_itinerary_tour else None
 
-                        choreo = local_cfg.get("movement") or getattr(s, "drone_choreography", None) or getattr(s, "camera_movement", None) or "dollyin"
                         coro = render_perspective_drone_clip(
                             image_path=kf,
                             output_path=out_clip,
                             duration_seconds=clip_dur,
                             fps=sb.recommended_fps or 24,
                             target_res=(3840, 2160),
-                            choreography=choreo,
+                            choreography=eff_choreo,
                             start_pan=local_cfg.get("start_pan", "center"),
                             start_zoom=local_cfg.get("start_zoom", "normal"),
                             start_tilt=local_cfg.get("start_tilt", "center"),

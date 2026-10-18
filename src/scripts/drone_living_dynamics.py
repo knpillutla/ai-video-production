@@ -44,64 +44,58 @@ class SpecularWaterShimmerEngine:
         grad_x = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
         grad_y = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
         grad_mag = cv2.magnitude(grad_x, grad_y)
-        terrain_edges = (grad_mag > 28.0).astype(np.uint8)
-        terrain_zone = cv2.dilate(terrain_edges, cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9)))
+        high_texture = (grad_mag > 55.0).astype(np.uint8)
+        hard_terrain = cv2.dilate(high_texture, cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7)))
 
-        c_classic = (hsv[:, :, 0] >= 85) & (hsv[:, :, 0] <= 135) & (hsv[:, :, 1] >= 22) & (hsv[:, :, 2] >= 22)
-        c_turquoise = (hsv[:, :, 0] >= 70) & (hsv[:, :, 0] <= 90) & (hsv[:, :, 1] >= 22) & (hsv[:, :, 2] >= 25)
-        c_dark_ocean = (hsv[:, :, 0] >= 80) & (hsv[:, :, 0] <= 145) & (hsv[:, :, 1] >= 12) & (hsv[:, :, 2] >= 15) & (hsv[:, :, 2] <= 95)
-        c_specular = (hsv[:, :, 0] >= 70) & (hsv[:, :, 0] <= 145) & (hsv[:, :, 1] <= 35) & (hsv[:, :, 2] >= 165)
+        c_classic = (hsv[:, :, 0] >= 85) & (hsv[:, :, 0] <= 135) & (hsv[:, :, 1] >= 18) & (hsv[:, :, 2] >= 18)
+        c_turquoise = (hsv[:, :, 0] >= 70) & (hsv[:, :, 0] <= 90) & (hsv[:, :, 1] >= 18) & (hsv[:, :, 2] >= 20)
+        c_dark_ocean = (hsv[:, :, 0] >= 80) & (hsv[:, :, 0] <= 145) & (hsv[:, :, 1] >= 10) & (hsv[:, :, 2] >= 12) & (hsv[:, :, 2] <= 110)
+        c_specular = (hsv[:, :, 0] >= 65) & (hsv[:, :, 0] <= 145) & (hsv[:, :, 1] <= 45) & (hsv[:, :, 2] >= 150)
         water_cand = (c_classic | c_turquoise | c_dark_ocean | c_specular)
-        water_cand[:int(height * 0.25), :] = False
-        water_cand[terrain_zone > 0] = False
+        water_cand[:int(height * 0.20), :] = False
+        water_cand[hard_terrain > 0] = False
 
-        k_open = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
-        water_clean = cv2.morphologyEx(water_cand.astype(np.uint8) * 255, cv2.MORPH_OPEN, k_open)
-        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(water_clean)
-        min_area = int(0.010 * width * height)
-        water_body = np.zeros_like(water_clean)
+        k_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+        water_closed = cv2.morphologyEx(water_cand.astype(np.uint8) * 255, cv2.MORPH_CLOSE, k_close)
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(water_closed)
+        min_area = int(0.005 * width * height)
+        water_body = np.zeros_like(water_closed)
         for lbl in range(1, num_labels):
             if stats[lbl, cv2.CC_STAT_AREA] >= min_area:
                 water_body[labels == lbl] = 255
 
-        k_buffer = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (19, 19))
+        k_buffer = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
         water_buffered = cv2.erode(water_body, k_buffer)
         dist = cv2.distanceTransform(water_buffered, cv2.DIST_L2, 5)
         max_d = 25.0 * self.scale
         water_mask = np.clip(dist / max_d, 0.0, 1.0).astype(np.float32)
+        self.water_mask = water_mask
 
-        if float(np.mean(water_mask > 0.01)) > 0.006:
+        if float(np.mean(water_mask > 0.01)) > 0.005:
             ys = np.where(water_mask > 0.005)[0]
             if len(ys) > 0:
                 y_min, y_max = int(ys.min()), int(ys.max()) + 1
+                self.y_min, self.y_max = y_min, y_max
                 roi_h = y_max - y_min
                 water_weight_roi = water_mask[y_min:y_max, :]
                 inv_water_weight_roi = 1.0 - water_weight_roi
                 roi_in = img[y_min:y_max, :]
-
-                sm_w = 1920
-                sm_h = max(16, int(round(roi_h * (1920.0 / width))))
-                roi_sm = cv2.resize(roi_in, (sm_w, sm_h), interpolation=cv2.INTER_LINEAR)
-                gx_sm, gy_sm = np.meshgrid(np.arange(sm_w, dtype=np.float32), np.arange(sm_h, dtype=np.float32))
+                gx, gy = np.meshgrid(np.arange(width, dtype=np.float32), np.arange(roi_h, dtype=np.float32))
 
                 for k in range(self.num_frames):
                     t = k * (2.0 * np.pi / self.num_frames)
-                    dx = (1.8 * np.sin(gx_sm * 0.015 + t) + 1.0 * np.sin(gx_sm * 0.035 - 1.3 * t) + 0.4 * np.sin(t)).astype(np.float32)
-                    dy = (2.2 * np.cos(gy_sm * 0.018 - t) + 1.2 * np.cos(gy_sm * 0.042 + 1.1 * t)).astype(np.float32)
-                    wave_sm = cv2.remap(roi_sm, gx_sm + dx, gy_sm + dy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-                    wave_roi = cv2.resize(wave_sm, (width, roi_h), interpolation=cv2.INTER_LANCZOS4)
+                    dx = (3.5 * self.scale * np.sin(gx * 0.008 + t) + 1.8 * self.scale * np.sin(gx * 0.020 - 1.3 * t)).astype(np.float32)
+                    dy = (2.5 * self.scale * np.cos(gy * 0.010 - t) + 1.2 * self.scale * np.cos(gy * 0.025 + 1.1 * t)).astype(np.float32)
+                    wave_roi = cv2.remap(roi_in, gx + dx, gy + dy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
 
-                    sh1 = np.sin(gx_sm * 0.065 + 2.2 * t) * np.cos(gy_sm * 0.065 - 1.8 * t)
-                    sh2 = np.cos(gx_sm * 0.12 - 1.4 * t + 0.7) * np.sin(gy_sm * 0.11 + 2.0 * t)
-                    caustic_raw = np.clip(sh1 + sh2 - 0.35, 0.0, 1.6) ** 2.5
-                    caustic_hi = cv2.resize(caustic_raw, (width, roi_h), interpolation=cv2.INTER_LINEAR)
-                    glint_bgr = (caustic_hi[:, :, None] * water_weight_roi[:, :, None] * np.array([28, 42, 52], dtype=np.float32)).astype(np.uint8)
+                    sh1 = np.sin(gx * 0.035 + 2.0 * t) * np.cos(gy * 0.035 - 1.8 * t)
+                    sh2 = np.cos(gx * 0.070 - 1.4 * t + 0.7) * np.sin(gy * 0.065 + 2.0 * t)
+                    caustic_raw = np.clip(sh1 + sh2 - 0.15, 0.0, 1.8) ** 1.8
+                    glint_bgr = (caustic_raw[:, :, None] * water_weight_roi[:, :, None] * np.array([45, 65, 80], dtype=np.float32)).astype(np.uint8)
                     wave_glint = cv2.add(wave_roi, glint_bgr)
 
                     blended = cv2.blendLinear(roi_in, wave_glint, inv_water_weight_roi, water_weight_roi)
-                    plate_k = img.copy()
-                    plate_k[y_min:y_max, :] = blended
-                    self.plates.append(plate_k)
+                    self.plates.append(blended)
                 self.has_water = True
 
 
@@ -253,11 +247,8 @@ class DroneLivingWorld:
                 if cloud_eng and cloud_eng.has_clouds:
                     frame_k = cloud_eng.plates[k].copy()
                 if water_eng and water_eng.has_water:
-                    # Water plate contains base plate + blended water ROI
-                    water_plate = water_eng.plates[k]
-                    diff = cv2.absdiff(water_plate, curr)
-                    mask = (cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY) > 1).astype(np.uint8)
-                    frame_k[mask > 0] = water_plate[mask > 0]
+                    w_y1, w_y2 = water_eng.y_min, water_eng.y_max
+                    frame_k[w_y1:w_y2, :] = water_eng.plates[k]
                 if obj_eng and obj_eng.has_objects:
                     frame_k = obj_eng.plates[k]
                 self.cycle_plates.append(frame_k)

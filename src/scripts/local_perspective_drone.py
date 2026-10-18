@@ -433,9 +433,21 @@ def normalize_choreography_sequence(choreography: Union[list, dict, str, None], 
 
     if isinstance(choreography, str):
         mov = choreography.lower().strip()
-        dur = max(2.0, min(14.0, default_duration))
+        dur = max(1.0, float(default_duration))
         if any(w in mov for w in ("stay", "hold", "fixed", "locked", "tripod", "static", "cinemagraph", "still")):
             return [("stay", dur)]
+        elif "orbit-left" in mov or "orbit_left" in mov:
+            return [("orbit-left", dur)]
+        elif "orbit-right" in mov or "orbit_right" in mov:
+            return [("orbit-right", dur)]
+        elif "drift-up-right" in mov:
+            return [("drift-up-right", dur)]
+        elif "drift-up-left" in mov:
+            return [("drift-up-left", dur)]
+        elif "drift-down-right" in mov:
+            return [("drift-down-right", dur)]
+        elif "drift-down-left" in mov:
+            return [("drift-down-left", dur)]
         elif "left" in mov:
             return [("pan-left", dur)]
         elif "right" in mov:
@@ -470,7 +482,7 @@ def normalize_choreography_sequence(choreography: Union[list, dict, str, None], 
                 norm.append((moves.lower().replace("_", "-"), dur))
             elif "action" in item:
                 norm.append((str(item["action"]).lower().replace("_", "-"), dur))
-    return norm if norm else [("dollyin", max(2.0, min(14.0, default_duration)))]
+    return norm if norm else [("dollyin", max(1.0, float(default_duration)))]
 
 
 def precompute_sequence_matrices(
@@ -505,9 +517,52 @@ def precompute_sequence_matrices(
         dtype=np.float32,
     )
 
-    cur_depth = 1.0 if start_zoom in ("in", "zoomed", "tight") else 0.0
-    cur_pan = -1.0 if start_pan in ("left", "far-left") else (1.0 if start_pan in ("right", "far-right") else 0.0)
-    cur_tilt = -1.0 if start_tilt in ("up", "top") else (1.0 if start_tilt in ("down", "bottom") else 0.0)
+    has_pan = any(
+        any(k in act for k in ("pan", "drift", "orbit", "left", "right"))
+        for item in sequence
+        for act in ([x[0] for x in item[1]] if item[0] == "parallel" else [item[0]])
+        if not any(w in act for w in ("stay", "hold", "fixed", "locked", "tripod", "static"))
+    )
+    has_tilt = any(
+        any(k in act for k in ("tilt", "pedestal", "crane", "drift", "up", "down", "ascend", "descend"))
+        for item in sequence
+        for act in ([x[0] for x in item[1]] if item[0] == "parallel" else [item[0]])
+        if not any(w in act for w in ("stay", "hold", "fixed", "locked", "tripod", "static"))
+    )
+
+    cur_depth = 1.0 if start_zoom in ("in", "zoomed", "tight") else (0.35 if (has_pan or has_tilt) else 0.0)
+
+    first_act = sequence[0][1][0][0] if (sequence and sequence[0][0] == "parallel" and sequence[0][1]) else (sequence[0][0] if sequence else "")
+    first_act = str(first_act).lower()
+
+    if start_pan in ("left", "far-left"):
+        cur_pan = -1.0
+    elif start_pan in ("right", "far-right"):
+        cur_pan = 1.0
+    else:
+        if "pan-right" in first_act or "panright" in first_act:
+            cur_pan = -0.85
+        elif "pan-left" in first_act or "panleft" in first_act:
+            cur_pan = 0.85
+        elif "orbit-left" in first_act:
+            cur_pan = 0.85
+        elif "orbit-right" in first_act:
+            cur_pan = -0.85
+        else:
+            cur_pan = 0.0
+
+    if start_tilt in ("up", "top"):
+        cur_tilt = -1.0
+    elif start_tilt in ("down", "bottom"):
+        cur_tilt = 1.0
+    else:
+        if any(k in first_act for k in ("tilt-up", "tiltup", "crane-up", "pedestal-up", "ascend")):
+            cur_tilt = 0.85
+        elif any(k in first_act for k in ("tilt-down", "tiltdown", "crane-down", "pedestal-down", "descend")):
+            cur_tilt = -0.85
+        else:
+            cur_tilt = 0.0
+
     cur_roll = 0.0
 
     timeline_states = []
@@ -523,12 +578,20 @@ def precompute_sequence_matrices(
             t_d = 0.0
         elif act in ("pan-left", "panleft"):
             t_p = -1.0
+            if t_d < 0.35:
+                t_d = 0.42
         elif act in ("pan-right", "panright"):
-            t_p = 0.0 if s_p < -0.05 else 1.0
+            t_p = 1.0
+            if t_d < 0.35:
+                t_d = 0.42
         elif act in ("tilt-up", "tiltup", "pedestal-up", "crane-up", "ascend"):
             t_t = -1.0
+            if t_d < 0.35:
+                t_d = 0.42
         elif act in ("tilt-down", "tiltdown", "pedestal-down", "crane-down", "descend"):
-            t_t = 0.0 if s_t < -0.05 else 1.0
+            t_t = 1.0
+            if t_d < 0.35:
+                t_d = 0.42
         elif act in ("roll-left", "rollleft"):
             t_r = -3.5
         elif act in ("roll-right", "rollright"):
@@ -537,16 +600,28 @@ def precompute_sequence_matrices(
             t_r = 0.0
         elif act in ("drift-up-right", "driftupright"):
             t_p = 1.0; t_t = -1.0
+            if t_d < 0.35:
+                t_d = 0.42
         elif act in ("drift-up-left", "driftupleft"):
             t_p = -1.0; t_t = -1.0
+            if t_d < 0.35:
+                t_d = 0.42
         elif act in ("drift-down-right", "driftdownright"):
             t_p = 1.0; t_t = 1.0
+            if t_d < 0.35:
+                t_d = 0.42
         elif act in ("drift-down-left", "driftdownleft"):
             t_p = -1.0; t_t = 1.0
+            if t_d < 0.35:
+                t_d = 0.42
         elif act in ("orbit-left", "orbitleft"):
-            t_p = -0.75; t_r = 2.5
+            t_p = -0.85; t_r = 2.5
+            if t_d < 0.35:
+                t_d = 0.42
         elif act in ("orbit-right", "orbitright"):
-            t_p = 0.75; t_r = -2.5
+            t_p = 0.85; t_r = -2.5
+            if t_d < 0.35:
+                t_d = 0.42
         elif "zoom-out" in act or "zoomout" in act or "dollyout" in act:
             t_d = 0.0; t_p = 1.0 if "right" in act else -1.0; t_t = s_t; t_r = s_r
         elif "zoom-in" in act or "zoomin" in act or "dollyin" in act:
