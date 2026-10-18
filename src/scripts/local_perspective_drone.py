@@ -256,9 +256,20 @@ class CinematicSnowEngine:
 
 
 class LivingEnvironmentEngine:
-    """Procedural living world dynamics: water wave displacement, caustic glimmer, and smoke plumes."""
+    """Procedural living world dynamics: water wave displacement, specular caustic shimmer, cloud drift, and smoke plumes."""
 
-    def __init__(self, img: np.ndarray, width: int, height: int, remove_objects: bool = False, remove_object_list: Optional[List[str]] = None, enable_water: bool = False, enable_smoke: bool = False):
+    def __init__(
+        self,
+        img: np.ndarray,
+        width: int,
+        height: int,
+        remove_objects: bool = False,
+        remove_object_list: Optional[List[str]] = None,
+        enable_water: bool = False,
+        enable_smoke: bool = False,
+        enable_clouds: bool = False,
+        enable_kinetic_objects: bool = False,
+    ):
         self.w, self.h = width, height
         self.scale = width / 1920.0
         self.remove_objects = remove_objects
@@ -269,79 +280,16 @@ class LivingEnvironmentEngine:
         hsv = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
         gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 
-        # Precision Water Body Detection (Multi-cue texture/edge boundary gating with inward buffer)
-        self.water_mask = None
-        self.cycle_plates: Optional[List[np.ndarray]] = None
-        self.num_cycle_frames = 36
-
-        if enable_water:
-            # 1. Texture gradient gate: mountains and rocky terrain have high spatial frequency edges
-            grad_x = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
-            grad_y = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
-            grad_mag = cv2.magnitude(grad_x, grad_y)
-            terrain_edges = (grad_mag > 28.0).astype(np.uint8)
-            terrain_zone = cv2.dilate(terrain_edges, cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9)))
-
-            # 2. Adaptive water color candidates (lower 75% of frame)
-            c_classic = (hsv[:, :, 0] >= 85) & (hsv[:, :, 0] <= 135) & (hsv[:, :, 1] >= 22) & (hsv[:, :, 2] >= 22)
-            c_turquoise = (hsv[:, :, 0] >= 70) & (hsv[:, :, 0] <= 90) & (hsv[:, :, 1] >= 22) & (hsv[:, :, 2] >= 25)
-            c_dark_ocean = (hsv[:, :, 0] >= 80) & (hsv[:, :, 0] <= 145) & (hsv[:, :, 1] >= 12) & (hsv[:, :, 2] >= 15) & (hsv[:, :, 2] <= 95)
-            c_specular = (hsv[:, :, 0] >= 70) & (hsv[:, :, 0] <= 145) & (hsv[:, :, 1] <= 35) & (hsv[:, :, 2] >= 165)
-            water_cand = (c_classic | c_turquoise | c_dark_ocean | c_specular)
-            water_cand[:int(height * 0.25), :] = False
-            water_cand[terrain_zone > 0] = False
-
-            # 3. Morphological cleaning & connected components (keep significant water bodies)
-            k_open = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
-            water_clean = cv2.morphologyEx(water_cand.astype(np.uint8) * 255, cv2.MORPH_OPEN, k_open)
-            num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(water_clean)
-            min_area = int(0.012 * width * height)
-            water_body = np.zeros_like(water_clean)
-            for lbl in range(1, num_labels):
-                if stats[lbl, cv2.CC_STAT_AREA] >= min_area:
-                    water_body[labels == lbl] = 255
-
-            # 4. Strict inward safety buffer (19px) + internal distance transform (guaranteed zero bleed onto mountains/land)
-            k_buffer = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (19, 19))
-            water_buffered = cv2.erode(water_body, k_buffer)
-            dist = cv2.distanceTransform(water_buffered, cv2.DIST_L2, 5)
-            max_d = 25.0 * self.scale
-            self.water_mask = np.clip(dist / max_d, 0.0, 1.0).astype(np.float32)
-
-            if float(np.mean(self.water_mask > 0.01)) > 0.008:
-                ys = np.where(self.water_mask > 0.005)[0]
-                if len(ys) > 0:
-                    self.water_y_min = int(ys.min())
-                    self.water_y_max = int(ys.max()) + 1
-                    roi_h = self.water_y_max - self.water_y_min
-                    water_weight_roi = self.water_mask[self.water_y_min:self.water_y_max, :]
-                    inv_water_weight_roi = 1.0 - water_weight_roi
-
-                    base_plate = self.clean_base_plate if self.clean_base_plate is not None else resized
-                    roi_in = base_plate[self.water_y_min:self.water_y_max, :]
-
-                    # Downsample ROI grid for lightning-fast 4K precomputation
-                    sm_w = 1920
-                    sm_h = max(16, int(round(roi_h * (1920.0 / width))))
-                    roi_sm = cv2.resize(roi_in, (sm_w, sm_h), interpolation=cv2.INTER_LINEAR)
-                    x_sm = np.arange(sm_w, dtype=np.float32)
-                    y_sm = np.arange(sm_h, dtype=np.float32)
-                    gx_sm, gy_sm = np.meshgrid(x_sm, y_sm)
-
-                    self.cycle_plates = []
-                    for k in range(self.num_cycle_frames):
-                        t = k * (2.0 * np.pi / self.num_cycle_frames)
-                        # Dual-harmonic organic wave swell & surface ripple displacement
-                        dx = (1.8 * np.sin(gx_sm * 0.015 + t) + 1.0 * np.sin(gx_sm * 0.035 - 1.3 * t)).astype(np.float32)
-                        dy = (2.2 * np.cos(gy_sm * 0.018 - t) + 1.2 * np.cos(gy_sm * 0.042 + 1.1 * t)).astype(np.float32)
-                        map_x = gx_sm + dx
-                        map_y = gy_sm + dy
-                        wave_sm = cv2.remap(roi_sm, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-                        wave_roi = cv2.resize(wave_sm, (width, roi_h), interpolation=cv2.INTER_LANCZOS4)
-                        blended = cv2.blendLinear(roi_in, wave_roi, inv_water_weight_roi, water_weight_roi)
-                        plate_k = base_plate.copy()
-                        plate_k[self.water_y_min:self.water_y_max, :] = blended
-                        self.cycle_plates.append(plate_k)
+        # Precision Living Dynamics: specular water shimmer, cloud drift, micro-kinetic objects
+        from src.scripts.drone_living_dynamics import DroneLivingWorld
+        self.living_world = DroneLivingWorld(
+            resized,
+            width,
+            height,
+            enable_water=enable_water,
+            enable_clouds=enable_clouds,
+            enable_objects=enable_kinetic_objects,
+        )
 
         # Smoke Detection (Only active when explicitly requested, preventing sky distortion)
         self.smoke_mask = None
@@ -372,11 +320,14 @@ class LivingEnvironmentEngine:
                     self.inv_smoke_weight_roi = self.inv_smoke_mask[self.smoke_y_min:self.smoke_y_max, :]
                     self.has_smoke = True
 
+    @property
+    def cycle_plates(self) -> Optional[List[np.ndarray]]:
+        return self.living_world.cycle_plates if self.living_world.cycle_plates else None
+
     def get_source_plate(self, frame_idx: int) -> np.ndarray:
         """Returns source plate animated with natural fluid dynamics aligned with 3D camera space."""
-        if self.cycle_plates:
-            return self.cycle_plates[frame_idx % len(self.cycle_plates)]
-        return self.clean_base_plate if self.clean_base_plate is not None else self.img_orig
+        base = self.clean_base_plate if self.clean_base_plate is not None else self.img_orig
+        return self.living_world.get_source_plate(frame_idx, base)
 
     def apply(self, frame: np.ndarray, frame_idx: int) -> np.ndarray:
         out = frame
@@ -753,6 +704,8 @@ def render_perspective_drone_clip_sync(
     lower_third_hud: Optional[dict] = None,
     water: bool = False,
     smoke: bool = False,
+    clouds: bool = False,
+    kinetic_objects: bool = False,
 ) -> Path:
     """Render calm, cinematic 4K perspective drone shot on CPU via subpixel homography and procedural dynamics."""
     out = Path(output_path)
@@ -802,7 +755,17 @@ def render_perspective_drone_clip_sync(
         curve=curve,
     )
 
-    living_env = LivingEnvironmentEngine(img_enhanced, target_w, target_h, remove_objects=remove_objects, remove_object_list=remove_object_list, enable_water=water, enable_smoke=smoke)
+    living_env = LivingEnvironmentEngine(
+        img_enhanced,
+        target_w,
+        target_h,
+        remove_objects=remove_objects,
+        remove_object_list=remove_object_list,
+        enable_water=water,
+        enable_smoke=smoke,
+        enable_clouds=clouds,
+        enable_kinetic_objects=kinetic_objects,
+    )
     rain_engine = CinematicRainEngine(target_w, target_h, intensity=rain_intensity, source_img=img_enhanced) if rain else None
     snow_engine = CinematicSnowEngine(target_w, target_h, intensity=snow_intensity, source_img=img_enhanced) if snow else None
 
@@ -914,9 +877,10 @@ async def render_perspective_drone_clip(
     remove_objects: bool = False,
     remove_object_list: Optional[List[str]] = None,
     interpolation: str = "cubic",
-    lower_third_hud: Optional[dict] = None,
     water: bool = False,
     smoke: bool = False,
+    clouds: bool = False,
+    kinetic_objects: bool = False,
 ) -> Path:
     """Asynchronously render calm 4K perspective drone shot on a worker thread."""
     return await asyncio.to_thread(
@@ -946,6 +910,8 @@ async def render_perspective_drone_clip(
         lower_third_hud=lower_third_hud,
         water=water,
         smoke=smoke,
+        clouds=clouds,
+        kinetic_objects=kinetic_objects,
     )
 
 
@@ -966,6 +932,9 @@ if __name__ == "__main__":
     parser.add_argument("--snow", action="store_true", help="Add procedural snowfall")
     parser.add_argument("--snow-intensity", choices=["light", "medium", "heavy", "high"], default="medium")
     parser.add_argument("--remove-objects", action="store_true")
+    parser.add_argument("--water", action="store_true", help="Enable procedural specular water shimmer")
+    parser.add_argument("--clouds", action="store_true", help="Enable atmospheric cloud drift")
+    parser.add_argument("--kinetic-objects", action="store_true", help="Enable micro-kinetic object motion")
     args, unknown = parser.parse_known_args()
 
     parsed_seq = parse_action_sequence(sys.argv)
@@ -990,6 +959,9 @@ if __name__ == "__main__":
             snow=args.snow,
             snow_intensity=args.snow_intensity,
             remove_objects=args.remove_objects,
+            water=args.water,
+            clouds=args.clouds,
+            kinetic_objects=args.kinetic_objects,
         )
         print(f"[Done] Rendered {out_p}")
     elif in_p.is_dir():
@@ -1013,4 +985,7 @@ if __name__ == "__main__":
                 snow=args.snow,
                 snow_intensity=args.snow_intensity,
                 remove_objects=args.remove_objects,
+                water=args.water,
+                clouds=args.clouds,
+                kinetic_objects=args.kinetic_objects,
             )

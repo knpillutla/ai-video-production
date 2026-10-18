@@ -3,7 +3,27 @@ let activeExecutionMode = "test"; // "test" | "prod"
 let activePipelineStrategy = "manual"; // "auto" | "manual"
 let activeTestDuration = 60, activeShotsCount = -1, activeBroadcastHours = 0.0167, currentNicheGroup = "relaxation";
 
-function setExecutionMode(mode) {
+function persistCurrentEpisodeInputs(patch) {
+  const ep = (typeof currentActiveInspectorEpisode !== "undefined") ? currentActiveInspectorEpisode : null;
+  if (!ep) return;
+  const epId = ep.id || ep.episode_id;
+  if (!epId) return;
+  Object.assign(ep, patch);
+  if (patch.pipeline_strategy) { ep.pipelineStrategy = patch.pipeline_strategy; ep.pipeline_strategy = patch.pipeline_strategy; }
+  if (patch.execution_mode) { ep.executionMode = patch.execution_mode; ep.execution_mode = patch.execution_mode; }
+  if (ep.user_inputs) Object.assign(ep.user_inputs, patch);
+  const ch = ep.channelId || ep.channel_id || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : "");
+  const fmt = ep.format || ep.format_slug || "";
+  const prod = ep.production_name || "";
+  const user = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
+  fetch(`/api/production/episodes/${encodeURIComponent(epId)}/update-inputs?channel_id=${encodeURIComponent(ch)}&format=${encodeURIComponent(fmt)}&production_name=${encodeURIComponent(prod)}&user_id=${encodeURIComponent(user)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch)
+  }).catch(e => console.warn("Failed to persist episode inputs:", e));
+}
+
+function setExecutionMode(mode, skipPersist = false) {
   activeExecutionMode = mode;
   document.getElementById("btn-exec-test")?.classList.toggle("active", mode === "test");
   document.getElementById("btn-exec-prod")?.classList.toggle("active", mode === "prod");
@@ -21,9 +41,15 @@ function setExecutionMode(mode) {
   document.getElementById("studio-custom-duration-container")?.classList.toggle("hidden", !isCust);
   syncTravelShotUI();
   calculateLiveCostEstimate();
+
+  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) {
+    currentActiveInspectorEpisode.executionMode = mode;
+    currentActiveInspectorEpisode.execution_mode = mode;
+  }
+  if (!skipPersist) persistCurrentEpisodeInputs({ execution_mode: mode });
 }
 
-function setPipelineExecutionMode(strat) {
+function setPipelineExecutionMode(strat, skipPersist = false) {
   activePipelineStrategy = strat;
   document.getElementById("btn-pipe-auto")?.classList.toggle("active", strat === "auto");
   document.getElementById("btn-pipe-manual")?.classList.toggle("active", strat === "manual");
@@ -36,8 +62,10 @@ function setPipelineExecutionMode(strat) {
   document.getElementById("studio-stage-controls-dock")?.classList.toggle("hidden", strat === "auto");
   if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) {
     currentActiveInspectorEpisode.pipelineStrategy = strat;
+    currentActiveInspectorEpisode.pipeline_strategy = strat;
     if (typeof updateStageGateDock === "function") updateStageGateDock(currentActiveInspectorEpisode);
   }
+  if (!skipPersist) persistCurrentEpisodeInputs({ pipeline_strategy: strat });
 }
 
 function setTestShots(val) {

@@ -110,11 +110,11 @@ function populateProductionControlsFromEpisode(rawVid) {
   // 6. Execution Mode (Test vs Prod)
   let effExecMode = inputs.execution_mode || vid.execution_mode || vid.executionMode;
   if (!effExecMode) effExecMode = (lpHours >= 1.0) ? "prod" : "test";
-  if (typeof setExecutionMode === "function") setExecutionMode(effExecMode === "prod" ? "prod" : "test");
+  if (typeof setExecutionMode === "function") setExecutionMode(effExecMode === "prod" ? "prod" : "test", true);
 
   // 7. Pipeline Strategy (Auto vs Manual)
   const effStrategy = inputs.pipeline_strategy || vid.pipelineStrategy || vid.pipeline_strategy || "manual";
-  if (typeof setPipelineExecutionMode === "function") setPipelineExecutionMode(effStrategy === "auto" ? "auto" : "manual");
+  if (typeof setPipelineExecutionMode === "function") setPipelineExecutionMode(effStrategy === "auto" ? "auto" : "manual", true);
 
   // 8. Shot Count
   const isDocOrTour = (typeof isTravelOrSkylineChannel === "function" && isTravelOrSkylineChannel()) ||

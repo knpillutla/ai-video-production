@@ -18,22 +18,17 @@ from src.providers.visual.fal_kling_v3 import FalKlingV3Adapter
 from src.providers.visual.fal_wan21 import FalWan21Adapter
 from src.providers.visual.fal_zimage import FalZImageAdapter
 from src.providers.visual.google_imagen3 import GoogleImagen3Adapter
+from src.providers.visual.fal_aura_sr import FalAuraSRAdapter
 
 
 @dataclass
 class MotionClipTask:
     """Specification for an AI video diffusion motion clip task."""
-    image_path: Path
-    motion_prompt: str
-    visual_prompt: str
-    output_path: Path
+    image_path: Path; motion_prompt: str; visual_prompt: str; output_path: Path
     duration_seconds: float = 30.0; model: str = "auto"; domain: str = "water_fluid"
-    req_file: Optional[Path] = None
-    allow_fallback: bool = False; force_rerun: bool = False
-    negative_prompt: Optional[str] = None
-    model_configs: Optional[dict[str, Any]] = None
-    camera_waypoints: Optional[list] = None
-    kinetic_micro_zones: Optional[dict] = None
+    req_file: Optional[Path] = None; allow_fallback: bool = False; force_rerun: bool = False
+    negative_prompt: Optional[str] = None; model_configs: Optional[dict[str, Any]] = None
+    camera_waypoints: Optional[list] = None; kinetic_micro_zones: Optional[dict] = None
     camera_movement: Optional[Any] = None; interpolation: str = "cubic"
 
 
@@ -97,6 +92,7 @@ class VisualBatchService:
         aspect_ratio: str = "16:9",
         force_rerun: bool = False,
         image_model: str = "flux_dev",
+        enable_4k_upscale: bool = True,
     ) -> List[Path]:
         """Render batch of keyframes concurrently with disk caching and dynamic image model routing."""
         async def _process_single_keyframe(prompt: str, out_path: Path, req_file: Optional[Path], idx: int) -> Path:
@@ -127,6 +123,8 @@ class VisualBatchService:
 
             log_pipeline_step("checking keyframes", f"Shot {idx} Keyframe", "started", f"keyframe missing, synthesizing via {model_display}", {"file": out_path.name})
             await adapter.generate_to_file(prompt=prompt, output_path=out_path, aspect_ratio=aspect_ratio, force_live=bool(self.fal_key))
+            if enable_4k_upscale and out_path.is_file():
+                await FalAuraSRAdapter(api_key=self.fal_key).upscale_image(out_path, out_path, force_live=bool(self.fal_key))
             log_pipeline_step("checking keyframes", f"Shot {idx} Keyframe", "completed", "keyframe created", {"file": out_path.name, "size_bytes": out_path.stat().st_size if out_path.is_file() else 0})
             return out_path
 

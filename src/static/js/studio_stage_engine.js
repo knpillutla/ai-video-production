@@ -70,7 +70,9 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
   if (!vid) return;
   currentActiveInspectorEpisode = vid;
   const currentGateUi = (typeof activePipelineStrategy !== "undefined" && activePipelineStrategy) ? activePipelineStrategy : "manual";
-  vid.pipelineStrategy = (strategy === "autonomous") ? "autonomous" : ((strategy === "manual") ? "manual" : currentGateUi);
+  const resolvedStrat = (strategy === "auto" || strategy === "autonomous") ? "auto" : ((strategy === "manual") ? "manual" : (vid.pipeline_strategy || vid.pipelineStrategy || currentGateUi));
+  vid.pipelineStrategy = resolvedStrat;
+  vid.pipeline_strategy = resolvedStrat;
   vid.status = "processing";
   studioAbortController = new AbortController();
   const resynthStartTime = new Date().toISOString();
@@ -295,7 +297,8 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         dual_editions: Boolean(vid.dual_editions ?? document.getElementById("studio-toggle-dual-editions")?.checked),
         tts_model: document.getElementById("studio-tts-model")?.value || vid.ttsModel || "gemini",
         allow_fallback: vid.allowFallback || false,
-        pipeline_strategy: vid.pipelineStrategy || "manual",
+        pipeline_strategy: vid.pipelineStrategy || vid.pipeline_strategy || (typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "manual"),
+        execution_mode: vid.execution_mode || vid.executionMode || (typeof activeExecutionMode !== "undefined" ? activeExecutionMode : "test"),
         script_only: isScriptOnly,
         photos_only: isPhotosOnly,
         motion_only: isMotionOnly,
@@ -636,20 +639,27 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
     const found = typeof findStudioEpisodeById === "function" ? findStudioEpisodeById(targetId, curCh, curFmt, curProd) : null;
     if (found) ep = found;
   }
-  const activeStrat = (typeof activePipelineStrategy !== "undefined" && activePipelineStrategy) ? activePipelineStrategy : "manual";
+  const activeStrat = (typeof activePipelineStrategy !== "undefined" && activePipelineStrategy) ? activePipelineStrategy : (ep?.pipeline_strategy || ep?.pipelineStrategy || "manual");
+  const activeExec = (typeof activeExecutionMode !== "undefined" && activeExecutionMode) ? activeExecutionMode : (ep?.execution_mode || ep?.executionMode || "test");
   if (!ep) {
     ep = {
       id: targetId,
       episode_id: targetId,
       title: `Episode ${targetId}`,
       status: "processing",
-      pipelineStrategy: activeStrat
+      pipelineStrategy: activeStrat,
+      pipeline_strategy: activeStrat,
+      executionMode: activeExec,
+      execution_mode: activeExec
     };
   }
   ep.id = targetId;
   ep.episode_id = targetId;
   ep.status = "processing";
   ep.pipelineStrategy = activeStrat;
+  ep.pipeline_strategy = activeStrat;
+  ep.executionMode = activeExec;
+  ep.execution_mode = activeExec;
   ep.is_approved = true;
   ep.errorMessage = null;
   ep.failedStage = null;
@@ -664,15 +674,22 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
   const chSlug = ep.channelId || ep.channel_id || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : "skylinediariesindia4k");
   ep.channelId = chSlug;
   ep.channel_id = chSlug;
-  console.log(`[REPROCESS] Reprocessing episode ${targetId} for channel ${chSlug} (${activeStrat} mode)`);
+  console.log(`[REPROCESS] Reprocessing episode ${targetId} for channel ${chSlug} (${activeStrat} mode, ${activeExec})`);
 
-  // Persist disk approval
+  // Persist disk approval and user inputs
   try {
     const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
     fetch(`/api/production/episodes/${targetId}/approve?channel_id=${chSlug}&user_id=${encodeURIComponent(uEmail)}`, { method: "POST" }).catch(() => {});
+    const fmt = ep.format || ep.format_slug || "";
+    const prod = ep.production_name || "";
+    fetch(`/api/production/episodes/${encodeURIComponent(targetId)}/update-inputs?channel_id=${encodeURIComponent(chSlug)}&format=${encodeURIComponent(fmt)}&production_name=${encodeURIComponent(prod)}&user_id=${encodeURIComponent(uEmail)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pipeline_strategy: activeStrat, execution_mode: activeExec })
+    }).catch(() => {});
   } catch (e) {}
 
-  // Resumes pipeline respecting user Gate setting (Manual: resumes current pending phase; Auto: end-to-end)
+  // Resumes pipeline respecting user Gate setting (Manual: resumes current pending phase and stops; Auto: end-to-end)
   let targetPhase = null;
   if (activeStrat === "manual") {
     const hasScript = Boolean(ep.script || ep.storyboard || ep.screenplay);
@@ -681,11 +698,19 @@ async function reprocessActiveEpisodeId(episodeId, motionModelOverride, forceRer
       const url = (typeof kf === "object") ? kf.url : kf;
       return url && (url.startsWith("http") || url.startsWith("/static/") || url.startsWith("/storage/")) && !url.includes("placeholder_");
     });
-    const hasPhotos = Boolean(completedKfs.length > 0 || rawKfs.length > 0);
+    const hasPhotos = Boolean(completedKfs.length > 0);
     const rawStems = (ep.audio_stems && ep.audio_stems.length > 0) ? ep.audio_stems : (ep.artifacts?.audio_stems || []);
-    const hasAudio = Boolean(rawStems.length > 0);
+    const completedStems = rawStems.filter(st => {
+      const url = (typeof st === "object") ? st.url : st;
+      return url && !String(url).includes("placeholder_");
+    });
+    const hasAudio = Boolean(completedStems.length > 0);
     const rawClips = (ep.motion_clips && ep.motion_clips.length > 0) ? ep.motion_clips : (ep.artifacts?.motion_clips || []);
-    const hasMotion = Boolean(rawClips.length > 0);
+    const completedClips = rawClips.filter(mc => {
+      const url = (typeof mc === "object") ? mc.url : mc;
+      return url && !String(url).includes("placeholder_");
+    });
+    const hasMotion = Boolean(completedClips.length > 0);
 
     if (!hasScript) targetPhase = "script";
     else if (!hasPhotos) targetPhase = "photos";

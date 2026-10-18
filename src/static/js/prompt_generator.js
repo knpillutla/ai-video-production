@@ -293,14 +293,16 @@ function quickTestProduceFromPrompt() {
         sub_genre: { value: selSubgenreVal || "", label: selSubgenreLabel },
         primary_archetype: { value: selArchVal || "", label: selArchLabel },
         weather: { value: selWeather, label: selWeatherLabel }
-      }
+      },
+      execution_mode: isTestMode ? "test" : "prod",
+      pipeline_strategy: typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "manual"
     },
     dual_editions: dualEditionsChecked,
     status: "queued", youtubeStatus: "unpublished", youtubeChannel: null, youtubeUrl: null,
     youtubeReferenceUrl: ytUrl, videoUrl: "/static/videos/preview_master.mp4",
     keyframes: [], motion_clips: [], audio_stems: [], editions: [], long_play_editions: [], currentStage: 1, progress: 10,
     durationSeconds: durationSec, duration: longPlayHours > 0 ? `${longPlayHours}h` : `${durationSec}s`, numShots, num_shots: numShots,
-    longPlayHours: longPlayHours, long_play_hours: longPlayHours, executionMode: isTestMode ? "test" : "prod",
+    longPlayHours: longPlayHours, long_play_hours: longPlayHours, executionMode: isTestMode ? "test" : "prod", execution_mode: isTestMode ? "test" : "prod",
     language: langVal === "te" ? "Telugu (te)" : (langVal === "hi" ? "Hindi (hi)" : "English (en)"), langCode: langVal, display_format: fmtStr, style: "Cinematic Photoreal",
     tierKey: tier.key, tierName: `${tier.name} (${tier.priceStr})`, cost: effCost, cost_usd: effCost, costStr: `$${effCost.toFixed(2)} USD`,
     theme: themeVal, idea: ideaVal, script: scriptVal, enableBgm: getChk("studio-toggle-bgm"), enableVoiceOver: getChk("studio-toggle-voice-over"),
@@ -308,7 +310,8 @@ function quickTestProduceFromPrompt() {
     enableLipsync: document.getElementById("studio-toggle-lipsync")?.checked || false,
     allowFallback: document.getElementById("studio-toggle-fallback")?.checked || false,
     motionModel: isTravelOrSkyline ? "ken_burns" : (isTestMode ? "wan" : "auto"), voiceGender: getVal("studio-voice-gender", "female"),
-    pipelineStrategy: typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "auto",
+    pipelineStrategy: typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "manual",
+    pipeline_strategy: typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "manual",
     createdAt: Date.now(), startedAt: null, completedAt: null, publishedAt: null
   };
 

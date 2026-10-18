@@ -197,8 +197,6 @@ class DocumentaryProducer:
 
             if is_graphic_card:
                 logger.info(f"doc_motion_dispatch: Scene {scene.scene_index} (Map/Card) -> Static Hold Clip ({scene.duration_seconds}s)")
-                # Generate smooth broadcast hold clip directly via ffmpeg without drone distortion
-                from src.scripts.local_perspective_drone import render_perspective_drone_clip
                 return await render_perspective_drone_clip(
                     image_path=kf_path,
                     output_path=out_clip,
@@ -244,6 +242,7 @@ class DocumentaryProducer:
                     "day_badge": f"DAY {day_n} • STOP {scene.scene_index}", "cost_text": cost_t, "transit_text": trans_t,
                 } if is_tour else None
                 choreo = local_cfg.get("movement") or scene.drone_choreography or scene.motion_prompt
+                txt = f"{getattr(scene, 'visual_prompt', '')} {getattr(scene, 'location_hub', '')}".lower()
                 return await render_perspective_drone_clip(
                     image_path=kf_path, output_path=out_clip, duration_seconds=scene.duration_seconds,
                     fps=24, target_res=(3840, 2160), choreography=choreo,
@@ -251,7 +250,9 @@ class DocumentaryProducer:
                     curve=local_cfg.get("curve") or getattr(scene, "motion_curve", "cosine"),
                     rain=(getattr(scene, "weather", "none") == "rain"), snow=(getattr(scene, "weather", "none") == "snow"),
                     lower_third_hud=hud_data,
-                    water=any(w in f"{getattr(scene, 'visual_prompt', '')} {getattr(scene, 'location_hub', '')}".lower() for w in ("water", "lake", "ocean", "river", "fjord", "sea", "pond", "waterfall")),
+                    water=any(w in txt for w in ("water", "lake", "ocean", "river", "fjord", "sea", "pond", "waterfall")),
+                    clouds=any(w in txt for w in ("cloud", "sky", "aerial", "panorama", "mountain", "valley", "overlook", "vista", "peak")),
+                    kinetic_objects=True,
                 )
             else:
                 eff_model = motion_model if motion_model != "auto" else scene.recommended_model

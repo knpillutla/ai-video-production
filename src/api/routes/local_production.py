@@ -72,6 +72,7 @@ class LocalProduceRequest(BaseModel):
     audio_only: Optional[bool] = False
     master_only: Optional[bool] = False
     pipeline_strategy: Optional[str] = "manual"
+    execution_mode: Optional[str] = "test"
     force_rerun: Optional[bool] = False
     enable_voiceover: Optional[bool] = False
     dual_editions: Optional[bool] = False
@@ -223,6 +224,7 @@ async def produce_video_locally(req: LocalProduceRequest):
             production_name=req.production_name,
             format_slug=req.format_slug or (req.format if req.format and req.format not in ("16:9", "9:16") else None),
             tts_model=req.tts_model,
+            execution_mode=req.execution_mode or "test",
         )
         eff_job_id = result.get("job_id") or job_id
         if eff_script_only:
@@ -424,6 +426,54 @@ async def approve_episode(episode_id: str, channel_id: Optional[str] = None, use
         pipe_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     return {"success": True, "episode_id": episode_id, "is_approved": True, "message": f"Episode {episode_id} approved."}
+
+
+@router.post("/episodes/{episode_id}/update-inputs")
+async def update_episode_inputs(
+    episode_id: str,
+    payload: dict[str, Any],
+    channel_id: Optional[str] = None,
+    user_id: str = "knpillutla@gmail.com",
+    format: Optional[str] = None,
+    production_name: Optional[str] = None,
+):
+    """Persist updated execution_mode and pipeline_strategy to user_inputs.json immediately."""
+    ep_dir = storage_service.find_episode_path(
+        user_id=user_id,
+        channel_id=channel_id or "",
+        episode_id=episode_id,
+        format_slug=format,
+        production_name=production_name,
+    )
+    if not ep_dir:
+        user_container = storage_service.get_user_container_path(user_id)
+        clean_target = episode_id.lower().replace("-", "_")
+        for cand in user_container.rglob("*"):
+            if cand.is_dir() and (cand.name.lower() == episode_id.lower() or cand.name.lower() == clean_target):
+                ep_dir = cand
+                break
+
+    if ep_dir and ep_dir.is_dir():
+        u_file = ep_dir / "user_inputs.json"
+        try:
+            data = json.loads(u_file.read_text("utf-8")) if u_file.is_file() else {}
+            for k, v in payload.items():
+                data[k] = v
+            u_file.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+            pipe_file = ep_dir / "pipeline_state.json"
+            p_data = json.loads(pipe_file.read_text("utf-8")) if pipe_file.is_file() else {}
+            if "pipeline_strategy" in payload:
+                p_data["pipeline_strategy"] = payload["pipeline_strategy"]
+            if "execution_mode" in payload:
+                p_data["execution_mode"] = payload["execution_mode"]
+            pipe_file.write_text(json.dumps(p_data, indent=2, ensure_ascii=False), encoding="utf-8")
+            logger.info(f"user_inputs_updated: {u_file.name} with {payload}")
+            return {"success": True, "episode_id": episode_id, "updated": payload}
+        except Exception as e:
+            logger.warning(f"user_inputs_update_error: {e}")
+
+    return {"success": False, "episode_id": episode_id, "error": "Episode not found"}
+
 
 
 @router.delete("/episodes/{episode_id}")
