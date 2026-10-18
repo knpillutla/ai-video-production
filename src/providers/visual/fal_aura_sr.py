@@ -72,15 +72,10 @@ class FalAuraSRAdapter:
             payload: dict[str, Any] = {"image_url": actual_url}
 
             upscaled_url: Optional[str] = None
-            async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=15.0)) as client:
-                # 1. Direct fast-path inference via fal.run
-                resp = await client.post(_FAL_AURA_SR_ENDPOINT, headers=headers, json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    upscaled_url = (data.get("image") or {}).get("url")
-                elif resp.status_code == 202:
-                    # 2. Queue poll fallback
-                    q_data = resp.json()
+            async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=15.0)) as client:
+                q_resp = await client.post(_FAL_QUEUE_ENDPOINT, headers=headers, json=payload)
+                if q_resp.status_code in (200, 201, 202):
+                    q_data = q_resp.json()
                     status_url = q_data.get("status_url")
                     response_url = q_data.get("response_url")
                     if status_url and response_url:
@@ -96,6 +91,7 @@ class FalAuraSRAdapter:
                                         upscaled_url = (res_data.get("image") or {}).get("url")
                                     break
                                 if st_data.get("status") in ("FAILED", "CANCELLED"):
+                                    logger.warning(f"fal_aura_sr_status_failed: {st_data.get('status')}")
                                     break
 
                 if upscaled_url:

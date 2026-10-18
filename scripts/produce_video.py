@@ -52,6 +52,7 @@ async def run_production(
     music_style: str | None = None, similar_to: str | None = None,
     user_id: str | None = None, network: str | None = None,
     num_images: int = 1, use_loras: bool = False,
+    rescript: bool = False,
 ):
     """Execute the Phase 2 & 3 end-to-end video production and compliance pipeline."""
     duration = parse_duration(duration)
@@ -424,7 +425,7 @@ async def run_production(
     # 1. Generate Structured Scene Storyboard Plan via Gemini 1.5 Pro (non-dance formats)
     storyboard_path = ep_ws / "storyboard.json"
     storyboard_data = None
-    if storyboard_path.exists() and storyboard_path.stat().st_size > 0:
+    if not rescript and storyboard_path.exists() and storyboard_path.stat().st_size > 0:
         try:
             storyboard_data = json.loads(storyboard_path.read_text(encoding="utf-8"))
             if not storyboard_data.get("id") or not storyboard_data.get("episode_id"):
@@ -433,6 +434,8 @@ async def run_production(
                 storyboard_path.write_text(json.dumps(storyboard_data, indent=2, ensure_ascii=False), encoding="utf-8")
             print(f"[i] Resume: Loaded existing storyboard from disk.")
         except Exception: pass
+    elif rescript:
+        print(f"[i] --rescript passed: Bypassing cached storyboard. Generating fresh script via Gemini with saved user inputs...")
 
     if not storyboard_data:
         # Resolve reference attributes for the prompt if not already available
@@ -621,6 +624,7 @@ def main():
         (["--tts"], "Conversational TTS", "tts"), (["--bgm"], "Background music", "bgm"),
         (["--refine", "--refine-script"], "Refine screenplay", "refine_script"),
         (["--loras", "--use-loras"], "Use persistent network LoRA models", "use_loras"),
+        (["--rescript", "--regenerate-script"], "Regenerate storyboard script via Gemini even if cached", "rescript"),
     ]:
         p.add_argument(*fls, action="store_true", default=False, help=h, dest=dst)
     profile_group = p.add_mutually_exclusive_group()

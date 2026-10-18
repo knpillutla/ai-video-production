@@ -21,43 +21,42 @@ def build_environmental_pose_directive(
 
     if eff_gender == "duet":
         chemistry_text = (
-            "   * DUET / ROMANTIC CO-LEAD HIGH-CTR INTIMACY & PHYSICAL CHEMISTRY (MANDATORY):\n"
-            "     - Never depict the couple as stiff, distant strangers sitting apart staring blankly!\n"
-            "     - Scene 1 (Intimate Glance): Standing close, he gently wraps an arm around her waist while she rests a hand lightly on his chest, looking into each other's eyes.\n"
-            "     - Scene 2 (Environmental Shared Joy): Walking side-by-side along the scenic path with fingers tightly intertwined ('holding hands'), sharing a genuine laugh.\n"
-            "     - Scene 3 (Tender Touch & Nature): He playfully tucks a blooming wildflower into her hair ('putting flower in hair') or she places her hands gently around his neck in a tender close moment.\n"
-            "     - Scene 4 (Atmospheric Panorama): Leaning shoulder-to-shoulder against a rustic wooden fence or stone bridge, his arm draped comfortably over her shoulder, gazing together at the horizon.\n"
+            "   * AUTONOMOUS DUET INTERACTION & CHEMISTRY DERIVATION (NO HARDCODED TEMPLATES):\n"
+            "     - Autonomously invent natural, authentic, context-matching couple interactions derived directly from the specific background elements, props, and terrain of each scene.\n"
+            "     - Derive poses that naturally engage with the setting (e.g., walking together along terrain trails with intertwined fingers, leaning side-by-side against authentic architectural rails or stone fences, candid laughing glances, gentle wind-in-hair moments).\n"
+            "     - Strictly prohibit stiff, separated mannequin stances where characters stand apart with arms dangling flat at sides staring blankly.\n"
         )
     elif eff_gender == "male":
         chemistry_text = (
-            "   * SOLO MALE LEAD DYNAMIC STORYTELLING & CHARISMA:\n"
-            "     - Never depict a stiff passport photo standing with arms flat at sides!\n"
-            "     - Pose 1 (Confident Environmental Lean): Casual swagger leaning back against a rustic timber railing or stone wall, one hand in pocket, sleeves rolled up showing chronograph watch on left wrist, gazing warmly.\n"
-            "     - Pose 2 (Sensory Mountain Walk): Walking forward through the alpine meadow or scenic trail, looking thoughtfully towards the peaks with the cool breeze ruffling his hair.\n"
-            "     - Pose 3 (Candid Reflective Moment): Sitting casually on a wooden dock or boulder, one knee raised, looking out across the glistening water with an evocative, soulful expression.\n"
+            "   * AUTONOMOUS SOLO MALE CHARISMA & STORYTELLING DERIVATION:\n"
+            "     - Autonomously invent dynamic, context-matching poses derived from the specific background architecture, terrain, and weather of each scene.\n"
+            "     - Engage naturally with the environment (e.g., walking through the trail, leaning thoughtfully against scenic props, candid seated reflections overlooking vistas).\n"
+            "     - Never depict a stiff passport photo standing with arms flat at sides staring blankly.\n"
         )
     else:  # Solo female
         chemistry_text = (
-            "   * SOLO FEMALE LEAD DYNAMIC SENSORY IMMERSION & HIGH-CTR MAGNETISM:\n"
-            "     - Never depict a stiff passport photo standing straight with hands down!\n"
-            "     - Pose 1 (Sensory Floral / Nature Touch): Gracefully leaning down to gently inhale the fragrance of a blooming wildflower ('smelling a flower') with eyes closed in pure serenity, or gently tucking a blossom behind her ear ('putting flower in hair').\n"
-            "     - Pose 2 (Dynamic Motion / Dress Swirl): Mid-twirl in the wildflower meadow with dress fabric billowing softly around her, looking playfully over her shoulder with an enchanting, magnetic smile.\n"
-            "     - Pose 3 (Atmospheric Breeze Immersion): Standing near a scenic wooden fence or viewpoint, head tilted back slightly enjoying the mountain breeze through her hair, hand lightly grazing collarbone, radiant expression.\n"
-            "     - Pose 4 (Reflective Candid): Sitting gracefully on a grassy knoll or mossy stone, one hand resting on chin, gazing dreamily toward the sunset/distant snow-capped peaks.\n"
+            "   * AUTONOMOUS SOLO FEMALE SENSORY IMMERSION & HIGH-CTR MAGNETISM:\n"
+            "     - Autonomously invent graceful, context-matching poses derived from the environment, breeze, sunlight, and natural scenery of each scene.\n"
+            "     - Engage dynamically with surroundings (e.g., twirling in open meadows with flowing fabric, enjoying the mountain breeze, candid reflective smiles, touching hair ornaments).\n"
+            "     - Never depict a stiff passport photo standing straight with hands down.\n"
         )
 
     return (
-        "MANDATORY HIGH-CTR BACKGROUND-SPECIFIC POSE DIRECTIVE (ANTI-STATIC MANDATE):\n"
-        "1. STRICT BAN ON STATIC 'STAND STILL' PORTRAITS: Characters must NEVER stand stiffly upright with arms at sides staring blankly into the camera. Every image must depict an active, natural, cinema-grade physical pose.\n"
-        "2. ACTIVE SENSORY ENJOYMENT OF ENVIRONMENT & WEATHER:\n"
-        "   - The character(s) must physically interact with and enjoy their surroundings:\n"
-        "     * Floral / Meadow / Garden: Smelling flowers, picking a petal, brushing fingertips across grass, tucking flower in hair.\n"
-        "     * Breeze / Mountain / Vista: Tilting head back to feel the fresh breeze, hair catching sunlight, open arms embracing nature.\n"
-        "     * Water / Lake / River: Dipping fingers into crystal water, walking barefoot along shoreline, feeling cool spray.\n"
-        "     * Sunlight / Golden Hour: Glancing over shoulder with radiant smile, golden rim lighting, hand shielding eyes.\n"
+        "AUTONOMOUS CONTEXT-DRIVEN POSE & FRAMING DIRECTIVE (NO HARDCODED POSES):\n"
+        "1. DYNAMIC CONTEXTUAL DERIVATION: Gemini must autonomously derive unique, cinema-grade character poses for each scene based strictly on the background terrain, weather, architecture, and narrative mood. Do NOT use generic or static templates.\n"
+        "2. STRICT BAN ON OFF-SCREEN REACHING & DISEMBODIED HANDS (CRITICAL):\n"
+        "   - In close-ups or intimate interactions, NEVER describe an off-screen partner's hands or arms reaching into the frame (e.g., do NOT write 'Dev reaches into the frame to touch her hair/ear').\n"
+        "   - For couple interactions, BOTH characters' faces, heads, and upper bodies MUST be clearly visible together in the frame (two-shot), OR the physical action must be self-directed (e.g., she touches her own hair blossom while smiling warmly at him beside her).\n"
+        "   - Strictly prohibit disembodied hands, floating limbs, or severed arms entering from frame edges.\n"
+        "3. UNIVERSAL FEMALE COMPOSITION & ACCESSORIES (EVERY SCENE):\n"
+        "   - The female lead's attractive composition MUST remain consistent across ALL scenes: graceful medium-slender slim build, defined slender waist, balanced natural feminine curves, and flattering designer gown (strictly NO boxy, loose, or shapeless garments).\n"
+        "   - Neckline must be an elegant, modest high boat neckline, mandarin collar, or high round neck with full upper chest coverage (strictly zero cleavage, zero low-cut V-necks).\n"
+        "   - AUTONOMOUS CONTEXTUAL ACCESSORIES IN EVERY SCENE: Gemini must autonomously decide the exact setting-matched accessories across all 4 zones (hair, neckline/ears, hands/wrists, legs/ankles) based on the background and context, and explicitly include them in 'characters[0].outfit_description' and each scene's 'visual_prompt' to ensure she looks delightfully cute, charming, and stylish in every frame.\n"
+        "4. ACTIVE SENSORY ENGAGEMENT WITH ENVIRONMENT & WEATHER:\n"
+        "   - Characters must naturally engage with their surroundings (breeze ruffling hair, sunlight reflections, touching natural textures, walking along trails, resting against scenic timber/stone rails).\n"
         f"{chemistry_text}"
-        f"3. DIVERSE MULTI-SCENE PROGRESSION ({num_scenes} SCENES):\n"
-        "   - Every scene MUST specify a distinct camera shot type ('camera_shot_type') AND a distinct physical interaction ('character_pose').\n"
+        f"5. DIVERSE MULTI-SCENE PROGRESSION ({num_scenes} SCENES):\n"
+        "   - Every scene MUST specify a distinct camera shot type ('camera_shot_type') AND a distinct physical interaction ('character_pose') derived autonomously from that specific scene's environment.\n"
         "   - 'visual_prompt' in each scene MUST describe the exact physical action and environmental engagement in vivid detail.\n\n"
     )
 
@@ -77,23 +76,23 @@ def get_offline_dynamic_scene_poses(
         pose_catalog = [
             {
                 "shot_type": "medium_shot",
-                "pose": "Tender romantic glance, his hand gently on her waist while she touches his chest",
-                "prompt_ext": "He gently places an arm around her waist while she rests her hand softly on his chest, sharing an intimate romantic gaze with the scenic background.",
+                "pose": "Tender romantic stance, standing close on scenic trail with fingers intertwined",
+                "prompt_ext": "Standing close together on the scenic trail with fingers tenderly intertwined ('holding hands'), leaning their shoulders gently in with radiant genuine smiles, modest high boat neckline, graceful slender-curvy silhouette.",
             },
             {
                 "shot_type": "wide_cinematic",
                 "pose": "Walking together with hands tightly intertwined, laughing in the open breeze",
-                "prompt_ext": "Walking together along the scenic trail with fingers intertwined ('holding hands'), sharing a genuine happy laugh in the open mountain sunlight.",
+                "prompt_ext": "Walking together along the scenic trail with fingers intertwined ('holding hands'), sharing a genuine happy laugh in the open mountain sunlight, dress fluttering softly.",
             },
             {
                 "shot_type": "close_up",
-                "pose": "Forehead-to-forehead tender moment, arms softly around neck",
-                "prompt_ext": "Standing close with foreheads nearly touching, her arms gently around his neck, eyes half-closed in deep emotional connection.",
+                "pose": "Intimate profile two-shot, leaning against rustic fence rail",
+                "prompt_ext": "Intimate two-shot profile leaning side-by-side against a rustic timber railing, BOTH faces and upper bodies clearly visible together, Dev smiling warmly beside Simran, zero disembodied hands.",
             },
             {
                 "shot_type": "three_quarter",
                 "pose": "Leaning shoulder-to-shoulder on rustic fence gazing at vista",
-                "prompt_ext": "Leaning shoulder-to-shoulder against a rustic timber railing, his arm comfortably over her shoulder, gazing together at the panoramic peaks.",
+                "prompt_ext": "Leaning shoulder-to-shoulder against a rustic timber railing, his arm comfortably over her shoulder, gazing together at the panoramic peaks, elegant modest attire.",
             },
         ]
     elif eff_gender == "male":

@@ -183,7 +183,10 @@ async def execute_vocal_pipeline(
     # Title Card Scene 0 (5-10s intro with native, English, and song type overlay)
     from src.compositor.vocal_title_card import create_vocal_title_card, resolve_song_type_label
     scene_00 = scenes_dir / "scene_00.jpg"
-    if not (scene_00.is_file() and scene_00.stat().st_size > 1000):
+    t_card_valid = scene_00.is_file() and scene_00.stat().st_size > 1000
+    if t_card_valid and primary_img.is_file() and primary_img.stat().st_mtime > scene_00.stat().st_mtime:
+        t_card_valid = False
+    if not t_card_valid:
         t_loc = sb_data.get("title_localized") or sb_data.get("title_en") or episode.title
         t_en = sb_data.get("title_en") or episode.title
         st_lbl = resolve_song_type_label(
@@ -217,7 +220,12 @@ async def execute_vocal_pipeline(
             active_audio = norm_audio
         except Exception: pass
 
-    if final_video.is_file() and final_video.stat().st_size > 1000:
+    master_valid = final_video.is_file() and final_video.stat().st_size > 1000
+    if master_valid and all_scenes:
+        m_time = final_video.stat().st_mtime
+        if any(p.is_file() and p.stat().st_mtime > m_time for p in all_scenes):
+            master_valid = False
+    if master_valid:
         if not (preview_video.is_file() and preview_video.stat().st_size > 1000):
             try: subprocess.run([ffmpeg_bin, "-y", "-i", str(final_video), "-t", f"{preview_dur:.2f}", "-c", "copy", str(preview_video)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
             except Exception: pass
@@ -231,15 +239,25 @@ async def execute_vocal_pipeline(
     prev_seg_durs = [prev_intro] + [max(1.0, preview_dur - prev_intro) / n_narr] * n_narr
 
     if not full_conf and actual_dur > 30.0 and not dry_run:
-        if not (preview_video.is_file() and preview_video.stat().st_size > 1000):
+        prev_valid = preview_video.is_file() and preview_video.stat().st_size > 1000
+        if prev_valid and all_scenes:
+            p_time = preview_video.stat().st_mtime
+            if any(p.is_file() and p.stat().st_mtime > p_time for p in all_scenes):
+                prev_valid = False
+        if not prev_valid:
             print(f"\n[~] Stage 1/2: Generating 30s fast preview video with Scene 0 title card...")
             await assemble_vocal_video(image_paths=all_scenes, song_path=active_audio, sub_path=None, out_video_path=preview_video, duration=preview_dur, timeline_cues=anim_cues, fonts_dir=fonts_dir, theme=eff_theme_vfx, episode_seed=ep_seed, segment_durations=prev_seg_durs)
         print(f"\n[+] 30s Fast Preview Video Ready: {preview_video.name}")
         if kwargs.get("preview_only", False): return preview_video
         cg = kwargs.get("custom_gate_input_fn")
-        proceed = cg(f"Proceed to render full master? (y/N): ") if cg else (input(f"\n[?] 30s preview ready ({preview_video.name}). Render full {actual_dur:.0f}s video? [y/N]: ").strip().lower() in ("y", "yes") if hasattr(sys.stdin, "isatty") and sys.stdin.isatty() else False)
+        proceed = False
+        try:
+            prompt_q = f"\n[?] 30s preview ready ({preview_video.name}). Render full {actual_dur:.0f}s video? [y/N]: "
+            proceed = cg(prompt_q) if cg else (input(prompt_q).strip().lower() in ("y", "yes"))
+        except (EOFError, OSError):
+            proceed = False
         if not proceed:
-            print(f"[i] Pausing at 30s preview. Pass --full-confirmed to render full {actual_dur:.0f}s master.")
+            print(f"[i] Pausing at 30s preview. Pass --full to render full {actual_dur:.0f}s master.")
             return preview_video
 
     if dry_run:

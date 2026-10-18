@@ -54,6 +54,7 @@ async def run_production(
     num_images: int = 1, use_loras: bool = False,
     preview_only: bool = False, full_confirmed: bool = False,
     solo_male: bool = False, solo_female: bool = False, duet: bool = False,
+    rescript: bool = False,
 ):
     """Execute the Phase 2 & 3 end-to-end video production and compliance pipeline."""
     duration = parse_duration(duration)
@@ -184,18 +185,32 @@ async def run_production(
                     stored_inputs = json.loads(inputs_json.read_text(encoding="utf-8"))
                     title = stored_inputs.get("title", title)
                     existing_ep.title = title
+                    idea = stored_inputs.get("idea", idea)
+                    theme = stored_inputs.get("theme", theme)
+                    prompt = stored_inputs.get("prompt", prompt)
+                    music_style = music_style or stored_inputs.get("music_style") or stored_inputs.get("style")
+                    similar_to = similar_to or stored_inputs.get("similar_to")
                     language = stored_inputs.get("language", language)
-                    effective_voice_gender = stored_inputs.get("gender", "female")
-                    character_name = stored_inputs.get("character_name")
-                    art_style = stored_inputs.get("art_style")
-                    is_voice_over = stored_inputs.get("enable_voice_over", True)
-                    enable_bgm = stored_inputs.get("enable_bgm", True)
-                    enable_lipsync = stored_inputs.get("enable_lipsync", False)
-                    active_sub = stored_inputs.get("subtitle_language", "en")
+                    character_name = character_name or stored_inputs.get("character_name")
+                    country = country or stored_inputs.get("country")
+                    culture = culture or stored_inputs.get("culture")
+                    costume_style = costume_style or stored_inputs.get("costume_style")
+                    dance_type = dance_type or stored_inputs.get("dance_type")
+                    art_style = art_style or stored_inputs.get("art_style")
+                    active_sub = stored_inputs.get("subtitle_language", subtitle_language or "en")
                     if num_images == 1 and "num_images" in stored_inputs:
                         num_images = int(stored_inputs["num_images"])
                     if not use_loras and "use_loras" in stored_inputs:
                         use_loras = bool(stored_inputs["use_loras"])
+                    if not (solo_male or solo_female or duet):
+                        duet = stored_inputs.get("duet", False) or (stored_inputs.get("gender") == "duet")
+                        solo_male = stored_inputs.get("solo_male", False) or (stored_inputs.get("gender") == "male")
+                        solo_female = stored_inputs.get("solo_female", False) or (stored_inputs.get("gender") == "female" and not duet)
+                    effective_voice_gender = "duet" if duet else ("male" if solo_male else ("female" if solo_female else stored_inputs.get("gender", "duet")))
+                    gender = effective_voice_gender
+                    is_voice_over = stored_inputs.get("enable_voice_over", False)
+                    enable_bgm = stored_inputs.get("enable_bgm", True)
+                    enable_lipsync = stored_inputs.get("enable_lipsync", True)
                 except Exception: pass
             
             # Preserve existing master renders on resume (Rule 3 Tier 1 Disk Check)
@@ -439,27 +454,37 @@ async def run_production(
     episode.options.target_languages = [language]
     ep_code = f"ep-{episode.episode_number:03d}" if episode.episode_number else f"ep-001"
 
+    eff_net = network or (show.slug if show else "default_network")
     if not restart_id or not ep_ws or not ep_ws.exists():
-        eff_net = network or (show.slug if show else "default_network")
         clean_fmt = "music_video" if (fmt_str in ("vocal", "music_video", "vocal_song") or "music" in str(fmt_str).lower() or "vocal" in str(fmt_str).lower() or genre in ("vocal", "vocal_song", "song")) else (re.sub(r"[^a-zA-Z0-9_-]", "_", str(fmt_str).lower()).strip("_") or "music_video")
         clean_name = re.sub(r"\s*[-–—]?\s*episode\s*\d+", "", str(title), flags=re.IGNORECASE).strip()
         clean_prod = re.sub(r"[^a-zA-Z0-9]+", "_", clean_name.lower()).strip("_") or "standalone"
         u_cont = getattr(user, "storage_container_name", None) or getattr(user, "email", None) or str(user.id)
         ep_ws = storage_service.get_channel_format_production_episode_path(u_cont, eff_net, clean_fmt, clean_prod, ep_code)
     ep_ws.mkdir(parents=True, exist_ok=True)
+    eff_idea = idea or (theme if theme else None) or prompt
+    eff_theme = theme or (resolved_theme.value if resolved_theme != ThemeGenre.AUTO else None) or eff_idea
     user_inputs = {
-        "user_id": str(user.id), "episode_id": str(episode.id), "title": ep_title, "duration_seconds": duration, "format": fmt_str, "genre": genre,
-        "theme": theme or (resolved_theme.value if resolved_theme != ThemeGenre.AUTO else None), "idea": idea, "script": script_text, "youtube_reference_url": youtube_reference_link,
-        "tier": tier, "profile": profile, "language": language, "subtitle_language": active_sub, "gender": effective_voice_gender, "character_name": character_name, "art_style": art_style,
-        "enable_voice_over": is_voice_over, "enable_bgm": enable_bgm, "enable_lipsync": enable_lipsync, "reference_attributes": ref_attrs.model_dump(mode="json") if ref_attrs else None,
-        "target_languages": episode.options.target_languages, "num_images": num_images, "use_loras": use_loras, "created_at": time.time(),
+        "user_id": str(user.id), "episode_id": str(episode.id), "episode_number": episode_number,
+        "title": ep_title, "duration_seconds": duration, "format": fmt_str, "genre": genre,
+        "theme": eff_theme, "idea": eff_idea, "prompt": prompt, "script": script_text, "youtube_reference_url": youtube_reference_link,
+        "tier": tier, "profile": profile, "language": language, "subtitle_language": active_sub,
+        "gender": effective_voice_gender, "voice_gender": voice_gender, "character_name": character_name,
+        "solo_male": solo_male, "solo_female": solo_female, "duet": duet,
+        "music_style": music_style, "style": music_style, "similar_to": similar_to,
+        "country": country, "culture": culture, "costume_style": costume_style, "dance_type": dance_type,
+        "art_style": art_style or (ref_attrs.art_style if ref_attrs else ""),
+        "enable_voice_over": is_voice_over, "enable_bgm": enable_bgm, "enable_lipsync": enable_lipsync,
+        "reference_attributes": ref_attrs.model_dump(mode="json") if ref_attrs else None,
+        "target_languages": episode.options.target_languages, "num_images": num_images, "use_loras": use_loras,
+        "network": eff_net, "created_at": time.time(),
     }
     with open(ep_ws / "user_inputs.json", "w", encoding="utf-8") as f: json.dump(user_inputs, f, indent=2, ensure_ascii=False)
 
     # 1. Generate Structured Scene Storyboard Plan via Gemini 1.5 Pro (non-dance formats)
     storyboard_path = ep_ws / "storyboard.json"
     storyboard_data = None
-    if storyboard_path.exists() and storyboard_path.stat().st_size > 0:
+    if not rescript and storyboard_path.exists() and storyboard_path.stat().st_size > 0:
         try:
             storyboard_data = json.loads(storyboard_path.read_text(encoding="utf-8"))
             if not storyboard_data.get("id") or not storyboard_data.get("episode_id"):
@@ -468,6 +493,8 @@ async def run_production(
                 storyboard_path.write_text(json.dumps(storyboard_data, indent=2, ensure_ascii=False), encoding="utf-8")
             print(f"[i] Resume: Loaded existing storyboard from disk.")
         except Exception: pass
+    elif rescript:
+        print(f"[i] --rescript passed: Bypassing cached storyboard. Generating fresh script via Gemini with saved user inputs...")
 
     if not storyboard_data:
         # Resolve reference attributes for the prompt if not already available
@@ -477,16 +504,19 @@ async def run_production(
 
         from src.compositor.genre_strategies import resolve_strategy
         strategy = resolve_strategy(media_format=fmt_str, genre=genre, idea=idea or title)
-        eff_idea = idea or (theme if theme else None) or prompt
-        eff_theme = theme or (resolved_theme.value if resolved_theme != ThemeGenre.AUTO else None) or eff_idea
+        # Derive gemini_inputs directly from user_inputs (Single Source of Truth)
         gemini_inputs = {
-            "title": ep_title, "duration_seconds": duration, "language": language,
-            "genre": genre, "idea": eff_idea, "theme": eff_theme,
-            "music_style": music_style, "num_images": num_images, "similar_to": similar_to,
-            "country": country, "culture": culture, "gender": effective_voice_gender,
-            "art_style": art_style or (ref_attrs.art_style if ref_attrs else ""),
-            "culture_ctx": culture_context, "character_name": character_name, "prompt": prompt,
-            "user_id": str(user.id), "network": network, "episode_number": episode_number,
+            "title": user_inputs["title"], "duration_seconds": user_inputs["duration_seconds"],
+            "language": user_inputs["language"], "genre": user_inputs["genre"],
+            "idea": user_inputs["idea"], "theme": user_inputs["theme"],
+            "music_style": user_inputs["music_style"], "num_images": user_inputs["num_images"],
+            "similar_to": user_inputs["similar_to"], "country": user_inputs["country"],
+            "culture": user_inputs["culture"], "gender": user_inputs["gender"],
+            "duet": user_inputs["duet"], "solo_male": user_inputs["solo_male"],
+            "solo_female": user_inputs["solo_female"], "art_style": user_inputs["art_style"],
+            "culture_ctx": culture_context, "character_name": user_inputs["character_name"],
+            "prompt": user_inputs["prompt"], "user_id": user_inputs["user_id"],
+            "network": user_inputs["network"], "episode_number": user_inputs["episode_number"],
         }
         with open(ep_ws / "gemini_inputs.json", "w", encoding="utf-8") as f:
             json.dump(gemini_inputs, f, indent=2, default=str, ensure_ascii=False)
@@ -663,6 +693,7 @@ def main():
         (["--solo-male"], "Solo male vocalist and solo male lead", "solo_male"),
         (["--solo-female"], "Solo female vocalist and solo female lead", "solo_female"),
         (["--duet"], "Duet vocalists (male & female) with both leads", "duet"),
+        (["--rescript", "--regenerate-script"], "Regenerate storyboard script via Gemini even if cached", "rescript"),
     ]:
         p.add_argument(*fls, action="store_true", default=False, help=h, dest=dst)
     profile_group = p.add_mutually_exclusive_group()

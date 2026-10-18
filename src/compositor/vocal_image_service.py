@@ -53,6 +53,17 @@ async def synthesize_vocal_scenes(
     char_seed = int((storyboard_data.get("characters") or [{}])[0].get("seed", 0))
     song_seed = (abs(hash(str(episode_id or scenes_dir.parent.name))) + char_seed * 137) % 900000
 
+    # Build persistent character visual anchor prefix to enforce facial/attire consistency across all scenes
+    chars = storyboard_data.get("characters") or []
+    char_anchors = []
+    for c in chars:
+        c_name = c.get("name", "Lead")
+        c_comp = c.get("body_composition", "")
+        c_outfit = c.get("outfit_description", "")
+        if c_name and (c_comp or c_outfit):
+            char_anchors.append(f"{c_name} ({c_comp}. Wearing {c_outfit})")
+    anchor_prefix = f"Recurring characters in scene: {'; '.join(char_anchors)}. " if char_anchors else ""
+
     for idx in range(1, count + 1):
         scene_path = scenes_dir / f"scene_{idx:02d}.jpg"
         if scene_path.is_file() and scene_path.stat().st_size > 1000:
@@ -73,8 +84,17 @@ async def synthesize_vocal_scenes(
         effective_prompt = f"{trigger_words}, {raw_prompt}".strip(", ") if (loras and trigger_words) else raw_prompt
         # Sanitize any accidental negative constraint or Negative: tokens from prompt
         effective_prompt = re.split(r"(?i)\bnegative\s*(?:constraints|prompt)?\s*:", effective_prompt)[0].strip(", ")
+        # Ensure universal modesty, female composition, accessories harmony, and anti-hallucination guards
+        safety_tokens = (
+            "modest high boat neckline, zero cleavage, fully visible leads in frame, zero disembodied hands, "
+            "zero floating limbs, graceful slender-curvy silhouette, delicate hair flowers or pins, "
+            "delicate necklace and sparkling pendant around neck, matching earrings, slim wrist watch, "
+            "delicate bangles, dainty ankle chain anklet, cute charming elegant styling"
+        )
+        effective_prompt = f"{anchor_prefix}{effective_prompt}, {safety_tokens}".strip(", ")
 
-        scene_seed = (song_seed + idx * 7919) % 1000000
+        # Use deterministic shared song seed for character consistency across all scenes in song
+        scene_seed = song_seed
         logger.info(f"generating_vocal_scene_{idx:02d}: prompt={effective_prompt[:80]}... (loras={len(loras)}, seed={scene_seed})")
         if loras:
             primary_lora = loras[0]["path"]

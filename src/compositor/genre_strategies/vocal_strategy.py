@@ -139,7 +139,14 @@ class VocalStrategy:
         theme: str | None = None,
         **kwargs: Any,
     ) -> str:
-        eff_gender = (gender or kwargs.get("vocal_gender") or "duet").lower()
+        if kwargs.get("duet") or str(gender).lower() == "duet":
+            eff_gender = "duet"
+        elif kwargs.get("solo_male") or str(gender).lower() == "male":
+            eff_gender = "male"
+        elif kwargs.get("solo_female") or str(gender).lower() == "female":
+            eff_gender = "female"
+        else:
+            eff_gender = (gender or kwargs.get("vocal_gender") or "duet").lower()
         eff_country = country or "India"
         if not culture:
             from src.studios.music_video_studio.country_music_catalog import resolve_culture_for_country_and_language

@@ -139,7 +139,13 @@ def build_cast_and_visual_directives(
             f"  * Palette & Designer Patterns: Rich saturated tones or luminous radiant pastels in {fem.palette} featuring intricate artistic designs—delicate floral embroidery, fine gold/silver threadwork borders, tasteful patterns, layered ruffles, or lacework that pop against the scenery.\n"
             f"  * Dynamic photogenic fabrics (flowing chiffon, georgette, or silk) that billow gracefully in the breeze and during turns/twirls.\n"
             f"  * STRICT MODESTY (FAMILY-FRIENDLY - ZERO NUDITY / ZERO SEXUALIZATION): Tasteful, fully modest and elegant necklines (boat neck, modest round neck, mandarin, or modest sweetheart with full coverage), completely covered torso and midriff, non-revealing, graceful silhouette. STRICTLY PROHIBIT deep cleavage, plunging necklines, sheer/translucent reveals, bare midriffs, or suggestive cuts.\n"
-            f"- 4-ZONE ACCESSORIES: Delicate hairpins/wildflowers in hair, subtle earrings/necklace, slim dress watch/bangles, dainty anklet.\n"
+            f"  * CURATED 4-ZONE ACCESSORIES (GEMINI AUTONOMOUS CONTEXTUAL SELECTION - MANDATORY IN SCRIPT & IMAGE PROMPTS):\n"
+            f"    Gemini MUST autonomously decide and describe context-matched accessories across all 4 zones based on the background, weather, and culture of {setting}:\n"
+            f"    - HAIR (Zone 1): Context-matched blossoms (e.g. wild alpine flowers, jasmine, or roses) or delicate pearl/gold barrette pins chosen by Gemini to look cute and romantic.\n"
+            f"    - EARS & NECK (Zone 2): Context-matched sparkling earrings/jhumkas and delicate pendant chain styled on a modest high neckline.\n"
+            f"    - HANDS & WRISTS (Zone 3): Context-matched graceful slim dress watch, delicate gold/silver bangles or chain bracelets, and dainty rings.\n"
+            f"    - LEGS & ANKLES (Zone 4): Context-matched dainty ankle chain (anklet / payal) paired with setting-appropriate footwear (sandals, heels, or embellished juttis).\n"
+            f"    - SCRIPT & PROMPT CONTRACT: Gemini MUST record these chosen accessories in 'characters[0].outfit_description' AND explicitly include them in 'visual_prompt' across EVERY scene so each image reflects her cute, charming, and stylish appearance.\n"
             f"- STRICT NEGATIVE DIRECTIVE: SOLO FEMALE ONLY. The image MUST depict ONLY this female character. "
             f"STRICTLY FORBIDDEN: NO MEN, NO MALE CHARACTERS, NO COUPLE, NO BOYFRIEND.\n"
         )
@@ -147,15 +153,29 @@ def build_cast_and_visual_directives(
     else:
         cast_dir = (
             f"COORDINATED COUPLE DIRECTIVE (SLOT #{slot} - DUET STAGING):\n"
-            f"- FEMALE LEAD: '{fem.name}', Age {fem.age}, natural fit medium-slender graceful build (graceful SLIM build), {fem.skin} skin, {fem.face}, {fem.hair}.\n"
-            f"  * Context-Matching & Attractive: Beautiful, colorful, elegant designer dress in {fem.palette} with delicate floral embroidery or fine threadwork designs, flowing chiffon/georgette fabric suited to {setting}.\n"
-            f"  * STRICT MODESTY (FAMILY-FRIENDLY - ZERO NUDITY): Tasteful, fully covered and elegant attire for both leads. Zero nudity, zero revealing or sexualized clothes.\n"
-            f"  * Curated 4-zone accessories: delicate pins/flowers in hair, subtle pendant/earrings, slim watch, dainty anklet.\n"
+            f"- FEMALE LEAD: '{fem.name}', Age {fem.age}, natural fit medium-slender graceful slim build with defined waist and natural feminine curves (graceful SLIM build), {fem.skin} skin, {fem.face}, {fem.hair}.\n"
+            f"  * Context-Matching & Attractive Designer Dress: Breathtakingly beautiful, colorful, elegant designer gown in {fem.palette} with delicate floral embroidery or fine threadwork designs, tailored to flatter her graceful slim waist and silhouette (strictly NO boxy, loose, or shapeless tunics).\n"
+            f"  * STRICT MODESTY (FAMILY-FRIENDLY & ZERO NUDITY): Elegant modest high boat neckline, mandarin collar, or high round neck with full upper chest coverage. Strictly zero cleavage, zero plunging necklines, zero low V-necks, zero bare midriff.\n"
+            f"  * CURATED 4-ZONE ACCESSORIES (GEMINI AUTONOMOUS CONTEXTUAL SELECTION - MANDATORY IN SCRIPT & IMAGE PROMPTS):\n"
+            f"    Gemini MUST autonomously decide and describe context-matched accessories across all 4 zones based on the background, weather, and culture of {setting}:\n"
+            f"    - HAIR (Zone 1): Context-matched blossoms or delicate pearl/gold barrette pins chosen by Gemini to look cute and romantic.\n"
+            f"    - EARS & NECK (Zone 2 - MANDATORY NECK ACCESSORY): Context-matched sparkling earrings/jhumkas AND delicate necklace or pendant chain styled gracefully around her neck over the high neckline. Females ALWAYS wear neck accessories; NEVER omit the necklace or pendant chain in any scene prompt.\n"
+            f"    - HANDS & WRISTS (Zone 3): Context-matched graceful slim dress watch, delicate gold/silver bangles or chain bracelets, and dainty rings.\n"
+            f"    - LEGS & ANKLES (Zone 4): Context-matched dainty ankle chain (anklet / payal) paired with setting-appropriate footwear (sandals, heels, or boots).\n"
+            f"    - SCRIPT & PROMPT CONTRACT: Gemini MUST record these chosen accessories in 'characters[0].outfit_description' AND explicitly include ALL 4 ZONES (including the necklace around her neck) in 'visual_prompt' across EVERY scene so each image reflects her cute, charming, and stylish appearance.\n"
             f"- MALE LEAD: '{male.name}', Age {male.age}, natural fit medium-athletic frame (MEDIUM BUILT), {male.skin} skin, {male.face}, {male.hair}.\n"
             f"  * Context-Matching & Attractive: Strikingly handsome, elegant tailored attire in {male.palette} suited to {setting}, tailored trousers, precision chronograph watch strapped securely to left wrist.\n"
-            f"- CANDID DIVERSE STAGING: Genuine romantic chemistry, sweet emotive interaction set in {setting}.\n"
+            f"- DIRECTORIAL FRAMING & ANTI-HALLUCINATION GUARD:\n"
+            f"  * Both leads must be framed together naturally or solo. NEVER describe an off-screen partner's hands reaching into the frame.\n"
+            f"  * Authentic romantic chemistry engaging with the background, zero stiff separated stances.\n"
         )
-        neg_constraints = "nudity, naked, cleavage, sexualized outfit, revealing clothes, low cut, exposed midriff, provocative attire, translucent fabric, watch on shirt, chest badge, misplaced jewelry, plastic doll skin, wax figure, distorted anatomy, zero outfit distortion"
+        neg_constraints = (
+            "nudity, naked, cleavage, sexualized outfit, revealing clothes, low cut, exposed midriff, "
+            "provocative attire, translucent fabric, watch on shirt, chest badge, misplaced jewelry, "
+            "plastic doll skin, wax figure, distorted anatomy, zero outfit distortion, disembodied hands, floating hands, "
+            "phantom limbs, severed arms, severed hands, extra limbs, off-screen reaching, boxy tunic, "
+            "baggy loungewear, shapeless clothing, low V-neck, plunging neckline, stiff posture, standing separated"
+        )
 
     return cast_dir, neg_constraints
 

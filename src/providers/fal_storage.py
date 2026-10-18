@@ -44,10 +44,13 @@ async def upload_to_fal(file_path: Path, api_key: str = "") -> str:
     # Universal Artifact Caching Guard (Directive 3): Check for existing .fal_url sidecar
     url_sidecar = file_path.with_suffix(file_path.suffix + ".fal_url")
     if url_sidecar.exists():
-        cached_url = url_sidecar.read_text(encoding="utf-8").strip()
-        if cached_url.startswith("http"):
-            logger.info(f"fal_storage_cache_hit: {file_path.name} → {cached_url}")
-            return cached_url
+        if file_path.exists() and file_path.stat().st_mtime > url_sidecar.stat().st_mtime:
+            logger.info(f"fal_storage_sidecar_stale: {file_path.name} is newer than sidecar, re-uploading")
+        else:
+            cached_url = url_sidecar.read_text(encoding="utf-8").strip()
+            if cached_url.startswith("http"):
+                logger.info(f"fal_storage_cache_hit: {file_path.name} → {cached_url}")
+                return cached_url
 
     suffix = file_path.suffix.lower()
     mime_map = {

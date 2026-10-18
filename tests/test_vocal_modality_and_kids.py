@@ -166,31 +166,30 @@ def test_high_ctr_dynamic_pose_directives():
 
     # Test Female Pose Directive
     fem_dir = build_environmental_pose_directive(gender="female", theme="Alpine Romance", num_scenes=3)
-    assert "smelling a flower" in fem_dir
-    assert "putting flower in hair" in fem_dir
-    assert "STRICT BAN ON STATIC 'STAND STILL' PORTRAITS" in fem_dir
+    assert "AUTONOMOUS CONTEXT-DRIVEN POSE & FRAMING DIRECTIVE (NO HARDCODED POSES)" in fem_dir
+    assert "AUTONOMOUS SOLO FEMALE SENSORY IMMERSION" in fem_dir
+    assert "UNIVERSAL FEMALE COMPOSITION & ACCESSORIES" in fem_dir
+    assert "AUTONOMOUS CONTEXTUAL ACCESSORIES IN EVERY SCENE" in fem_dir
 
     # Test Duet Pose Directive
     duet_dir = build_environmental_pose_directive(gender="duet", theme="Lake Romance", num_scenes=4)
-    assert "holding hands" in duet_dir
-    assert "wraps an arm around her waist" in duet_dir
-    assert "hands gently around his neck" in duet_dir
+    assert "AUTONOMOUS DUET INTERACTION & CHEMISTRY DERIVATION (NO HARDCODED TEMPLATES)" in duet_dir
+    assert "STRICT BAN ON OFF-SCREEN REACHING & DISEMBODIED HANDS" in duet_dir
+    assert "UNIVERSAL FEMALE COMPOSITION & ACCESSORIES" in duet_dir
 
     # Test Offline Mock Poses
     offline_scenes = get_offline_dynamic_scene_poses(
         country="Switzerland", culture="Indian", character_desc="Anya", gender="female", num_scenes=3
     )
     assert len(offline_scenes) == 3
-    assert any("smelling a flower" in sc["visual_prompt"] for sc in offline_scenes)
-    assert any("putting flower in hair" in sc["visual_prompt"] for sc in offline_scenes)
 
     # Test VocalStrategy prompt injection
     strat = VocalStrategy()
     prompt = strat.build_gemini_prompt(
         title="Hawaaon Ke Sang", duration_seconds=180, language="hi", gender="female", theme="Alpine Wildflowers", num_images=3,
     )
-    assert "MANDATORY HIGH-CTR BACKGROUND-SPECIFIC POSE DIRECTIVE" in prompt
-    assert "smelling a flower" in prompt
+    assert "AUTONOMOUS CONTEXT-DRIVEN POSE & FRAMING DIRECTIVE (NO HARDCODED POSES)" in prompt
+    assert "UNIVERSAL FEMALE COMPOSITION & ACCESSORIES" in prompt
 
 
 def test_outfit_and_modesty_standards(sample_cast):
@@ -200,6 +199,10 @@ def test_outfit_and_modesty_standards(sample_cast):
         slot=1, fem=fem, male=male, culture="Indian", setting="Alpine Meadow", gender="female", is_kids=False,
     )
     assert "BEAUTIFUL, COLORFUL, ELEGANT WITH DESIGNS" in f_dir
+    assert "CURATED 4-ZONE ACCESSORIES" in f_dir
+    assert "LEGS & ANKLES" in f_dir
+    assert "HANDS & WRISTS" in f_dir
+    assert "anklet" in f_dir
     assert "STRICT MODESTY" in f_dir
     assert "ZERO NUDITY" in f_dir
     assert "nudity" in f_neg
@@ -220,6 +223,8 @@ def test_outfit_and_modesty_standards(sample_cast):
         slot=1, fem=fem, male=male, culture="Indian", setting="Alpine Meadow", gender="duet", is_kids=False,
     )
     assert "Context-Matching & Attractive" in d_dir
+    assert "CURATED 4-ZONE ACCESSORIES" in d_dir
+    assert "anklet" in d_dir
     assert "ZERO NUDITY" in d_dir
     assert "nudity" in d_neg
 

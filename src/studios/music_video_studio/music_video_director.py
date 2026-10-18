@@ -153,7 +153,7 @@ def _build_offline_multilingual_storyboard(
                 "gender": "female",
                 "age": 25,
                 "body_composition": "Natural fit medium-slender graceful build",
-                "outfit_description": f"Elegant context-matched attire for {country}",
+                "outfit_description": f"Elegant context-matched designer dress for {country} with modest high neckline, fresh blossoms or pins in hair, sparkling earrings and delicate pendant, slim dress watch, and dainty silver ankle chain anklet",
             }
         ],
         "lyrics_segments": [
