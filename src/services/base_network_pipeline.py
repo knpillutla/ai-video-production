@@ -59,6 +59,7 @@ class BaseChannelPipeline:
         uncompressed: bool = False,
         force_rerun: bool = False,
         tts_model: Optional[str] = None,
+        execution_mode: str = "test",
     ) -> Dict[str, Any]:
         """Execute standardized multi-stage pipeline workflow with review gates and --id banners."""
         effective_hours = long_play_hours or self.config.default_hours
@@ -66,7 +67,7 @@ class BaseChannelPipeline:
         eff_model = motion_model or self.config.default_motion_model
         crf_val = 16 if uncompressed else 22
 
-        logger.info(f"starting_channel_job: {self.config.channel_name} id={episode_id} tier={tier} image={image_model} motion={eff_model} photos_only={photos_only} motion_only={motion_only} no_bgm={no_bgm} voiceover={enable_voiceover} tts_model={tts_model}")
+        logger.info(f"starting_channel_job: {self.config.channel_name} id={episode_id} tier={tier} image={image_model} motion={eff_model} exec_mode={execution_mode} photos_only={photos_only} motion_only={motion_only} no_bgm={no_bgm} voiceover={enable_voiceover} tts_model={tts_model}")
         print(f"\n[DECISION - CHANNEL PIPELINE INITIALIZED]")
         print(f"   * Channel:     {self.config.channel_name} ({self.config.channel_handle})")
         print(f"   * Title:       {sb.title}")
@@ -94,6 +95,7 @@ class BaseChannelPipeline:
             allow_fallback=allow_fallback,
             force_rerun=force_rerun,
             tts_model=tts_model,
+            execution_mode=execution_mode,
         )
 
         ep_id = result["episode_id"]

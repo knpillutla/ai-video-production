@@ -877,6 +877,7 @@ async def render_perspective_drone_clip(
     remove_objects: bool = False,
     remove_object_list: Optional[List[str]] = None,
     interpolation: str = "cubic",
+    lower_third_hud: Optional[dict] = None,
     water: bool = False,
     smoke: bool = False,
     clouds: bool = False,

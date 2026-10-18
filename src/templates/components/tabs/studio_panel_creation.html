@@ -1,17 +1,12 @@
 <!-- PANEL 1: STORY & CREATION HUB (Left Panel: New Production & Channel Archive) -->
 <div class="h-full flex flex-col bg-[var(--card)] border border-[var(--border)] rounded-2xl p-2.5 shadow-sm space-y-2 overflow-y-auto custom-scrollbar">
-  <!-- Top Panel 1 Switcher Tabs: New Production vs Existing Episodes -->
-  <div class="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-2">
-    <div class="segmented-track flex-1">
-      <button type="button" onclick="switchCreationTab('new')" id="btn-tab-creation-new" class="segmented-btn flex-1 justify-center py-1.5 px-3 text-sm font-bold active">
-        <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
-        <span>New</span>
-      </button>
-      <button type="button" onclick="switchCreationTab('archive')" id="btn-tab-creation-archive" class="segmented-btn flex-1 justify-center py-1.5 px-3 text-sm font-bold">
-        <i class="fa-solid fa-film text-xs"></i>
-        <span>Episodes</span>
-        <span id="channel-archive-badge-count" class="px-1.5 py-0.2 rounded-full text-[10px] bg-[var(--card-subtle)] text-[var(--text-muted)] font-mono font-bold">0</span>
-      </button>
+  <!-- Top Header: Panel Title & Tools -->
+  <div class="flex items-center justify-between border-b border-[var(--border)] pb-2">
+    <div class="flex items-center gap-2">
+      <div class="w-6 h-6 rounded-lg bg-[var(--accent)]/10 text-[var(--accent)] flex items-center justify-center font-bold text-xs shrink-0">
+        <i class="fa-solid fa-clapperboard"></i>
+      </div>
+      <span class="text-sm font-black text-[var(--text)] tracking-tight">Video Production</span>
     </div>
     
     <div class="flex items-center gap-1 shrink-0">
@@ -28,6 +23,19 @@
         <span>Clear</span>
       </button>
     </div>
+  </div>
+
+  <!-- Switcher Tabs: New Production vs Existing Episodes -->
+  <div class="segmented-track w-full">
+    <button type="button" onclick="switchCreationTab('new')" id="btn-tab-creation-new" class="segmented-btn flex-1 justify-center py-1.5 px-3 text-xs font-bold active">
+      <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+      <span>New</span>
+    </button>
+    <button type="button" onclick="switchCreationTab('archive')" id="btn-tab-creation-archive" class="segmented-btn flex-1 justify-center py-1.5 px-3 text-xs font-bold">
+      <i class="fa-solid fa-film text-[10px]"></i>
+      <span>Episodes</span>
+      <span id="channel-archive-badge-count" class="px-1.5 py-0.2 rounded-full text-[10px] bg-[var(--card-subtle)] text-[var(--text-muted)] font-mono font-bold">0</span>
+    </button>
   </div>
 
   <!-- VIEW A: NEW PRODUCTION CREATION WORKSPACE -->
@@ -77,38 +85,38 @@
       <input type="hidden" id="studio-active-format-val" value="relaxation">
     </div>
 
-    <!-- 2. PRODUCTION (New Production vs Existing Production) & EPISODE NUMBER -->
-    <div class="p-2.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-2">
+    <!-- 2. PRODUCTION (Options Dropdown + Optional Custom Input) & EPISODE NUMBER -->
+    <div class="p-2.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
       <div class="flex items-center justify-between">
-        <label class="text-xs font-bold text-[var(--text)] flex items-center gap-1.5">
+        <label for="studio-existing-series-select" class="text-xs font-bold text-[var(--text)] flex items-center gap-1.5">
           <i class="fa-solid fa-clapperboard text-xs text-[var(--accent)]"></i>
           <span>2. Production:</span>
-          <span class="text-rose-500 font-bold ml-0.5" title="Mandatory">*</span>
+          <span class="text-[10px] font-normal text-[var(--text-muted)]">(Optional)</span>
         </label>
-        <!-- Prominent Existing vs New Switcher -->
+        <!-- Mode switcher: Options vs Custom -->
         <div class="segmented-track text-xs">
-          <button type="button" onclick="setSeriesMode('new')" id="series-mode-new-btn" class="segmented-btn py-1 px-3" title="Create a New Production">
-            <i class="fa-solid fa-plus text-[10px]"></i>
-            <span>+ New</span>
+          <button type="button" onclick="setSeriesMode('existing')" id="series-mode-existing-btn" class="segmented-btn py-0.5 px-2 active" title="Select from curated & existing production series options">
+            <i class="fa-solid fa-list-ul text-[10px]"></i>
+            <span>Options</span>
           </button>
-          <button type="button" onclick="setSeriesMode('existing')" id="series-mode-existing-btn" class="segmented-btn py-1 px-3 active" title="Select from Existing Productions">
-            <i class="fa-solid fa-folder-open text-[10px]"></i>
-            <span>Existing</span>
+          <button type="button" onclick="setSeriesMode('new')" id="series-mode-new-btn" class="segmented-btn py-0.5 px-2" title="Type a custom production name (optional)">
+            <i class="fa-solid fa-pen text-[10px]"></i>
+            <span>+ Custom</span>
           </button>
         </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-[1fr_95px] gap-2 items-center">
-        <!-- New Production Input Container -->
-        <div id="series-new-container" class="hidden">
-          <input type="text" id="studio-production-name" oninput="onNewSeriesNameInput(this.value)" required placeholder="Enter New Production Name (e.g. Swiss Landscape)..." class="w-full px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-medium placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
-        </div>
-
-        <!-- Existing Production Dropdown Container -->
+        <!-- Production Options Dropdown (Curated series & existing productions) -->
         <div id="series-existing-container">
           <select id="studio-existing-series-select" onchange="onExistingSeriesSelect(this.value)" class="w-full px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]">
-            <option value="">(No existing productions found - start new)</option>
+            <option value="">Loading production options...</option>
           </select>
+        </div>
+
+        <!-- Custom Production Input Container (Optional) -->
+        <div id="series-new-container" class="hidden">
+          <input type="text" id="studio-production-name" oninput="onNewSeriesNameInput(this.value)" placeholder="Custom series name (optional)..." class="w-full px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-medium placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
         </div>
 
         <!-- Sequential Episode Box -->
@@ -140,11 +148,11 @@
         </select>
       </div>
 
-      <!-- 2. Sub-Genre Selector (Format & Style) -->
+      <!-- 4. Sub-Genre Selector (Format & Style) -->
       <div class="space-y-0.5">
         <label for="studio-subgenre-selector" class="text-xs font-bold text-[var(--text)] flex items-center gap-1">
           <i class="fa-solid fa-layer-group text-[var(--text-muted)] text-[10px]"></i>
-          <span>2. Sub-Genre (Format &amp; Style):</span>
+          <span>4. Sub-Genre (Format &amp; Style):</span>
         </label>
         <select id="studio-subgenre-selector" onchange="onSubGenreChange(this.value)" class="w-full px-2.5 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]">
           <option value="ambient_soundscape" selected>🌲 Ambient Soundscape (4K Living Wallpaper)</option>
@@ -158,11 +166,11 @@
         </select>
       </div>
 
-      <!-- 3. Ecosystem Archetype Selector (Setting Template) -->
+      <!-- 5. Ecosystem Archetype Selector (Setting Template) -->
       <div class="space-y-0.5">
         <label for="studio-archetype-selector" class="text-xs font-bold text-[var(--text)] flex items-center gap-1">
           <i class="fa-solid fa-mountain-sun text-[var(--text-muted)] text-[10px]"></i>
-          <span>3. Archetype (Setting Template):</span>
+          <span>5. Archetype (Setting Template):</span>
         </label>
         <select id="studio-archetype-selector" onchange="onArchetypeChange(this.value)" class="w-full px-2.5 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]">
           <option value="rainy_cabin_bedroom" selected>🛏️ Glass Cabin Bedroom (Rain on Panoramic Window)</option>
@@ -170,12 +178,12 @@
       </div>
 
 
-      <!-- 4. Weather & Atmosphere Selector (Explicit User Control) -->
+      <!-- 6. Weather & Atmosphere Selector (Explicit User Control) -->
       <div class="space-y-0.5 pt-1 border-t border-[var(--border)]">
         <label for="studio-weather-selector" class="text-xs font-bold text-[var(--text)] flex items-center justify-between">
           <span class="flex items-center gap-1">
             <i class="fa-solid fa-cloud-sun-rain text-[var(--text-muted)] text-[10px]"></i>
-            <span>4. Weather &amp; Atmosphere:</span>
+            <span>6. Weather &amp; Atmosphere:</span>
           </span>
           <span class="text-[9px] font-mono text-[var(--text-muted)]">Procedural Dynamic FX</span>
         </label>

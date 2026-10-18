@@ -190,7 +190,7 @@ async def generate_documentary_storyboard_gemini(
                         duration_seconds=sc_dur,
                         shot_type=sc.get("shot_type", "wide" if idx == 0 else "medium"),
                         motion_domain=sc.get("domain") or domain_tag,
-                        recommended_model=default_model,
+                        recommended_model=sc.get("recommended_model") or sc.get("motion_model") or default_model,
                         visual_prompt=v_prompt,
                         motion_prompt=m_prompt,
                         narration_text=n_text,

@@ -82,10 +82,14 @@ def build_base_directorial_prompt(
 
     motion_rule = (
         f"3. HYBRID MOTION DIRECTORIAL CONTRACT (TIER: {clean_tier.upper()}):\n"
-        '   - Gemini DECIDES "motion_type" ("ken_burns" | "ai_diffusion") and "motion_rationale" for every scene.\n'
+        '   - Gemini DECIDES "motion_type" ("ken_burns" | "ai_diffusion"), "recommended_model", and "motion_rationale" for every scene.\n'
         '   - Default for stable landscapes & geometry: "ken_burns" ($0.00 compute local 4K perspective engine).\n'
-        '   - Select "ai_diffusion" only if complex kinematics (waterfalls, running fauna) strictly require neural video.\n'
-        '   - SEQUENTIAL & PARALLEL MULTI-STAGE MOVEMENTS: Direct sequential timeline arrays (e.g. [{"movement": "dollyin", "duration": 6.0}, {"movement": "zoomin", "duration": 4.0}]) or parallel compound movements matching scene duration.'
+        '   - When "motion_type" is "ai_diffusion", Gemini MUST specify "recommended_model" to avoid hallucinations:\n'
+        '     * "wan_2_1": Best for smooth laminar fluids, glassy rivers, gentle rain, lake reflections, drifting mist/smoke, subtle tree sway (zero melting foam).\n'
+        '     * "kling_v3": Best for violent water impact, plunging waterfalls, roaring cataracts, crashing ocean surf, fire/embers.\n'
+        '     * "kling_pro": Best for complex human/animal movement, street vehicles, and cinemagraph living wallpapers.\n'
+        '     * "local_drone": Best for static topography, architectural monuments, and mountain flights ($0.00 compute).\n'
+        '   - SEQUENTIAL & PARALLEL MOVEMENTS: Direct timeline arrays (e.g. [{"movement": "dollyin", "duration": 6.0}]) or compound movements.'
     )
 
     if is_nature_relax:
@@ -275,6 +279,7 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
       }},
       "domain": "landscape_solid",
       "motion_type": "{ex_motion_type}",
+      "recommended_model": "{'wan_2_1' if is_nature_relax else 'local_drone'}",
       "camera_movement": "{default_cam_move}",
       "kinetic_micro_zones": {{ "sprites": [], "tree_sway_zones": [], "water_zones": [] }},
       "motion_rationale": "{ex_rationale}",
@@ -286,9 +291,8 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
     "ctr_titles": ["3 HOURS of Deep Serenity in [Landmark] ⋄ 432Hz Soundbath - 4K UHD", "Sleep Under [Landmark Sky] ✦ 432Hz Tone - 4K"],
     "description_with_timestamps": "Immerse yourself in [Landmark Name]. Filmed with broadcast 4K clarity.\\n\\n⏱️ Chapters:\\n0:00 - Vista 1",
     "seo_tags": ["nature relaxation", "living wallpaper", "4k nature", "ambient nature"],
-    "has_synthetic_media": true,
-    "ypp_monetization_safety": "100% AdSense Advertiser-Friendly (Green Dollar Guarantee)",
-    "thumbnail_concept_prompts": ["Ultra-crisp 16:9 cinematic shot of [Landmark Name], striking natural lighting, award-winning photography."]
+    "has_synthetic_media": true, "ypp_monetization_safety": "100% AdSense Advertiser-Friendly (Green Dollar Guarantee)",
+    "thumbnail_concept_prompts": ["Ultra-crisp 16:9 cinematic shot of [Landmark Name], striking natural lighting."]
   }}
 }}
 Do NOT output markdown backticks or preamble. Output raw JSON only.

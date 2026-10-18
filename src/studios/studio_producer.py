@@ -70,11 +70,21 @@ class StudioProducer:
         allow_fallback: bool = False,
         force_rerun: bool = False,
         tts_model: Optional[str] = None,
+        execution_mode: str = "test",
     ) -> Dict[str, Any]:
         """Execute 4-Stage Progressive Quality Gate with 100% Artifact Idempotency."""
         t_start = time.time()
         ep_dir = (self.output_base / episode_id) if episode_id else (self.output_base / f"ep_{sb.primary_archetype[:20]}_{int(time.time())}")
         ep_dir.mkdir(parents=True, exist_ok=True)
+
+        eff_exec = (execution_mode or "").strip().lower()
+        if (not eff_exec or eff_exec == "auto") and ep_dir and (ep_dir / "user_inputs.json").is_file():
+            try:
+                import json
+                eff_exec = (json.loads((ep_dir / "user_inputs.json").read_text("utf-8")).get("execution_mode") or "test").strip().lower()
+            except Exception:
+                eff_exec = "test"
+        eff_exec = eff_exec or "test"
 
         if not sb or not getattr(sb, "scenes", None) or len(sb.scenes) == 0:
             raise RuntimeError(
@@ -374,11 +384,12 @@ class StudioProducer:
                     (motion_model or "").lower() in ("locked_tripod", "local_drone", "local_zoompan", "local", "offline", "ken_burns")
                     or (getattr(s, "motion_type", "") in ("ken_burns", "static", "local_drone", "locked_tripod"))
                 )
-                use_local = not is_diffusion_model and (
+                is_test_mode = (eff_exec == "test")
+                use_local = is_test_mode or (not is_diffusion_model and (
                     is_tour_slide
                     or is_local_requested
                     or (is_relax and (motion_model or "").lower() in ("locked_tripod", "local_drone", "local", "ken_burns", None, ""))
-                )
+                ))
 
                 if use_local:
                     raw_cfg = getattr(s, "model_configs", None) or {}
@@ -472,6 +483,7 @@ class StudioProducer:
                     chosen_model, m_allow_fallback, m_rationale = resolve_scene_motion_model(
                         scene=s, tier=tier, requested_motion_model=motion_model,
                         scene_index=idx - 1, total_scenes=len(valid_keyframes), genre=getattr(sb, "cluster", "relax/nature"),
+                        execution_mode=eff_exec,
                     )
                     motion_tasks.append(
                         MotionClipTask(

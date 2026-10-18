@@ -32,8 +32,9 @@ class DocumentaryProducer:
         include_bgm: bool = False,
         photos_only: bool = False,
         allow_fallback: bool = False,
-        force_local_drone: bool = True,
+        force_local_drone: bool = False,
         force_rerun: bool = False,
+        execution_mode: str = "test",
     ) -> Dict[str, Any]:
         """Execute 4-Stage Progressive Quality Gate with 100% Artifact Idempotency."""
         t_start = time.time()
@@ -213,7 +214,8 @@ class DocumentaryProducer:
                     lower_third_hud=None,
                 )
 
-            use_local = force_local_drone or (getattr(scene, "motion_engine", "local_drone") == "local_drone")
+            is_test = (execution_mode or "test").strip().lower() == "test"
+            use_local = is_test or force_local_drone or (getattr(scene, "motion_engine", "local_drone") == "local_drone") or (getattr(scene, "motion_type", "") in ("ken_burns", "static", "local_drone"))
             if use_local:
                 logger.info(f"doc_motion_dispatch: Scene {scene.scene_index} -> 4K Local Perspective Drone (duration: {scene.duration_seconds}s)")
                 raw_cfg = getattr(scene, "model_configs", None) or {}
@@ -255,8 +257,8 @@ class DocumentaryProducer:
                     kinetic_objects=True,
                 )
             else:
-                eff_model = motion_model if motion_model != "auto" else scene.recommended_model
-                logger.info(f"doc_motion_dispatch: Scene {scene.scene_index} -> AI Video {eff_model}")
+                eff_model = scene.recommended_model if (getattr(scene, "recommended_model", None) and scene.recommended_model != "auto") else (motion_model if motion_model != "auto" else "wan_2_1")
+                logger.info(f"doc_motion_dispatch: Scene {scene.scene_index} -> AI Video {eff_model} (Gemini Directed)")
                 task = MotionClipTask(
                     image_path=kf_path, motion_prompt=scene.motion_prompt, visual_prompt=scene.visual_prompt,
                     output_path=out_clip, duration_seconds=scene.duration_seconds, model=eff_model,
@@ -276,19 +278,15 @@ class DocumentaryProducer:
         if out_clip.is_file() and str(out_clip) not in [str(c) for c in video_clip_paths]:
             video_clip_paths.append(out_clip)
 
-        # Stage 5: Master Assembly & Packaging
         master_path = ep_dir / "master_4k_documentary.mp4"
         assemble_documentary_4k_master(video_clip_paths, mixed_audio, master_path, srt_path)
         yt_pkg = export_documentary_metadata_package(sb, ep_dir)
-
-        # Generate High-CTR Branded 4K YouTube Thumbnails
         try:
             from src.studios.documentary_studio.doc_thumbnail_service import generate_documentary_thumbnail_variants
             thumb_pkg = generate_documentary_thumbnail_variants(sb, ep_dir, keyframe_paths)
             if thumb_pkg: yt_pkg["thumbnail_packaging"] = thumb_pkg
         except Exception as ex_t:
             logger.warning(f"failed_to_generate_tour_thumbnails: {ex_t}")
-
         await topic_memory.remember_topic(topic=sb.title, genre=f"doc_{sb.genre.value}", tags=[sb.genre.value, "documentary", sb.language], story_synopsis=f"4K Documentary on {sb.title} ({len(sb.scenes)} scenes)", episode_id=ep_dir.name)
         render_time = round(time.time() - t_start, 2)
         logger.info(f"documentary_production_ready: {ep_dir.name} in {render_time}s")

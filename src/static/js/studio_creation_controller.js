@@ -45,6 +45,83 @@ let activeStudioFormat = "relaxation";
 let activeSeriesMode = "existing";
 let cachedExistingSeries = [];
 
+function getCuratedProductionPresets(channelSlug, formatKey) {
+  const c = String(channelSlug || "").toLowerCase();
+  const f = String(formatKey || "").toLowerCase();
+  const g = String(document.getElementById("studio-genre-selector")?.value || "").toLowerCase();
+  const sg = String(document.getElementById("studio-subgenre-selector")?.value || "").toLowerCase();
+
+  if (c.includes("euro") || g.includes("nations") || sg.includes("europe") || c.includes("discovery")) {
+    return [
+      "Grand European Odyssey",
+      "Chronicles of Europe",
+      "European Heritage & Empires",
+      "Great Cities of Europe",
+      "Alpine & Nordic Sanctuaries",
+      "Mediterranean Horizons",
+      "Historic Nations & Dynasties",
+      "Lost Empires & Castles",
+      "European Countryside Walks",
+      "Scenic Rail & River Journeys"
+    ];
+  }
+  if (c.includes("skyline") || g.includes("city") || g.includes("urban") || g.includes("places")) {
+    return [
+      "Skyline Diaries 4K",
+      "Metropolitan Marvels",
+      "Monuments of Heritage",
+      "Spiritual Capitals & Ghats",
+      "Ancient Forts & Palaces",
+      "Coastal & Riverfront Skylines"
+    ];
+  }
+  if (f === "relaxation" || g.startsWith("relax")) {
+    return [
+      "Majestic Alpine Sanctuaries",
+      "Velvet Forest Whispers",
+      "Tranquil Ocean Horizons",
+      "Cozy Fireplace & Embers",
+      "Biophilic Rain Retreats",
+      "Kyoto Zen Temple Serenity",
+      "Cascading Waterfall Glades",
+      "Sacred Lotus Ponds"
+    ];
+  }
+  if (f === "walking_tour" || g.includes("walking") || g.includes("tour")) {
+    return [
+      "Historic Old Town Strolls",
+      "European Countryside Walks",
+      "Alpine Mountain Trails",
+      "Rainy Evening City Walks",
+      "Cobblestone Village Paths"
+    ];
+  }
+  if (g.includes("comedy") || f === "short") {
+    return [
+      "Urban Satire Chronicles",
+      "Middle Class Melodramas",
+      "Weekend Chaos Stories",
+      "IT Office Quirks"
+    ];
+  }
+  if (g.includes("dance") || f === "music_video") {
+    return [
+      "Folk Rhythms & Festive Beats",
+      "Highland Dance Melodies",
+      "Heritage Musical Journeys",
+      "Sunset Melodic Waves"
+    ];
+  }
+  return [
+    "Chronicles of Civilizations",
+    "Nations of the World",
+    "Deep History & Dynasties",
+    "Earth's Untamed Frontiers",
+    "Lost Empires & Architecture",
+    "Wildlife Expeditions & Wonders"
+  ];
+}
+
 function setSeriesMode(mode) {
   activeSeriesMode = mode;
   const existBtn = document.getElementById("series-mode-existing-btn");
@@ -69,10 +146,9 @@ function setSeriesMode(mode) {
     const pInput = document.getElementById("studio-production-name");
     const epCode = document.getElementById("studio-episode-code");
     if (pInput) {
-      pInput.value = "";
       pInput.focus();
     }
-    if (epCode) epCode.value = "EP-001";
+    if (epCode && !epCode.value) epCode.value = "EP-001";
   }
 }
 
@@ -104,44 +180,79 @@ async function fetchAndPopulateExistingSeries(channelSlug, formatKey) {
   const sel = document.getElementById("studio-existing-series-select");
   if (!sel) return;
 
-  if (!channelSlug || channelSlug === "all") {
-    sel.innerHTML = '<option value="">(Select a specific Network)</option>';
-    return;
+  const curated = getCuratedProductionPresets(channelSlug, formatKey);
+  let existing = [];
+
+  if (channelSlug && channelSlug !== "all") {
+    try {
+      const res = await fetch(`/api/channels/${channelSlug}/productions?format=${encodeURIComponent(formatKey)}`);
+      const data = await res.json();
+      if (data.status === "ok" && Array.isArray(data.productions) && data.productions.length > 0) {
+        existing = data.productions;
+        cachedExistingSeries = existing;
+      } else {
+        cachedExistingSeries = [];
+      }
+    } catch (err) {
+      cachedExistingSeries = [];
+    }
   }
 
-  try {
-    const res = await fetch(`/api/channels/${channelSlug}/productions?format=${encodeURIComponent(formatKey)}`);
-    const data = await res.json();
-    if (data.status === "ok" && Array.isArray(data.productions) && data.productions.length > 0) {
-      cachedExistingSeries = data.productions;
-      sel.innerHTML = data.productions.map(p => `
-        <option value="${p.slug}" data-next="${p.next_episode_code}">
-          ${p.name} (${p.episodes_count} ep${p.episodes_count === 1 ? '' : 's'} • Next: ${p.next_episode_code})
-        </option>
-      `).join("");
-      onExistingSeriesSelect(data.productions[0].slug);
-    } else {
-      cachedExistingSeries = [];
-      sel.innerHTML = '<option value="">(No existing productions found • Click + New)</option>';
-      const epCode = document.getElementById("studio-episode-code");
-      if (epCode) epCode.value = "EP-001";
-    }
-  } catch (err) {
-    console.warn("fetchAndPopulateExistingSeries notice:", err);
-    sel.innerHTML = '<option value="">(No series found • Click + New)</option>';
+  let html = "";
+  if (existing.length > 0) {
+    html += `<optgroup label="📁 Existing Productions on Disk">`;
+    html += existing.map(p => `
+      <option value="${p.slug}" data-name="${p.name}" data-next="${p.next_episode_code}">
+        ${p.name} (${p.episodes_count} ep${p.episodes_count === 1 ? '' : 's'} • Next: ${p.next_episode_code})
+      </option>
+    `).join("");
+    html += `</optgroup>`;
+  }
+
+  html += `<optgroup label="⭐ Curated Production Options">`;
+  html += curated.map(name => {
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    return `<option value="${slug}" data-name="${name}">${name}</option>`;
+  }).join("");
+  html += `</optgroup>`;
+  html += `<option value="standalone" data-name="Standalone">🌿 Standalone (Single Episode)</option>`;
+
+  sel.innerHTML = html;
+
+  // Preserve current value or pick first
+  const pInput = document.getElementById("studio-production-name");
+  const currentVal = pInput?.value?.trim();
+  const matchOpt = Array.from(sel.options).find(o => (o.getAttribute("data-name") || o.textContent.trim()) === currentVal || o.value === currentVal);
+
+  if (matchOpt) {
+    sel.value = matchOpt.value;
+    onExistingSeriesSelect(matchOpt.value);
+  } else if (existing.length > 0) {
+    sel.value = existing[0].slug;
+    onExistingSeriesSelect(existing[0].slug);
+  } else if (curated.length > 0) {
+    const firstSlug = curated[0].toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    sel.value = firstSlug;
+    onExistingSeriesSelect(firstSlug);
   }
 }
 
 function onExistingSeriesSelect(seriesSlug) {
+  const sel = document.getElementById("studio-existing-series-select");
   const p = cachedExistingSeries.find(x => x.slug === seriesSlug);
   const epCode = document.getElementById("studio-episode-code");
   const pInput = document.getElementById("studio-production-name");
   if (p) {
     if (epCode) epCode.value = p.next_episode_code || "EP-001";
     if (pInput) pInput.value = p.name;
-  } else if (seriesSlug) {
-    if (pInput) pInput.value = seriesSlug.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+  } else {
+    const opt = sel?.selectedOptions?.[0];
+    const cleanName = opt?.getAttribute("data-name") || opt?.textContent?.trim() || seriesSlug;
+    if (pInput) pInput.value = cleanName;
     if (epCode && !epCode.value) epCode.value = "EP-001";
+    if (cleanName && cleanName !== "Standalone") {
+      onNewSeriesNameInput(cleanName);
+    }
   }
 }
 
@@ -321,6 +432,8 @@ function onGenreChange(genreVal, preserveSubGenre = null, preserveArch = null) {
   if (typeof calculateLiveCostEstimate === "function") {
     calculateLiveCostEstimate();
   }
+  const chSlug = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : "nature_rhythms";
+  fetchAndPopulateExistingSeries(chSlug, activeStudioFormat);
 }
 
 function syncDualMastersVisibility() {

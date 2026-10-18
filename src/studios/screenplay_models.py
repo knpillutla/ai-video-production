@@ -83,9 +83,9 @@ class RelaxSceneDirective(BaseModel):
     image_model_configs: Dict[str, Any] = Field(default_factory=dict)
     domain: str = "landscape_solid"
     motion_type: str = "ai_diffusion"
+    recommended_model: Optional[str] = "wan_2_1"
     camera_movement: Union[List[Dict[str, Any]], List[Any], str] = Field(
-        default="slow_zoom_in",
-        description="Array of movement stages with durations or single movement"
+        default="slow_zoom_in", description="Array of movement stages with durations or single movement"
     )
     motion_rationale: Optional[str] = None
     duration_seconds: float = 30.0
@@ -193,6 +193,7 @@ class BaseScenePrompt(BaseModel):
     duration_seconds: float = 30.0
     domain: str = "landscape_solid"
     motion_type: str = "ai_diffusion"
+    recommended_model: Optional[str] = "wan_2_1"
     camera_rig: str = "locked_tripod"
     camera_movement: Union[List[Dict[str, Any]], List[Any], str] = "slow_zoom_in"
     motion_rationale: Optional[str] = None
@@ -261,6 +262,7 @@ def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> BaseStoryboard:
                 duration_seconds=s.duration_seconds,
                 domain=s.domain,
                 motion_type=getattr(s, "motion_type", "ai_diffusion"),
+                recommended_model=getattr(s, "recommended_model", "wan_2_1"),
                 camera_rig=getattr(s, "camera_rig", "locked_tripod"),
                 camera_movement=getattr(s, "camera_movement", "slow_zoom_in"),
                 motion_rationale=getattr(s, "motion_rationale", None),
@@ -289,8 +291,7 @@ def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> BaseStoryboard:
         secondary_archetype=sp.secondary_archetype, cluster=sp.cluster or "travel",
         tier=getattr(sp, "tier", None) or "balanced",
         total_duration=sp.total_duration_seconds or sum(s.duration_seconds for s in sp.scenes) or 60.0,
-        recommended_fps=sp.recommended_fps or 24,
-        audio_tags=sp.audio_master.suno_musical_tags if sp.audio_master else "",
+        recommended_fps=sp.recommended_fps or 24, audio_tags=sp.audio_master.suno_musical_tags if sp.audio_master else "",
         spoken_narration_script=getattr(sp.audio_master, "spoken_narration_script", "") if sp.audio_master else "",
         itinerary_summary=getattr(sp, "itinerary_summary", None), scenes=scenes,
     )

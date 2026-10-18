@@ -245,13 +245,11 @@ function quickTestProduceFromPrompt() {
   const seriesSelect = document.getElementById("studio-existing-series-select");
   if (!selProdName && seriesSelect?.value) {
     const selOpt = seriesSelect.selectedOptions?.[0];
-    selProdName = selOpt ? selOpt.textContent.split("(")[0].trim() : seriesSelect.value;
+    const optName = selOpt ? (selOpt.getAttribute("data-name") || selOpt.textContent.split("(")[0].trim()) : seriesSelect.value;
+    if (optName && optName !== "standalone") selProdName = optName;
   }
-  if (!selProdName) {
-    const pInput = document.getElementById("studio-production-name");
-    if (pInput) { pInput.classList.add("ring-2", "ring-rose-500", "border-rose-500"); pInput.focus(); }
-    alert("⚠️ Action Required: Production / Web Series Name is mandatory.\n\nPlease enter a series or franchise name (e.g. 'Swiss Alpine Odyssey') before producing.");
-    return;
+  if (!selProdName || selProdName.toLowerCase() === "standalone") {
+    selProdName = selSubgenreLabel || selGenreLabel || (typeof currentChannel !== "undefined" && currentChannel?.name ? currentChannel.name : "Standalone");
   }
   const selFormatVal = document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "documentary");
   const selAspect = document.getElementById("studio-selected-format")?.value || "16:9";

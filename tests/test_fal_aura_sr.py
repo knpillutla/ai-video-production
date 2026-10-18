@@ -54,8 +54,10 @@ async def test_visual_batch_service_with_4k_upscale(tmp_path: Path, monkeypatch)
 
     from src.providers.visual.google_imagen3 import GoogleImagen3Adapter
 
-    monkeypatch.setattr(visual_batch_service, "_fal_key", "")
-    monkeypatch.setattr(visual_batch_service, "fal_key", "")
+    monkeypatch.setattr(visual_batch_service.__class__, "fal_key", property(lambda self: ""))
+    monkeypatch.setattr("src.services.visual_batch_service._fal_api_key", lambda: "")
+    monkeypatch.setattr("src.providers.fal_storage._fal_api_key", lambda: "")
+    monkeypatch.setattr("src.providers.visual.fal_aura_sr._fal_api_key", lambda: "")
 
     async def _mock_gen(self, prompt, output_path, aspect_ratio="16:9", **kwargs):
         img = np.zeros((768, 1344, 3), dtype=np.uint8)

@@ -20,24 +20,9 @@ def resolve_scene_motion_model(
     total_scenes: int = 1,
     genre: str = "relax/nature",
     force_ai_motion: bool = False,
+    execution_mode: str = "test",
 ) -> Tuple[str, bool, str]:
-    """Resolve the effective motion model strictly from the screenplay script.
-
-    Args:
-        scene: Scene object with mandatory `motion_type` from the director script.
-        tier: Production tier ('cinematic', 'balanced', 'low_cost', 'local').
-        requested_motion_model: Default AI diffusion model requested (e.g. 'wan', 'kling').
-        scene_index: 0-indexed position of scene in storyboard.
-        total_scenes: Total count of scenes in storyboard.
-        genre: Channel/story genre category.
-        force_ai_motion: Overriding flag to mandate AI diffusion.
-
-    Returns:
-        Tuple[str, bool, str]: (chosen_model, allow_fallback, rationale)
-
-    Raises:
-        ValueError: If scene is missing or motion_type is undefined in the script.
-    """
+    """Resolve the effective motion model strictly from the screenplay script."""
     if scene is None:
         raise ValueError(
             f"Production halted: Scene at index {scene_index} is None. "
@@ -46,6 +31,12 @@ def resolve_scene_motion_model(
 
     clean_tier = (tier or "balanced").strip().lower()
     base_model = requested_motion_model or "wan"
+    clean_exec = (execution_mode or "test").strip().lower()
+
+    # Rule: In test mode, ALWAYS use local drone mode for all motions ($0.00 compute)
+    if clean_exec == "test":
+        rationale = f"Test execution mode: Local perspective drone mandated for Scene {scene_index + 1} ($0.00 compute)"
+        return "local_zoompan", False, rationale
 
     # 0. User / Directorial Selection of Local Motion Engine
     if base_model in ("local_drone", "locked_tripod", "local_zoompan", "local", "offline"):
@@ -54,8 +45,10 @@ def resolve_scene_motion_model(
 
     # 1. Flagship Cinematic Tier -> 100% AI Video Diffusion
     if clean_tier in ("cinematic", "movie", "high", "flagship") or force_ai_motion:
-        rationale = f"Cinematic tier: Full neural video diffusion mandated ({base_model})"
-        return base_model, False, rationale
+        rec_model = getattr(scene, "recommended_model", None) or getattr(scene, "motion_model", None)
+        eff_model = rec_model if (rec_model and rec_model not in ("auto", "local_drone")) else base_model
+        rationale = f"Cinematic tier: Full neural video diffusion mandated ({eff_model})"
+        return eff_model, False, rationale
 
     # 2. Low-Cost / Local Tier -> 100% Local Steadycam Zoom-Pan ($0.00 compute)
     if clean_tier in ("low_cost", "low", "quick", "local", "offline"):
@@ -72,11 +65,13 @@ def resolve_scene_motion_model(
         )
 
     if raw_motion_type in ("ai_diffusion", "diffusion", "neural", "neural_diffusion"):
+        rec_model = getattr(scene, "recommended_model", None) or getattr(scene, "motion_model", None)
+        eff_model = rec_model if (rec_model and rec_model not in ("auto", "local_drone")) else base_model
         rationale = (
-            f"Balanced tier (Script Directive): Scene {scene_index + 1} explicitly dictates "
-            f"live AI video diffusion ({base_model})"
+            f"Prod tier (Gemini Directive): Scene {scene_index + 1} dictates "
+            f"AI video diffusion via model '{eff_model}'"
         )
-        return base_model, False, rationale
+        return eff_model, False, rationale
 
     if raw_motion_type in ("ken_burns", "static", "locked_tripod", "local_zoompan", "zoompan", "local", "local_drone"):
         rationale = (

@@ -540,6 +540,7 @@ async def produce_channel_video(
         long_play_hours=long_play_hours,
         force_rerun=force_rerun,
         tts_model=tts_model,
+        execution_mode=eff_exec_mode,
     )
 
     ep_id = result.get("episode_id") or episode_id or "EP-001"
