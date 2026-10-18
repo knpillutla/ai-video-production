@@ -182,6 +182,11 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
             screenplay_data = json.loads(files["screenplay.json"].read_text(encoding="utf-8"))
         except Exception:
             pass
+    elif "storyboard.json" in files:
+        try:
+            screenplay_data = json.loads(files["storyboard.json"].read_text(encoding="utf-8"))
+        except Exception:
+            pass
 
     pipeline_state_data = {}
     if "pipeline_state.json" in files:
@@ -216,6 +221,7 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
     title = (
         manifest_data.get("title")
         or screenplay_data.get("title")
+        or screenplay_data.get("title_en")
         or yt_pack.get("title")
         or user_inputs_data.get("prompt")
         or ep_id.replace("ep_", "").replace("_", " ").title()
@@ -285,6 +291,9 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
     ]
 
     keyframes = [{"name": f"Shot {k.replace('keyframe_p', '').replace('.jpg', '')}", "url": f"{rel_prefix}/{k}?t={int(files[k].stat().st_mtime)}", "filename": k} for k in sorted(files.keys()) if k.startswith("keyframe_p") and k.endswith(".jpg")]
+    if not keyframes and (ep_path / "scenes").exists():
+        keyframes = [{"name": f"Scene {p.stem.replace('scene_', '')}", "url": f"{rel_prefix}/scenes/{p.name}?t={int(p.stat().st_mtime)}", "filename": p.name} for p in sorted((ep_path / "scenes").glob("scene_*.jpg")) if p.stat().st_size > 1000]
+
     motion_clips = [{"name": f"Motion {m.replace('motion_p', '').replace('.mp4', '')}", "url": f"{rel_prefix}/{m}?t={int(files[m].stat().st_mtime)}", "filename": m, "model": "Kling Pro" if "p1" in m else "Wan 2.1"} for m in sorted(files.keys()) if m.startswith("motion_p") and m.endswith(".mp4") and not m.endswith("_fwd_seamless.mp4")]
     audio_stems = []
     if "raw_soundtrack.mp3" in files and files["raw_soundtrack.mp3"].stat().st_size > 1000:
@@ -305,12 +314,26 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
             "model": "Spatial DSP",
             "color": "emerald",
         })
+    if not audio_stems and (ep_path / "stems").exists():
+        for a in sorted((ep_path / "stems").glob("*.mp3")):
+            if a.stat().st_size > 1000:
+                audio_stems.append({"name": "Suno Vocal Soundtrack" if "soundtrack" in a.name else a.stem, "url": f"{rel_prefix}/stems/{a.name}?t={int(a.stat().st_mtime)}", "filename": a.name, "type": "vocal_music", "model": "Suno v3.5", "color": "cyan"})
+
+    if (ep_path / "master_renders").exists():
+        for m in sorted((ep_path / "master_renders").glob("*.mp4")):
+            if m.stat().st_size > 1000:
+                editions.append({"edition_id": "master_music_video", "name": f"🎵 4K Vocal Master", "label": "4K Vocal Music Video Master", "icon": "fa-music text-purple-400", "audio_mode": "Singing Vocals + Suno BGM", "duration": f"{int(manifest_data.get('duration_seconds', 60))}s", "format": "16:9 Master", "status": "completed", "url": f"{rel_prefix}/master_renders/{m.name}?t={int(m.stat().st_mtime)}", "size_str": f"{round(m.stat().st_size / (1024*1024), 1)} MB"})
 
     thumb_url = None
     if "thumbnail_music_4k.jpg" in files:
         thumb_url = f"{rel_prefix}/thumbnail_music_4k.jpg?ep={ep_id}&t={int(files['thumbnail_music_4k.jpg'].stat().st_mtime)}"
     elif "keyframe_p1.jpg" in files:
         thumb_url = f"{rel_prefix}/keyframe_p1.jpg?ep={ep_id}&t={int(files['keyframe_p1.jpg'].stat().st_mtime)}"
+    elif (ep_path / "thumbnails").exists():
+        for th in sorted((ep_path / "thumbnails").glob("thumb_*.jpg")):
+            if th.stat().st_size > 1000:
+                thumb_url = f"{rel_prefix}/thumbnails/{th.name}?t={int(th.stat().st_mtime)}"
+                break
     elif keyframes:
         thumb_url = keyframes[0]["url"]
 

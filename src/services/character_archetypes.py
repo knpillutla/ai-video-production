@@ -69,11 +69,13 @@ def resolve_cast_archetypes(
     culture: str = "te",
     language: str = "te",
 ) -> tuple[ArchetypeSpec, ArchetypeSpec]:
-    """Return the exact (Female, Male) ArchetypeSpec for this slot (0-49)."""
-    norm_slot = slot % ROTATION_CYCLE_LIMIT
-    fem = TELUGU_FEMALE_ARCHETYPES[norm_slot]
-    male = TELUGU_MALE_ARCHETYPES[norm_slot]
-    return fem, male
+    """Return the exact (Female, Male) ArchetypeSpec dynamically created or retrieved for this language."""
+    from src.services.dynamic_character_service import get_or_create_language_archetypes_sync
+
+    fem_list, male_list = get_or_create_language_archetypes_sync(language=language, culture=culture)
+    norm_fem_slot = slot % len(fem_list)
+    norm_male_slot = slot % len(male_list)
+    return fem_list[norm_fem_slot], male_list[norm_male_slot]
 
 
 def build_fresh_cast_prompt_directive(
@@ -94,9 +96,10 @@ def build_fresh_cast_prompt_directive(
         )
     else:
         wardrobe_directive = (
-            f"3. ATTRACTIVE & ENVIRONMENT-MATCHED FASHION (Rule 12):\n"
-            f"   - Female Lead ({fem.name}): Breathtakingly beautiful, stylish, and cute, wearing an attractive outfit in {fem.palette} perfectly tailored for the environment with curated 4-zone accessories.\n"
-            f"   - Male Lead ({male.name}): Strikingly handsome in tailored attire in {male.palette} with chronograph watch strapped securely to left wrist.\n"
+            f"3. CONTEXT-MATCHING ATTRACTIVE DESIGNER FASHION (BEAUTIFUL, COLORFUL, ELEGANT WITH DESIGNS - Rule 12):\n"
+            f"   - Female Lead ({fem.name}): Breathtakingly beautiful, cute, and stylish. Wearing a context-matching, vibrant and colorful designer dress in {fem.palette} (rich jewel tones, vivid pastels, delicate floral embroidery, or fine lace/zari threadwork designs) tailored to flatter her graceful slim waist and natural curves, with curated 4-zone accessories (delicate pins/flowers in hair, earrings, watch, anklet).\n"
+            f"   - STRICT MODESTY (FAMILY-FRIENDLY & ZERO NUDITY): Tasteful, fully modest and elegant necklines (boat neck, modest round neck, mandarin collar), completely covered torso and midriff, non-revealing, graceful silhouette. STRICTLY PROHIBIT deep cleavage, plunging necklines, bare midriffs, sheer fabrics, or sexualized/provocative cuts.\n"
+            f"   - Male Lead ({male.name}): Strikingly handsome, stylish, and elegant in attractive context-matched tailored attire in {male.palette} (crisp tailored shirt or structured layer, tailored trousers, leather footwear) with chronograph watch strapped securely to his left wrist. Modest gentleman styling (zero bare chest, zero nudity).\n"
         )
 
     return (

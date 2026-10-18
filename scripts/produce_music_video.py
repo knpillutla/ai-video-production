@@ -53,6 +53,7 @@ async def run_production(
     user_id: str | None = None, network: str | None = None,
     num_images: int = 1, use_loras: bool = False,
     preview_only: bool = False, full_confirmed: bool = False,
+    solo_male: bool = False, solo_female: bool = False, duet: bool = False,
 ):
     """Execute the Phase 2 & 3 end-to-end video production and compliance pipeline."""
     duration = parse_duration(duration)
@@ -391,7 +392,17 @@ async def run_production(
         script_label = f"Text: {script_text[:36]}..." if script_text else "None"
         active_sub = subtitle_language or "en"
 
-    effective_voice_gender = voice_gender or gender or "female"
+    if solo_male:
+        effective_voice_gender = "male"
+        gender = "male"
+    elif solo_female:
+        effective_voice_gender = "female"
+        gender = "female"
+    elif duet:
+        effective_voice_gender = "duet"
+        gender = "duet"
+    else:
+        effective_voice_gender = voice_gender or gender or "female"
     is_voice_over = False
     enable_lipsync = False
     enable_bgm = bool(bgm)
@@ -402,7 +413,8 @@ async def run_production(
             enable_lipsync = bool(tts)
     else:
         is_voice_over, enable_lipsync = classifier_agent.infer_audio_modalities(theme=theme or (resolved_theme.value if resolved_theme != ThemeGenre.AUTO else None), idea=idea, script=script_text, media_format=resolved_format)
-        effective_voice_gender = voice_gender or ("male" if resolved_format in (MediaFormat.WALKING_TOUR, MediaFormat.MOVIE_CINEMATIC, MediaFormat.EPIC_CINEMATIC) and gender == "female" else (gender or "female"))
+        if not (solo_male or solo_female or duet):
+            effective_voice_gender = voice_gender or ("male" if resolved_format in (MediaFormat.WALKING_TOUR, MediaFormat.MOVIE_CINEMATIC, MediaFormat.EPIC_CINEMATIC) and gender == "female" else (gender or "female"))
 
     if resolved_format in (MediaFormat.DANCE_VIDEO, MediaFormat.MUSIC_VIDEO):
         enable_bgm, enable_lipsync, is_voice_over = True, True, False
@@ -442,7 +454,7 @@ async def run_production(
         "enable_voice_over": is_voice_over, "enable_bgm": enable_bgm, "enable_lipsync": enable_lipsync, "reference_attributes": ref_attrs.model_dump(mode="json") if ref_attrs else None,
         "target_languages": episode.options.target_languages, "num_images": num_images, "use_loras": use_loras, "created_at": time.time(),
     }
-    with open(ep_ws / "user_inputs.json", "w", encoding="utf-8") as f: json.dump(user_inputs, f, indent=2)
+    with open(ep_ws / "user_inputs.json", "w", encoding="utf-8") as f: json.dump(user_inputs, f, indent=2, ensure_ascii=False)
 
     # 1. Generate Structured Scene Storyboard Plan via Gemini 1.5 Pro (non-dance formats)
     storyboard_path = ep_ws / "storyboard.json"
@@ -450,6 +462,10 @@ async def run_production(
     if storyboard_path.exists() and storyboard_path.stat().st_size > 0:
         try:
             storyboard_data = json.loads(storyboard_path.read_text(encoding="utf-8"))
+            if not storyboard_data.get("id") or not storyboard_data.get("episode_id"):
+                storyboard_data["id"] = str(episode.id)
+                storyboard_data["episode_id"] = str(episode.id)
+                storyboard_path.write_text(json.dumps(storyboard_data, indent=2, ensure_ascii=False), encoding="utf-8")
             print(f"[i] Resume: Loaded existing storyboard from disk.")
         except Exception: pass
 
@@ -473,7 +489,7 @@ async def run_production(
             "user_id": str(user.id), "network": network, "episode_number": episode_number,
         }
         with open(ep_ws / "gemini_inputs.json", "w", encoding="utf-8") as f:
-            json.dump(gemini_inputs, f, indent=2, default=str)
+            json.dump(gemini_inputs, f, indent=2, default=str, ensure_ascii=False)
 
         if script_text:
             gemini_prompt = build_storyboard_prompt(
@@ -494,14 +510,16 @@ async def run_production(
             f.write(gemini_prompt)
         if schema:
             with open(ep_ws / "gemini_schema.json", "w", encoding="utf-8") as f:
-                json.dump(schema, f, indent=2)
+                json.dump(schema, f, indent=2, ensure_ascii=False)
 
         from src.providers.llm.gemini_adapter import GeminiLLMAdapter
         llm = GeminiLLMAdapter()
         storyboard_data = await llm.generate_structured(gemini_prompt, schema=schema) if schema else await llm.generate_structured(gemini_prompt)
+        storyboard_data["id"] = str(episode.id)
+        storyboard_data["episode_id"] = str(episode.id)
         strategy.validate_storyboard(storyboard_data)
         with open(storyboard_path, "w", encoding="utf-8") as f:
-            json.dump(storyboard_data, f, indent=2)
+            json.dump(storyboard_data, f, indent=2, ensure_ascii=False)
 
     # The canonical project title and storage identity stay English. Localized
     # titles remain inside the storyboard/script artifact for audience-facing use.
@@ -642,6 +660,9 @@ def main():
         (["--loras", "--use-loras"], "Use persistent network LoRA models", "use_loras"),
         (["--preview-only"], "Render only 30s fast preview", "preview_only"),
         (["--full"], "Skip interactive preview pause and render full master directly", "full_confirmed"),
+        (["--solo-male"], "Solo male vocalist and solo male lead", "solo_male"),
+        (["--solo-female"], "Solo female vocalist and solo female lead", "solo_female"),
+        (["--duet"], "Duet vocalists (male & female) with both leads", "duet"),
     ]:
         p.add_argument(*fls, action="store_true", default=False, help=h, dest=dst)
     profile_group = p.add_mutually_exclusive_group()

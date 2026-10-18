@@ -51,64 +51,14 @@ async def synthesize_vocal_keyframe(storyboard_data: dict[str, Any], out_path: P
     return str(paths[0]), paths[0]
 
 
-def build_vocal_subtitles(
-    storyboard_data: dict[str, Any], language: str, out_ass_path: Path,
-    total_duration: float, audio_path: Path | None = None,
-) -> tuple[Path, Path]:
-    """Generate center-screen (.ass) timed lyrics subtitles in target language script with font management and beat sync."""
-    from src.services.font_manager import ensure_language_font
-    font_name, fonts_dir = ensure_language_font(language)
-    raw_segs = storyboard_data.get("lyrics_segments") or []
-    segments = [{"start": float(s["start"]), "end": min(total_duration, float(s["end"])), "text": str(s["text"]).strip()}
-                for s in raw_segs if isinstance(s, dict) and s.get("text")]
-    min_intro = 4.5
-    if audio_path and Path(audio_path).is_file():
-        try:
-            import numpy as np
-            from src.scripts.local_beat_detector import LocalBeatDetector
-            cmd = [imageio_ffmpeg.get_ffmpeg_exe(), "-i", str(audio_path), "-t", "35", "-f", "s16le", "-ac", "1", "-ar", "22050", "-"]
-            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-            if proc.stdout and len(proc.stdout) > 2000:
-                samples = np.frombuffer(proc.stdout, dtype=np.int16).astype(np.float32) / 32768.0
-                grid = LocalBeatDetector().analyze_audio_buffer(samples=samples, sample_rate=22050, duration_seconds=min(35.0, len(samples) / 22050))
-                if grid.drop_timestamps:
-                    min_intro = max(4.0, min(30.0, float(grid.drop_timestamps[0])))
-                    logger.info(f"vocal_onset_detected: {min_intro:.2f}s using LocalBeatDetector")
-        except Exception as e:
-            logger.warning(f"beat_detection_failed_fallback: {e}")
-
-    if segments and segments[0]["start"] < min_intro:
-        shift = min_intro - segments[0]["start"]
-        for s in segments:
-            s["start"] = round(min(total_duration - 1.0, s["start"] + shift), 2)
-            s["end"] = round(min(total_duration, s["end"] + shift), 2)
-    elif not segments:
-        lyrics = [l.strip() for l in str(storyboard_data.get("lyrics") or "").splitlines() if l.strip() and not l.startswith("[")]
-        lines = lyrics or [storyboard_data.get("title_localized") or storyboard_data.get("title_en") or ""]
-        tpl = max(3.5, (total_duration - min_intro) / max(1, len(lines)))
-        curr = min_intro
-        for l in lines:
-            end_t = min(total_duration, curr + tpl)
-            segments.append({"start": round(curr, 2), "end": round(end_t, 2), "text": l})
-            curr = end_t
-    sub_file = generate_kinetic_ass(segments=segments, output_path=out_ass_path, language=language, font_size=52, alignment=5, font_name=font_name)
-    try:
-        from src.scripts.local_subtitles import generate_srt, generate_vtt
-        en_segs = [{"start": float(s["start"]), "end": min(total_duration, float(s["end"])), "text": str(s.get("text_en") or s.get("text")).strip()} for s in raw_segs if isinstance(s, dict)] or segments
-        generate_srt(segments=en_segs, output_path=out_ass_path.parent / "captions_en.srt")
-        generate_vtt(segments=en_segs, output_path=out_ass_path.parent / "captions_en.vtt")
-        generate_srt(segments=segments, output_path=out_ass_path.parent / f"captions_{language}.srt")
-        generate_vtt(segments=segments, output_path=out_ass_path.parent / f"captions_{language}.vtt")
-    except Exception as e: logger.warning(f"failed_generating_youtube_cc_files: {e}")
-
-    return sub_file, fonts_dir
+from src.compositor.vocal_subtitles import build_vocal_subtitles
 
 
 async def assemble_vocal_video(
     image_paths: list[Path] | Path, song_path: Path, sub_path: Path | None, out_video_path: Path,
     duration: float, fps: int = 30, timeline_cues: list[dict[str, Any]] | None = None,
     fonts_dir: Path | str | None = None, static_canvas: bool = True, enable_vfx: bool = True,
-    theme: str | None = None, episode_seed: int = 0,
+    theme: str | None = None, episode_seed: int = 0, segment_durations: list[float] | None = None,
 ) -> Path:
     """Fast 2-Stage Assembly: Stage 1 Base Assembly (Static Tripod + xfade + Audio) -> Stage 2 Scene VFX."""
     if out_video_path.is_file() and out_video_path.stat().st_size > 1000:
@@ -122,7 +72,9 @@ async def assemble_vocal_video(
     base_target = out_video_path.parent / f"_temp_base_{out_video_path.name}" if enable_vfx else out_video_path
 
     # Stage 1: Fast Base Assembly on Static Tripod (Images + xfade + Audio + Subtitles)
-    base_filter = compile_vocal_base_filter_complex(len(imgs), duration, sub_path=sub_path, fonts_dir=fonts_dir, fps=fps)
+    base_filter = compile_vocal_base_filter_complex(
+        len(imgs), duration, sub_path=sub_path, fonts_dir=fonts_dir, fps=fps, segment_durations=segment_durations
+    )
     img_args = [arg for p in imgs for arg in ("-loop", "1", "-t", f"{duration:.2f}", "-i", str(p))]
     cmd_base = [
         ffmpeg, "-y", *img_args, "-i", str(song_path), "-t", f"{duration:.2f}",
@@ -228,6 +180,24 @@ async def execute_vocal_pipeline(
     )
     primary_img = img_paths[0] if img_paths else scenes_dir / "scene_01.jpg"
 
+    # Title Card Scene 0 (5-10s intro with native, English, and song type overlay)
+    from src.compositor.vocal_title_card import create_vocal_title_card, resolve_song_type_label
+    scene_00 = scenes_dir / "scene_00.jpg"
+    if not (scene_00.is_file() and scene_00.stat().st_size > 1000):
+        t_loc = sb_data.get("title_localized") or sb_data.get("title_en") or episode.title
+        t_en = sb_data.get("title_en") or episode.title
+        st_lbl = resolve_song_type_label(
+            theme=theme, idea=idea, genre="vocal", music_style=music_style,
+            storyboard_data=sb_data, suno_tags=sb_data.get("suno_tags"),
+            hook_thesis=sb_data.get("hook_thesis"), song_type=sb_data.get("song_type"), mood=sb_data.get("mood"),
+        )
+        create_vocal_title_card(base_image_path=primary_img, output_path=scene_00, title_localized=t_loc, title_en=t_en, song_type=st_lbl, language=language)
+
+    all_scenes = [scene_00] + [p for p in img_paths if p != scene_00]
+    n_narr = max(1, len(img_paths))
+    intro_dur = min(10.0, max(5.0, 7.0))
+    seg_durs = [intro_dur] + [max(1.0, actual_dur - intro_dur) / n_narr] * n_narr
+
     sub_path = ep_dir / "subtitles" / f"kinetic_{language}.ass"
     sub_path, fonts_dir = build_vocal_subtitles(sb_data, language, sub_path, actual_dur, audio_path=active_audio)
 
@@ -235,7 +205,6 @@ async def execute_vocal_pipeline(
     anim_cues = sb_data.get("animation_timeline")
     render_name = f"master_16x9_ep{episode.episode_number:02d}_{language}.mp4" if language and language != "en" else f"master_16x9_ep{episode.episode_number:02d}.mp4"
     final_video = renders_dir / render_name
-
     preview_dur = min(30.0, actual_dur)
     prev_name = f"preview_30s_ep{episode.episode_number:02d}_{language}.mp4" if language and language != "en" else f"preview_30s_ep{episode.episode_number:02d}.mp4"
     preview_video, ffmpeg_bin = renders_dir / prev_name, imageio_ffmpeg.get_ffmpeg_exe()
@@ -258,11 +227,13 @@ async def execute_vocal_pipeline(
     full_conf = kwargs.get("full_confirmed", False)
     ep_seed = abs(hash(str(episode.id))) % 30
     eff_theme_vfx = theme or (sb_data.get("hook_thesis") if sb_data else None) or episode.title
+    prev_intro = min(intro_dur, preview_dur * 0.25)
+    prev_seg_durs = [prev_intro] + [max(1.0, preview_dur - prev_intro) / n_narr] * n_narr
 
     if not full_conf and actual_dur > 30.0 and not dry_run:
         if not (preview_video.is_file() and preview_video.stat().st_size > 1000):
-            print(f"\n[~] Stage 1/2: Generating 30s fast preview video for review...")
-            await assemble_vocal_video(image_paths=img_paths, song_path=active_audio, sub_path=None, out_video_path=preview_video, duration=preview_dur, timeline_cues=anim_cues, fonts_dir=fonts_dir, theme=eff_theme_vfx, episode_seed=ep_seed)
+            print(f"\n[~] Stage 1/2: Generating 30s fast preview video with Scene 0 title card...")
+            await assemble_vocal_video(image_paths=all_scenes, song_path=active_audio, sub_path=None, out_video_path=preview_video, duration=preview_dur, timeline_cues=anim_cues, fonts_dir=fonts_dir, theme=eff_theme_vfx, episode_seed=ep_seed, segment_durations=prev_seg_durs)
         print(f"\n[+] 30s Fast Preview Video Ready: {preview_video.name}")
         if kwargs.get("preview_only", False): return preview_video
         cg = kwargs.get("custom_gate_input_fn")
@@ -274,8 +245,8 @@ async def execute_vocal_pipeline(
     if dry_run:
         final_video.touch()
     else:
-        print(f"\n[~] Rendering full {actual_dur:.0f}s master video...")
-        await assemble_vocal_video(image_paths=img_paths, song_path=active_audio, sub_path=None, out_video_path=final_video, duration=actual_dur, timeline_cues=anim_cues, fonts_dir=fonts_dir, theme=eff_theme_vfx, episode_seed=ep_seed)
+        print(f"\n[~] Rendering full {actual_dur:.0f}s master video with Scene 0 Title Card...")
+        await assemble_vocal_video(image_paths=all_scenes, song_path=active_audio, sub_path=None, out_video_path=final_video, duration=actual_dur, timeline_cues=anim_cues, fonts_dir=fonts_dir, theme=eff_theme_vfx, episode_seed=ep_seed, segment_durations=seg_durs)
         if not (preview_video.is_file() and preview_video.stat().st_size > 1000):
             try: subprocess.run([ffmpeg_bin, "-y", "-i", str(final_video), "-t", f"{preview_dur:.2f}", "-c", "copy", str(preview_video)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
             except Exception: pass

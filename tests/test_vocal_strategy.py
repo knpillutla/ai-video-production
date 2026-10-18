@@ -82,7 +82,7 @@ def test_build_vocal_subtitles_center_alignment(tmp_path: Path):
     assert res_path.is_file()
     assert fonts_dir.is_dir()
     content = res_path.read_text(encoding="utf-8")
-    assert ("Mandali" in content or "Noto Sans Telugu" in content or "Nirmala UI" in content or "Arial" in content)
+    assert ("Mandali" in content or "Noto Sans Telugu" in content or "Nirmala UI" in content or "Arial" in content or "Gidugu" in content)
     assert ",5,80,80," in content  # Alignment=5 (center)
     assert "కరిగే వెన్నెలే" in content
 

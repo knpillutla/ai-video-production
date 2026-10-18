@@ -85,6 +85,42 @@
       <input type="hidden" id="studio-active-format-val" value="relaxation">
     </div>
 
+    <!-- 1B. CONTINENT, COUNTRY, REGION & LANGUAGE SELECTOR (Dynamic 4-Tier Hierarchy) -->
+    <div id="studio-country-language-shelf" class="p-2 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5 hidden">
+      <div class="flex items-center justify-between">
+        <label class="text-[11px] font-bold text-[var(--text)] flex items-center gap-1.5">
+          <i class="fa-solid fa-earth-americas text-[10px] text-[var(--accent)]"></i>
+          <span>Continent, Country, Region &amp; Language:</span>
+        </label>
+        <span class="text-[9px] font-mono text-[var(--text-muted)]">4-Tier Regional Hierarchy</span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-1.5">
+        <div>
+          <label class="block text-[9px] font-semibold text-[var(--text-muted)] mb-0.5">1. Continent</label>
+          <select id="studio-continent-selector" onchange="onStudioContinentChange(this.value)" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]" title="Select Continent">
+            <option value="Asia" selected>🌏 Asia</option>
+            <option value="Europe">🌍 Europe</option>
+            <option value="North America">🌎 North America</option>
+            <option value="South America">🌎 South America</option>
+            <option value="Africa">🌍 Africa</option>
+            <option value="Oceania">🌏 Oceania</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[9px] font-semibold text-[var(--text-muted)] mb-0.5">2. Country</label>
+          <select id="studio-country-selector" onchange="onStudioCountryChange(this.value)" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]" title="Select Country"></select>
+        </div>
+        <div>
+          <label class="block text-[9px] font-semibold text-[var(--text-muted)] mb-0.5">3. Country Region / State</label>
+          <select id="studio-subregion-selector" onchange="onStudioSubRegionChange(this.value)" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]" title="Select Country Region"></select>
+        </div>
+        <div>
+          <label class="block text-[9px] font-semibold text-[var(--text-muted)] mb-0.5">4. Language &amp; Heritage</label>
+          <select id="studio-region-language-selector" onchange="onStudioLanguageChange(this.value)" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]" title="Select Language"></select>
+        </div>
+      </div>
+    </div>
+
     <!-- 2. PRODUCTION (Options Dropdown + Optional Custom Input) & EPISODE NUMBER -->
     <div class="p-2.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
       <div class="flex items-center justify-between">
@@ -93,33 +129,19 @@
           <span>2. Production:</span>
           <span class="text-[10px] font-normal text-[var(--text-muted)]">(Optional)</span>
         </label>
-        <!-- Mode switcher: Options vs Custom -->
         <div class="segmented-track text-xs">
-          <button type="button" onclick="setSeriesMode('existing')" id="series-mode-existing-btn" class="segmented-btn py-0.5 px-2 active" title="Select from curated & existing production series options">
-            <i class="fa-solid fa-list-ul text-[10px]"></i>
-            <span>Options</span>
-          </button>
-          <button type="button" onclick="setSeriesMode('new')" id="series-mode-new-btn" class="segmented-btn py-0.5 px-2" title="Type a custom production name (optional)">
-            <i class="fa-solid fa-pen text-[10px]"></i>
-            <span>+ Custom</span>
-          </button>
+          <button type="button" onclick="setSeriesMode('existing')" id="series-mode-existing-btn" class="segmented-btn py-0.5 px-2 active" title="Select options"><i class="fa-solid fa-list-ul text-[10px]"></i><span>Options</span></button>
+          <button type="button" onclick="setSeriesMode('new')" id="series-mode-new-btn" class="segmented-btn py-0.5 px-2" title="Type custom name"><i class="fa-solid fa-pen text-[10px]"></i><span>+ Custom</span></button>
         </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-[1fr_95px] gap-2 items-center">
-        <!-- Production Options Dropdown (Curated series & existing productions) -->
         <div id="series-existing-container">
-          <select id="studio-existing-series-select" onchange="onExistingSeriesSelect(this.value)" class="w-full px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]">
-            <option value="">Loading production options...</option>
-          </select>
+          <select id="studio-existing-series-select" onchange="onExistingSeriesSelect(this.value)" class="w-full px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]"><option value="">Loading production options...</option></select>
         </div>
-
-        <!-- Custom Production Input Container (Optional) -->
         <div id="series-new-container" class="hidden">
           <input type="text" id="studio-production-name" oninput="onNewSeriesNameInput(this.value)" placeholder="Custom series name (optional)..." class="w-full px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-medium placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
         </div>
-
-        <!-- Sequential Episode Box -->
         <div>
           <input type="text" id="studio-episode-code" placeholder="EP-001" title="Episode Identifier" class="w-full px-2 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-mono font-bold text-center placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
         </div>
@@ -166,62 +188,50 @@
         </select>
       </div>
 
-      <!-- 5. Ecosystem Archetype Selector (Setting Template) -->
+      <!-- 5. Vocal Performer Modality (Solo Female / Solo Male / Duet) -->
+      <div id="studio-vocal-gender-container" class="space-y-0.5">
+        <label for="studio-vocal-gender-selector" class="text-xs font-bold text-[var(--text)] flex items-center gap-1">
+          <i class="fa-solid fa-microphone-lines text-[var(--accent)] text-[10px]"></i>
+          <span>Vocal Performer (Modality):</span>
+        </label>
+        <select id="studio-vocal-gender-selector" class="w-full px-2.5 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]" title="Select Vocal Performer">
+          <option value="female" selected>👩 Solo - Female</option>
+          <option value="male">👨 Solo - Male</option>
+          <option value="duet">💑 Duet - Male &amp; Female</option>
+        </select>
+      </div>
+
+      <!-- 6. Ecosystem Archetype Selector (Setting Template) -->
       <div class="space-y-0.5">
         <label for="studio-archetype-selector" class="text-xs font-bold text-[var(--text)] flex items-center gap-1">
           <i class="fa-solid fa-mountain-sun text-[var(--text-muted)] text-[10px]"></i>
-          <span>5. Archetype (Setting Template):</span>
+          <span>6. Archetype (Setting Template):</span>
         </label>
         <select id="studio-archetype-selector" onchange="onArchetypeChange(this.value)" class="w-full px-2.5 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]">
           <option value="rainy_cabin_bedroom" selected>🛏️ Glass Cabin Bedroom (Rain on Panoramic Window)</option>
         </select>
       </div>
 
-
-      <!-- 6. Weather & Atmosphere Selector (Explicit User Control) -->
+      <!-- 7. Weather & Atmosphere Selector -->
       <div class="space-y-0.5 pt-1 border-t border-[var(--border)]">
         <label for="studio-weather-selector" class="text-xs font-bold text-[var(--text)] flex items-center justify-between">
-          <span class="flex items-center gap-1">
-            <i class="fa-solid fa-cloud-sun-rain text-[var(--text-muted)] text-[10px]"></i>
-            <span>6. Weather &amp; Atmosphere:</span>
-          </span>
-          <span class="text-[9px] font-mono text-[var(--text-muted)]">Procedural Dynamic FX</span>
+          <span class="flex items-center gap-1"><i class="fa-solid fa-cloud-sun-rain text-[var(--text-muted)] text-[10px]"></i><span>7. Weather &amp; Atmosphere:</span></span>
+          <span class="text-[9px] font-mono text-[var(--text-muted)]">Procedural FX</span>
         </label>
         <div class="grid grid-cols-3 gap-1 text-[11px] font-semibold">
-          <label class="flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border-2 border-[var(--accent)] cursor-pointer text-[var(--text)]" id="weather-lbl-normal">
-            <input type="radio" name="studio_weather" value="normal" checked onchange="onWeatherChange(this.value)" class="hidden">
-            <span>☀️ Normal</span>
-          </label>
-          <label class="flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-rain">
-            <input type="radio" name="studio_weather" value="rain" onchange="onWeatherChange(this.value)" class="hidden">
-            <span>🌧️ Rain</span>
-          </label>
-          <label class="flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-snow">
-            <input type="radio" name="studio_weather" value="snow" onchange="onWeatherChange(this.value)" class="hidden">
-            <span>❄️ Snow</span>
-          </label>
-          <label class="flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-fog">
-            <input type="radio" name="studio_weather" value="fog" onchange="onWeatherChange(this.value)" class="hidden">
-            <span>🌫️ Mist/Fog</span>
-          </label>
-          <label class="flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-sunset">
-            <input type="radio" name="studio_weather" value="sunset" onchange="onWeatherChange(this.value)" class="hidden">
-            <span>🌅 Sunset</span>
-          </label>
-          <label class="flex items-center justify-center gap-1 py-1 px-1.5 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-night">
-            <input type="radio" name="studio_weather" value="night" onchange="onWeatherChange(this.value)" class="hidden">
-            <span>🌌 Starlit</span>
-          </label>
+          <label class="flex items-center justify-center py-1 px-1 bg-[var(--card)] rounded-md border-2 border-[var(--accent)] cursor-pointer text-[var(--text)]" id="weather-lbl-normal"><input type="radio" name="studio_weather" value="normal" checked onchange="onWeatherChange(this.value)" class="hidden"><span>☀️ Normal</span></label>
+          <label class="flex items-center justify-center py-1 px-1 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-rain"><input type="radio" name="studio_weather" value="rain" onchange="onWeatherChange(this.value)" class="hidden"><span>🌧️ Rain</span></label>
+          <label class="flex items-center justify-center py-1 px-1 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-snow"><input type="radio" name="studio_weather" value="snow" onchange="onWeatherChange(this.value)" class="hidden"><span>❄️ Snow</span></label>
+          <label class="flex items-center justify-center py-1 px-1 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-fog"><input type="radio" name="studio_weather" value="fog" onchange="onWeatherChange(this.value)" class="hidden"><span>🌫️ Mist</span></label>
+          <label class="flex items-center justify-center py-1 px-1 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-sunset"><input type="radio" name="studio_weather" value="sunset" onchange="onWeatherChange(this.value)" class="hidden"><span>🌅 Sunset</span></label>
+          <label class="flex items-center justify-center py-1 px-1 bg-[var(--card)] rounded-md border border-[var(--border)] cursor-pointer hover:border-[var(--accent)] text-[var(--text)]" id="weather-lbl-night"><input type="radio" name="studio_weather" value="night" onchange="onWeatherChange(this.value)" class="hidden"><span>🌌 Starlit</span></label>
         </div>
       </div>
 
       <!-- Relaxation Shot Hold Cadence Radio Group -->
       <div id="relaxation-cadence-container" class="pt-1 border-t border-[var(--border)] space-y-0.5">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold text-[var(--text)] flex items-center gap-1">
-            <i class="fa-solid fa-hourglass-half text-[var(--text-muted)] text-[10px]"></i>
-            <span>Shot Cadence:</span>
-          </span>
+          <span class="text-xs font-bold text-[var(--text)] flex items-center gap-1"><i class="fa-solid fa-hourglass-half text-[var(--text-muted)] text-[10px]"></i><span>Shot Cadence:</span></span>
           <span class="text-[9px] font-mono text-[var(--text-muted)]">Anti-Fatigue</span>
         </div>
         <div class="grid grid-cols-5 gap-1 text-xs">

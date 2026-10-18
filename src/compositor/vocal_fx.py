@@ -211,15 +211,19 @@ def ensure_fx_overlay(
     return out_path
 
 
-def _build_crossfade_filter(count: int, total_duration: float) -> tuple[list[str], str]:
+def _build_crossfade_filter(
+    count: int, total_duration: float, segment_durations: list[float] | None = None, fps: int = 30
+) -> tuple[list[str], str]:
     if count <= 1:
-        return ["[0:v]scale=3840:2160[base]"], "base"
-    seg_dur = total_duration / count
-    fade_dur = min(1.2, max(0.5, seg_dur * 0.08))
-    chains = [f"[{i}:v]scale=3840:2160[v_seg_{i}]" for i in range(count)]
+        return [f"[0:v]scale=3840:2160,fps={fps},format=yuv420p,setsar=1[base]"], "base"
+    chains = [f"[{i}:v]scale=3840:2160,fps={fps},format=yuv420p,setsar=1[v_seg_{i}]" for i in range(count)]
     prev = "v_seg_0"
+    cum_time = 0.0
     for k in range(1, count):
-        offset = max(0.1, k * seg_dur - fade_dur)
+        seg_dur = segment_durations[k - 1] if segment_durations and k - 1 < len(segment_durations) else (total_duration / count)
+        fade_dur = min(1.2, max(0.6, seg_dur * 0.12))
+        cum_time += seg_dur
+        offset = max(0.1, cum_time - fade_dur)
         out_s = "base" if k == count - 1 else f"xf_{k}"
         chains.append(f"[{prev}][v_seg_{k}]xfade=transition=fade:duration={fade_dur:.2f}:offset={offset:.2f}[{out_s}]")
         prev = out_s
@@ -228,11 +232,12 @@ def _build_crossfade_filter(count: int, total_duration: float) -> tuple[list[str
 
 def compile_vocal_base_filter_complex(
     image_count: int, total_duration: float, sub_path: Path | None = None,
-    fonts_dir: Path | str | None = None, fps: int = 30,
+    fonts_dir: Path | str | None = None, fps: int = 30, segment_durations: list[float] | None = None,
 ) -> str:
     """Compile Stage 1 base filter complex: image crossfades + subtitles + 48k audio."""
     count = max(1, image_count)
-    filter_chains, current_stream = _build_crossfade_filter(count, total_duration)
+    filter_chains, current_stream = _build_crossfade_filter(count, total_duration, segment_durations=segment_durations, fps=fps)
+
 
     if sub_path and sub_path.is_file():
         clean_sub = sub_path.resolve().as_posix().replace(":", r"\\:")
@@ -254,7 +259,7 @@ def compile_vocal_filter_complex(
     """Single-pass filter complex using single unified decorator overlay on static tripod."""
     eff_overlays = enable_overlays if enable_overlays is not None else True
     count = max(1, image_count)
-    filter_chains, current_stream = _build_crossfade_filter(count, total_duration)
+    filter_chains, current_stream = _build_crossfade_filter(count, total_duration, fps=fps)
     extra_args: list[str] = []
 
     if eff_overlays:

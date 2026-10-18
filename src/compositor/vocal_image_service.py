@@ -7,6 +7,7 @@ supporting fresh characters per song by default, and persistent network LoRAs wh
 from __future__ import annotations
 
 from pathlib import Path
+import re
 from typing import Any
 
 from src.compliance.rights_ledger import AssetType, CommercialLicenseType, rights_ledger
@@ -31,11 +32,12 @@ async def synthesize_vocal_scenes(
     """Synthesize or reuse 4K scene images locking character consistency and optional network LoRAs."""
     scenes_dir.mkdir(parents=True, exist_ok=True)
     count = max(1, num_images)
+    eff_use_loras = use_loras or (count > 1)
     script_loras = storyboard_data.get("loras") or storyboard_data.get("character_loras") or []
     effective_explicit = explicit_loras or script_loras
     loras = (
         resolve_effective_loras(user_id=str(user_id or "default_user"), network=network, explicit_loras=effective_explicit)
-        if (use_loras or effective_explicit)
+        if (eff_use_loras or effective_explicit)
         else (effective_explicit or [])
     )
     trigger_words = " ".join(l.get("trigger_word", "") for l in loras if l.get("trigger_word")).strip()
@@ -69,9 +71,8 @@ async def synthesize_vocal_scenes(
 
         # Apply LoRA trigger words if active, otherwise use Gemini script prompt directly
         effective_prompt = f"{trigger_words}, {raw_prompt}".strip(", ") if (loras and trigger_words) else raw_prompt
-        # Sanitize any accidental negative constraint tokens from prompt
-        if "negative constraints:" in effective_prompt:
-            effective_prompt = effective_prompt.split("negative constraints:")[0].strip(", ")
+        # Sanitize any accidental negative constraint or Negative: tokens from prompt
+        effective_prompt = re.split(r"(?i)\bnegative\s*(?:constraints|prompt)?\s*:", effective_prompt)[0].strip(", ")
 
         scene_seed = (song_seed + idx * 7919) % 1000000
         logger.info(f"generating_vocal_scene_{idx:02d}: prompt={effective_prompt[:80]}... (loras={len(loras)}, seed={scene_seed})")

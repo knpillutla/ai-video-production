@@ -36,6 +36,10 @@ async def dispatch_studio_director(
     image_model: str = "flux_1_1_pro_ultra",
     tier: str = "balanced",
     weather: Optional[str] = "normal",
+    country: Optional[str] = None,
+    language: Optional[str] = None,
+    culture: Optional[str] = None,
+    **extra_kwargs: Any,
 ) -> RelaxScreenplay:
     """Dispatch screenplay request to the appropriate specialized studio director."""
     p_lower = (custom_prompt or "").lower()
@@ -62,9 +66,10 @@ async def dispatch_studio_director(
         custom_prompt=eff_custom_prompt, duration_seconds=duration_seconds, num_shots=num_shots,
         camera_motion=camera_motion, user_id=user_id, raw_output_path=raw_output_path,
         image_model=image_model, channel_id=channel_id or "earth_serenade",
-        tier=tier, weather=weather,
+        tier=tier, weather=weather, country=country, language=language, culture=culture,
     )
     base_kwargs = {k: v for k, v in kwargs.items() if k not in ("tier", "weather")}
+
 
     # 0. Dedicated Blue-Chip Documentary & Science Studio Dispatch
     is_science = "science" in genre_lower or "science" in sub_lower or "science" in arch_lower
@@ -253,7 +258,25 @@ async def dispatch_studio_director(
         logger.info(f"dispatcher_route: target='AlpineStudio' prompt='{custom_prompt}'")
         return await generate_alpine_screenplay(**kwargs)
 
-    # 7. Default Ambient World Studio (Fusion & 14 Archetypes)
+    # 7. Dedicated Music Video & Folk Dance Studio Dispatch (Structured rhyming lyrics, zero spoken voiceover)
+    is_music = (
+        genre_lower.startswith("music/")
+        or genre_lower.startswith("dance/")
+        or "dance" in genre_lower
+        or "music" in genre_lower
+        or sub_lower in {"mass_folk_dance", "classical_dance", "romantic_melody", "party_upbeat", "happy_feelgood", "festive_celebration", "soulful_devotional", "energetic_party"}
+    )
+    if is_music:
+        from src.studios.music_video_studio.music_video_director import generate_music_video_screenplay
+        logger.info(f"dispatcher_route: target='MusicVideoStudio' genre='{genre}' sub='{sub_genre}'")
+        return await generate_music_video_screenplay(
+            genre=genre,
+            sub_genre=sub_genre,
+            primary_archetype=primary_archetype,
+            **kwargs,
+        )
+
+    # 8. Default Ambient World Studio (Fusion & 14 Archetypes)
     logger.info(f"dispatcher_route: target='AmbientWorldStudio' genre='{genre}' prompt='{custom_prompt}'")
     return await generate_relax_screenplay_gemini(
         primary=primary_archetype or sub_genre or "",

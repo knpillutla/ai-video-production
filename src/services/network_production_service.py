@@ -94,6 +94,9 @@ async def produce_channel_video(
     production_name: Optional[str] = None,
     format_slug: Optional[str] = None,
     tts_model: Optional[str] = None,
+    country: Optional[str] = None,
+    language: Optional[str] = None,
+    culture: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Execute live channel pipeline script for selected channel inside isolated user channel folder."""
     effective_user = user_id or "user_krishna_01"
@@ -208,8 +211,15 @@ async def produce_channel_video(
             saved_inputs = json.loads(user_inputs_file.read_text("utf-8"))
             if (num_shots is None or num_shots <= 0) and saved_inputs.get("num_shots"):
                 num_shots = int(saved_inputs["num_shots"])
+            if not country and saved_inputs.get("country"):
+                country = saved_inputs.get("country")
+            if not language and saved_inputs.get("language"):
+                language = saved_inputs.get("language")
+            if not culture and saved_inputs.get("culture"):
+                culture = saved_inputs.get("culture")
         except Exception:
             pass
+
 
     is_downstream_stage = bool(photos_only or motion_only or audio_only or master_only)
     is_resume_flow = not (script_only or force_rerun)
@@ -320,6 +330,9 @@ async def produce_channel_video(
         "enable_voiceover": eff_voiceover,
         "no_bgm": eff_no_bgm,
         "tier": eff_tier,
+        "country": country,
+        "language": language,
+        "culture": culture,
     }
     if user_inputs_file:
         try:
@@ -372,6 +385,9 @@ async def produce_channel_video(
                 image_model=image_model,
                 tier=eff_tier,
                 weather=eff_weather,
+                country=country,
+                language=language,
+                culture=culture,
             )
             dur_stage1 = time.time() - t_stage1
             if ep_dir:

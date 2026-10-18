@@ -63,3 +63,53 @@ def test_attractive_and_snow_weather_wardrobe_directive():
     assert "wool trousers" in directive.lower()
     assert "alpine winter boots" in directive.lower()
     assert "PROHIBITION against thin fabrics, sleeveless tops, bare midriffs" in directive
+
+
+def test_language_specific_regional_character_distinctness():
+    """Verify distinct regional facial features and names across South, North, East India and Global regions."""
+    # South Indian (te)
+    te_fem, te_male = resolve_cast_archetypes(slot=0, language="te", culture="south_indian")
+    assert te_fem.name == "Vennela"
+    assert "warm golden-wheatish" in te_fem.skin or "wheatish" in te_fem.skin
+    assert te_male.name == "Siddharth"
+
+    # North Indian (hi)
+    hi_fem, hi_male = resolve_cast_archetypes(slot=0, language="hi", culture="north_indian")
+    assert hi_fem.name == "Ananya"
+    assert "fair golden-wheatish" in hi_fem.skin or "wheatish" in hi_fem.skin
+    assert hi_male.name == "Kabir"
+
+    # East Indian (bn)
+    bn_fem, bn_male = resolve_cast_archetypes(slot=0, language="bn", culture="bengali")
+    assert bn_fem.name == "Poulomi"
+    assert "pata-chokh" in bn_fem.face or "doe eyes" in bn_fem.face
+    assert bn_male.name == "Sourav"
+
+    # Japanese (ja)
+    ja_fem, ja_male = resolve_cast_archetypes(slot=0, language="ja", culture="japanese")
+    assert ja_fem.name == "Sakura"
+    assert "almond eyes" in ja_fem.face
+    assert ja_male.name == "Haruto"
+
+    # French (fr)
+    fr_fem, fr_male = resolve_cast_archetypes(slot=0, language="fr", culture="french")
+    assert fr_fem.name == "Camille"
+    assert "Roman nose" in fr_fem.face or "hazel-green" in fr_fem.face
+    assert fr_male.name == "Antoine"
+
+    # Spanish (es)
+    es_fem, es_male = resolve_cast_archetypes(slot=0, language="es", culture="spanish")
+    assert es_fem.name == "Lucia"
+    assert "olive" in es_fem.skin
+    assert es_male.name == "Mateo"
+
+    # Korean (ko)
+    ko_fem, ko_male = resolve_cast_archetypes(slot=0, language="ko", culture="korean")
+    assert ko_fem.name == "Ji-woo"
+    assert "glass" in ko_fem.skin or "V-line" in ko_fem.face
+    assert ko_male.name == "Min-jun"
+
+    # Western English (en)
+    en_fem, en_male = resolve_cast_archetypes(slot=0, language="en", culture="western")
+    assert en_fem.name == "Emma"
+    assert en_male.name == "Liam"

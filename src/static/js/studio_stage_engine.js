@@ -149,11 +149,16 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
   const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
   const durSec = vid.durationSeconds || (vid.duration ? parseInt(vid.duration, 10) : ((typeof getEffectiveProductionDuration === "function") ? getEffectiveProductionDuration().durSec : 120));
 
+  const isMusicVideo = String(vid.format || vid.format_slug || "").toLowerCase().includes("music_video")
+    || String(vid.genre || document.getElementById("studio-genre-selector")?.value || "").toLowerCase().startsWith("music/")
+    || String(vid.genre || document.getElementById("studio-genre-selector")?.value || "").toLowerCase().startsWith("dance/");
+
   const pollArtifacts = async () => {
     try {
-      const fmtQ = encodeURIComponent(vid.format || vid.format_slug || "");
+      const fmtQ = encodeURIComponent(vid.format || vid.format_slug || (isMusicVideo ? "music_video" : ""));
       const prodQ = encodeURIComponent(vid.production_name || "");
-      const res = await fetch(`/api/production/poll-artifacts?channel_id=${chSlug}&episode_id=${epId}&format=${fmtQ}&production_name=${prodQ}&user_id=${encodeURIComponent(uEmail)}`);
+      const pollEndpoint = isMusicVideo ? "/api/music-video/poll-artifacts" : "/api/production/poll-artifacts";
+      const res = await fetch(`${pollEndpoint}?channel_id=${chSlug}&episode_id=${epId}&format=${fmtQ}&production_name=${prodQ}&user_id=${encodeURIComponent(uEmail)}`);
       if (res.ok) {
         const data = await res.json();
         let changed = false;
@@ -271,7 +276,8 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
   }, 2000);
 
   try {
-    const res = await fetch("/api/production/local-produce", {
+    const produceEndpoint = isMusicVideo ? "/api/music-video/produce" : "/api/production/local-produce";
+    const res = await fetch(produceEndpoint, {
       method: "POST",
       signal: studioAbortController.signal,
       headers: { "Content-Type": "application/json" },
@@ -353,6 +359,12 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           return vid.primaryArchetypeLabel || vid.primary_archetype_label || (archMap[g]?.find(x => x.val === arch)?.label) || document.getElementById("studio-archetype-selector")?.selectedOptions?.[0]?.textContent?.trim() || "";
         })(),
         weather: (document.querySelector('input[name="studio_weather"]:checked')?.value || "normal"),
+        vocal_gender: (vid.vocal_gender || document.getElementById("studio-vocal-gender-selector")?.value || "female"),
+        continent: (vid.continent || document.getElementById("studio-continent-selector")?.value || null),
+        country: (vid.country || document.getElementById("studio-country-selector")?.value || null),
+        sub_region: (vid.sub_region || document.getElementById("studio-subregion-selector")?.value || null),
+        language: (vid.language || document.getElementById("studio-region-language-selector")?.value || null),
+        culture: (vid.culture || document.getElementById("studio-region-language-selector")?.selectedOptions?.[0]?.getAttribute("data-culture") || null),
         production_name: (vid.production_name || document.getElementById("studio-production-name")?.value?.trim() || null),
         format: (vid.format_slug || (vid.format && !["16:9", "9:16"].includes(vid.format) ? vid.format : null) || document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "documentary")),
         format_slug: (vid.format_slug || (vid.format && !["16:9", "9:16"].includes(vid.format) ? vid.format : null) || document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "documentary")),

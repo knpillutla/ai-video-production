@@ -317,6 +317,16 @@ function selectStudioFormat(fmtKey, preserveGenre = null) {
     }
   }
 
+  // Show/Hide Country & Region/Language Shelf for Music Video format
+  const countryShelf = document.getElementById("studio-country-language-shelf");
+  if (countryShelf) {
+    const isMusic = (fmtKey === "music_video");
+    countryShelf.classList.toggle("hidden", !isMusic);
+    if (isMusic) {
+      initMusicCountryAndLanguageFromNetwork(chSlug);
+    }
+  }
+
   fetchAndPopulateExistingSeries(chSlug, fmtKey);
   syncGenreDropdownOnly(chSlug, preserveGenre);
 }
@@ -345,7 +355,10 @@ function syncGenreDropdownOnly(channelSlug, preserveGenre = null) {
   } else if (activeStudioFormat === "walking_tour") {
     normalized = normalized.filter(g => g === "travel_walking");
   } else if (activeStudioFormat === "music_video") {
-    normalized = normalized.filter(g => g.startsWith("dance/"));
+    normalized = normalized.filter(g => g.startsWith("dance/") || g.startsWith("music/"));
+    if (normalized.length === 0) {
+      normalized = ["music/static_vocal", "music/solo_singer", "music/duet_romance", "music/concert_live", "dance/folk"];
+    }
   } else if (activeStudioFormat === "short" || activeStudioFormat === "movie") {
     normalized = normalized.filter(g => g.startsWith("comedy/") || g === "documentary" || g === "travel/scenic" || g === "science");
   }
@@ -369,7 +382,185 @@ function syncGenreDropdownOnly(channelSlug, preserveGenre = null) {
 function syncGenreDropdownForChannel(channelSlug) {
   renderFormatChipsForActiveNetwork(channelSlug);
   syncGenreDropdownOnly(channelSlug);
+  if (activeStudioFormat === "music_video") {
+    initMusicCountryAndLanguageFromNetwork(channelSlug);
+  }
 }
+
+function onStudioContinentChange(continentVal, preserveCountry = null, preserveSubRegion = null, preserveLang = null) {
+  const cSelector = document.getElementById("studio-country-selector");
+  if (!cSelector) return;
+  const cMap = (typeof WORLD_CONTINENTS_REGIONS_MAP !== "undefined") ? WORLD_CONTINENTS_REGIONS_MAP : {};
+  const list = cMap[continentVal] || cMap["Asia"] || [];
+
+  const currentCountry = preserveCountry || cSelector.value;
+  const targetCountry = (currentCountry && list.some(x => x.name === currentCountry)) ? currentCountry : (list[0]?.name || "India");
+
+  cSelector.innerHTML = list.map(item => `
+    <option value="${item.name}" ${item.name === targetCountry ? 'selected' : ''}>
+      ${item.flag ? item.flag + ' ' : ''}${item.name}
+    </option>
+  `).join("");
+  cSelector.value = targetCountry;
+
+  onStudioCountryChange(targetCountry, preserveSubRegion, preserveLang);
+}
+
+function onStudioCountryChange(countryVal, preserveSubRegion = null, preserveLang = null) {
+  const sSelector = document.getElementById("studio-subregion-selector");
+  if (!sSelector) return;
+
+  const rMap = (typeof WORLD_COUNTRY_REGIONS_MAP !== "undefined") ? WORLD_COUNTRY_REGIONS_MAP : {};
+  const regions = rMap[countryVal];
+
+  if (regions && regions.length > 0) {
+    _renderSubRegions(regions, preserveSubRegion, preserveLang);
+  } else {
+    // Dynamic LLM curation fallback with Universal Artifact Disk Caching
+    fetch(`/api/music-video/country-hierarchy?country=${encodeURIComponent(countryVal)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data && Array.isArray(data.sub_regions) && data.sub_regions.length > 0) {
+          rMap[countryVal] = data.sub_regions;
+          _renderSubRegions(data.sub_regions, preserveSubRegion, preserveLang);
+        } else {
+          populateMusicCountryLanguages(countryVal, preserveLang);
+        }
+      })
+      .catch(e => {
+        console.warn("Country hierarchy fetch warning:", e);
+        populateMusicCountryLanguages(countryVal, preserveLang);
+      });
+  }
+
+  const chSlug = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : "telugu_rhythms";
+  fetchAndPopulateExistingSeries(chSlug, activeStudioFormat);
+}
+
+function _renderSubRegions(regions, preserveSubRegion = null, preserveLang = null) {
+  const sSelector = document.getElementById("studio-subregion-selector");
+  if (!sSelector) return;
+
+  const currentSub = preserveSubRegion || sSelector.value;
+  const targetSub = (currentSub && regions.some(x => x.id === currentSub)) ? currentSub : (regions[0]?.id || "");
+
+  sSelector.innerHTML = regions.map(item => `
+    <option value="${item.id}" data-culture="${item.culture || ''}" ${item.id === targetSub ? 'selected' : ''}>
+      ${item.name}
+    </option>
+  `).join("");
+  sSelector.value = targetSub;
+
+  onStudioSubRegionChange(targetSub, preserveLang);
+}
+
+function onStudioSubRegionChange(subRegionId, preserveLang = null) {
+  const cSelector = document.getElementById("studio-country-selector");
+  const lSelector = document.getElementById("studio-region-language-selector");
+  if (!lSelector) return;
+
+  const countryVal = cSelector ? cSelector.value : "India";
+  const rMap = (typeof WORLD_COUNTRY_REGIONS_MAP !== "undefined") ? WORLD_COUNTRY_REGIONS_MAP : {};
+  const regions = rMap[countryVal] || [];
+  const activeRegion = regions.find(x => x.id === subRegionId) || regions[0];
+
+  const langs = (activeRegion && Array.isArray(activeRegion.languages) && activeRegion.languages.length > 0)
+    ? activeRegion.languages
+    : ((typeof STUDIO_COUNTRY_LANGUAGE_MAP !== "undefined" && STUDIO_COUNTRY_LANGUAGE_MAP[countryVal]) || []);
+
+  const currentLang = preserveLang || lSelector.value;
+  const targetLang = (currentLang && langs.some(x => x.code === currentLang)) ? currentLang : (langs[0]?.code || "te");
+
+  lSelector.innerHTML = langs.map(item => `
+    <option value="${item.code}" data-culture="${item.culture || activeRegion?.culture || 'western'}" data-script="${item.script || 'Latin'}" ${item.code === targetLang ? 'selected' : ''}>
+      ${item.name}
+    </option>
+  `).join("");
+  lSelector.value = targetLang;
+
+  onStudioLanguageChange(targetLang);
+}
+
+function populateMusicCountryLanguages(countryVal, preserveLang = null) {
+  const lSelector = document.getElementById("studio-region-language-selector");
+  if (!lSelector) return;
+  const map = (typeof STUDIO_COUNTRY_LANGUAGE_MAP !== "undefined") ? STUDIO_COUNTRY_LANGUAGE_MAP : {};
+  const list = map[countryVal] || map["India"] || [];
+
+  const currentLang = preserveLang || lSelector.value;
+  const targetLang = (currentLang && list.some(x => x.code === currentLang)) ? currentLang : (list[0]?.code || "te");
+
+  lSelector.innerHTML = list.map(item => `
+    <option value="${item.code}" data-culture="${item.culture}" data-script="${item.script}" ${item.code === targetLang ? 'selected' : ''}>
+      ${item.name}
+    </option>
+  `).join("");
+  lSelector.value = targetLang;
+}
+
+function onStudioLanguageChange(langVal) {
+  const chSlug = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : "telugu_rhythms";
+  fetchAndPopulateExistingSeries(chSlug, activeStudioFormat);
+  if (typeof calculateLiveCostEstimate === "function") {
+    calculateLiveCostEstimate();
+  }
+}
+
+function initMusicCountryAndLanguageFromNetwork(channelSlug) {
+  const contSelector = document.getElementById("studio-continent-selector");
+  const cSelector = document.getElementById("studio-country-selector");
+  const sSelector = document.getElementById("studio-subregion-selector");
+  const lSelector = document.getElementById("studio-region-language-selector");
+  if (!contSelector || !cSelector || !sSelector || !lSelector) return;
+
+  const slug = String(channelSlug || "").toLowerCase();
+  let defaultContinent = "Asia";
+  let defaultCountry = "India";
+  let defaultSubRegion = "south_india";
+  let defaultLang = "te";
+
+  if (slug.includes("japan") || slug.includes("tokyo")) {
+    defaultContinent = "Asia"; defaultCountry = "Japan"; defaultSubRegion = "kanto_tokyo"; defaultLang = "ja";
+  } else if (slug.includes("france") || slug.includes("paris")) {
+    defaultContinent = "Europe"; defaultCountry = "France"; defaultSubRegion = "paris_ile_de_france"; defaultLang = "fr";
+  } else if (slug.includes("spain") || slug.includes("flamenco")) {
+    defaultContinent = "Europe"; defaultCountry = "Spain"; defaultSubRegion = "andalusia"; defaultLang = "es";
+  } else if (slug.includes("korea") || slug.includes("seoul") || slug.includes("kpop")) {
+    defaultContinent = "Asia"; defaultCountry = "South Korea"; defaultSubRegion = "nationwide"; defaultLang = "ko";
+  } else if (slug.includes("us") || slug.includes("america") || slug.includes("english")) {
+    defaultContinent = "North America"; defaultCountry = "United States"; defaultSubRegion = "american_south"; defaultLang = "en";
+  } else if (slug.includes("uk") || slug.includes("scotland") || slug.includes("celtic") || slug.includes("british")) {
+    defaultContinent = "Europe"; defaultCountry = "United Kingdom"; defaultSubRegion = "scotland"; defaultLang = "gd";
+  } else if (slug.includes("tamil") || slug.includes("kollywood")) {
+    defaultContinent = "Asia"; defaultCountry = "India"; defaultSubRegion = "south_india"; defaultLang = "ta";
+  } else if (slug.includes("kannada") || slug.includes("sandalwood")) {
+    defaultContinent = "Asia"; defaultCountry = "India"; defaultSubRegion = "south_india"; defaultLang = "kn";
+  } else if (slug.includes("malayalam") || slug.includes("mollywood")) {
+    defaultContinent = "Asia"; defaultCountry = "India"; defaultSubRegion = "south_india"; defaultLang = "ml";
+  } else if (slug.includes("hindi") || slug.includes("bollywood")) {
+    defaultContinent = "Asia"; defaultCountry = "India"; defaultSubRegion = "north_india"; defaultLang = "hi";
+  } else if (slug.includes("punjabi") || slug.includes("bhangra")) {
+    defaultContinent = "Asia"; defaultCountry = "India"; defaultSubRegion = "north_india"; defaultLang = "pa";
+  } else if (slug.includes("kashmiri")) {
+    defaultContinent = "Asia"; defaultCountry = "India"; defaultSubRegion = "north_india"; defaultLang = "ks";
+  } else if (slug.includes("urdu") || slug.includes("ghazal")) {
+    defaultContinent = "Asia"; defaultCountry = "India"; defaultSubRegion = "north_india"; defaultLang = "ur";
+  } else if (slug.includes("bengali") || slug.includes("baul")) {
+    defaultContinent = "Asia"; defaultCountry = "India"; defaultSubRegion = "east_india"; defaultLang = "bn";
+  } else if (slug.includes("odia") || slug.includes("odissi") || slug.includes("sambalpuri")) {
+    defaultContinent = "Asia"; defaultCountry = "India"; defaultSubRegion = "east_india"; defaultLang = "or";
+  } else if (slug.includes("assamese") || slug.includes("bihu")) {
+    defaultContinent = "Asia"; defaultCountry = "India"; defaultSubRegion = "east_india"; defaultLang = "as";
+  } else if (slug.includes("marathi") || slug.includes("lavani")) {
+    defaultContinent = "Asia"; defaultCountry = "India"; defaultSubRegion = "west_india"; defaultLang = "mr";
+  } else if (slug.includes("gujarati") || slug.includes("garba")) {
+    defaultContinent = "Asia"; defaultCountry = "India"; defaultSubRegion = "west_india"; defaultLang = "gu";
+  }
+
+  contSelector.value = defaultContinent;
+  onStudioContinentChange(defaultContinent, defaultCountry, defaultSubRegion, defaultLang);
+}
+
 
 function onGenreChange(genreVal, preserveSubGenre = null, preserveArch = null) {
   const subSelector = document.getElementById("studio-subgenre-selector");

@@ -120,3 +120,15 @@ TELUGU_MALE_ARCHETYPES: list[ArchetypeSpec] = [
     ArchetypeSpec("Ajay", 25, "charismatic magnetic smile, athletic frame", "modern textured quiff with clean edges", "clear wheatish skin", "royal blue and rust", 495301),
     ArchetypeSpec("Naveen", 26, "well-defined chin, bright intelligent gaze", "natural wavy pompadour, light stubble", "sun-warmed golden bronze skin", "plum and slate grey", 505307),
 ]
+
+# Regional Aliases for South Indian Languages (te, ta, kn, ml)
+SOUTH_INDIAN_FEMALE_ARCHETYPES = TELUGU_FEMALE_ARCHETYPES
+SOUTH_INDIAN_MALE_ARCHETYPES = TELUGU_MALE_ARCHETYPES
+
+__all__ = [
+    "ArchetypeSpec",
+    "TELUGU_FEMALE_ARCHETYPES",
+    "TELUGU_MALE_ARCHETYPES",
+    "SOUTH_INDIAN_FEMALE_ARCHETYPES",
+    "SOUTH_INDIAN_MALE_ARCHETYPES",
+]

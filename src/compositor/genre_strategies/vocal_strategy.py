@@ -2,7 +2,7 @@
 
 Orchestration config:
 1. Gemini: Original poetic rhyming lyrics, Suno music tags, multi-model image prompts, and timed lyrics.
-2. Suno v3.5 Pro: Full commercial vocal song synthesis.
+2. Suno v3.5 Pro: Full commercial vocal song synthesis matching mood & gender.
 3. 4K Keyframe: Z-Image Turbo default (with multi-model prompt alternatives in script JSON).
 4. Local FFmpeg ($0.00): Song-duration lock, center-screen native lyrics burn-in, -14 LUFS mastering.
 """
@@ -13,6 +13,11 @@ import re
 from typing import Any
 
 from src.compositor.genre_strategies.base_strategy import default_storyboard_sanity_check
+from src.compositor.genre_strategies.vocal_cast_builder import (
+    build_cast_and_visual_directives,
+    build_vocal_suno_tags,
+    is_kids_song_genre,
+)
 
 
 def vocal_gemini_schema() -> dict:
@@ -47,6 +52,11 @@ def vocal_gemini_schema() -> dict:
         "properties": {
             "title_en": {"type": "STRING"},
             "title_localized": {"type": "STRING"},
+            "song_type": {"type": "STRING"},
+            "mood": {"type": "STRING"},
+            "language": {"type": "STRING"},
+            "country": {"type": "STRING"},
+            "tempo_bpm": {"type": "INTEGER"},
             "hook_thesis": {"type": "STRING"},
             "suno_tags": {"type": "STRING"},
             "vocal_gender": {"type": "STRING"},
@@ -81,6 +91,26 @@ def vocal_gemini_schema() -> dict:
     }
 
 
+def _format_lyrics_directives(language: str, culture: str, theme: str, duration_seconds: int = 60) -> str:
+    """Compile culturally authentic lyrical verse instructions scaled to target duration."""
+    lang = (language or "en").lower()
+    if duration_seconds > 150:
+        len_hint = "Full 3.5-min song: 6-8 structured stanzas (~28-36 lines). Use [Intro], [Chorus/Mukhda] (repeated), [Verse 1/Antra 1], [Chorus], [Verse 2/Antra 2], [Bridge/Charanam], [Verse 3], [Final Chorus & Outro]."
+    elif duration_seconds > 75:
+        len_hint = "Full 2-min song: 4 structured stanzas (~16-20 lines). Use [Chorus/Mukhda], [Verse 1/Antra 1], [Chorus], [Verse 2/Antra 2], [Outro]."
+    else:
+        len_hint = "Compact 1-min song: 2 stanzas (~8-12 lines) with [Mukhda] and [Antra]."
+
+    base = f"1. Write complete rhyming lyrics in NATIVE SCRIPT of {language} celebrating '{theme}'.\n"
+    if lang in ("te", "ta", "kn", "ml"):
+        base += "2. Cultural meter (Pallavi, Anupallavi, Charanam) with strict prasa & chandas.\n"
+    elif lang in ("hi", "pa", "bn", "ur"):
+        base += "2. Cultural meter (Mukhda chorus, Antras) with strict qafiya & radif.\n"
+    else:
+        base += "2. Metric rhyme scheme and radio-friendly melodic hook.\n"
+    return f"{base}3. SONG STRUCTURE & DURATION SCALE: {len_hint}\n"
+
+
 class VocalStrategy:
     """Strategy for full-length songs with single 4K visual art and center-screen lyrics."""
 
@@ -109,10 +139,13 @@ class VocalStrategy:
         theme: str | None = None,
         **kwargs: Any,
     ) -> str:
-        eff_style = music_style or "romantic melody, soft, heartfelt"
-        eff_gender = gender or "duet"
+        eff_gender = (gender or kwargs.get("vocal_gender") or "duet").lower()
         eff_country = country or "India"
-        eff_culture = culture or "South Indian"
+        if not culture:
+            from src.studios.music_video_studio.country_music_catalog import resolve_culture_for_country_and_language
+            eff_culture = resolve_culture_for_country_and_language(eff_country, language)
+        else:
+            eff_culture = culture
         eff_theme = theme or kwargs.get("theme") or idea or "soulful romantic melody"
 
         user_id = str(kwargs.get("user_id") or "default_user")
@@ -122,97 +155,75 @@ class VocalStrategy:
         from src.services.character_archetypes import (
             get_and_increment_production_slot,
             resolve_cast_archetypes,
-            build_fresh_cast_prompt_directive,
         )
         slot = get_and_increment_production_slot(user_id=user_id, network=network, episode_number=ep_num)
         fem_spec, male_spec = resolve_cast_archetypes(slot=slot, culture=eff_culture, language=language)
-        fresh_cast_directive = build_fresh_cast_prompt_directive(slot=slot, fem=fem_spec, male=male_spec, setting=eff_theme)
 
-        ref_directive = (
-            f"MUSICAL REFERENCE PATTERN: Infuse the tenderness, emotional cadence, softness, and acoustic depth "
-            f"evocative of the famous classic '{similar_to}', but compose 100% brand-new original lyrics and melody."
-            if similar_to else ""
+        is_kids = is_kids_song_genre(genre, eff_theme)
+        cast_directive, neg_constraints = build_cast_and_visual_directives(
+            slot=slot, fem=fem_spec, male=male_spec, culture=eff_culture,
+            setting=eff_theme, gender=eff_gender, is_kids=is_kids,
         )
 
-        is_generic_title = not title or any(k in str(title).lower() for k in ("wfh confusions", "melody - lyrical song", "custom screenplay", "standalone", "new song", "new production", "soulful romantic melody"))
+        suno_hint = build_vocal_suno_tags(genre, eff_culture, gender=eff_gender, tempo_bpm=100)
+
+        is_generic_title = not title or any(k in str(title).lower() for k in ("wfh confusions", "melody - lyrical song", "custom screenplay", "standalone", "new song", "soulful romantic melody"))
         if is_generic_title:
             title_directive = (
                 f"- TITLE INVENTION (CRITICAL DIRECTIVE):\n"
                 f"  * Invent an evocative, poetic, and culturally authentic title for this song celebrating '{eff_theme}'.\n"
-                f"  * 'title_en': Return ONLY the pure Romanized/transliterated song title in English alphabet (e.g. 'Preyasi Priyatama', 'Kanula Kaanthi Neeve', 'Gundelona Premaga'). STRICTLY PROHIBIT appending 'Episode X', 'Part X', or subtitle descriptions.\n"
-                f"  * 'title_localized': Return the native script title followed by the Romanized title in parentheses (e.g. 'ప్రేయసి ప్రియతమా (Preyasi Priyatama)')."
+                f"  * 'title_en': Return ONLY the pure Romanized song title in English alphabet (e.g. 'Preyasi Priyatama', 'Sous Le Ciel'). Prohibit 'Episode X'.\n"
+                f"  * 'title_localized': Native script title followed by Romanized title in parentheses."
             )
         else:
             clean_in_title = re.sub(r"\s*-\s*episode\s*\d+", "", str(title), flags=re.IGNORECASE).strip()
-            title_directive = f"- Title: {clean_in_title} (Ensure 'title_en' is clean Romanized song title only and 'title_localized' is native script)"
+            title_directive = f"- Title: {clean_in_title} ('title_en' is clean Romanized song title; 'title_localized' is native script)"
 
         num_images = int(kwargs.get("num_images") or 1)
-        multi_scene_directive = (
-            f"MULTI-SCENE ROTATION ({num_images} SCENES - AUTONOMOUS DIRECTORIAL DERIVATION):\n"
-            f"Produce exactly {num_images} distinct scenes in 'scenes'. Derive each scene strictly within the setting/premise '{eff_theme}':\n"
-            f"  * 'location_hub': Derive a unique picturesque environment strictly within '{eff_theme}'. Prohibit repeating or deviating to unrelated foreign locations.\n"
-            f"  * 'character_pose': Distinct physical pose & interaction per scene (strolling -> cafe/terrace -> gazing at scenery). Prohibit repeating poses.\n"
-            f"  * 'camera_shot_type': Vary framing across scenes (wide establishing -> medium two-shot -> portrait close-up).\n"
-            f"  * 'visual_prompt': Complete 4K directorial visual prompt. MANDATORY SCRIPT IDENTITY: Explicitly specify recurring lead couple's authentic {eff_culture} ethnicity, facial identity, and wardrobe continuity.\n\n"
-            if num_images > 1 else ""
+        from src.compositor.genre_strategies.vocal_poses import build_environmental_pose_directive
+        pose_directive = build_environmental_pose_directive(
+            gender=eff_gender, theme=eff_theme, culture=eff_culture, num_scenes=num_images,
         )
 
+        if eff_gender == "male":
+            vocal_perspective_directive = "5. VOCAL PERFORMER PERSPECTIVE (SOLO MALE):\n   * Write all lyrics strictly from the first-person perspective of the SOLO MALE lead with male grammatical endings (e.g. 'गाता हूँ', 'मेरा'). Strictly NO female lines.\n\n"
+        elif eff_gender == "female":
+            vocal_perspective_directive = "5. VOCAL PERFORMER PERSPECTIVE (SOLO FEMALE):\n   * Write all lyrics strictly from the first-person perspective of the SOLO FEMALE lead with female grammatical endings (e.g. 'गाती हूँ', 'मेरी'). Strictly NO male lines.\n\n"
+        else:
+            vocal_perspective_directive = "5. VOCAL PERFORMER PERSPECTIVE (DUET):\n   * Structure the lyrics with alternating call-and-response couplets between [Male Lead] and [Female Lead], joining in harmony for [Chorus / Both].\n\n"
+
+        ref_line = f"- Musical Reference / Similar To: {similar_to}\n" if similar_to else ""
+        art_line = f"- Visual & Architectural Art Style: {art_style}\n" if art_style else ""
+
         return (
-            f"You are an acclaimed master lyricist, music director, and visual artist. "
+            f"You are an acclaimed master lyricist, music director, and visual artist.\n"
             f"Create a full broadcast-grade musical release in the {language.upper()} language.\n\n"
             f"CREATIVE DIRECTIVES:\n"
             f"{title_directive}\n"
-            f"- Central Theme / Setting / Premise: {eff_theme}\n"
-            f"- Country / Region: {eff_country}\n"
-            f"- Cultural Nuance: {eff_culture}\n"
-            f"- Music Style: {eff_style} (e.g. festive, happy, soft romantic melody, or energetic)\n"
-            f"- Vocal Gender: {eff_gender} (male solo, female solo, or romantic duet)\n"
-            f"{ref_directive}\n\n"
-            f"LYRICS SPECIFICATION (3.5-Minute Broadcast Standard):\n"
-            f"1. Write complete rhyming lyrical couplets (Pallavi, Anupallavi, Charanam 1, and Charanam 2) in the NATIVE SCRIPT of {language} celebrating '{eff_theme}'.\n"
-            f"2. Strict cultural meter and rhyming cadence (e.g. prasa/chandas for Telugu/Kannada, qafiya/radif for Hindi/Urdu).\n"
-            f"3. DUAL-LINE SUBTITLES (MANDATORY): In 'lyrics_segments', for every line provide BOTH:\n"
-            f"   * 'text': Lyrical line in the NATIVE SCRIPT (e.g. Telugu).\n"
-            f"   * 'text_en': Romanized English transliteration + concise English meaning (e.g. 'Kanula Kaanthi Neeve | You are the light in my eyes').\n"
-            f"4. INSTRUMENTAL INTRO & VOCAL SYNC: The song begins with a 4.5s-5.5s acoustic intro (flute/guitar/tabla) before singing starts. First segment MUST start at ~4.5s, pacing segments smoothly across {duration_seconds}s.\n\n"
-            f"{multi_scene_directive}"
-            f"HIGH-CTR 4K IMAGE & CHARACTER SPECIFICATION (Rule 12):\n"
-            f"{fresh_cast_directive}"
-            f"DIVERSE STAGING & CANDID CHEMISTRY (Strict Ban on Default Hand-Holding):\n"
-            f"- Feature dynamic, cute, emotional, connecting staging (cafe terrace, snowy observation deck, train window, scenic stroll).\n"
-            f"- Both characters must look completely in love, sweet, attractive, and expressing genuine romantic chemistry.\n"
-            f"4. SETTING & SCENIC LOCATION FIDELITY (MANDATORY):\n"
-            f"   - If '{eff_theme}' or art_style mentions a location/environment (e.g. Swiss Alps, Paris, Norway, Mediterranean), ALL scene backgrounds, location_hubs, and thumbnail_prompt MUST be set in picturesque sub-locations of THAT SPECIFIC setting (e.g. for Swiss Alps: snow-capped Eiger/Jungfrau peaks, green alpine meadows, Swiss chalets, glacial streams). Prohibit deviating to unrelated foreign locations.\n"
-            f"5. AUTHENTIC 35MM OPTICAL AESTHETIC (Zero Plastic CGI Sheen):\n"
-            f"   - Photorealistic 35mm film photograph aesthetic with natural skin texture, visible pores, fine film grain. STRICTLY PROHIBIT plastic doll skin, wax figures, or artificial CGI sheen.\n"
-            f"6. CONTEXT-MATCHED DYNAMIC WARDROBE & 4-ZONE CURATED ACCESSORIES:\n"
-            f"   - MANDATORY SETTING-OUTFIT HARMONY: Western cities (Paris, London) = chic Western modern fashion (trench coat, tailored wool overcoat, fine knit turtleneck, high-waist trousers, stylish boots). STRICTLY NO sarees in Western cities!\n"
-            f"   - STRICT BAN ON SAREES FOR FEMALE CHARACTERS unless explicitly requested by the user or in a traditional temple/wedding setting.\n"
-            f"   - 4-ZONE ACCESSORIES FOR HER (Matched to Outfit):\n"
-            f"     * Hair: Delicate pearl/gold hairpins or sleek barrette (modern); fresh jasmine flowers or subtle maang tikka (festive).\n"
-            f"     * Neck & Ears: Delicate necklace/pendant, matching huggie/stud earrings or cultural jhumkas.\n"
-            f"     * Hands & Wrists: Slim luxury dress watch, delicate tennis bracelet or glass bangles, dainty rings on slender fingers.\n"
-            f"     * Legs & Feet: Delicate gold/silver ankle chain (anklet) catching light, paired with strappy sandals or heels (modern); silver payal (festive).\n"
-            f"   - MALE ANATOMICAL WATCH PLACEMENT (CRITICAL): Male lead's chronograph watch MUST be described as 'strapped securely to his left wrist'. Plain clean unadorned shirt front with zero badges, pins, or graphics.\n"
-            f"   - MANDATORY SELF-CONTAINED SCENE PROMPTS: Every scene's 'visual_prompt' MUST repeat the woman's dress, slender-curvy build, and accessories, and the man's outfit and wrist-worn watch. NEVER drop or abbreviate wardrobe in later scenes!\n"
-            f"7. YOUTUBE 4K THUMBNAIL & METADATA SPECIFICATION (youtube_metadata):\n"
-            f"   - 'thumbnail_prompt': High-CTR 4K thumbnail image prompt for the image model capturing the emotional climax, gorgeous couple chemistry, dramatic lighting, and vibrant jewel tones.\n"
-            f"   - 'title': High-CTR clean video title. STRICT PROHIBITION: DO NOT include names of characters in title.\n"
-            f"   - 'description': High-CTR description celebrating the music, atmosphere, and lyrics. STRICT PROHIBITION: DO NOT include character names in description. ZERO emojis or symbols in timestamps or headings. Use clean real line breaks.\n"
-            f"   - 'title_localized': Pure song title in the NATIVE SCRIPT of {language} (e.g. 'చిగురించే ప్రేమలా') rendered on the thumbnail banner with the native regional font (Mandali for Telugu)!\n"
-            f"8. FAMILY-FRIENDLY & MONETIZATION SAFETY (Rule 11 - Strict Safe-Ad Guarantee):\n"
-            f"   - Outfits must be dignified, classy, and culturally authentic. Zero revealing, provocative, or overly sexualized clothing. STRICTLY NO plunging necklines, NO sheer/exposed underwear, and NEVER nude / NSFW.\n\n"
+            f"- Setting / Premise: {eff_theme}\n"
+            f"- SETTING & SCENIC LOCATION FIDELITY: {eff_theme.title()}\n"
+            f"- MULTI-SCENE ROTATION ({num_images} SCENES): Rotate camera perspective and framing across scenes matching {eff_theme}.\n"
+            f"- Country / Region: {eff_country} | Culture: {eff_culture}\n"
+            f"- Music Tone: {genre.replace('_', ' ').title()} | Vocal Performer: {eff_gender.upper()}\n"
+            f"{ref_line}{art_line}"
+            f"- Song Categorization: Differentiate clearly between 'SOULFUL MELODY' (deep emotional pathos, acoustic yearning, gentle strings, melancholy) vs 'ROMANTIC SONG' (joyous love, celebratory couple bond) vs 'ENERGETIC FOLK' (mass dance, festive). Populate 'song_type' and 'mood' accordingly.\n"
+            f"- Suno Music Tags Reference: '{suno_hint}'\n\n"
+            f"LYRICS SPECIFICATION:\n"
+            f"{_format_lyrics_directives(language, eff_culture, eff_theme, duration_seconds=duration_seconds)}"
+            f"3. DUAL-LINE SUBTITLES (MANDATORY): For every line in 'lyrics_segments', provide:\n"
+            f"   * 'text': Native script of {language}.\n"
+            f"   * 'text_en': Romanized transliteration + concise English meaning.\n"
+            f"4. First segment starts after the opening title card (~6-8s), pacing across {duration_seconds}s.\n"
+            f"{vocal_perspective_directive}"
+            f"{pose_directive}"
+            f"CHARACTER & VISUAL STAGING DIRECTIVE:\n"
+            f"{cast_directive}\n"
+            f"MANDATORY NEGATIVE CONSTRAINTS (Inject into visual prompts):\n"
+            f"Negative: {neg_constraints}\n\n"
             f"MULTI-MODEL PROMPT ADAPTATION (prompts_by_model):\n"
-            f"Generate tailored image prompts for all 5 image models in the studio. Every prompt MUST explicitly mandate: 'crisp tailored garment construction, zero outfit distortion, scene-matched wardrobe drape, clean tailored seams, authentic anatomy, natural hands':\n"
-            f"- 'z_image': Fast, ultra-sharp 4K prompt emphasizing vibrant colors, crisp textile textures, zero outfit distortions (Default).\n"
-            f"- 'flux_dev': 28-step natural language cinematic prompt with pristine garment draping specifics.\n"
-            f"- 'flux_pro_ultra': Optical camera specifics (35mm Master Prime, f/1.4 shallow depth) and clean couture tailoring.\n"
-            f"- 'imagen3': Google Imagen 3 photorealistic lighting and realistic textile detail prompt.\n"
-            f"- 'midjourney': Stylized aesthetic prompt with aspect ratio flag --ar 16:9 and clean fashion lines.\n\n"
-            f"CULTURALLY ALIGNED VISUAL EFFECTS & ANIMATIONS (animation_timeline - Rule 12):\n"
-            f"Direct dynamic local visual animations authentic to the song's culture ({eff_culture}), setting, and mood across {duration_seconds}s. Provide 3-5 timed cues:\n"
-            f"- camera_motion: 'static_tripod' (MANDATORY: Camera is locked on a static tripod with ZERO camera movement, zoom, or pan; characters are photographic stills, so the frame remains completely stationary while atmospheric particle VFX drifts naturally).\n"
-            f"- effect_type: 'floating_petals_up', 'golden_fireflies', 'golden_light_leak', 'shimmering_sparkles', 'floating_petals_down', 'romantic_bokeh_drift', 'monsoon_rain_mist'.\n"
+            f"Generate tailored prompts for z_image, flux_dev, flux_pro_ultra, imagen3, midjourney reflecting the exact character modality and setting above.\n\n"
+            f"VISUAL EFFECTS & ANIMATIONS (animation_timeline):\n"
+            f"Direct 3-5 timed particle cues (camera_motion='static_tripod'): effect_type in ('floating_petals_up', 'golden_fireflies', 'golden_light_leak', 'shimmering_sparkles', 'floating_petals_down', 'romantic_bokeh_drift', 'monsoon_rain_mist').\n"
         )
 
     def build_gemini_schema(self) -> dict:

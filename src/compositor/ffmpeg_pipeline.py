@@ -15,24 +15,17 @@ from src.scripts.local_pan_zoom import build_zoompan_expression
 def get_ffmpeg_binary() -> str:
     """Resolve FFmpeg binary path from system PATH, imageio_ffmpeg, or local virtualenv."""
     sys_ffmpeg = shutil.which("ffmpeg")
-    if sys_ffmpeg:
-        return sys_ffmpeg
+    if sys_ffmpeg: return sys_ffmpeg
     try:
         import imageio_ffmpeg
         exe = imageio_ffmpeg.get_ffmpeg_exe()
-        if exe and Path(exe).exists():
-            return str(exe)
-    except Exception:
-        pass
-
+        if exe and Path(exe).exists(): return str(exe)
+    except Exception: pass
     root = Path(__file__).resolve().parent.parent.parent
-    for venv_name in (".venv", "venv"):
-        v_dir = root / venv_name
-        if v_dir.exists():
-            for match in v_dir.glob("**/imageio_ffmpeg/binaries/ffmpeg*.exe"):
-                if match.is_file():
-                    return str(match)
+    for m in root.glob("**/imageio_ffmpeg/binaries/ffmpeg*.exe"):
+        if m.is_file(): return str(m)
     return "ffmpeg"
+
 
 
 def has_ffmpeg() -> bool:
@@ -93,31 +86,47 @@ def build_single_pass_command(
     cmd: list[str] = [get_ffmpeg_binary(), "-y"]
     filter_chains: list[str] = []
 
-    # 1. Register visual inputs (true video motion or zoompan over keyframe)
+    # 1. Register visual inputs (with transition overlap padding for xfade)
+    num_scenes = len(timeline.scenes)
+    x_dur = 0.8 if num_scenes > 1 else 0.0
+
     for idx, sc in enumerate(timeline.scenes):
+        is_last = (idx == num_scenes - 1)
+        input_dur = sc.duration_seconds + (0.0 if is_last else x_dur)
+
         if sc.video_path and sc.video_path.exists():
             cmd.extend(["-i", str(sc.video_path)])
             v_dur = max(0.5, get_video_duration(sc.video_path))
-            pts_factor = sc.duration_seconds / v_dur
+            pts_factor = input_dur / v_dur
             filter_chains.append(
-                f"[{idx}:v]setpts={pts_factor:.4f}*(PTS-STARTPTS),trim=duration={sc.duration_seconds:.2f},scale={timeline.target_resolution[0]}:{timeline.target_resolution[1]}:flags=bicubic,fps={timeline.fps},setsar=1[v{idx}]"
+                f"[{idx}:v]setpts={pts_factor:.4f}*(PTS-STARTPTS),trim=duration={input_dur:.2f},scale={timeline.target_resolution[0]}:{timeline.target_resolution[1]}:flags=bicubic,fps={timeline.fps},setsar=1[v{idx}]"
             )
         else:
             img_file = sc.image_path or Path("placeholder.png")
-            cmd.extend(["-loop", "1", "-t", f"{sc.duration_seconds:.2f}", "-i", str(img_file)])
+            cmd.extend(["-loop", "1", "-t", f"{input_dur:.2f}", "-i", str(img_file)])
 
             # Apply 2.5D camera pan-zoom motion over static keyframe
             zp_filter = build_zoompan_expression(
                 movement=sc.camera_movement,
-                duration_seconds=sc.duration_seconds,
+                duration_seconds=input_dur,
                 fps=timeline.fps,
                 target_res=timeline.target_resolution,
             )
             filter_chains.append(f"[{idx}:v]{zp_filter},setsar=1[v{idx}]")
 
-    # 2. Concatenate visual scenes sequentially into [v_concat]
-    concat_inputs = "".join(f"[v{i}]" for i in range(len(timeline.scenes)))
-    filter_chains.append(f"{concat_inputs}concat=n={len(timeline.scenes)}:v=1:a=0[v_concat]")
+    # 2. Smooth cinematic transitions (xfade) between scenes / photos
+    if num_scenes <= 1:
+        filter_chains.append("[v0]null[v_concat]")
+    else:
+        prev_tag = "v0"
+        curr_offset = timeline.scenes[0].duration_seconds
+        for i in range(1, num_scenes):
+            out_tag = "v_concat" if i == num_scenes - 1 else f"v_xf_{i}"
+            filter_chains.append(
+                f"[{prev_tag}][v{i}]xfade=transition=fade:duration={x_dur:.2f}:offset={curr_offset:.2f}[{out_tag}]"
+            )
+            prev_tag = out_tag
+            curr_offset += timeline.scenes[i].duration_seconds
 
     current_v = "[v_concat]"
 
@@ -184,35 +193,29 @@ def build_single_pass_command(
     duck_expr = build_timeline_volume_expression(timeline.speech_intervals, base_volume=0.30, ducked_volume=0.08) if has_speech else "volume=0.30"
     foley_expr = build_timeline_volume_expression(timeline.speech_intervals, base_volume=0.18, ducked_volume=0.05) if has_speech else "volume=0.18"
 
-    if bgm_idx is not None and foley_idx is not None and has_speech:
-        filter_chains.append(f"[{bgm_idx}:a]{duck_expr}[a_ducked]")
-        filter_chains.append(f"[{foley_idx}:a]{foley_expr}[a_foley_ducked]")
-        filter_chains.append(f"[a_ducked][a_foley_ducked][a_speech]amix=inputs=3:duration=first:dropout_transition=0:weights='0.25 0.15 1.20'[a_out]")
+    mix_sources: list[tuple[str, float]] = []
+    if bgm_idx is not None:
+        b_expr = duck_expr if has_speech else "volume=0.30"
+        filter_chains.append(f"[{bgm_idx}:a]{b_expr}[a_bgm_m]")
+        mix_sources.append(("[a_bgm_m]", 0.25 if has_speech else 0.60))
+    if foley_idx is not None:
+        f_expr = foley_expr if has_speech else "volume=0.18"
+        filter_chains.append(f"[{foley_idx}:a]{f_expr}[a_foley_m]")
+        mix_sources.append(("[a_foley_m]", 0.15 if has_speech else 0.40))
+    if has_speech:
+        mix_sources.append(("[a_speech]", 1.20))
+
+    if len(mix_sources) > 1:
+        inputs_str = "".join(tag for tag, _ in mix_sources)
+        weights_str = " ".join(f"{w:.2f}" for _, w in mix_sources)
+        filter_chains.append(f"{inputs_str}amix=inputs={len(mix_sources)}:duration=first:dropout_transition=0:weights='{weights_str}'[a_out]")
         current_a = "[a_out]"
-    elif bgm_idx is not None and has_speech:
-        filter_chains.append(f"[{bgm_idx}:a]{duck_expr}[a_ducked]")
-        filter_chains.append(f"[a_ducked][a_speech]amix=inputs=2:duration=first:dropout_transition=0:weights='0.30 1.20'[a_out]")
-        current_a = "[a_out]"
-    elif foley_idx is not None and has_speech:
-        filter_chains.append(f"[{foley_idx}:a]{foley_expr}[a_foley_ducked]")
-        filter_chains.append(f"[a_foley_ducked][a_speech]amix=inputs=2:duration=first:dropout_transition=0:weights='0.20 1.20'[a_out]")
-        current_a = "[a_out]"
-    elif has_speech:
-        current_a = "[a_speech]"
-    elif bgm_idx is not None and foley_idx is not None:
-        filter_chains.append(f"[{bgm_idx}:a]volume=0.30[a_bgm_plain]")
-        filter_chains.append(f"[{foley_idx}:a]volume=0.18[a_foley_plain]")
-        filter_chains.append(f"[a_bgm_plain][a_foley_plain]amix=inputs=2:duration=first:dropout_transition=0:weights='0.60 0.40'[a_out]")
-        current_a = "[a_out]"
-    elif bgm_idx is not None:
-        filter_chains.append(f"[{bgm_idx}:a]volume=0.30[a_out]")
-        current_a = "[a_out]"
-    elif foley_idx is not None:
-        filter_chains.append(f"[{foley_idx}:a]volume=0.18[a_out]")
-        current_a = "[a_out]"
+    elif len(mix_sources) == 1:
+        current_a = mix_sources[0][0]
     else:
         filter_chains.append(f"anullsrc=channel_layout=stereo:sample_rate=48000:d={timeline.total_duration_seconds:.2f}[a_out]")
         current_a = "[a_out]"
+
     # 4b. Broadcast Loudness Normalization (-14.0 LUFS EBU R128 standard)
     filter_chains.append(f"{current_a}loudnorm=I=-14.0:TP=-1.0:LRA=7.0[a_norm]")
     current_a = "[a_norm]"
@@ -241,10 +244,8 @@ def build_single_pass_command(
     return cmd
 
 
-from src.compositor.ffmpeg_concat import build_fast_concat_command
-
-
 async def execute_single_pass_render(
+
     timeline: CompiledTimeline,
     output_path: Path | str,
     dry_run: bool = False,

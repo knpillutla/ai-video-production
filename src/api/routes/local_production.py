@@ -48,6 +48,8 @@ class LocalProduceRequest(BaseModel):
     narration_male: Optional[bool] = None
     narration_female: Optional[bool] = None
     language: Optional[str] = "en"
+    country: Optional[str] = None
+    culture: Optional[str] = None
     target_languages: Optional[list[str]] = None
     theme: Optional[str] = None
     idea: Optional[str] = None
@@ -82,6 +84,7 @@ class LocalProduceRequest(BaseModel):
     format_slug: Optional[str] = None
     aspect_ratio: Optional[str] = None
     tts_model: Optional[str] = None
+    vocal_gender: Optional[str] = None
 
 
 class LocalProduceResponse(BaseModel):
@@ -187,6 +190,28 @@ async def produce_video_locally(req: LocalProduceRequest):
     eff_api_shots = -1 if is_req_travel else (req.num_shots or 0)
     if is_req_travel:
         logger.info(f"api_travel_shots_cadence: duration={capped_duration}s -> num_shots=-1 (autonomous cadence)")
+
+    req_fmt = str(req.format_slug or req.format or "").lower()
+    if req_fmt == "music_video" or req_g_lower.startswith(("music/", "dance/")):
+        from src.studios.music_video_studio.music_pipeline import MusicVideoPipeline
+        pipe = MusicVideoPipeline(
+            user_id=user_id_val, channel_id=eff_channel_id, episode_id=episode_id,
+            production_name=req.production_name or "standalone",
+        )
+        mv_res = await pipe.produce(
+            genre=req.genre or "music/static_vocal", sub_genre=req.sub_genre, primary_archetype=req.primary_archetype,
+            prompt=req.prompt, country=req.country, language=req.language, culture=req.culture,
+            duration_seconds=capped_duration, num_shots=eff_api_shots if eff_api_shots > 0 else 1,
+            tier=req.tier or "balanced", script_only=eff_script_only, photos_only=eff_photos_only,
+            audio_only=eff_audio_only, master_only=eff_master_only,
+        )
+        eff_stage = mv_res.get("current_stage", 1)
+        job_manager.update_job(
+            job_id=job_id, stage=eff_stage, progress=100 if eff_stage >= 5 else eff_stage * 20,
+            status="completed" if eff_stage >= 5 else "ready", keyframes=mv_res.get("keyframes", []),
+            motion_clips=[], audio_stems=mv_res.get("audio_stems", []), video_url=mv_res.get("video_url"),
+        )
+        return LocalProduceResponse(**mv_res)
 
     try:
         result = await produce_channel_video(
@@ -309,6 +334,8 @@ async def poll_production_artifacts(
             return f"/storage/{f.name}?t={mtime}"
 
     kfs = [{"name": f"Shot {k.replace('keyframe_p','').replace('.jpg','')}", "url": _file_url(files[k]), "filename": k} for k in sorted(files) if k.startswith("keyframe_p") and k.endswith(".jpg") and files[k].stat().st_size > 1000]
+    if not kfs and (c_dir / "scenes").exists():
+        kfs = [{"name": f"Scene {p.stem.replace('scene_', '')}", "url": _file_url(p), "filename": p.name} for p in sorted((c_dir / "scenes").glob("scene_*.jpg")) if p.stat().st_size > 1000]
 
     manifest_file = c_dir / "episode_manifest.json"
     m_data = json.loads(manifest_file.read_text("utf-8")) if manifest_file.exists() else {}
@@ -326,6 +353,8 @@ async def poll_production_artifacts(
         stems.append({"name": "Suno Soundtrack", "filename": "raw_soundtrack.mp3", "url": _file_url(files["raw_soundtrack.mp3"]), "color": "cyan"})
     if "velvet_binaural_master_48k.mp3" in files and files["velvet_binaural_master_48k.mp3"].stat().st_size > 1000:
         stems.append({"name": "432Hz Velvet Binaural ASMR", "filename": "velvet_binaural_master_48k.mp3", "url": _file_url(files["velvet_binaural_master_48k.mp3"]), "color": "emerald"})
+    if not stems and (c_dir / "stems").exists():
+        stems = [{"name": "Suno Vocal Soundtrack" if "soundtrack" in a.name else a.stem, "filename": a.name, "url": _file_url(a), "color": "cyan"} for a in sorted((c_dir / "stems").glob("*.mp3")) if a.stat().st_size > 1000]
 
     has_narr_master = "master_4k_narration.mp4" in files and files["master_4k_narration.mp4"].stat().st_size > 1000
     has_amb_master = "master_4k_ambient.mp4" in files and files["master_4k_ambient.mp4"].stat().st_size > 1000
@@ -333,6 +362,11 @@ async def poll_production_artifacts(
     nat_f = files.get("master_4k_nature.mp4") or files.get("master_4k_ambient_nature_only.mp4")
     master_url = _file_url(files["master_4k_narration.mp4"]) if has_narr_master else (_file_url(files["master_4k_ambient.mp4"]) if has_amb_master else None)
     nature_master_url = _file_url(nat_f) if has_nat_master else (_file_url(files["master_4k_ambient.mp4"]) if has_amb_master else None)
+    if not master_url and (c_dir / "master_renders").exists():
+        for m in sorted((c_dir / "master_renders").glob("*.mp4")):
+            if m.stat().st_size > 1000:
+                master_url = _file_url(m)
+                break
 
     dur_str = f"{int(m_data.get('duration_seconds', 5))}s"
     editions = []
@@ -362,6 +396,8 @@ async def poll_production_artifacts(
                 long_play_editions.append({"edition_id": eid, "name": name, "icon": icon, "audio_mode": mode, "duration": dur, "format": fmt, "status": "completed", "url": _file_url(target_f), "size_str": f"{sz_mb} MB" if sz_mb < 1000 else f"{round(sz_mb/1024, 2)} GB", "filename": target_f.name})
 
     screenplay_file = c_dir / "screenplay.json"
+    if not screenplay_file.exists():
+        screenplay_file = c_dir / "storyboard.json"
     screenplay_data = json.loads(screenplay_file.read_text("utf-8")) if screenplay_file.exists() else None
 
     pipeline_state_file = c_dir / "pipeline_state.json"

@@ -99,7 +99,310 @@ const MODE_STARTERS = {
   youtube: "https://www.youtube.com/watch?v=-BLxlHRYpac"
 };
 
+const WORLD_CONTINENTS_REGIONS_MAP = {
+  "Asia": [
+    { name: "India", flag: "🇮🇳" },
+    { name: "Japan", flag: "🇯🇵" },
+    { name: "South Korea", flag: "🇰🇷" },
+    { name: "China", flag: "🇨🇳" },
+    { name: "Indonesia", flag: "🇮🇩" },
+    { name: "Thailand", flag: "🇹🇭" },
+    { name: "Vietnam", flag: "🇻🇳" },
+    { name: "Philippines", flag: "🇵🇭" },
+    { name: "Turkey", flag: "🇹🇷" },
+    { name: "Saudi Arabia", flag: "🇸🇦" },
+    { name: "United Arab Emirates", flag: "🇦🇪" }
+  ],
+  "Europe": [
+    { name: "France", flag: "🇫🇷" },
+    { name: "Spain", flag: "🇪🇸" },
+    { name: "Italy", flag: "🇮🇹" },
+    { name: "Germany", flag: "🇩🇪" },
+    { name: "United Kingdom", flag: "🇬🇧" },
+    { name: "Ireland", flag: "🇮🇪" },
+    { name: "Greece", flag: "🇬🇷" },
+    { name: "Norway", flag: "🇳🇴" },
+    { name: "Sweden", flag: "🇸🇪" },
+    { name: "Portugal", flag: "🇵🇹" },
+    { name: "Poland", flag: "🇵🇱" },
+    { name: "Switzerland", flag: "🇨🇭" },
+    { name: "Netherlands", flag: "🇳🇱" }
+  ],
+  "North America": [
+    { name: "United States", flag: "🇺🇸" },
+    { name: "Canada", flag: "🇨🇦" },
+    { name: "Mexico", flag: "🇲🇽" },
+    { name: "Jamaica", flag: "🇯🇲" },
+    { name: "Cuba", flag: "🇨🇺" },
+    { name: "Puerto Rico", flag: "🇵🇷" },
+    { name: "Dominican Republic", flag: "🇩🇴" }
+  ],
+  "South America": [
+    { name: "Brazil", flag: "🇧🇷" },
+    { name: "Colombia", flag: "🇨🇴" },
+    { name: "Argentina", flag: "🇦🇷" },
+    { name: "Peru", flag: "🇵🇪" },
+    { name: "Chile", flag: "🇨🇱" }
+  ],
+  "Africa": [
+    { name: "Nigeria", flag: "🇳🇬" },
+    { name: "Egypt", flag: "🇪🇬" },
+    { name: "South Africa", flag: "🇿🇦" },
+    { name: "Kenya", flag: "🇰🇪" },
+    { name: "Morocco", flag: "🇲🇦" },
+    { name: "Ghana", flag: "🇬🇭" },
+    { name: "Senegal", flag: "🇸🇳" },
+    { name: "Ethiopia", flag: "🇪🇹" }
+  ],
+  "Oceania": [
+    { name: "Australia", flag: "🇦🇺" },
+    { name: "New Zealand", flag: "🇳🇿" },
+    { name: "Fiji", flag: "🇫🇯" }
+  ]
+};
+
+const WORLD_COUNTRY_REGIONS_MAP = {
+  "India": [
+    {
+      id: "south_india",
+      name: "South India (Tollywood, Kollywood, Sandalwood, Mollywood)",
+      culture: "south_indian",
+      languages: [
+        { code: "te", name: "Telugu (Andhra & Telangana - Tollywood)", script: "Telugu", culture: "south_indian" },
+        { code: "ta", name: "Tamil (Tamil Nadu - Kollywood)", script: "Tamil", culture: "south_indian" },
+        { code: "kn", name: "Kannada (Karnataka - Sandalwood)", script: "Kannada", culture: "south_indian" },
+        { code: "ml", name: "Malayalam (Kerala - Mollywood)", script: "Malayalam", culture: "south_indian" }
+      ]
+    },
+    {
+      id: "east_india",
+      name: "East India (Bengal, Odisha & Assam)",
+      culture: "east_indian",
+      languages: [
+        { code: "bn", name: "Bengali (West Bengal - Baul & Tollywood)", script: "Bengali", culture: "east_indian" },
+        { code: "or", name: "Odia (Odisha - Sambalpuri & Odissi)", script: "Odia", culture: "east_indian" },
+        { code: "as", name: "Assamese (Assam - Bihu & Lokageet)", script: "Bengali", culture: "east_indian" }
+      ]
+    },
+    {
+      id: "west_india",
+      name: "West India (Maharashtra, Gujarat, Goa & Sindh Heritage)",
+      culture: "west_indian",
+      languages: [
+        { code: "mr", name: "Marathi (Maharashtra - Natya Sangeet & Lavani)", script: "Devanagari", culture: "west_indian" },
+        { code: "gu", name: "Gujarati (Gujarat - Garba & Sugam Sangeet)", script: "Gujarati", culture: "west_indian" },
+        { code: "kok", name: "Konkani (Goa & Konkan - Mandó & Dulpod)", script: "Devanagari", culture: "west_indian" },
+        { code: "sd", name: "Sindhi (Sindh Heritage - Sufi Kalaam & Jhulelal)", script: "Devanagari", culture: "west_indian" }
+      ]
+    },
+    {
+      id: "north_india",
+      name: "North India (Punjab, Kashmir, Hindi Heartland & Urdu)",
+      culture: "north_indian",
+      languages: [
+        { code: "hi", name: "Hindi (Bollywood & Classical Hindustani)", script: "Devanagari", culture: "north_indian" },
+        { code: "pa", name: "Punjabi (Punjab - Bhangra & Sufi)", script: "Gurmukhi", culture: "north_indian" },
+        { code: "ks", name: "Kashmiri (Kashmir Valley - Rouf & Sufiyana)", script: "Devanagari", culture: "north_indian" },
+        { code: "ur", name: "Urdu (Ghazal & Qawwali)", script: "Arabic", culture: "north_indian" }
+      ]
+    }
+  ],
+  "Spain": [
+    {
+      id: "andalusia",
+      name: "Andalusia (Flamenco & Cante Jondo)",
+      culture: "spanish",
+      languages: [
+        { code: "es", name: "Spanish (Andalusian Flamenco & Acoustic)", script: "Latin", culture: "spanish" }
+      ]
+    },
+    {
+      id: "catalonia",
+      name: "Catalonia (Rumba Catalana & Nova Cançó)",
+      culture: "spanish",
+      languages: [
+        { code: "ca", name: "Catalan (Rumba Catalana & Pop)", script: "Latin", culture: "spanish" },
+        { code: "es", name: "Spanish (Barcelona Modern Pop)", script: "Latin", culture: "spanish" }
+      ]
+    },
+    {
+      id: "galicia",
+      name: "Galicia (Celtic Cantigas & Alalá)",
+      culture: "spanish",
+      languages: [
+        { code: "gl", name: "Galician (Celtic Folk & Cantigas)", script: "Latin", culture: "spanish" }
+      ]
+    }
+  ],
+  "United States": [
+    {
+      id: "american_south",
+      name: "American South (Country, Blues & Gospel)",
+      culture: "western",
+      languages: [
+        { code: "en", name: "English (Southern Country & Delta Blues)", script: "Latin", culture: "western" }
+      ]
+    },
+    {
+      id: "appalachia",
+      name: "Appalachia (Bluegrass & Mountain Folk)",
+      culture: "western",
+      languages: [
+        { code: "en", name: "English (Appalachian Bluegrass & Old-Time)", script: "Latin", culture: "western" }
+      ]
+    },
+    {
+      id: "southwest",
+      name: "Southwest & Border (Tejano, Mariachi & Latin)",
+      culture: "spanish",
+      languages: [
+        { code: "es", name: "Spanish (Tejano & Border Ballad)", script: "Latin", culture: "spanish" },
+        { code: "en", name: "English (Desert Acoustic & Folk)", script: "Latin", culture: "western" }
+      ]
+    }
+  ],
+  "United Kingdom": [
+    {
+      id: "scotland",
+      name: "Scotland (Highland Celtic & Folk Ballads)",
+      culture: "western",
+      languages: [
+        { code: "gd", name: "Scottish Gaelic (Gàidhlig - Celtic)", script: "Latin", culture: "western" },
+        { code: "en", name: "English (Scottish Ballads & Acoustic)", script: "Latin", culture: "western" }
+      ]
+    },
+    {
+      id: "wales",
+      name: "Wales (Cerdd Dant & Choral Folk)",
+      culture: "western",
+      languages: [
+        { code: "cy", name: "Welsh (Cymraeg - Choral & Folk)", script: "Latin", culture: "western" },
+        { code: "en", name: "English (Welsh Acoustic & Hymns)", script: "Latin", culture: "western" }
+      ]
+    },
+    {
+      id: "england",
+      name: "England (Traditional Folk & Modern Pop)",
+      culture: "western",
+      languages: [
+        { code: "en", name: "English (Traditional Folk & Modern Pop)", script: "Latin", culture: "western" }
+      ]
+    }
+  ],
+  "Japan": [
+    {
+      id: "kanto_tokyo",
+      name: "Kanto (Tokyo - Modern J-Pop & City Pop)",
+      culture: "japanese",
+      languages: [
+        { code: "ja", name: "Japanese (Tokyo J-Pop & City Pop)", script: "Japanese", culture: "japanese" }
+      ]
+    },
+    {
+      id: "kansai_kyoto",
+      name: "Kansai (Kyoto & Osaka - Traditional Gagaku & Folk)",
+      culture: "japanese",
+      languages: [
+        { code: "ja", name: "Japanese (Koto Classical & Min'yo)", script: "Japanese", culture: "japanese" }
+      ]
+    },
+    {
+      id: "okinawa",
+      name: "Okinawa (Ryukyu - Sanshin Island Folk)",
+      culture: "japanese",
+      languages: [
+        { code: "ja", name: "Japanese / Ryukyu (Sanshin Island Folk)", script: "Japanese", culture: "japanese" }
+      ]
+    }
+  ],
+  "France": [
+    {
+      id: "paris_ile_de_france",
+      name: "Île-de-France (Paris - Chanson Française & Pop)",
+      culture: "french",
+      languages: [
+        { code: "fr", name: "French (Chanson Française & Parisian Pop)", script: "Latin", culture: "french" }
+      ]
+    },
+    {
+      id: "brittany",
+      name: "Brittany (Celtic Fest-Noz & Folk)",
+      culture: "french",
+      languages: [
+        { code: "fr", name: "French / Breton (Celtic Folk Ballad)", script: "Latin", culture: "french" }
+      ]
+    }
+  ],
+  "Nigeria": [
+    {
+      id: "yorubaland",
+      name: "South-West (Yorubaland - Fuji, Jùjú & Afrobeats)",
+      culture: "african",
+      languages: [
+        { code: "yo", name: "Yoruba (Fuji, Jùjú & Afrobeats)", script: "Latin", culture: "african" },
+        { code: "en", name: "English (Lagos Afrobeats)", script: "Latin", culture: "african" }
+      ]
+    },
+    {
+      id: "igboland",
+      name: "South-East (Igboland - Ogene & Highlife)",
+      culture: "african",
+      languages: [
+        { code: "ig", name: "Igbo (Ogene & Highlife)", script: "Latin", culture: "african" }
+      ]
+    },
+    {
+      id: "northern_nigeria",
+      name: "Northern Nigeria (Hausa Folk & Arewa Pop)",
+      culture: "african",
+      languages: [
+        { code: "ha", name: "Hausa (Traditional & Arewa Pop)", script: "Latin", culture: "african" }
+      ]
+    }
+  ]
+};
+
+const STUDIO_COUNTRY_LANGUAGE_MAP = {
+  "India": [
+    { code: "te", name: "Telugu (South India - Tollywood)", script: "Telugu", culture: "south_indian" },
+    { code: "hi", name: "Hindi (North India - Bollywood)", script: "Devanagari", culture: "north_indian" },
+    { code: "ta", name: "Tamil (South India - Kollywood)", script: "Tamil", culture: "south_indian" },
+    { code: "kn", name: "Kannada (South India - Sandalwood)", script: "Kannada", culture: "south_indian" },
+    { code: "ml", name: "Malayalam (South India - Mollywood)", script: "Malayalam", culture: "south_indian" },
+    { code: "bn", name: "Bengali (East India - Tollywood Bengal / Baul)", script: "Bengali", culture: "east_indian" },
+    { code: "mr", name: "Marathi (West India - Natya Sangeet / Bhavgeet / Lavani)", script: "Devanagari", culture: "west_indian" },
+    { code: "or", name: "Odia (East India - Sambalpuri / Odissi / Bhakti)", script: "Odia", culture: "east_indian" },
+    { code: "gu", name: "Gujarati (West India - Garba / Sugam Sangeet)", script: "Gujarati", culture: "west_indian" },
+    { code: "pa", name: "Punjabi (North India - Bhangra / Sufi)", script: "Gurmukhi", culture: "north_indian" },
+    { code: "ks", name: "Kashmiri (North India - Sufiyana Kalam / Rouf / Chakri)", script: "Devanagari", culture: "north_indian" },
+    { code: "sd", name: "Sindhi (West/North India - Sufi Kalaam / Jhulelal)", script: "Devanagari", culture: "west_indian" },
+    { code: "as", name: "Assamese (East India - Bihu / Folk)", script: "Bengali", culture: "east_indian" },
+    { code: "ur", name: "Urdu (North India - Ghazal / Qawwali)", script: "Arabic", culture: "north_indian" },
+    { code: "kok", name: "Konkani (West India - Goan Mandó / Dulpod)", script: "Devanagari", culture: "west_indian" }
+  ],
+  "Japan": [
+    { code: "ja", name: "Japanese (Nihongo - J-Pop / Enka / Traditional)", script: "Japanese", culture: "japanese" }
+  ],
+  "France": [
+    { code: "fr", name: "French (Chanson / Modern Pop / Acoustic)", script: "Latin", culture: "french" }
+  ],
+  "Spain": [
+    { code: "es", name: "Spanish (Flamenco / Latin Pop / Acoustic)", script: "Latin", culture: "spanish" }
+  ],
+  "United States": [
+    { code: "en", name: "English (Country / Pop / R&B / Acoustic)", script: "Latin", culture: "western" }
+  ],
+  "South Korea": [
+    { code: "ko", name: "Korean (K-Pop / Ballad / Traditional)", script: "Hangul", culture: "korean" }
+  ]
+};
+
 const ALL_STUDIO_GENRES = {
+  "music/static_vocal": "🎤 Static Vocal (Solo Singer & Ambient Particles / VFX)",
+  "music/solo_singer": "🎸 Solo Singer & Expressive Performance (4K Cinematic)",
+  "music/duet_romance": "💑 Duet Romance & Dual Melodic Performance",
+  "music/concert_live": "🎆 Grand Live Stage & Concert Performance",
+  "dance/folk": "💃 Dance, Folk & Music Videos (dance/folk)",
   "relax/ocean": "🏖️ Ocean Retreat & Coastal Sanctuaries (relax/ocean)",
   "relax/beach_lounge": "🏖️ Luxury Beach Lounge & Cabana (relax/beach_lounge)",
   "relax/desert": "🏜️ Luxury Desert Glamping & Dunes (relax/desert)",
@@ -121,7 +424,6 @@ const ALL_STUDIO_GENRES = {
   "relax/scenic": "✈️ Travel & Nature Scenic Wonders (travel/scenic)",
   "relax/art": "🎨 Living Art, Museum Galleries & Ateliers (relax/art)",
   "travel_walking": "🚶 Travel & 4K 60fps Walking Tours (travel_walking)",
-  "dance/folk": "💃 Dance, Folk & Music Videos (dance/folk)",
   "comedy/satire": "🎭 Telugu Comedy & Satire Shorts (comedy/satire)",
   "science": "🔬 Science, Discovery & Cosmos (science)"
 };
@@ -131,7 +433,8 @@ const DEFAULT_CHANNEL_GENRES = {
   "earth_serenade": ["relax/nature", "relax/rain", "relax/forest", "relax/mountain", "relax/valley", "relax/ocean", "relax/beach_lounge", "relax/desert", "relax/blizzard", "relax/healing", "relax/zen", "relax/waterfall", "relax/ambient", "travel/scenic", "doc/nations", "relax/art", "science"],
   "silent_hearth": ["relax/hearth", "relax/rain", "relax/cozy", "relax/blizzard"],
   "skylinediariesindia4k": ["travel/scenic"],
-  "euro_discovery": ["doc/nations", "documentary", "travel/scenic", "travel_walking"]
+  "euro_discovery": ["doc/nations", "documentary", "travel/scenic", "travel_walking"],
+  "telugu_rhythms": ["music/static_vocal", "music/solo_singer", "music/duet_romance", "music/concert_live", "dance/folk"]
 };
 
 const STUDIO_SUBOPTIONS_MAP = {
@@ -186,7 +489,42 @@ const STUDIO_SUBOPTIONS_MAP = {
     { val: "travel_itinerary_tour", label: "🗺️ Travel Itinerary Tour (Ordered Route, Day Plan & Connecting Map)" }
   ],
   "travel_walking": [{ val: "alpine_village_walk", label: "🏡 Swiss Alpine Countryside Walk (1.5 km/h)" }, { val: "rain_walking_tour", label: "🌧️ 4K Rain Walking Tour (Puddles & Wet Street Reflections)" }, { val: "city_walk_pov", label: "🏙️ 4K 60fps Historic City & Night Walk" }, { val: "coastal_promenade", label: "🏖️ Secluded Ocean Bluff Walk" }],
-  "dance/folk": [{ val: "mass_folk_dance", label: "💃 High-Energy Mass Folk Dance (30fps)" }, { val: "classical_dance", label: "🪘 Cultural Classical Choreography" }],
+  "music/static_vocal": [
+    { val: "romantic_melody", label: "💖 Romantic & Melodic Ballad" },
+    { val: "soulful_melody", label: "✨ Soulful Melody & Acoustic Longing" },
+    { val: "kids_rhyme_song", label: "🧸 Kids Song & Nursery Rhyme (3D Animation)" },
+    { val: "soulful_spiritual", label: "🪔 Soulful, Devotional & Spiritual" },
+    { val: "happy_uplifting", label: "☀️ Happy, Cheerful & Uplifting" },
+    { val: "melancholic_emotional", label: "🌧️ Melancholic & Emotional Ballad" },
+    { val: "acoustic_unplugged", label: "🎸 Acoustic Unplugged & Coffeehouse" }
+  ],
+  "music/solo_singer": [
+    { val: "romantic_melody", label: "💖 Romantic & Melodic Solo" },
+    { val: "soulful_melody", label: "✨ Soulful Melody & Acoustic Longing" },
+    { val: "kids_rhyme_song", label: "🧸 Kids Song & Nursery Rhyme (3D Animation)" },
+    { val: "energetic_party", label: "🎉 Energetic Party & Upbeat Club" },
+    { val: "happy_uplifting", label: "☀️ Happy & Uplifting Performance" },
+    { val: "festive_celebration", label: "🎆 Festive Celebration & Jathara" },
+    { val: "soulful_spiritual", label: "🪔 Soulful & Devotional Strains" }
+  ],
+  "music/duet_romance": [
+    { val: "romantic_melody", label: "💖 Romantic & Melodic Love Duet" },
+    { val: "soulful_melody", label: "✨ Soulful Melody & Acoustic Longing" },
+    { val: "kids_rhyme_song", label: "🧸 Kids Song & Nursery Rhyme (3D Animation)" },
+    { val: "playful_banter", label: "😉 Playful Teasing & Flirty Banter" },
+    { val: "rain_romance", label: "🌧️ Monsoon & Rain Romance" },
+    { val: "festive_duet", label: "🎆 Festive Couple Dance & Celebration" }
+  ],
+  "music/concert_live": [
+    { val: "energetic_party", label: "🎉 High-Voltage Stadium Anthem" },
+    { val: "festival_headliner", label: "🎆 World Music Festival Headliner" },
+    { val: "unplugged_arena", label: "🕯️ Intimate Arena Acoustic Set" }
+  ],
+  "dance/folk": [
+    { val: "mass_folk_dance", label: "💃 High-Energy Mass Folk Dance (30fps)" },
+    { val: "classical_dance", label: "🪘 Cultural Classical Choreography" },
+    { val: "festive_celebration", label: "🎆 Festive Jathara & Village Fair" }
+  ],
   "comedy/satire": [{ val: "satirical_short", label: "🎭 Modern Satire & Relatable Comedy Short" }],
   "science": [
     { val: "science_space", label: "🪐 Space, Astronomy & Astrophysics" },
@@ -403,6 +741,44 @@ const STUDIO_ARCHETYPES_MAP = {
     { val: "quantum_computing", label: "💻 Quantum Supremacy & Cryostat Qubits" },
     { val: "deep_space_propulsion", label: "🚀 Interstellar Propulsion: Ion Thrusters & Sails" },
     { val: "megastructures_future", label: "🏗️ Megastructures: Orbital Rings & Dyson Swarms" }
+  ],
+  "music/static_vocal": [
+    { val: "local_country_heritage", label: "🏛️ Local Regional Heritage & Ancient Architecture" },
+    { val: "local_riverside_ghats", label: "🌊 Local Sacred Riverside & Morning Mist" },
+    { val: "local_lush_countryside", label: "🌾 Local Verdant Countryside & Green Meadows" },
+    { val: "swiss_alps_snow", label: "🏔️ Swiss Alps Snow Peaks & Pines (International)" },
+    { val: "paris_seine_terrace", label: "🗼 Paris Rooftop & Seine Riverfront (International)" },
+    { val: "kyoto_bamboo_temple", label: "🎋 Kyoto Bamboo Grove & Shrines (International)" },
+    { val: "santorini_cliffside", label: "🌊 Santorini White Cliffside & Aegean Sea (International)" },
+    { val: "dolomites_meadow", label: "⛰️ Dolomites Wildflower Meadows & Glacial Stream" }
+  ],
+  "music/solo_singer": [
+    { val: "local_country_heritage", label: "🏛️ Local Regional Heritage & Ancient Architecture" },
+    { val: "local_riverside_ghats", label: "🌊 Local Sacred Riverside & Morning Mist" },
+    { val: "local_lush_countryside", label: "🌾 Local Verdant Countryside & Green Meadows" },
+    { val: "local_historic_street", label: "🏮 Local Historic Old Town & Twilight Lanterns" },
+    { val: "swiss_alps_snow", label: "🏔️ Swiss Alps Snow Peaks & Pines (International)" },
+    { val: "paris_seine_terrace", label: "🗼 Paris Rooftop & Seine Riverfront (International)" },
+    { val: "santorini_cliffside", label: "🌊 Santorini White Cliffside & Aegean Sea (International)" }
+  ],
+  "music/duet_romance": [
+    { val: "local_lush_countryside", label: "🌾 Local Verdant Countryside & Green Meadows" },
+    { val: "local_riverside_ghats", label: "🌊 Local Sacred Riverside & Morning Mist" },
+    { val: "swiss_alps_snow", label: "🏔️ Swiss Alps Snow Peaks & Pines (International)" },
+    { val: "dolomites_meadow", label: "⛰️ Dolomites Wildflower Meadows & Glacial Stream" },
+    { val: "paris_seine_terrace", label: "🗼 Paris Rooftop & Seine Riverfront (International)" },
+    { val: "santorini_cliffside", label: "🌊 Santorini White Cliffside & Aegean Sea (International)" }
+  ],
+  "music/concert_live": [
+    { val: "local_heritage_palace", label: "🏛️ Grand Historic Palace Arena Courtyard" },
+    { val: "festival_fairgrounds", label: "🎆 Illuminated Fairgrounds & Night Sky Pyrotechnics" },
+    { val: "modern_stadium_stage", label: "🏟️ 4K Laser Stadium Stage & Moving Beams" }
+  ],
+  "dance/folk": [
+    { val: "festive_village_square", label: "🎪 Vibrant Village Festival Square & Jathara" },
+    { val: "local_lush_countryside", label: "🌾 Swaying Emerald Paddy Fields & Coconut Palms" },
+    { val: "ancient_banyan_platform", label: "🌳 Sacred Ancient Banyan Tree Platform" },
+    { val: "historic_temple_gopuram", label: "🛕 Grand Temple Gopuram Courtyard" }
   ]
 };
 

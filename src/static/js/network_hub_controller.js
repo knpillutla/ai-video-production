@@ -38,6 +38,109 @@ function selectHubChannel(chId) {
   if (typeof renderChannelHubTable === "function") renderChannelHubTable();
 }
 
+function onNetworkContinentChange(continentVal, preserveCountry = null, preserveSubRegion = null, preserveLang = null) {
+  const cSelector = document.getElementById("crud-network-country");
+  if (!cSelector) return;
+  const cMap = (typeof WORLD_CONTINENTS_REGIONS_MAP !== "undefined") ? WORLD_CONTINENTS_REGIONS_MAP : {};
+  const list = cMap[continentVal] || cMap["Asia"] || [];
+
+  const currentCountry = preserveCountry || cSelector.value;
+  const targetCountry = (currentCountry && list.some(x => x.name === currentCountry)) ? currentCountry : (list[0]?.name || "India");
+
+  cSelector.innerHTML = list.map(item => `
+    <option value="${item.name}" ${item.name === targetCountry ? 'selected' : ''}>
+      ${item.flag ? item.flag + ' ' : ''}${item.name}
+    </option>
+  `).join("");
+  cSelector.value = targetCountry;
+
+  onNetworkCountryChange(targetCountry, preserveSubRegion, preserveLang);
+}
+
+function onNetworkCountryChange(countryVal, preserveSubRegion = null, preserveLang = null) {
+  const sSelector = document.getElementById("crud-network-subregion");
+  if (!sSelector) return;
+
+  const rMap = (typeof WORLD_COUNTRY_REGIONS_MAP !== "undefined") ? WORLD_COUNTRY_REGIONS_MAP : {};
+  const regions = rMap[countryVal];
+
+  if (regions && regions.length > 0) {
+    _renderNetworkSubRegions(regions, preserveSubRegion, preserveLang);
+  } else {
+    fetch(`/api/music-video/country-hierarchy?country=${encodeURIComponent(countryVal)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data && Array.isArray(data.sub_regions) && data.sub_regions.length > 0) {
+          rMap[countryVal] = data.sub_regions;
+          _renderNetworkSubRegions(data.sub_regions, preserveSubRegion, preserveLang);
+        } else {
+          _fallbackNetworkLanguages(countryVal, preserveLang);
+        }
+      })
+      .catch(e => {
+        console.warn("Network country hierarchy warning:", e);
+        _fallbackNetworkLanguages(countryVal, preserveLang);
+      });
+  }
+}
+
+function _renderNetworkSubRegions(regions, preserveSubRegion = null, preserveLang = null) {
+  const sSelector = document.getElementById("crud-network-subregion");
+  if (!sSelector) return;
+
+  const currentSub = preserveSubRegion || sSelector.value;
+  const targetSub = (currentSub && regions.some(x => x.id === currentSub)) ? currentSub : (regions[0]?.id || "");
+
+  sSelector.innerHTML = regions.map(item => `
+    <option value="${item.id}" data-culture="${item.culture || ''}" ${item.id === targetSub ? 'selected' : ''}>
+      ${item.name}
+    </option>
+  `).join("");
+  sSelector.value = targetSub;
+
+  onNetworkSubRegionChange(targetSub, preserveLang);
+}
+
+function onNetworkSubRegionChange(subRegionId, preserveLang = null) {
+  const cSelector = document.getElementById("crud-network-country");
+  const lSelector = document.getElementById("crud-channel-lang");
+  if (!lSelector) return;
+
+  const countryVal = cSelector ? cSelector.value : "India";
+  const rMap = (typeof WORLD_COUNTRY_REGIONS_MAP !== "undefined") ? WORLD_COUNTRY_REGIONS_MAP : {};
+  const regions = rMap[countryVal] || [];
+  const activeRegion = regions.find(x => x.id === subRegionId) || regions[0];
+
+  const langs = (activeRegion && Array.isArray(activeRegion.languages) && activeRegion.languages.length > 0)
+    ? activeRegion.languages
+    : ((typeof STUDIO_COUNTRY_LANGUAGE_MAP !== "undefined" && STUDIO_COUNTRY_LANGUAGE_MAP[countryVal]) || []);
+
+  const currentLang = preserveLang || lSelector.value;
+  const targetLang = (currentLang && langs.some(x => x.code === currentLang)) ? currentLang : (langs[0]?.code || "te");
+
+  lSelector.innerHTML = langs.map(item => `
+    <option value="${item.code}" data-culture="${item.culture || activeRegion?.culture || 'western'}" ${item.code === targetLang ? 'selected' : ''}>
+      ${item.name}
+    </option>
+  `).join("");
+  lSelector.value = targetLang;
+}
+
+function _fallbackNetworkLanguages(countryVal, preserveLang = null) {
+  const lSelector = document.getElementById("crud-channel-lang");
+  if (!lSelector) return;
+  const map = (typeof STUDIO_COUNTRY_LANGUAGE_MAP !== "undefined") ? STUDIO_COUNTRY_LANGUAGE_MAP : {};
+  const list = map[countryVal] || map["India"] || [];
+
+  const currentLang = preserveLang || lSelector.value;
+  const targetLang = (currentLang && list.some(x => x.code === currentLang)) ? currentLang : (list[0]?.code || "te");
+
+  lSelector.innerHTML = list.map(item => `
+    <option value="${item.code}" data-culture="${item.culture}">${item.name}</option>
+  `).join("");
+  lSelector.value = targetLang;
+}
+
 function openCreateChannelModal() {
   activeEnrichedProfile = null;
   document.getElementById("crud-is-edit").value = "false";
@@ -46,6 +149,9 @@ function openCreateChannelModal() {
   document.getElementById("crud-channel-slug").disabled = false;
   document.getElementById("crud-submit-btn").innerHTML = '<i class="fa-solid fa-plus text-[10px]"></i><span>Create Network</span>';
   document.getElementById("channel-crud-form").reset();
+  const contSelector = document.getElementById("crud-network-continent");
+  if (contSelector) contSelector.value = "Asia";
+  onNetworkContinentChange("Asia", "India", "south_india", "te");
   // Default format selections
   const defaultFormats = ["documentary", "relaxation", "walking_tour", "music_video", "short"];
   document.querySelectorAll('input[name="crud_format"]').forEach(cb => {
@@ -70,7 +176,22 @@ async function openEditChannelModal(channelId) {
   document.getElementById("crud-channel-name").value = ch.channel_name || "";
   document.getElementById("crud-channel-handle").value = (ch.channel_handle || "").replace(/^@/, "");
   document.getElementById("crud-channel-category").value = ch.category || "General";
-  document.getElementById("crud-channel-lang").value = ch.primary_language || "en";
+  const pLang = ch.primary_language || "en";
+  let continentGuess = "Asia";
+  let countryGuess = "India";
+  let subRegionGuess = "south_india";
+  if (["ja"].includes(pLang)) { continentGuess = "Asia"; countryGuess = "Japan"; subRegionGuess = "kanto_tokyo"; }
+  else if (["fr"].includes(pLang)) { continentGuess = "Europe"; countryGuess = "France"; subRegionGuess = "paris_ile_de_france"; }
+  else if (["es", "ca", "gl"].includes(pLang)) { continentGuess = "Europe"; countryGuess = "Spain"; subRegionGuess = "andalusia"; }
+  else if (["ko"].includes(pLang)) { continentGuess = "Asia"; countryGuess = "South Korea"; subRegionGuess = "nationwide"; }
+  else if (["en"].includes(pLang)) { continentGuess = "North America"; countryGuess = "United States"; subRegionGuess = "american_south"; }
+  else if (["bn", "or", "as"].includes(pLang)) { continentGuess = "Asia"; countryGuess = "India"; subRegionGuess = "east_india"; }
+  else if (["mr", "gu", "sd", "kok"].includes(pLang)) { continentGuess = "Asia"; countryGuess = "India"; subRegionGuess = "west_india"; }
+  else if (["hi", "pa", "ks", "ur"].includes(pLang)) { continentGuess = "Asia"; countryGuess = "India"; subRegionGuess = "north_india"; }
+
+  const contSelector = document.getElementById("crud-network-continent");
+  if (contSelector) contSelector.value = continentGuess;
+  onNetworkContinentChange(continentGuess, countryGuess, subRegionGuess, pLang);
   document.getElementById("crud-channel-icon").value = ch.icon || "fa-clapperboard";
   document.getElementById("crud-channel-color").value = ch.color || "indigo";
   document.getElementById("crud-channel-desc").value = ch.description || "";

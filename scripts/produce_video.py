@@ -427,6 +427,10 @@ async def run_production(
     if storyboard_path.exists() and storyboard_path.stat().st_size > 0:
         try:
             storyboard_data = json.loads(storyboard_path.read_text(encoding="utf-8"))
+            if not storyboard_data.get("id") or not storyboard_data.get("episode_id"):
+                storyboard_data["id"] = str(episode.id)
+                storyboard_data["episode_id"] = str(episode.id)
+                storyboard_path.write_text(json.dumps(storyboard_data, indent=2, ensure_ascii=False), encoding="utf-8")
             print(f"[i] Resume: Loaded existing storyboard from disk.")
         except Exception: pass
 
@@ -476,9 +480,11 @@ async def run_production(
         from src.providers.llm.gemini_adapter import GeminiLLMAdapter
         llm = GeminiLLMAdapter()
         storyboard_data = await llm.generate_structured(gemini_prompt, schema=schema) if schema else await llm.generate_structured(gemini_prompt)
+        storyboard_data["id"] = str(episode.id)
+        storyboard_data["episode_id"] = str(episode.id)
         strategy.validate_storyboard(storyboard_data)
         with open(storyboard_path, "w", encoding="utf-8") as f:
-            json.dump(storyboard_data, f, indent=2)
+            json.dump(storyboard_data, f, indent=2, ensure_ascii=False)
 
     # The canonical project title and storage identity stay English. Localized
     # titles remain inside the storyboard/script artifact for audience-facing use.

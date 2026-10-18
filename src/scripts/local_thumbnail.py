@@ -34,8 +34,9 @@ def get_localized_badge_text(episode_number: int, language: str = "en") -> str:
 
 
 def _get_font(size: int = 36, language: str = "en") -> ImageFont.ImageFont:
-    """Load default truetype font or fallback to system font with Mandali as default for Telugu."""
-    if language in ("te", "telugu"):
+    """Load default truetype font or fallback to system font with Mandali as default for Telugu and Nirmala for Indic."""
+    clean_lang = (language or "en").lower().strip()
+    if clean_lang in ("te", "telugu"):
         for te_path in (
             Path("storage/fonts/te/Mandali-Regular.ttf"),
             Path.home() / "AppData/Local/Microsoft/Windows/Fonts/Mandali-Regular.ttf",
@@ -44,6 +45,19 @@ def _get_font(size: int = 36, language: str = "en") -> ImageFont.ImageFont:
             if te_path.is_file():
                 try:
                     return ImageFont.truetype(str(te_path), size=size)
+                except Exception:
+                    continue
+
+    # Instant native Windows Indic font check (covers Bengali, Odia, Devanagari/Marathi/Hindi, Gujarati, Gurmukhi, Tamil, Kannada, Malayalam)
+    if clean_lang in ("hi", "mr", "bn", "or", "gu", "pa", "ta", "kn", "ml", "ks", "sd", "as", "ur", "kok"):
+        for indic_path in (
+            Path("C:/Windows/Fonts/Nirmala.ttc"),
+            Path("C:/Windows/Fonts/NirmalaB.ttf"),
+            Path("C:/Windows/Fonts/nirmala.ttf"),
+        ):
+            if indic_path.is_file():
+                try:
+                    return ImageFont.truetype(str(indic_path), size=size)
                 except Exception:
                     continue
 
@@ -207,9 +221,12 @@ def generate_episodic_thumbnail(
     return out
 
 
+get_language_font = _get_font
+
 __all__ = [
     "EpisodicBadgeConfig",
     "get_localized_badge_text",
+    "get_language_font",
     "render_top_left_badge",
     "render_bottom_headline",
     "apply_cinematic_thumbnail_vfx",
