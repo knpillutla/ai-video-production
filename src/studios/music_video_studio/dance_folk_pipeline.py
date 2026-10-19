@@ -99,8 +99,9 @@ class DanceFolkPipeline(BaseMusicVideoPipeline):
         return await assemble_vocal_video(
             image_paths=img_paths, song_path=audio_path, sub_path=sub_path, out_video_path=out_render,
             duration=actual_dur, timeline_cues=sb_data.get("animation_timeline"), fonts_dir=fonts_dir,
-            enable_vfx=False, theme=sb_data.get("hook_thesis") or sb_data.get("title_en"),
+            enable_vfx=True, theme=sb_data.get("hook_thesis") or sb_data.get("title_en"),
             episode_seed=abs(hash(str(self.episode_id))) % 30, segment_durations=seg_durs,
+            enable_movement=True,
         )
 
 
