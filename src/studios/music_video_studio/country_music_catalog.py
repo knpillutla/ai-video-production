@@ -176,6 +176,7 @@ SCENERY_ARCHETYPES: dict[str, dict[str, str]] = {
     "local_lush_countryside": {"title": "Verdant Countryside & Paddy/Vineyard Hills", "prompt": "lush verdant countryside", "vfx": "light_bokeh"},
     "local_nature_waterfall": {"title": "Forest Waterfall & Mist Glade", "prompt": "forest waterfall and mist glade", "vfx": "rain"},
     "local_historic_street": {"title": "Vibrant Historic Town Street & Lanterns", "prompt": "historic town street with lanterns", "vfx": "dust"},
+    "mass_jathara_grounds": {"title": "Festive Mass Jathara & Fairgrounds", "prompt": "vibrant Indian festive jathara fairgrounds with temple banners, colorful swirling dust and energetic troupe crowd", "vfx": "dust"},
 }
 
 MUSIC_PERFORMANCE_TYPES = {
@@ -184,6 +185,7 @@ MUSIC_PERFORMANCE_TYPES = {
     "music/duet_romance": "👫 Romantic Melodic Duet (Lead Pair Chemistry)",
     "music/concert_live": "🎸 Concert & Live Acoustic Stage (Auditorium/Open-Air)",
     "music/dance_folk": "💃 Mass Folk & Cultural Troupe Dance",
+    "music/mass_song": "🥁 Mass Song with Mass Beats (High-Energy Dappu, Teenmaar & Whistle Drops)",
 }
 
 SONG_MOODS = {
@@ -194,6 +196,7 @@ SONG_MOODS = {
     "festival_celebration": "🪔 Festive & Cultural Celebration (Traditional Folk Percussion)",
     "spiritual_devotional": "🪷 Spiritual & Devotional (Meditative Sacred Chants & Flute)",
     "soulful_acoustic": "🎸 Soulful Unplugged & Melancholic",
+    "mass_beats": "🥁 High-Energy Mass Beats (Thumping Dappu, Teenmaar & Whistle Drops)",
 }
 
 

@@ -403,6 +403,7 @@ const ALL_STUDIO_GENRES = {
   "music/duet_romance": "💑 Duet Romance & Dual Melodic Performance",
   "music/concert_live": "🎆 Grand Live Stage & Concert Performance",
   "dance/folk": "💃 Dance, Folk & Music Videos (dance/folk)",
+  "music/mass_song": "🥁 Mass Song with Mass Beats (High-Energy Dappu & Teenmaar)",
   "relax/ocean": "🏖️ Ocean Retreat & Coastal Sanctuaries (relax/ocean)",
   "relax/beach_lounge": "🏖️ Luxury Beach Lounge & Cabana (relax/beach_lounge)",
   "relax/desert": "🏜️ Luxury Desert Glamping & Dunes (relax/desert)",
@@ -434,7 +435,7 @@ const DEFAULT_CHANNEL_GENRES = {
   "silent_hearth": ["relax/hearth", "relax/rain", "relax/cozy", "relax/blizzard"],
   "skylinediariesindia4k": ["travel/scenic"],
   "euro_discovery": ["doc/nations", "documentary", "travel/scenic", "travel_walking"],
-  "telugu_rhythms": ["music/static_vocal", "music/solo_singer", "music/duet_romance", "music/concert_live", "dance/folk"]
+  "telugu_rhythms": ["music/static_vocal", "music/solo_singer", "music/duet_romance", "music/concert_live", "dance/folk", "music/mass_song"]
 };
 
 const STUDIO_SUBOPTIONS_MAP = {
@@ -524,6 +525,12 @@ const STUDIO_SUBOPTIONS_MAP = {
     { val: "mass_folk_dance", label: "💃 High-Energy Mass Folk Dance (30fps)" },
     { val: "classical_dance", label: "🪘 Cultural Classical Choreography" },
     { val: "festive_celebration", label: "🎆 Festive Jathara & Village Fair" }
+  ],
+  "music/mass_song": [
+    { val: "mass_beats", label: "🥁 High-Energy Mass Beats (Thumping Dappu & Teenmaar)" },
+    { val: "commercial_hook_step", label: "🔥 Commercial Mass Hero Hook Step" },
+    { val: "jathara_mass_festival", label: "🎆 Jathara Festive Mass Celebration" },
+    { val: "fast_brass_whistle", label: "🎺 Fast Brass, Trumpets & Whistle Drops" }
   ],
   "comedy/satire": [{ val: "satirical_short", label: "🎭 Modern Satire & Relatable Comedy Short" }],
   "science": [
@@ -779,6 +786,12 @@ const STUDIO_ARCHETYPES_MAP = {
     { val: "local_lush_countryside", label: "🌾 Swaying Emerald Paddy Fields & Coconut Palms" },
     { val: "ancient_banyan_platform", label: "🌳 Sacred Ancient Banyan Tree Platform" },
     { val: "historic_temple_gopuram", label: "🛕 Grand Temple Gopuram Courtyard" }
+  ],
+  "music/mass_song": [
+    { val: "mass_jathara_grounds", label: "🎪 Festive Mass Jathara Fairgrounds & Confetti" },
+    { val: "festive_village_square", label: "🎪 Vibrant Village Festival Square & Banners" },
+    { val: "local_heritage_palace", label: "🏛️ Grand Historic Palace Arena Courtyard" },
+    { val: "modern_city_rooftop", label: "🌆 Neon City Rooftop Stage" }
   ]
 };
 

@@ -15,6 +15,7 @@ from src.studios.music_video_studio import (
     ConcertPipeline,
     DuetRomancePipeline,
     DanceFolkPipeline,
+    MassSongPipeline,
 )
 
 
@@ -107,6 +108,10 @@ def test_specialized_pipelines_factory_dispatch():
     p_dance = get_music_video_pipeline("dance/folk", u, ch, ep)
     assert isinstance(p_dance, DanceFolkPipeline)
     assert p_dance.pipeline_type == "dance_folk"
+
+    p_mass = get_music_video_pipeline("music/mass_song", u, ch, ep)
+    assert isinstance(p_mass, MassSongPipeline)
+    assert p_mass.pipeline_type == "mass_song"
 
 
 def test_music_video_api_produce_and_poll():

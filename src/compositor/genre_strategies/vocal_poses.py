@@ -57,7 +57,11 @@ def build_environmental_pose_directive(
         f"{chemistry_text}"
         f"5. DIVERSE MULTI-SCENE PROGRESSION ({num_scenes} SCENES):\n"
         "   - Every scene MUST specify a distinct camera shot type ('camera_shot_type') AND a distinct physical interaction ('character_pose') derived autonomously from that specific scene's environment.\n"
-        "   - 'visual_prompt' in each scene MUST describe the exact physical action and environmental engagement in vivid detail.\n\n"
+        "   - 'visual_prompt' in each scene MUST describe the exact physical action and environmental engagement in vivid detail.\n"
+        "6. MANDATORY BROADCAST SAFE HEADROOM & UPPER FRAME CLEARANCE (RULE OF THIRDS):\n"
+        "   - In ALL shots (wide, medium, two-shot, walking, seated), camera framing MUST maintain generous headroom: leave at least 15% to 25% clear open vertical space above the tallest character's head to the top edge of the 16:9 canvas.\n"
+        "   - Characters' eye lines must sit along the upper-third line (roughly 30-35% down from the top), showing the expansive open sky, mountains, or architecture above them.\n"
+        "   - Strictly prohibit tight headroom, cropped hair, cut off foreheads, or characters' heads touching the top edge of the frame, ensuring faces remain 100% visible on all desktop and mobile players without being cropped.\n\n"
     )
 
 

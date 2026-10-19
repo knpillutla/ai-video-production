@@ -54,6 +54,7 @@ async def run_production(
     num_images: int = 1, use_loras: bool = False,
     preview_only: bool = False, full_confirmed: bool = False,
     solo_male: bool = False, solo_female: bool = False, duet: bool = False,
+    mass_song: bool = False,
     rescript: bool = False,
 ):
     """Execute the Phase 2 & 3 end-to-end video production and compliance pipeline."""
@@ -418,6 +419,15 @@ async def run_production(
         gender = "duet"
     else:
         effective_voice_gender = voice_gender or gender or "female"
+
+    if mass_song or any("mass" in str(x).lower() for x in (genre, music_style, media_format, theme, idea)):
+        mass_song = True
+        if genre in ("vocal", "vocal_song", "dance"):
+            genre = "music/mass_song"
+        mass_desc = "mass commercial dance, thumping dappu drums, fast teenmaar rhythm, energetic brass trumpets, whistle drops"
+        if not music_style or "mass" not in music_style.lower():
+            music_style = f"{mass_desc}, {music_style}" if music_style else mass_desc
+
     is_voice_over = False
     enable_lipsync = False
     enable_bgm = bool(bgm)
@@ -471,6 +481,7 @@ async def run_production(
         "tier": tier, "profile": profile, "language": language, "subtitle_language": active_sub,
         "gender": effective_voice_gender, "voice_gender": voice_gender, "character_name": character_name,
         "solo_male": solo_male, "solo_female": solo_female, "duet": duet,
+        "mass_song": mass_song,
         "music_style": music_style, "style": music_style, "similar_to": similar_to,
         "country": country, "culture": culture, "costume_style": costume_style, "dance_type": dance_type,
         "art_style": art_style or (ref_attrs.art_style if ref_attrs else ""),
@@ -513,7 +524,8 @@ async def run_production(
             "similar_to": user_inputs["similar_to"], "country": user_inputs["country"],
             "culture": user_inputs["culture"], "gender": user_inputs["gender"],
             "duet": user_inputs["duet"], "solo_male": user_inputs["solo_male"],
-            "solo_female": user_inputs["solo_female"], "art_style": user_inputs["art_style"],
+            "solo_female": user_inputs["solo_female"], "mass_song": user_inputs.get("mass_song", False),
+            "art_style": user_inputs["art_style"],
             "culture_ctx": culture_context, "character_name": user_inputs["character_name"],
             "prompt": user_inputs["prompt"], "user_id": user_inputs["user_id"],
             "network": user_inputs["network"], "episode_number": user_inputs["episode_number"],
@@ -693,6 +705,7 @@ def main():
         (["--solo-male"], "Solo male vocalist and solo male lead", "solo_male"),
         (["--solo-female"], "Solo female vocalist and solo female lead", "solo_female"),
         (["--duet"], "Duet vocalists (male & female) with both leads", "duet"),
+        (["--mass", "--mass-song", "--mass-beats"], "Mass song with mass beats (high-energy dappu, teenmaar & brass)", "mass_song"),
         (["--rescript", "--regenerate-script"], "Regenerate storyboard script via Gemini even if cached", "rescript"),
     ]:
         p.add_argument(*fls, action="store_true", default=False, help=h, dest=dst)

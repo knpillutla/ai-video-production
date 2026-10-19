@@ -213,7 +213,7 @@ class VocalStrategy:
             f"- Country / Region: {eff_country} | Culture: {eff_culture}\n"
             f"- Music Tone: {genre.replace('_', ' ').title()} | Vocal Performer: {eff_gender.upper()}\n"
             f"{ref_line}{art_line}"
-            f"- Song Categorization: Differentiate clearly between 'SOULFUL MELODY' (deep emotional pathos, acoustic yearning, gentle strings, melancholy) vs 'ROMANTIC SONG' (joyous love, celebratory couple bond) vs 'ENERGETIC FOLK' (mass dance, festive). Populate 'song_type' and 'mood' accordingly.\n"
+            f"- Song Categorization: Differentiate clearly between 'SOULFUL MELODY' (deep emotional pathos, acoustic yearning, gentle strings, melancholy) vs 'ROMANTIC SONG' (joyous love, celebratory couple bond) vs 'MASS SONG WITH MASS BEATS' (high-energy mass commercial dance, thumping dappu drums, fast teenmaar rhythm, brass, whistle drops, explosive hook couplets) vs 'ENERGETIC FOLK' (mass dance, festive). Populate 'song_type' and 'mood' accordingly.\n"
             f"- Suno Music Tags Reference: '{suno_hint}'\n\n"
             f"LYRICS SPECIFICATION:\n"
             f"{_format_lyrics_directives(language, eff_culture, eff_theme, duration_seconds=duration_seconds)}"

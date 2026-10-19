@@ -6,6 +6,7 @@ Dispatches requests directly to dedicated, specialized pipelines:
 - ConcertPipeline: Live stadium / arena stage performance with lighting trusses
 - DuetRomancePipeline: Male & female duet harmony and alternating perspectives
 - DanceFolkPipeline: High-energy cultural mass folk choreography & beat drops
+- MassSongPipeline: Explosive mass song with mass beats, dappu drums & teenmaar
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from src.studios.music_video_studio.pipeline_factory import (
     ConcertPipeline,
     DanceFolkPipeline,
     DuetRomancePipeline,
+    MassSongPipeline,
     SoloSingingPipeline,
     StaticVocalPipeline,
     get_music_video_pipeline,
@@ -80,4 +82,5 @@ __all__ = [
     "ConcertPipeline",
     "DuetRomancePipeline",
     "DanceFolkPipeline",
+    "MassSongPipeline",
 ]

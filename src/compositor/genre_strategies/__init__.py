@@ -16,6 +16,7 @@ _STRATEGIES: dict[str, GenreStrategy] = {
     "vocal": VocalStrategy(),
     "vocal_song": VocalStrategy(),
     "lyrical_video": VocalStrategy(),
+    "mass_song": VocalStrategy(),
     "dance_video": DanceStrategy(),
     "music_video": MusicVideoStrategy(),
     "tourist_guide": TouristGuideStrategy(),
@@ -39,7 +40,7 @@ _STRATEGIES: dict[str, GenreStrategy] = {
 
 # Fallback keyword detection for when format string doesn't match directly
 _KEYWORD_FALLBACKS: list[tuple[list[str], str]] = [
-    (["vocal", "lyrical", "lyric video", "suno song", "audio song", "vocal song"], "vocal"),
+    (["vocal", "lyrical", "lyric video", "suno song", "audio song", "vocal song", "mass song", "mass beats"], "vocal"),
     (["dance", "folk dance", "jathara", "choreography", "song dance", "mass dance"], "dance_video"),
     (["music video", "monsoon song", "love song", "melody song"], "music_video"),
     (["tourist attractions", "top 10 places", "places to see", "city guide", "in 3 days", "in 4 days"], "tourist_guide"),

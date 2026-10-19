@@ -49,6 +49,11 @@ const GENRE_LABELS = {
   "relax/art": "🎨 Living Art",
   "travel_walking": "🚶 Walking",
   "dance/folk": "💃 Folk Dance",
+  "music/mass_song": "🥁 Mass Song",
+  "music/static_vocal": "🎤 Static Vocal",
+  "music/solo_singer": "🎸 Solo Singer",
+  "music/duet_romance": "💑 Duet Romance",
+  "music/concert_live": "🎆 Concert Live",
   "comedy/satire": "🎭 Comedy"
 };
 

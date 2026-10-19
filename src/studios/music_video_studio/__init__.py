@@ -17,6 +17,7 @@ from src.studios.music_video_studio.pipeline_factory import (
     ConcertPipeline,
     DuetRomancePipeline,
     DanceFolkPipeline,
+    MassSongPipeline,
 )
 from src.studios.music_video_studio.music_pipeline import MusicVideoPipeline
 
@@ -35,5 +36,6 @@ __all__ = [
     "ConcertPipeline",
     "DuetRomancePipeline",
     "DanceFolkPipeline",
+    "MassSongPipeline",
 ]
 

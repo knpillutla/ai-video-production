@@ -357,7 +357,7 @@ function syncGenreDropdownOnly(channelSlug, preserveGenre = null) {
   } else if (activeStudioFormat === "music_video") {
     normalized = normalized.filter(g => g.startsWith("dance/") || g.startsWith("music/"));
     if (normalized.length === 0) {
-      normalized = ["music/static_vocal", "music/solo_singer", "music/duet_romance", "music/concert_live", "dance/folk"];
+      normalized = ["music/static_vocal", "music/solo_singer", "music/duet_romance", "music/concert_live", "dance/folk", "music/mass_song"];
     }
   } else if (activeStudioFormat === "short" || activeStudioFormat === "movie") {
     normalized = normalized.filter(g => g.startsWith("comedy/") || g === "documentary" || g === "travel/scenic" || g === "science");

@@ -6,6 +6,7 @@ Routes genre selections to their specialized, dedicated pipeline implementation:
 - music/concert_live -> ConcertPipeline
 - music/duet_romance -> DuetRomancePipeline
 - dance/folk -> DanceFolkPipeline
+- music/mass_song -> MassSongPipeline
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from src.studios.music_video_studio.base_music_pipeline import BaseMusicVideoPip
 from src.studios.music_video_studio.concert_pipeline import ConcertPipeline
 from src.studios.music_video_studio.dance_folk_pipeline import DanceFolkPipeline
 from src.studios.music_video_studio.duet_romance_pipeline import DuetRomancePipeline
+from src.studios.music_video_studio.mass_song_pipeline import MassSongPipeline
 from src.studios.music_video_studio.solo_singing_pipeline import SoloSingingPipeline
 from src.studios.music_video_studio.static_vocal_pipeline import StaticVocalPipeline
 
@@ -29,6 +31,8 @@ def get_music_video_pipeline(
 ) -> BaseMusicVideoPipeline:
     """Instantiate the specialized pipeline matching the music video genre."""
     g = (genre or "").lower().strip()
+    if "mass" in g:
+        return MassSongPipeline(user_id=user_id, channel_id=channel_id, episode_id=episode_id, production_name=production_name)
     if "concert" in g or "live" in g:
         return ConcertPipeline(user_id=user_id, channel_id=channel_id, episode_id=episode_id, production_name=production_name)
     if "solo" in g or "singer" in g:
@@ -47,4 +51,5 @@ __all__ = [
     "ConcertPipeline",
     "DuetRomancePipeline",
     "DanceFolkPipeline",
+    "MassSongPipeline",
 ]

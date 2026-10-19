@@ -59,6 +59,13 @@ def build_vocal_suno_tags(
             f"cheerful brass flourishes, vibrant {vocal_tag}, {tempo_bpm} bpm, broadcast mix"
         )
 
+    if any(k in eff_sub for k in ("mass", "dappu", "teenmaar")):
+        return (
+            f"mass commercial dance, heavy thumping dappu drums, fast teenmaar rhythm, {culture}, "
+            f"energetic brass trumpets, whistle drops, catchy hook couplets, energetic {vocal_tag}, "
+            f"138 bpm, thumping bass downbeats, clean punchy 48khz broadcast master"
+        )
+
     if any(k in eff_sub for k in ("party", "club", "dance", "beat")):
         return (
             f"energetic party dance, {culture}, groovy bassline, infectious drum groove, "
@@ -174,7 +181,8 @@ def build_cast_and_visual_directives(
             "provocative attire, translucent fabric, watch on shirt, chest badge, misplaced jewelry, "
             "plastic doll skin, wax figure, distorted anatomy, zero outfit distortion, disembodied hands, floating hands, "
             "phantom limbs, severed arms, severed hands, extra limbs, off-screen reaching, boxy tunic, "
-            "baggy loungewear, shapeless clothing, low V-neck, plunging neckline, stiff posture, standing separated"
+            "baggy loungewear, shapeless clothing, low V-neck, plunging neckline, stiff posture, standing separated, "
+            "head cropped, cut off head, cut off face, head touching top edge, no headroom, tight headroom, top frame cut off, forehead cropped, hair touching top frame"
         )
 
     return cast_dir, neg_constraints

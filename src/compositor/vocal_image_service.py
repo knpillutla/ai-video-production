@@ -86,10 +86,11 @@ async def synthesize_vocal_scenes(
         effective_prompt = re.split(r"(?i)\bnegative\s*(?:constraints|prompt)?\s*:", effective_prompt)[0].strip(", ")
         # Ensure universal modesty, female composition, accessories harmony, and anti-hallucination guards
         safety_tokens = (
-            "modest high boat neckline, zero cleavage, fully visible leads in frame, zero disembodied hands, "
-            "zero floating limbs, graceful slender-curvy silhouette, delicate hair flowers or pins, "
-            "delicate necklace and sparkling pendant around neck, matching earrings, slim wrist watch, "
-            "delicate bangles, dainty ankle chain anklet, cute charming elegant styling"
+            "generous upper headroom, characters framed with ample headroom showing open sky and scenery, "
+            "rule of thirds eye line, safe broadcast framing, modest high boat neckline, zero cleavage, "
+            "fully visible leads in frame, zero disembodied hands, zero floating limbs, graceful slender-curvy silhouette, "
+            "delicate hair flowers or pins, delicate necklace and sparkling pendant around neck, matching earrings, "
+            "slim wrist watch, delicate bangles, dainty ankle chain anklet, cute charming elegant styling"
         )
         effective_prompt = f"{anchor_prefix}{effective_prompt}, {safety_tokens}".strip(", ")
 
