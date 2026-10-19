@@ -75,7 +75,7 @@ class MassSongPipeline(BaseMusicVideoPipeline):
         raw_audio = self.stems_dir / "raw_soundtrack.mp3"
         if not self.is_audio_cached():
             tags = (
-                f"{sb_data.get('suno_tags') or 'mass commercial dance, heavy thumping dappu drums, fast teenmaar rhythm, brass trumpets, whistle drops'}, "
+                f"{sb_data.get('suno_tags') or 'catchy hummable mass commercial dance, heavy thumping dappu drums, fast teenmaar rhythm, brass trumpets, whistle drops, explosive earworm hook couplets'}, "
                 f"138 bpm, thumping bass downbeats, clean punchy 48khz broadcast master"
             )
             await self.with_retries(

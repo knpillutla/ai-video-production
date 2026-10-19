@@ -137,6 +137,9 @@ class ProductionPipelineCoordinator:
                 auto_confirm=auto_confirm,
                 preview_only=kwargs.get("preview_only", False),
                 full_confirmed=kwargs.get("full_confirmed", False),
+                no_movements=kwargs.get("no_movements", False),
+                mass_song=kwargs.get("mass_song", False),
+                force_movements=kwargs.get("force_movements", False),
             )
 
         from src.providers.dance.fal_video_factory import resolve_video_motion_adapter

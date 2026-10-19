@@ -56,6 +56,8 @@ async def run_production(
     solo_male: bool = False, solo_female: bool = False, duet: bool = False,
     mass_song: bool = False,
     rescript: bool = False,
+    no_movements: bool = False,
+    force_movements: bool = False,
 ):
     """Execute the Phase 2 & 3 end-to-end video production and compliance pipeline."""
     duration = parse_duration(duration)
@@ -99,22 +101,43 @@ async def run_production(
     if restart_id:
         try:
             from uuid import UUID
-            rid = UUID(restart_id)
-            # Find disk workspace strictly prioritizing music_video paths
-            disk_matches = [p for p in Path(settings.storage.local_storage_root).glob(f"**/{restart_id}/user_inputs.json") if "music_video" in str(p)]
+            rid = None
+            disk_matches = []
+            try:
+                rid = UUID(restart_id)
+                disk_matches = [p for p in Path(settings.storage.local_storage_root).glob(f"**/{restart_id}/user_inputs.json") if "music_video" in str(p)]
+            except (ValueError, TypeError):
+                # Check if user passed an episode folder name like ep-006
+                ep_matches = [p for p in Path(settings.storage.local_storage_root).glob(f"**/{restart_id}/user_inputs.json") if "music_video" in str(p)]
+                if ep_matches:
+                    disk_matches = ep_matches
+                    try:
+                        stored = json.loads(disk_matches[0].read_text(encoding="utf-8"))
+                        rid = UUID(stored.get("episode_id") or stored.get("id"))
+                    except Exception:
+                        pass
+
             if not disk_matches:
                 for ui_path in Path(settings.storage.local_storage_root).glob("**/user_inputs.json"):
                     if "music_video" not in str(ui_path):
                         continue
                     try:
                         d = json.loads(ui_path.read_text(encoding="utf-8"))
-                        if d.get("episode_id") == str(restart_id) or str(d.get("id")) == str(restart_id):
+                        if str(d.get("episode_id")) == str(restart_id) or str(d.get("id")) == str(restart_id) or restart_id in str(ui_path):
                             disk_matches = [ui_path]
+                            rid = rid or UUID(str(d.get("episode_id") or d.get("id")))
                             break
                     except Exception:
                         continue
 
-            existing_ep = repo.get_episode(user.id, rid) or repo.episodes.get(rid)
+            if not rid and disk_matches:
+                try:
+                    stored = json.loads(disk_matches[0].read_text(encoding="utf-8"))
+                    rid = UUID(str(stored.get("episode_id") or stored.get("id")))
+                except Exception:
+                    pass
+
+            existing_ep = repo.get_episode(user.id, rid) or (repo.episodes.get(rid) if rid else None)
             if not existing_ep:
                 if disk_matches:
                     stored = json.loads(disk_matches[0].read_text(encoding="utf-8"))
@@ -636,6 +659,7 @@ async def run_production(
         auto_confirm=auto_confirm, profile=profile, music_style=music_style, similar_to=similar_to, country=country,
         network=network, num_images=num_images, use_loras=use_loras,
         preview_only=preview_only, full_confirmed=full_confirmed,
+        no_movements=no_movements, mass_song=mass_song, force_movements=force_movements,
     )
     if not final_video:
         print("[!] Production stopped at Image Quality Gate. No video rendered.\n")
@@ -707,6 +731,8 @@ def main():
         (["--duet"], "Duet vocalists (male & female) with both leads", "duet"),
         (["--mass", "--mass-song", "--mass-beats"], "Mass song with mass beats (high-energy dappu, teenmaar & brass)", "mass_song"),
         (["--rescript", "--regenerate-script"], "Regenerate storyboard script via Gemini even if cached", "rescript"),
+        (["--no-movements", "--no-movement", "--static-only", "--fixed-camera"], "Disable camera pan/zoom motion; keep keyframe fixed and static", "no_movements"),
+        (["--movements", "--movement", "--camera-movements"], "Force enable camera pan/zoom motion for non-mass songs", "force_movements"),
     ]:
         p.add_argument(*fls, action="store_true", default=False, help=h, dest=dst)
     profile_group = p.add_mutually_exclusive_group()

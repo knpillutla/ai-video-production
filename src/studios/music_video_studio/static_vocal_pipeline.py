@@ -92,10 +92,13 @@ class StaticVocalPipeline(BaseMusicVideoPipeline):
     async def stage_3_audio(self, sb_data: dict[str, Any], duration_seconds: float = 60.0, force_live: bool = False) -> list[dict[str, Any]]:
         raw_audio = self.stems_dir / "raw_soundtrack.mp3"
         if not self.is_audio_cached():
+            tags = sb_data.get("suno_tags") or "catchy hummable broadcast master stereo vocal"
+            if not any(k in tags.lower() for k in ("catchy", "hummable", "earworm")):
+                tags = f"{tags}, catchy hummable melody, memorable earworm hook"
             await self.with_retries(
                 "stage_3_audio",
                 lambda: SunoMusicAdapter().generate_to_file(
-                    output_path=raw_audio, genre=sb_data.get("suno_tags") or "broadcast master stereo vocal",
+                    output_path=raw_audio, genre=tags,
                     duration_seconds=duration_seconds, lyrics=sb_data.get("lyrics") or "",
                     vocal_gender=sb_data.get("vocal_gender") or "female",
                     title=sb_data.get("title_en") or "Music Track", episode_id=self.episode_id, force_live=force_live,

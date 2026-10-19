@@ -61,7 +61,21 @@ def build_environmental_pose_directive(
         "6. MANDATORY BROADCAST SAFE HEADROOM & UPPER FRAME CLEARANCE (RULE OF THIRDS):\n"
         "   - In ALL shots (wide, medium, two-shot, walking, seated), camera framing MUST maintain generous headroom: leave at least 15% to 25% clear open vertical space above the tallest character's head to the top edge of the 16:9 canvas.\n"
         "   - Characters' eye lines must sit along the upper-third line (roughly 30-35% down from the top), showing the expansive open sky, mountains, or architecture above them.\n"
-        "   - Strictly prohibit tight headroom, cropped hair, cut off foreheads, or characters' heads touching the top edge of the frame, ensuring faces remain 100% visible on all desktop and mobile players without being cropped.\n\n"
+        "   - Strictly prohibit tight headroom, cropped hair, cut off foreheads, or characters' heads touching the top edge of the frame, ensuring faces remain 100% visible on all desktop and mobile players without being cropped.\n"
+        "7. MASS SONG & PARTY BACKGROUND TROUPE (MALE & FEMALE DANCERS - MANDATORY):\n"
+        "   - For all mass songs, dance videos, and indoor party settings, NEVER depict an empty or deserted room.\n"
+        "   - The midground and background MUST feature an energetic, coordinated dance troupe of BOTH male and female backup dancers in matching colorful festive attire.\n"
+        "   - Direct background dancers performing synchronized hook steps, clapping on the downbeat, or cheering in soft optical bokeh/depth of field.\n"
+        "   - The solo lead remains the radiant centerstage superstar in sharp foreground focus with full 4-zone accessories and modest attire.\n"
+        "8. MANDATORY CONTEXT-DRIVEN FACIAL EXPRESSIONS & EMOTIVE ACTING (ABHINAYA):\n"
+        "   - Strictly prohibit blank, deadpan, expressionless, neutral staring, or robotic faces.\n"
+        "   - Every scene's 'visual_prompt' MUST explicitly direct vivid, authentic facial expressions matching the lyrical context:\n"
+        "     * Romantic / Soulful Melodies: Tender affectionate smile, soft dreamy gaze, gentle warmth, eyes full of emotion and longing.\n"
+        "     * Mass Song / Party / Dance: Radiant, infectious, high-voltage joyful grin, energetic confidence, lively teasing sparkle in eyes.\n"
+        "     * Melancholic / Love Ballad: Tender wistful gaze, gentle nostalgic emotion, subtle reflective depth.\n"
+        "     * Devotional / Spiritual: Serene peaceful countenance, blissfully meditative smile of inner peace.\n"
+        "     * Playful / Banter: Mischievous playful smirk, sparkling laughing eyes, charming teasing expression.\n"
+        "   - Characters must look genuinely alive, emotionally connected, and expressive in every frame.\n\n"
     )
 
 

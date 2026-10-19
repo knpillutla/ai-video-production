@@ -71,7 +71,7 @@ class DuetRomancePipeline(BaseMusicVideoPipeline):
     async def stage_3_audio(self, sb_data: dict[str, Any], duration_seconds: float = 60.0, force_live: bool = False) -> list[dict[str, Any]]:
         raw_audio = self.stems_dir / "raw_soundtrack.mp3"
         if not self.is_audio_cached():
-            tags = f"{sb_data.get('suno_tags') or 'romantic duet, male and female vocals'}, acoustic harmony, emotional strings"
+            tags = f"{sb_data.get('suno_tags') or 'catchy hummable romantic duet, male and female vocals'}, memorable earworm hook, acoustic harmony, emotional strings"
             await self.with_retries(
                 "stage_3_audio",
                 lambda: SunoMusicAdapter().generate_to_file(

@@ -201,9 +201,19 @@ def generate_vocal_title_card(
                     draw.text((x + dx, y + dy), text, font=font, fill=shadow_color)
         draw.text((x, y), text, font=font, fill=fill_color)
 
-    # Line 1: Regional Hero Title (Rozha / Ramabhadra)
-    _draw_shadowed_text((cx - (tw1 // 2) - ox1, curr_y - oy1), line1, font_loc, (255, 255, 255), radius=7)
-    curr_y += th1 + spacing_1_2
+    # Line 1: Regional Hero Title (DirectWrite HarfBuzz for Indic; PIL for Latin)
+    from src.compositor.indic_text_renderer import is_complex_indic_script, render_indic_text_directwrite
+    indic_img = render_indic_text_directwrite(line1, font_size=f_loc_size, max_width=int(w * 0.88)) if is_complex_indic_script(line1) else None
+
+    if indic_img:
+        ix = cx - (indic_img.width // 2)
+        iy = curr_y - int(10 * scale)
+        img.alpha_composite(indic_img, (ix, iy))
+        draw = ImageDraw.Draw(img)
+        curr_y += indic_img.height + spacing_1_2
+    else:
+        _draw_shadowed_text((cx - (tw1 // 2) - ox1, curr_y - oy1), line1, font_loc, (255, 255, 255), radius=7)
+        curr_y += th1 + spacing_1_2
 
     # Line 2: English Song Title (Cinzel tracked uppercase)
     if line2:

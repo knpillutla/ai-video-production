@@ -50,19 +50,78 @@ async def synthesize_vocal_scenes(
     z_adapter = FalZImageAdapter()
     flux_adapter = FalFluxLoraAdapter()
     aura_upscaler = FalAuraSRAdapter()
+    import hashlib
+
+    seed_key = str(episode_id or scenes_dir.parent.name)
+    seed_hash = int(hashlib.sha256(seed_key.encode("utf-8")).hexdigest()[:8], 16)
     char_seed = int((storyboard_data.get("characters") or [{}])[0].get("seed", 0))
-    song_seed = (abs(hash(str(episode_id or scenes_dir.parent.name))) + char_seed * 137) % 900000
+    song_seed = (seed_hash + char_seed * 137) % 900000
 
     # Build persistent character visual anchor prefix to enforce facial/attire consistency across all scenes
     chars = storyboard_data.get("characters") or []
     char_anchors = []
     for c in chars:
         c_name = c.get("name", "Lead")
+        c_age = c.get("age", "")
+        c_gender = c.get("gender", "")
         c_comp = c.get("body_composition", "")
+        c_hair = c.get("hair_and_facial_features") or c.get("face_and_hair") or ""
         c_outfit = c.get("outfit_description", "")
-        if c_name and (c_comp or c_outfit):
-            char_anchors.append(f"{c_name} ({c_comp}. Wearing {c_outfit})")
-    anchor_prefix = f"Recurring characters in scene: {'; '.join(char_anchors)}. " if char_anchors else ""
+        desc_parts = []
+        if c_age:
+            desc_parts.append(f"{c_age}-year-old")
+        if c_gender:
+            desc_parts.append(c_gender)
+        if c_comp:
+            desc_parts.append(c_comp)
+        if c_hair:
+            desc_parts.append(c_hair)
+        if c_outfit:
+            desc_parts.append(f"wearing {c_outfit}")
+        char_anchors.append(f"{c_name} ({', '.join(desc_parts) if desc_parts else c_comp})")
+
+    # If hair/stubble details were omitted from characters array, pull from base_prompt
+    facial_hair_hint = ""
+    if base_prompt:
+        m_fh = re.search(r"(\b(?:curtain fade|stubble|beard|mustache|haircut|hairstyle|wavy hair|braid|bun|curls)\b[^\.,;]*)", base_prompt, re.IGNORECASE)
+        if m_fh and not any("stubble" in a.lower() or "hair" in a.lower() for a in char_anchors):
+            facial_hair_hint = f" Facial and hair styling: {m_fh.group(1)}."
+
+    anchor_prefix = (
+        f"Lead character identity: {'; '.join(char_anchors)}.{facial_hair_hint} Same exact character face, hair, and outfit in every scene. "
+        if char_anchors else ""
+    )
+
+    # Detect character gender for gender-adaptive broadcast safety tokens
+    vocal_g = str(storyboard_data.get("vocal_gender") or "").lower()
+    char_g = str((chars[0] if chars else {}).get("gender") or "").lower()
+    is_male = "male" in char_g or "male" in vocal_g
+    is_female = "female" in char_g or "female" in vocal_g
+    is_duet = ("duet" in vocal_g) or (is_male and is_female) or len(chars) > 1
+
+    if is_duet:
+        safety_tokens = (
+            "generous upper headroom, characters framed with ample headroom showing open sky and scenery, "
+            "rule of thirds eye line, safe broadcast framing, modest high boat neckline for female lead, zero cleavage, "
+            "fully visible leads in frame, zero disembodied hands, zero floating limbs, handsome male lead with watch on left wrist, "
+            "beautiful female lead in elegant modest designer attire, tasteful modest family-friendly attire, zero nudity, zero bare chest"
+        )
+    elif is_male:
+        safety_tokens = (
+            "generous upper headroom, character framed with ample headroom showing open sky and scenery, "
+            "rule of thirds eye line, safe broadcast framing, fully visible lead in frame, zero disembodied hands, zero floating limbs, "
+            "natural fit lean-athletic masculine build, defined sharp jawline, neat light facial stubble, stylish haircut, "
+            "tailored collared shirt, chronograph watch strapped securely to left wrist, tasteful modest family-friendly attire, "
+            "zero bare chest, zero nudity"
+        )
+    else:
+        safety_tokens = (
+            "generous upper headroom, character framed with ample headroom showing open sky and scenery, "
+            "rule of thirds eye line, safe broadcast framing, modest high boat neckline, zero cleavage, "
+            "fully visible lead in frame, zero disembodied hands, zero floating limbs, graceful slender-curvy silhouette, "
+            "delicate hair flowers or pins, delicate necklace and sparkling pendant around neck, matching earrings, "
+            "slim wrist watch, delicate bangles, dainty ankle chain anklet, cute charming elegant styling, zero nudity"
+        )
 
     for idx in range(1, count + 1):
         scene_path = scenes_dir / f"scene_{idx:02d}.jpg"
@@ -84,15 +143,24 @@ async def synthesize_vocal_scenes(
         effective_prompt = f"{trigger_words}, {raw_prompt}".strip(", ") if (loras and trigger_words) else raw_prompt
         # Sanitize any accidental negative constraint or Negative: tokens from prompt
         effective_prompt = re.split(r"(?i)\bnegative\s*(?:constraints|prompt)?\s*:", effective_prompt)[0].strip(", ")
-        # Ensure universal modesty, female composition, accessories harmony, and anti-hallucination guards
-        safety_tokens = (
-            "generous upper headroom, characters framed with ample headroom showing open sky and scenery, "
-            "rule of thirds eye line, safe broadcast framing, modest high boat neckline, zero cleavage, "
-            "fully visible leads in frame, zero disembodied hands, zero floating limbs, graceful slender-curvy silhouette, "
-            "delicate hair flowers or pins, delicate necklace and sparkling pendant around neck, matching earrings, "
-            "slim wrist watch, delicate bangles, dainty ankle chain anklet, cute charming elegant styling"
+
+        # Derive context-driven facial expressions matching the mood and lyrical theme
+        ctx = f"{storyboard_data.get('genre', '')} {storyboard_data.get('song_type', '')} {storyboard_data.get('mood', '')} {storyboard_data.get('suno_tags', '')} {raw_prompt}".lower()
+        if any(k in ctx for k in ("mass", "dappu", "teenmaar", "dance", "troupe", "party", "club", "energetic", "celebrat", "jathara")):
+            expression_token = "radiant energetic joyful smile, infectious beaming expression, lively confident sparkle in eyes, happy animated laugh"
+        elif any(k in ctx for k in ("devotion", "spiritual", "bhajan", "kirtan", "temple", "peace", "prayer")):
+            expression_token = "serene peaceful smile, blissful transcendent expression, gentle spiritual warmth, glowing tranquil countenance"
+        elif any(k in ctx for k in ("sad", "heartbreak", "melanchol", "sorrow", "tear", "alone", "cry")):
+            expression_token = "tender wistful gaze, gentle soulful reflective emotion, poignant heartfelt expression, emotional eyes"
+        else:
+            expression_token = "warm affectionate tender smile, soft dreamy romantic gaze, heartfelt soulful facial expression, vibrant lively eyes"
+
+        is_mass_or_party = any(k in ctx for k in ("mass", "dappu", "teenmaar", "dance", "troupe", "party", "club"))
+        troupe_token = (
+            ", vibrant synchronized background troupe of both male and female backup dancers in coordinated festive party attire grooving in soft cinematic bokeh, lively cheering crowd"
+            if is_mass_or_party else ""
         )
-        effective_prompt = f"{anchor_prefix}{effective_prompt}, {safety_tokens}".strip(", ")
+        effective_prompt = f"{anchor_prefix}{effective_prompt}, {expression_token}, {safety_tokens}{troupe_token}".strip(", ")
 
         # Use deterministic shared song seed for character consistency across all scenes in song
         scene_seed = song_seed

@@ -59,8 +59,9 @@ async def assemble_vocal_video(
     duration: float, fps: int = 30, timeline_cues: list[dict[str, Any]] | None = None,
     fonts_dir: Path | str | None = None, static_canvas: bool = True, enable_vfx: bool = True,
     theme: str | None = None, episode_seed: int = 0, segment_durations: list[float] | None = None,
+    enable_movement: bool = False,
 ) -> Path:
-    """Fast 2-Stage Assembly: Stage 1 Base Assembly (Static Tripod + xfade + Audio) -> Stage 2 Scene VFX."""
+    """Fast 2-Stage Assembly: Stage 1 Base Assembly (Static Tripod or 2.5D Mass Movement + xfade + Audio) -> Stage 2 Scene VFX."""
     if out_video_path.is_file() and out_video_path.stat().st_size > 1000:
         logger.info(f"vocal_master_cached: reusing existing render {out_video_path.name}")
         return out_video_path
@@ -71,9 +72,10 @@ async def assemble_vocal_video(
     from src.compositor.vocal_fx import compile_vocal_base_filter_complex, ensure_fx_overlay, resolve_scene_vfx_type
     base_target = out_video_path.parent / f"_temp_base_{out_video_path.name}" if enable_vfx else out_video_path
 
-    # Stage 1: Fast Base Assembly on Static Tripod (Images + xfade + Audio + Subtitles)
+    # Stage 1: Fast Base Assembly (Images + xfade + Audio + Subtitles + optional mass movement)
     base_filter = compile_vocal_base_filter_complex(
-        len(imgs), duration, sub_path=sub_path, fonts_dir=fonts_dir, fps=fps, segment_durations=segment_durations
+        len(imgs), duration, sub_path=sub_path, fonts_dir=fonts_dir, fps=fps,
+        segment_durations=segment_durations, enable_movement=enable_movement,
     )
     img_args = [arg for p in imgs for arg in ("-loop", "1", "-t", f"{duration:.2f}", "-i", str(p))]
     cmd_base = [
@@ -244,9 +246,14 @@ async def execute_vocal_pipeline(
             p_time = preview_video.stat().st_mtime
             if any(p.is_file() and p.stat().st_mtime > p_time for p in all_scenes):
                 prev_valid = False
+        is_mass = kwargs.get("mass_song", False) or any(k in f"{strategy.genre_id} {theme or ''} {idea or ''} {music_style or ''}".lower() for k in ("mass", "dappu", "teenmaar", "mass_beats"))
+        if sb_data:
+            is_mass = is_mass or any(k in f"{sb_data.get('suno_tags', '')} {sb_data.get('hook_thesis', '')}".lower() for k in ("mass", "dappu", "teenmaar"))
+        mov_active = False if kwargs.get("no_movements", False) else (True if kwargs.get("force_movements", False) else is_mass)
+
         if not prev_valid:
-            print(f"\n[~] Stage 1/2: Generating 30s fast preview video with Scene 0 title card...")
-            await assemble_vocal_video(image_paths=all_scenes, song_path=active_audio, sub_path=None, out_video_path=preview_video, duration=preview_dur, timeline_cues=anim_cues, fonts_dir=fonts_dir, theme=eff_theme_vfx, episode_seed=ep_seed, segment_durations=prev_seg_durs)
+            print(f"\n[~] Stage 1/2: Generating 30s fast preview video with Scene 0 title card (Movements: {mov_active})...")
+            await assemble_vocal_video(image_paths=all_scenes, song_path=active_audio, sub_path=None, out_video_path=preview_video, duration=preview_dur, timeline_cues=anim_cues, fonts_dir=fonts_dir, enable_movement=mov_active, enable_vfx=not kwargs.get("no_movements", False), theme=eff_theme_vfx, episode_seed=ep_seed, segment_durations=prev_seg_durs)
         print(f"\n[+] 30s Fast Preview Video Ready: {preview_video.name}")
         if kwargs.get("preview_only", False): return preview_video
         cg = kwargs.get("custom_gate_input_fn")
@@ -263,8 +270,12 @@ async def execute_vocal_pipeline(
     if dry_run:
         final_video.touch()
     else:
-        print(f"\n[~] Rendering full {actual_dur:.0f}s master video with Scene 0 Title Card...")
-        await assemble_vocal_video(image_paths=all_scenes, song_path=active_audio, sub_path=None, out_video_path=final_video, duration=actual_dur, timeline_cues=anim_cues, fonts_dir=fonts_dir, theme=eff_theme_vfx, episode_seed=ep_seed, segment_durations=seg_durs)
+        is_mass = kwargs.get("mass_song", False) or any(k in f"{strategy.genre_id} {theme or ''} {idea or ''} {music_style or ''}".lower() for k in ("mass", "dappu", "teenmaar", "mass_beats"))
+        if sb_data:
+            is_mass = is_mass or any(k in f"{sb_data.get('suno_tags', '')} {sb_data.get('hook_thesis', '')}".lower() for k in ("mass", "dappu", "teenmaar"))
+        mov_active = False if kwargs.get("no_movements", False) else (True if kwargs.get("force_movements", False) else is_mass)
+        print(f"\n[~] Rendering full {actual_dur:.0f}s master video with Scene 0 Title Card (Movements: {mov_active})...")
+        await assemble_vocal_video(image_paths=all_scenes, song_path=active_audio, sub_path=None, out_video_path=final_video, duration=actual_dur, timeline_cues=anim_cues, fonts_dir=fonts_dir, enable_movement=mov_active, enable_vfx=not kwargs.get("no_movements", False), theme=eff_theme_vfx, episode_seed=ep_seed, segment_durations=seg_durs)
         if not (preview_video.is_file() and preview_video.stat().st_size > 1000):
             try: subprocess.run([ffmpeg_bin, "-y", "-i", str(final_video), "-t", f"{preview_dur:.2f}", "-c", "copy", str(preview_video)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
             except Exception: pass

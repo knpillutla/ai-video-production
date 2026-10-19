@@ -266,7 +266,7 @@ def build_music_video_prompt_package(
     )
     eff_theme = (user_prompt.strip() if user_prompt and user_prompt.strip() else autonomous_theme)
 
-    suno_style = f"{song_mood.replace('_', ' ')}, {', '.join(c_spec.traditional_instruments[:2])}, {c_spec.modern_instruments[0]}"
+    suno_style = f"catchy hummable {song_mood.replace('_', ' ')}, memorable hook melody, {', '.join(c_spec.traditional_instruments[:2])}, {c_spec.modern_instruments[0]}"
 
     return {
         "language": lang,

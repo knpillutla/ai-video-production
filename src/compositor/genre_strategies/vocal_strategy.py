@@ -24,7 +24,7 @@ def vocal_gemini_schema() -> dict:
     """Return strict JSON schema for vocal lyrical video structured output."""
     character = {
         "type": "OBJECT",
-        "properties": {"name": {"type": "STRING"}, "gender": {"type": "STRING"}, "age": {"type": "INTEGER"}, "body_composition": {"type": "STRING"}, "outfit_description": {"type": "STRING"}},
+        "properties": {"name": {"type": "STRING"}, "gender": {"type": "STRING"}, "age": {"type": "INTEGER"}, "body_composition": {"type": "STRING"}, "hair_and_facial_features": {"type": "STRING"}, "outfit_description": {"type": "STRING"}},
         "required": ["name", "gender", "age", "body_composition", "outfit_description"],
     }
     lyrics_seg = {
@@ -95,20 +95,30 @@ def _format_lyrics_directives(language: str, culture: str, theme: str, duration_
     """Compile culturally authentic lyrical verse instructions scaled to target duration."""
     lang = (language or "en").lower()
     if duration_seconds > 150:
-        len_hint = "Full 3.5-min song: 6-8 structured stanzas (~28-36 lines). Use [Intro], [Chorus/Mukhda] (repeated), [Verse 1/Antra 1], [Chorus], [Verse 2/Antra 2], [Bridge/Charanam], [Verse 3], [Final Chorus & Outro]."
+        len_hint = "Full 3.5-min song: 6-8 structured stanzas (~28-36 lines). Use [Intro], [Chorus/Mukhda - Catchy Hummable Hook] (repeated), [Verse 1/Antra 1], [Chorus], [Verse 2/Antra 2], [Bridge/Charanam], [Verse 3], [Final Chorus & Outro]."
     elif duration_seconds > 75:
-        len_hint = "Full 2-min song: 4 structured stanzas (~16-20 lines). Use [Chorus/Mukhda], [Verse 1/Antra 1], [Chorus], [Verse 2/Antra 2], [Outro]."
+        len_hint = "Full 2-min song: 4 structured stanzas (~16-20 lines). Use [Chorus/Mukhda - Catchy Hummable Hook], [Verse 1/Antra 1], [Chorus], [Verse 2/Antra 2], [Outro]."
     else:
-        len_hint = "Compact 1-min song: 2 stanzas (~8-12 lines) with [Mukhda] and [Antra]."
+        len_hint = "Compact 1-min song: 2 stanzas (~8-12 lines) with [Mukhda - Catchy Hook] and [Antra]."
 
-    base = f"1. Write complete rhyming lyrics in NATIVE SCRIPT of {language} celebrating '{theme}'.\n"
-    if lang in ("te", "ta", "kn", "ml"):
-        base += "2. Cultural meter (Pallavi, Anupallavi, Charanam) with strict prasa & chandas.\n"
-    elif lang in ("hi", "pa", "bn", "ur"):
-        base += "2. Cultural meter (Mukhda chorus, Antras) with strict qafiya & radif.\n"
-    else:
-        base += "2. Metric rhyme scheme and radio-friendly melodic hook.\n"
-    return f"{base}3. SONG STRUCTURE & DURATION SCALE: {len_hint}\n"
+    meter_spec = (
+        "Cultural meter (Pallavi, Anupallavi, Charanam) with strict prasa, anuprasa, and melodic chandas."
+        if lang in ("te", "ta", "kn", "ml")
+        else "Cultural meter (Mukhda chorus, Antras) with strict qafiya, radif, and poetic flow."
+        if lang in ("hi", "pa", "bn", "ur")
+        else "Metric rhyme scheme, infectious rhythm, and radio-friendly melodic hook."
+    )
+    return (
+        f"1. Write complete rhyming lyrics in NATIVE SCRIPT of {language} celebrating '{theme}'.\n"
+        f"2. CATCHY & HUMMABLE HIGH-CTR HOOK MANDATE:\n"
+        f"   - Opening Chorus/Pallavi/Mukhda couplet MUST be extremely catchy, simple, rhythmically symmetrical, and instantly hummable from the very first listen.\n"
+        f"   - Craft an undeniable EARWORM: memorable phrases and sing-along phonetics viewers immediately hum and repeat.\n"
+        f"   - Repeat the signature hook couplet across stanzas (minimum 3-4 repetitions) to maximize replay value, watch retention, and CTR.\n"
+        f"3. SUNO COMPOSITION INSTRUCTIONS & SECTION HEADERS:\n"
+        f"   - Embed descriptive bracketed cue tags in 'lyrics': e.g. [Catchy Melodic Hook], [Hummable Chorus], [Verse 1 - Rhythmic Flow], [Instrumental Whistle Hook], [Antra 2], [Explosive Hook Refrain], [Outro]. Suno utilizes these cue headers to compose musical transitions and melodic hooks.\n"
+        f"4. METRIC & CULTURAL CADENCE: {meter_spec}\n"
+        f"5. SONG STRUCTURE & DURATION SCALE: {len_hint}\n"
+    )
 
 
 class VocalStrategy:
@@ -213,14 +223,14 @@ class VocalStrategy:
             f"- Country / Region: {eff_country} | Culture: {eff_culture}\n"
             f"- Music Tone: {genre.replace('_', ' ').title()} | Vocal Performer: {eff_gender.upper()}\n"
             f"{ref_line}{art_line}"
-            f"- Song Categorization: Differentiate clearly between 'SOULFUL MELODY' (deep emotional pathos, acoustic yearning, gentle strings, melancholy) vs 'ROMANTIC SONG' (joyous love, celebratory couple bond) vs 'MASS SONG WITH MASS BEATS' (high-energy mass commercial dance, thumping dappu drums, fast teenmaar rhythm, brass, whistle drops, explosive hook couplets) vs 'ENERGETIC FOLK' (mass dance, festive). Populate 'song_type' and 'mood' accordingly.\n"
+            f"- High-CTR Earworm & Hummability Mandate: 'hook_thesis' MUST define the central hummable melodic hook. 'suno_tags' MUST include explicit keywords: 'catchy hummable melody, memorable sing-along hook, earworm refrain' along with authentic instruments and rhythm.\n"
             f"- Suno Music Tags Reference: '{suno_hint}'\n\n"
             f"LYRICS SPECIFICATION:\n"
             f"{_format_lyrics_directives(language, eff_culture, eff_theme, duration_seconds=duration_seconds)}"
-            f"3. DUAL-LINE SUBTITLES (MANDATORY): For every line in 'lyrics_segments', provide:\n"
+            f"6. DUAL-LINE SUBTITLES (MANDATORY): For every line in 'lyrics_segments', provide:\n"
             f"   * 'text': Native script of {language}.\n"
             f"   * 'text_en': Romanized transliteration + concise English meaning.\n"
-            f"4. First segment starts after the opening title card (~6-8s), pacing across {duration_seconds}s.\n"
+            f"7. First segment starts after the opening title card (~6-8s), pacing across {duration_seconds}s.\n"
             f"{vocal_perspective_directive}"
             f"{pose_directive}"
             f"CHARACTER & VISUAL STAGING DIRECTIVE:\n"
