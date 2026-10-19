@@ -14,9 +14,7 @@ from typing import Any
 
 from src.compositor.genre_strategies.base_strategy import default_storyboard_sanity_check
 from src.compositor.genre_strategies.vocal_cast_builder import (
-    build_cast_and_visual_directives,
-    build_vocal_suno_tags,
-    is_kids_song_genre,
+    build_cast_and_visual_directives, build_vocal_suno_tags, is_kids_song_genre,
 )
 
 
@@ -76,6 +74,20 @@ def vocal_gemini_schema() -> dict:
                         "location_hub": {"type": "STRING"},
                         "character_pose": {"type": "STRING"},
                         "camera_shot_type": {"type": "STRING"},
+                        "camera_motion": {"type": "STRING"},
+                        "camera_speed": {"type": "STRING", "enum": ["slow", "medium", "fast", "steady"]},
+                        "local_drone": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "movement": {"type": "STRING"},
+                                "speed": {"type": "STRING", "enum": ["slow", "medium", "fast", "steady"]},
+                                "parallel_movements": {"type": "ARRAY", "items": {"type": "STRING"}},
+                                "start_pan": {"type": "STRING"},
+                                "start_zoom": {"type": "STRING"},
+                                "start_tilt": {"type": "STRING"},
+                                "rationale": {"type": "STRING"},
+                            },
+                        },
                         "visual_prompt": {"type": "STRING"},
                         "dialogue": {"type": "STRING"},
                     },
@@ -101,23 +113,24 @@ def _format_lyrics_directives(language: str, culture: str, theme: str, duration_
     else:
         len_hint = "Compact 1-min song: 2 stanzas (~8-12 lines) with [Mukhda - Catchy Hook] and [Antra]."
 
-    meter_spec = (
-        "Cultural meter (Pallavi, Anupallavi, Charanam) with strict prasa, anuprasa, and melodic chandas."
-        if lang in ("te", "ta", "kn", "ml")
-        else "Cultural meter (Mukhda chorus, Antras) with strict qafiya, radif, and poetic flow."
-        if lang in ("hi", "pa", "bn", "ur")
-        else "Metric rhyme scheme, infectious rhythm, and radio-friendly melodic hook."
-    )
+    is_classical_sangam = any(k in f"{theme} {culture}".lower() for k in ("carnatic", "sangam", "narumugaye", "raga", "classical"))
+    if is_classical_sangam:
+        meter_spec = "Classical Sangam / Raga poetry (Pallavi, Anupallavi, Charanam) with evocative nature metaphors (lotus, twilight, jasmine, sacred river, fragrant breeze), high-literary vocabulary, and yearning romantic Sringara rasa."
+    elif lang in ("te", "ta", "kn", "ml"):
+        meter_spec = "Cultural meter (Pallavi, Anupallavi, Charanam) with strict prasa, anuprasa, and melodic chandas."
+    elif lang in ("hi", "pa", "bn", "ur"):
+        meter_spec = "Cultural meter (Mukhda chorus, Antras) with strict qafiya, radif, and poetic flow."
+    else:
+        meter_spec = "Metric rhyme scheme, infectious rhythm, and radio-friendly melodic hook."
     return (
         f"1. Write complete rhyming lyrics in NATIVE SCRIPT of {language} celebrating '{theme}'.\n"
         f"2. CATCHY & HUMMABLE HIGH-CTR HOOK MANDATE:\n"
-        f"   - Opening Chorus/Pallavi/Mukhda couplet MUST be extremely catchy, simple, rhythmically symmetrical, and instantly hummable from the very first listen.\n"
-        f"   - Craft an undeniable EARWORM: memorable phrases and sing-along phonetics viewers immediately hum and repeat.\n"
-        f"   - Repeat the signature hook couplet across stanzas (minimum 3-4 repetitions) to maximize replay value, watch retention, and CTR.\n"
+        f"   - Opening Chorus/Pallavi/Mukhda couplet MUST be extremely catchy, simple, rhythmically symmetrical, and instantly hummable. Repeat signature hook 3-4 times across stanzas for retention.\n"
         f"3. SUNO COMPOSITION INSTRUCTIONS & SECTION HEADERS:\n"
         f"   - Embed descriptive bracketed cue tags in 'lyrics': e.g. [Catchy Melodic Hook], [Hummable Chorus], [Verse 1 - Rhythmic Flow], [Instrumental Whistle Hook], [Antra 2], [Explosive Hook Refrain], [Outro]. Suno utilizes these cue headers to compose musical transitions and melodic hooks.\n"
         f"4. METRIC & CULTURAL CADENCE: {meter_spec}\n"
         f"5. SONG STRUCTURE & DURATION SCALE: {len_hint}\n"
+        f"6. VOCAL RANGE & CASING: Standard sentence casing only (NO ALL-CAPS or '!!!'). Anchor male vocals in a warm, resonant chest-voice register (zero high-pitch strain or cracking).\n"
     )
 
 
@@ -177,12 +190,13 @@ class VocalStrategy:
         fem_spec, male_spec = resolve_cast_archetypes(slot=slot, culture=eff_culture, language=language)
 
         is_kids = is_kids_song_genre(genre, eff_theme)
+        is_jugalbandi = bool(kwargs.get("jugalbandi") or any(k in f"{genre} {eff_theme}".lower() for k in ("jugalbandi", "sawaal", "jawaab")))
         cast_directive, neg_constraints = build_cast_and_visual_directives(
             slot=slot, fem=fem_spec, male=male_spec, culture=eff_culture,
-            setting=eff_theme, gender=eff_gender, is_kids=is_kids,
+            setting=eff_theme, gender=eff_gender, is_kids=is_kids, is_jugalbandi=is_jugalbandi,
         )
 
-        suno_hint = build_vocal_suno_tags(genre, eff_culture, gender=eff_gender, tempo_bpm=100)
+        suno_hint = build_vocal_suno_tags(genre if not is_jugalbandi else "jugalbandi", eff_culture, gender=eff_gender, tempo_bpm=100)
 
         is_generic_title = not title or any(k in str(title).lower() for k in ("wfh confusions", "melody - lyrical song", "custom screenplay", "standalone", "new song", "soulful romantic melody"))
         if is_generic_title:
@@ -197,19 +211,23 @@ class VocalStrategy:
             title_directive = f"- Title: {clean_in_title} ('title_en' is clean Romanized song title; 'title_localized' is native script)"
 
         num_images = int(kwargs.get("num_images") or 1)
+        is_mass = kwargs.get("mass_song", False) or any(k in f"{genre} {eff_theme}".lower() for k in ("mass", "dappu", "teenmaar", "mass_beats"))
         from src.compositor.genre_strategies.vocal_poses import build_environmental_pose_directive
-        pose_directive = build_environmental_pose_directive(
-            gender=eff_gender, theme=eff_theme, culture=eff_culture, num_scenes=num_images,
-        )
+        pose_directive = build_environmental_pose_directive(gender=eff_gender, theme=eff_theme, culture=eff_culture, num_scenes=num_images, is_mass=is_mass)
 
-        if eff_gender == "male":
+        if is_jugalbandi:
+            vocal_perspective_directive = "5. VOCAL PERFORMER PERSPECTIVE (VOCAL JUGALBANDI / SAWAAL-JAWAAB):\n   * Structure lyrics as a virtuoso vocal face-off between [Vocalist A] and [Vocalist B] with counter-melodies, rapid 2-line trades, and a grand Sangam unison climax. Label each stanza: [Vocalist A], [Vocalist B], or [Both].\n\n"
+        elif eff_gender == "male":
             vocal_perspective_directive = "5. VOCAL PERFORMER PERSPECTIVE (SOLO MALE):\n   * Write all lyrics strictly from the first-person perspective of the SOLO MALE lead with male grammatical endings (e.g. 'गाता हूँ', 'मेरा'). Strictly NO female lines.\n\n"
         elif eff_gender == "female":
             vocal_perspective_directive = "5. VOCAL PERFORMER PERSPECTIVE (SOLO FEMALE):\n   * Write all lyrics strictly from the first-person perspective of the SOLO FEMALE lead with female grammatical endings (e.g. 'गाती हूँ', 'मेरी'). Strictly NO male lines.\n\n"
         else:
             vocal_perspective_directive = "5. VOCAL PERFORMER PERSPECTIVE (DUET):\n   * Structure the lyrics with alternating call-and-response couplets between [Male Lead] and [Female Lead], joining in harmony for [Chorus / Both].\n\n"
 
-        ref_line = f"- Musical Reference / Similar To: {similar_to}\n" if similar_to else ""
+        ref_line = (
+            f"- MELODIC BLUEPRINT / SIMILAR TO: '{similar_to}'\n"
+            f"  * Capture the exact musical DNA, raga cadence, tempo, and melodic sweetness of '{similar_to}' while composing 100% original lyrics in {language.upper()}.\n"
+        ) if similar_to else ""
         art_line = f"- Visual & Architectural Art Style: {art_style}\n" if art_style else ""
 
         return (
@@ -239,8 +257,14 @@ class VocalStrategy:
             f"Negative: {neg_constraints}\n\n"
             f"MULTI-MODEL PROMPT ADAPTATION (prompts_by_model):\n"
             f"Generate tailored prompts for z_image, flux_dev, flux_pro_ultra, imagen3, midjourney reflecting the exact character modality and setting above.\n\n"
+            f"LOCAL DRONE CAMERA MOTIONS (scenes[i].local_drone & camera_motion):\n"
+            f"Direct camera flight for each scene matching choreography and beat intensity:\n"
+            f"- Primitives: 'dollyin', 'dollyout', 'pan-left', 'pan-right', 'tilt-up', 'tilt-down', 'orbit-left', 'orbit-right', 'stay'.\n"
+            f"- Parallel / Compound Movements: 'drift-up-right', 'drift-up-left', 'dollyin+tilt-up' (crane push-in), 'dollyin+pan-right', 'dollyout+tilt-down'.\n"
+            f"- 'camera_motion': Single or compound motion (e.g. 'dollyin+tilt-up', 'orbit-left', 'drift-up-right').\n"
+            f"  * Speed Control ('camera_speed'): 'slow'|'medium'|'fast'|'steady'. Mass songs MUST vary speed: 'slow' for lyrics/story/portraits so details are crystal clear; 'fast' strictly for beat drops & hook steps. Carnatic/Melody/Others must ALWAYS be 'slow' or 'steady' (tranquil glide).\n\n"
             f"VISUAL EFFECTS & ANIMATIONS (animation_timeline):\n"
-            f"Direct 3-5 timed particle cues (camera_motion='static_tripod'): effect_type in ('floating_petals_up', 'golden_fireflies', 'golden_light_leak', 'shimmering_sparkles', 'floating_petals_down', 'romantic_bokeh_drift', 'monsoon_rain_mist').\n"
+            f"Direct 3-5 timed particle cues: effect_type in ('floating_petals_down', 'golden_fireflies', 'golden_light_leak', 'shimmering_sparkles', 'floating_petals_up', 'romantic_bokeh_drift', 'monsoon_rain_mist').\n"
         )
 
     def build_gemini_schema(self) -> dict:

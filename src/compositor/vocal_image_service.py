@@ -160,24 +160,46 @@ async def synthesize_vocal_scenes(
             ", vibrant synchronized background troupe of both male and female backup dancers in coordinated festive party attire grooving in soft cinematic bokeh, lively cheering crowd"
             if is_mass_or_party else ""
         )
-        effective_prompt = f"{anchor_prefix}{effective_prompt}, {expression_token}, {safety_tokens}{troupe_token}".strip(", ")
+        is_cutaway = idx <= len(scenes_list) and any(k in f"{scenes_list[idx-1].get('character_pose', '')} {raw_prompt}".lower() for k in ("cutaway", "contextual insert", "percussion close", "troupe only", "drone insert", "scenic insert"))
+        eff_anchor = "" if is_cutaway else anchor_prefix
+        eff_expr = "" if is_cutaway else f", {expression_token}"
+        effective_prompt = f"{eff_anchor}{effective_prompt}{eff_expr}, {safety_tokens}{troupe_token}".strip(", ")
 
         # Use deterministic shared song seed for character consistency across all scenes in song
-        scene_seed = song_seed
-        logger.info(f"generating_vocal_scene_{idx:02d}: prompt={effective_prompt[:80]}... (loras={len(loras)}, seed={scene_seed})")
-        if loras:
-            primary_lora = loras[0]["path"]
-            scale = float(loras[0].get("scale", 1.0))
-            await flux_adapter.generate_with_lora(
-                prompt=effective_prompt, lora_url=primary_lora, output_path=scene_path,
-                lora_scale=scale, aspect_ratio="16:9", seed=scene_seed,
-            )
-            provider_name, model_name = "Fal.ai/Flux", "flux-lora"
-        else:
-            await z_adapter.generate_to_file(
-                prompt=effective_prompt, output_path=scene_path, aspect_ratio="16:9", force_live=force_live, seed=scene_seed,
-            )
-            provider_name, model_name = "Fal.ai", "z-image-turbo"
+        max_attempts = 3 if force_live else 1
+        for attempt in range(1, max_attempts + 1):
+            scene_seed = (song_seed + idx * 79 + (attempt - 1) * 12345) % 900000
+            cur_prompt = effective_prompt
+            if attempt > 1:
+                cur_prompt = f"{effective_prompt}, anatomically flawless human body, strictly two natural arms, strictly two hands, zero extra hands, zero extra fingers"
+            logger.info(f"generating_vocal_scene_{idx:02d} (attempt {attempt}/{max_attempts}): prompt={cur_prompt[:80]}... (seed={scene_seed})")
+            if loras:
+                primary_lora = loras[0]["path"]
+                scale = float(loras[0].get("scale", 1.0))
+                await flux_adapter.generate_with_lora(
+                    prompt=cur_prompt, lora_url=primary_lora, output_path=scene_path,
+                    lora_scale=scale, aspect_ratio="16:9", seed=scene_seed,
+                )
+                provider_name, model_name = "Fal.ai/Flux", "flux-lora"
+            else:
+                await z_adapter.generate_to_file(
+                    prompt=cur_prompt, output_path=scene_path, aspect_ratio="16:9", force_live=force_live, seed=scene_seed,
+                )
+                provider_name, model_name = "Fal.ai", "z-image-turbo"
+
+            # Automated multimodal hallucination and anatomical audit
+            from src.compositor.image_hallucination_auditor import audit_image_anatomy
+            audit = await audit_image_anatomy(scene_path, prompt_context=cur_prompt, force_live=force_live)
+            if not audit.is_valid:
+                logger.warning(
+                    f"hallucination_detected_in_scene_{idx:02d} (attempt {attempt}/{max_attempts}): "
+                    f"{audit.reason}. Defects: {audit.defects}. Deleting and regenerating..."
+                )
+                scene_path.unlink(missing_ok=True)
+                if attempt < max_attempts:
+                    continue
+                logger.error(f"scene_{idx:02d}_max_regeneration_attempts_reached: proceeding with best effort")
+            break
 
         if scene_path.is_file():
             logger.info(f"upscaling_vocal_scene_{idx:02d}_to_4k: target=(3840, 2160)")

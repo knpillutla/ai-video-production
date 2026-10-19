@@ -90,7 +90,7 @@ class MassSongPipeline(BaseMusicVideoPipeline):
             logger.info(f"mass_song_audio_reused: {raw_audio.name}")
         return [{"name": "Mass Beats Soundtrack", "filename": raw_audio.name, "type": "vocal_music", "url": self._file_url(raw_audio), "color": "orange"}]
 
-    async def stage_4_master_assembly(self, sb_data: dict[str, Any], img_paths: list[Path], audio_path: Path, language: str, duration: float) -> Path:
+    async def stage_4_master_assembly(self, sb_data: dict[str, Any], img_paths: list[Path], audio_path: Path, language: str, duration: float, static_mode: bool = False, enable_vfx: bool = False) -> Path:
         renders = sorted([p for p in self.renders_dir.glob("master_*.mp4") if p.stat().st_size > 1000])
         if renders:
             return renders[0]
@@ -100,13 +100,14 @@ class MassSongPipeline(BaseMusicVideoPipeline):
         sub_path, fonts_dir = build_vocal_subtitles(sb_data, language, out_ass, actual_dur, audio_path=audio_path)
         out_render = self.renders_dir / f"master_16x9_ep{self.episode_id}_{language}.mp4"
         seg_durs = [actual_dur / len(img_paths)] * len(img_paths) if len(img_paths) > 1 else None
+        scene_movs = [s.get("camera_motion") or (s.get("local_drone") or {}).get("movement") for s in sb_data.get("scenes", []) if s.get("camera_motion") or (s.get("local_drone") or {}).get("movement")] if sb_data else []
 
         return await assemble_vocal_video(
             image_paths=img_paths, song_path=audio_path, sub_path=sub_path, out_video_path=out_render,
             duration=actual_dur, timeline_cues=sb_data.get("animation_timeline"), fonts_dir=fonts_dir,
-            enable_vfx=True, theme=sb_data.get("hook_thesis") or sb_data.get("title_en"),
+            enable_vfx=enable_vfx, theme=sb_data.get("hook_thesis") or sb_data.get("title_en"),
             episode_seed=abs(hash(str(self.episode_id))) % 30, segment_durations=seg_durs,
-            enable_movement=True,
+            enable_movement=not static_mode, scene_movements=scene_movs or None,
         )
 
     async def produce(
@@ -138,7 +139,9 @@ class MassSongPipeline(BaseMusicVideoPipeline):
         img_paths = sorted([p for p in self.scenes_dir.glob("scene_*.jpg") if p.stat().st_size > 1000])[:eff_shots]
         audio_path = self.stems_dir / "raw_soundtrack.mp3"
         eff_lang = language or sb_data.get("language") or "te"
-        master_path = await self.stage_4_master_assembly(sb_data, img_paths, audio_path, eff_lang, duration_seconds)
+        is_static = bool(kwargs.get("static") or kwargs.get("no_movements"))
+        vfx_active = bool(kwargs.get("vfx") or kwargs.get("enable_vfx"))
+        master_path = await self.stage_4_master_assembly(sb_data, img_paths, audio_path, eff_lang, duration_seconds, static_mode=is_static, enable_vfx=vfx_active)
 
         return {
             "status": "success", "pipeline": self.pipeline_type, "elapsed": round(time.time() - t0, 2),

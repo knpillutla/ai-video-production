@@ -619,7 +619,90 @@ const STUDIO_SUBGENRE_PLACEHOLDERS = {
   nordic_polar_nations: "e.g. Leave empty for autonomous Nordic realm & topic rotation via TopicMemory, or specify (e.g. Iceland, Norway, Svalbard)..."
 };
 
+const MUSIC_VIDEO_BACKGROUND_ARCHETYPES = [
+  // 1. 🏛️ Royal Palaces, Temples & Historical Architecture
+  { val: "palace_courtyard", label: "🏛️ Royal Palace Courtyard & Veranda (Heritage Carved Pillars)" },
+  { val: "palace_darbar_hall", label: "👑 Royal Darbar & Mirrored Hall (Ornate Marble & Chandeliers)" },
+  { val: "temple_mandapam_lotus", label: "🪷 Sacred Temple Mandapam & Lotus Pond (Ancient Carved Stone)" },
+  { val: "historic_fort_ramparts", label: "🏰 Historic Fort Ramparts & Stone Arches (Scenic Valley Vista)" },
+
+  // 2. 🎭 Live Concert Stages & Performance Recitals
+  { val: "classical_sabha_concert", label: "🪕 Classical Sabha Concert (Seated Dais, Accompanists & Audience)" },
+  { val: "live_vocal_arena_concert", label: "🎤 Live Singing Arena Concert (Illuminated Stage, Spotlights & Cheering Crowd)" },
+  { val: "dance_recital_theatre", label: "💃 Classical Dance Recital Stage (Proscenium Arch, Footwork Floor & Audience)" },
+  { val: "contemporary_dance_concert", label: "🕺 Grand Contemporary Dance Stage (Backup Troupe, Stage Smoke & LED Walls)" },
+  { val: "open_air_amphitheatre", label: "🏛️ Open-Air Stone Amphitheatre (Starlit Sky, Lanterns & Tiered Audience)" },
+  { val: "concert_hall_stage", label: "🎭 Grand Symphony Concert Hall & Stage (Mahogany Acoustics & Spotlights)" },
+
+  // 3. 🏡 Indoor, Acoustic & Intimate (Classical / Jugalbandi / Baithak)
+  { val: "traditional_heritage_home", label: "🏡 Traditional Heritage Home Living Room & Veranda (Warm Wood & Lamps)" },
+  { val: "royal_baithak_chamber", label: "🪕 Royal Baithak / Acoustic Chamber (Silk Bolsters & Persian Carpets)" },
+  { val: "glass_penthouse_lounge", label: "🏙️ Modern Luxury Glass Penthouse (Skyline Panoramic Backdrop)" },
+
+  // 3. 🏔️ Majestic Nature & Grand Landscapes
+  { val: "swiss_alps_meadow", label: "🏔️ Swiss Alps & Wildflower Meadows (Lauterbrunnen Valley)" },
+  { val: "norwegian_fjords_waters", label: "🌊 Norwegian Fjords & Glacial Waters (Granite Cliffs & Waterfalls)" },
+  { val: "misty_pine_forest_stream", label: "🌲 Misty Ancient Pine Forest & Glacial Stream (Komorebi Beams)" },
+  { val: "pastoral_wildflower_valley", label: "🌸 Pastoral Wildflower Valley & Rolling Foothills (Sunset Golden Hour)" },
+
+  // 4. 🗼 World Iconic Cities & European Romance
+  { val: "paris_seine_eiffel", label: "🗼 Paris Romantic Seine Riverbank & Eiffel Twilight" },
+  { val: "london_thames_westminster", label: "🇬🇧 London Thames Riverbank & Historic Westminster (Misty Romance)" },
+  { val: "venice_grand_canal", label: "🛶 Venice Grand Canal & Historic Palazzos (Gondola Twilight)" },
+  { val: "tokyo_shinjuku_rooftop", label: "🌆 Tokyo Shinjuku Twilight Rooftop (Glass Balustrade & Neon Glow)" },
+
+  // 5. 🌊 Coastal, Maritime & Nautical
+  { val: "tropical_white_beach", label: "🏖️ Tropical White Sand Beach & Sunset Surf (Golden Tide Wash)" },
+  { val: "luxury_cruise_deck", label: "🚢 Luxury Yacht / Cruise Ship Observation Deck (Infinite Ocean Horizon)" },
+  { val: "cliffside_ocean_terrace", label: "🌊 Cliffside Mediterranean Stone Terrace & Azure Sea" },
+
+  // 6. ✈️ Luxury Travel & Exotic Frontiers
+  { val: "private_jet_cabin", label: "✈️ In-Flight Luxury Private Jet VIP Cabin (Clouds Outside Oval Windows)" },
+  { val: "desert_dunes_oasis", label: "🏜️ Arabian Desert Sand Dunes & Sunset Oasis Camp (Silk Pavilions)" },
+  { val: "royal_heritage_train", label: "🚂 Luxury Royal Heritage Train Salon (Countryside Gliding Past Windows)" },
+
+  // 7. 🌌 Fantasy & Celestial Dreamscapes
+  { val: "celestial_fantasy_garden", label: "🌌 Celestial Ethereal Fantasy Garden (Luminescent Blossoms & Mist)" },
+  { val: "starlit_sacred_lotus", label: "✨ Starlit Sacred Lotus Sanctuary (Milky Way & Floating Lanterns)" },
+
+  // 8. 🎪 Traditional Folk & Mass Grounds
+  { val: "village_jathara_square", label: "🎪 Village Fairground Stage & Jathara Grounds (Festive Banners)" },
+  { val: "lush_paddy_fields", label: "🌾 Verdant Rural Paddy Fields & Palm Groves" }
+];
+
+const COUNTRY_MUSIC_BACKGROUND_DEFAULTS = {
+  "Switzerland": "swiss_alps_meadow",
+  "Norway": "norwegian_fjords_waters",
+  "France": "paris_seine_eiffel",
+  "United Kingdom": "london_thames_westminster",
+  "Italy": "venice_grand_canal",
+  "Japan": "tokyo_shinjuku_rooftop",
+  "United States": "glass_penthouse_lounge",
+  "India": "palace_courtyard",
+  "United Arab Emirates": "desert_dunes_oasis",
+  "Saudi Arabia": "desert_dunes_oasis",
+  "Egypt": "historic_fort_ramparts",
+  "Greece": "cliffside_ocean_terrace",
+  "Spain": "cliffside_ocean_terrace",
+  "Maldives": "tropical_white_beach",
+  "Indonesia": "tropical_white_beach",
+  "Thailand": "tropical_white_beach",
+  "Germany": "concert_hall_stage",
+  "Austria": "concert_hall_stage"
+};
+
 const STUDIO_ARCHETYPES_MAP = {
+  "music_video": MUSIC_VIDEO_BACKGROUND_ARCHETYPES,
+  "music/static_vocal": MUSIC_VIDEO_BACKGROUND_ARCHETYPES,
+  "music/solo_singer": MUSIC_VIDEO_BACKGROUND_ARCHETYPES,
+  "music/duet_romance": MUSIC_VIDEO_BACKGROUND_ARCHETYPES,
+  "music/concert_live": MUSIC_VIDEO_BACKGROUND_ARCHETYPES,
+  "music/mass_song": MUSIC_VIDEO_BACKGROUND_ARCHETYPES,
+  "music/carnatic_fusion": MUSIC_VIDEO_BACKGROUND_ARCHETYPES,
+  "music/golden_retro": MUSIC_VIDEO_BACKGROUND_ARCHETYPES,
+  "music/jugalbandi": MUSIC_VIDEO_BACKGROUND_ARCHETYPES,
+  "music/instrumental_solo": MUSIC_VIDEO_BACKGROUND_ARCHETYPES,
+  "music/instrumental_jugalbandi": MUSIC_VIDEO_BACKGROUND_ARCHETYPES,
   "relax/art": [{ val: "living_impressionism", label: "🎨 Living Impressionism" }, { val: "grand_gallery", label: "🏛️ Grand Nocturne Gallery" }, { val: "artist_atelier", label: "🖌️ Sunlit Artist Atelier" }, { val: "sumie_ukiyoe", label: "🪷 Ukiyo-e Woodblock" }, { val: "stained_glass", label: "✨ Cathedral Stained Glass" }, { val: "klimt_gold_leaf", label: "🪙 Gold Leaf & Marble" }, { val: "surrealist_dream", label: "🌌 Surrealist Dreamscape" }],
   "travel/scenic": [{ val: "cities", label: "🏙️ Metropolises & Skylines" }, { val: "nature", label: "🌲 Wilderness & Nature" }, { val: "remote_places", label: "🧭 Remote Frontiers" }, { val: "tourist_places", label: "🏖️ Tourist Havens" }, { val: "spiritual_places", label: "🪔 Spiritual & Sacred" }, { val: "iconic_places", label: "🏛️ Iconic Heritage Forts" }, { val: "natural_wonders", label: "🌋 Natural Wonders" }],
   "relax/ocean": [{ val: "ocean_daytime_shore", label: "☀️ Overwater Villa (Lagoon)" }, { val: "ocean_sunrise_coast", label: "🌅 Coastal Veranda (Dawn)" }, { val: "ocean_sunset_horizon", label: "🌇 Cliffside Sanctuary (Sunset)" }, { val: "ocean_night_bioluminescent", label: "🌌 Beach Pavilion (Bioluminescent)" }, { val: "ocean_campfire_hearth", label: "🔥 Beach Campfire & Surf" }, { val: "ocean_tropical_rain", label: "🌧️ Sheltered Balcony (Rain ASMR)" }],

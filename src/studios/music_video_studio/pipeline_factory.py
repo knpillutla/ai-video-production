@@ -17,6 +17,7 @@ from src.studios.music_video_studio.base_music_pipeline import BaseMusicVideoPip
 from src.studios.music_video_studio.concert_pipeline import ConcertPipeline
 from src.studios.music_video_studio.dance_folk_pipeline import DanceFolkPipeline
 from src.studios.music_video_studio.duet_romance_pipeline import DuetRomancePipeline
+from src.studios.music_video_studio.instrumental_pipeline import InstrumentalPipeline
 from src.studios.music_video_studio.mass_song_pipeline import MassSongPipeline
 from src.studios.music_video_studio.solo_singing_pipeline import SoloSingingPipeline
 from src.studios.music_video_studio.static_vocal_pipeline import StaticVocalPipeline
@@ -31,6 +32,8 @@ def get_music_video_pipeline(
 ) -> BaseMusicVideoPipeline:
     """Instantiate the specialized pipeline matching the music video genre."""
     g = (genre or "").lower().strip()
+    if "instrumental" in g:
+        return InstrumentalPipeline(user_id=user_id, channel_id=channel_id, episode_id=episode_id, production_name=production_name)
     if "mass" in g:
         return MassSongPipeline(user_id=user_id, channel_id=channel_id, episode_id=episode_id, production_name=production_name)
     if "concert" in g or "live" in g:
@@ -52,4 +55,5 @@ __all__ = [
     "DuetRomancePipeline",
     "DanceFolkPipeline",
     "MassSongPipeline",
+    "InstrumentalPipeline",
 ]

@@ -55,9 +55,13 @@ async def run_production(
     preview_only: bool = False, full_confirmed: bool = False,
     solo_male: bool = False, solo_female: bool = False, duet: bool = False,
     mass_song: bool = False,
+    carnatic_song: bool = False,
+    retro_song: bool = False,
+    jugalbandi: bool = False,
     rescript: bool = False,
     no_movements: bool = False,
     force_movements: bool = False,
+    vfx: bool = False,
 ):
     """Execute the Phase 2 & 3 end-to-end video production and compliance pipeline."""
     duration = parse_duration(duration)
@@ -70,6 +74,7 @@ async def run_production(
         allow_fallback = False
         if not tier:
             tier = "cinematic"
+    user_id = user_id or "knpillutla@gmail.com"
     if user_id:
         from uuid import UUID, uuid5, NAMESPACE_DNS
         from src.core.storage import sanitize_container_name
@@ -431,7 +436,14 @@ async def run_production(
         script_label = f"Text: {script_text[:36]}..." if script_text else "None"
         active_sub = subtitle_language or "en"
 
-    if solo_male:
+    if jugalbandi or any(k in str(x).lower() for x in (genre, music_style, media_format, theme, idea) for k in ("jugalbandi", "sawaal")):
+        jugalbandi = True
+        duet = True
+        effective_voice_gender = "duet"
+        gender = "duet"
+        if not theme or theme == "None":
+            theme = "vocal_jugalbandi"
+    elif solo_male:
         effective_voice_gender = "male"
         gender = "male"
     elif solo_female:
@@ -450,6 +462,19 @@ async def run_production(
         mass_desc = "mass commercial dance, thumping dappu drums, fast teenmaar rhythm, energetic brass trumpets, whistle drops"
         if not music_style or "mass" not in music_style.lower():
             music_style = f"{mass_desc}, {music_style}" if music_style else mass_desc
+
+    if carnatic_song or any(any(k in str(x).lower() for k in ("carnatic", "raga", "narumugaye", "sangam")) for x in (genre, music_style, media_format, theme, idea)):
+        carnatic_song = True
+        if genre in ("vocal", "vocal_song", "dance", "comedy"): genre = "music/carnatic_fusion"
+        carnatic_desc = "carnatic classical fusion, nattaikurinji raga, acoustic bansuri flute, veena, mridangam, lush strings"
+        if not music_style or "carnatic" not in music_style.lower(): music_style = f"{carnatic_desc}, {music_style}" if music_style else carnatic_desc
+        if not similar_to: similar_to = "Narumugaye (Iruvar)"
+
+    if retro_song or any(any(k in str(x).lower() for k in ("retro", "golden_retro", "vintage", "60s", "70s", "80s", "90s")) for x in (genre, music_style, media_format, theme, idea)):
+        retro_song = True
+        if genre in ("vocal", "vocal_song", "dance", "comedy"): genre = "music/golden_retro"
+        retro_desc = "golden retro classics, live acoustic orchestra, harmonium, acoustic sitar, tabla, analog tape warmth"
+        if not music_style or "retro" not in music_style.lower(): music_style = f"{retro_desc}, {music_style}" if music_style else retro_desc
 
     is_voice_over = False
     enable_lipsync = False
@@ -504,7 +529,7 @@ async def run_production(
         "tier": tier, "profile": profile, "language": language, "subtitle_language": active_sub,
         "gender": effective_voice_gender, "voice_gender": voice_gender, "character_name": character_name,
         "solo_male": solo_male, "solo_female": solo_female, "duet": duet,
-        "mass_song": mass_song,
+        "mass_song": mass_song, "jugalbandi": jugalbandi,
         "music_style": music_style, "style": music_style, "similar_to": similar_to,
         "country": country, "culture": culture, "costume_style": costume_style, "dance_type": dance_type,
         "art_style": art_style or (ref_attrs.art_style if ref_attrs else ""),
@@ -548,6 +573,7 @@ async def run_production(
             "culture": user_inputs["culture"], "gender": user_inputs["gender"],
             "duet": user_inputs["duet"], "solo_male": user_inputs["solo_male"],
             "solo_female": user_inputs["solo_female"], "mass_song": user_inputs.get("mass_song", False),
+            "jugalbandi": user_inputs.get("jugalbandi", False),
             "art_style": user_inputs["art_style"],
             "culture_ctx": culture_context, "character_name": user_inputs["character_name"],
             "prompt": user_inputs["prompt"], "user_id": user_inputs["user_id"],
@@ -640,9 +666,9 @@ async def run_production(
         base_image_path=base_keyframe,
         badge_config=EpisodicBadgeConfig(episode_number=episode_number, language=language, style="pill", position="top_left", custom_label=badge_label),
         headline=headline,
-        enable_vfx=True,
+        enable_vfx=vfx,
     )
-    print(f"[2/4] Rendered Top-Left Episodic Thumbnail with VFX: thumb_ep{episode_number:02d}_{language}.jpg")
+    print(f"[2/4] Rendered Top-Left Episodic Thumbnail (VFX: {vfx}): thumb_ep{episode_number:02d}_{language}.jpg")
 
     ffmpeg_available = has_ffmpeg()
     effective_dry_run = dry_run or not ffmpeg_available
@@ -660,12 +686,14 @@ async def run_production(
         network=network, num_images=num_images, use_loras=use_loras,
         preview_only=preview_only, full_confirmed=full_confirmed,
         no_movements=no_movements, mass_song=mass_song, force_movements=force_movements,
+        carnatic_song=carnatic_song, retro_song=retro_song, jugalbandi=jugalbandi, ep_dir=ep_ws,
+        vfx=vfx, enable_vfx=vfx,
     )
     if not final_video:
         print("[!] Production stopped at Image Quality Gate. No video rendered.\n")
         return None
 
-    # Refresh episodic thumbnail using the LAST picture from scenes all the time with VFX
+    # Refresh episodic thumbnail using the LAST picture from scenes
     all_imgs = sorted([p for p in (ep_ws / "scenes").glob("scene_*.jpg") if p.is_file() and p.stat().st_size > 1000])
     base_keyframe = all_imgs[-1] if all_imgs else None
     if base_keyframe:
@@ -674,9 +702,9 @@ async def run_production(
             base_image_path=base_keyframe,
             badge_config=EpisodicBadgeConfig(episode_number=episode_number, language=language, style="pill", position="top_left", custom_label=badge_label),
             headline=headline,
-            enable_vfx=True,
+            enable_vfx=vfx,
         )
-        print(f"[4/4] Rendered Final 4K Thumbnail from last scene ({base_keyframe.name}) with VFX: thumb_ep{episode_number:02d}_{language}.jpg")
+        print(f"[4/4] Rendered Final 4K Thumbnail from last scene ({base_keyframe.name}) (VFX: {vfx}): thumb_ep{episode_number:02d}_{language}.jpg")
     print(f"[4/4] Master Video Generated: {final_video}")
 
     saved_episode = repo.get_episode(user.id, episode.id)
@@ -706,7 +734,7 @@ def main():
         ("--similar-to", None, str, "Reference famous song for mood/tenderness/pattern", "similar_to"),
         ("--art-style", None, str, "Style", "art_style"), ("--voice-gender", None, str, "Voice gender", "voice_gender"),
         ("--youtube-reference-link", None, str, "YouTube URL", "youtube_reference_link"),
-        ("--user-id", None, str, "User ID scope", "user_id"),
+        ("--user-id", "knpillutla@gmail.com", str, "User ID scope (default: knpillutla@gmail.com)", "user_id"),
         ("--network", None, str, "Network or Channel universe name/slug", "network"),
         ("--name", None, str, "Project / Episode name (alias for --title)", "name_alias"),
         ("--format", None, str, "Media format (alias for --type)", "format_alias"),
@@ -731,8 +759,12 @@ def main():
         (["--duet"], "Duet vocalists (male & female) with both leads", "duet"),
         (["--mass", "--mass-song", "--mass-beats"], "Mass song with mass beats (high-energy dappu, teenmaar & brass)", "mass_song"),
         (["--rescript", "--regenerate-script"], "Regenerate storyboard script via Gemini even if cached", "rescript"),
-        (["--no-movements", "--no-movement", "--static-only", "--fixed-camera"], "Disable camera pan/zoom motion; keep keyframe fixed and static", "no_movements"),
+        (["--static", "--no-movements", "--no-movement", "--static-only", "--fixed-camera"], "Disable camera pan/zoom motion; keep keyframe fixed and static", "no_movements"),
         (["--movements", "--movement", "--camera-movements"], "Force enable camera pan/zoom motion for non-mass songs", "force_movements"),
+        (["--carnatic", "--carnatic-fusion", "--carnatic-classical"], "Classical Carnatic melody / raga duet", "carnatic_song"),
+        (["--retro", "--golden-classics", "--retro-classics"], "Golden retro classics (60s, 70s, 80s, 90s vintage)", "retro_song"),
+        (["--jugalbandi", "--sawaal-jawaab"], "Vocal Jugalbandi / Sawaal-Jawaab face-off duet", "jugalbandi"),
+        (["--vfx", "--enable-vfx"], "Enable procedural atmospheric VFX overlay (petals, sparks, bokeh; default: off)", "vfx"),
     ]:
         p.add_argument(*fls, action="store_true", default=False, help=h, dest=dst)
     profile_group = p.add_mutually_exclusive_group()

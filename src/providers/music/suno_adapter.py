@@ -99,7 +99,9 @@ class SunoMusicAdapter(MusicProviderProtocol):
                 task_sidecar.unlink(missing_ok=True)
 
         if lyrics:
-            v_tag = f", {vocal_gender.lower()} vocals" if vocal_gender and vocal_gender.lower() in ("female", "male", "duet", "chorus") else ""
+            v_g = (vocal_gender or "").lower()
+            v_map = {"male": "smooth tenor male vocals, warm chest voice", "female": "sweet expressive female vocals", "duet": "duet, smooth tenor male and female vocals"}
+            v_tag = f", {v_map.get(v_g, f'{v_g} vocals')}" if v_g else ""
             tags_str = f"{genre}, {mood}{v_tag}"
             body = {
                 "custom_mode": True, "prompt": lyrics, "tags": tags_str[:120],

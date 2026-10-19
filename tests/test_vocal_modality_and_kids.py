@@ -229,3 +229,66 @@ def test_outfit_and_modesty_standards(sample_cast):
     assert "nudity" in d_neg
 
 
+def test_vocal_jugalbandi_directives():
+    from src.compositor.genre_strategies.vocal_strategy import VocalStrategy
+    from src.compositor.genre_strategies.vocal_cast_builder import build_vocal_suno_tags, build_cast_and_visual_directives
+    from types import SimpleNamespace
+
+    # Test Suno tags
+    tags = build_vocal_suno_tags("vocal_jugalbandi", "Indian Classical", gender="duet")
+    assert "vocal jugalbandi" in tags
+    assert "sawaal jawaab" in tags
+    assert "call and response" in tags
+
+    # Test Vocal Strategy prompt
+    strat = VocalStrategy()
+    prompt = strat.build_gemini_prompt(
+        title="Raga Sangam", duration_seconds=60, language="te", genre="vocal",
+        idea="Classical face-off", theme="vocal_jugalbandi", jugalbandi=True,
+    )
+    assert "VOCAL JUGALBANDI / SAWAAL-JAWAAB" in prompt
+    assert "Vocalist A" in prompt
+    assert "Vocalist B" in prompt
+    assert "Sangam" in prompt
+
+    # Test cast staging
+    fem = SimpleNamespace(name="Radha", age=24, skin="fair", face="radiant", hair="long silky", palette="emerald green")
+    male = SimpleNamespace(name="Krishna", age=26, skin="wheatish", face="handsome", hair="neat fade", palette="royal blue")
+    j_dir, j_neg = build_cast_and_visual_directives(
+        slot=1, fem=fem, male=male, culture="Indian", setting="Palace Court", gender="duet", is_jugalbandi=True,
+    )
+    assert "VOCAL JUGALBANDI STAGING" in j_dir
+    assert "Sawaal-Jawaab" in j_dir
+
+
+def test_instrumental_pipeline_and_tags():
+    from src.compositor.genre_strategies.vocal_cast_builder import build_vocal_suno_tags
+    from src.compositor.genre_strategies.vocal_poses import get_offline_dynamic_scene_poses
+    from src.studios.music_video_studio.pipeline_factory import get_music_video_pipeline
+    from src.studios.music_video_studio.instrumental_pipeline import InstrumentalPipeline
+
+    # 1. Tags
+    solo_tags = build_vocal_suno_tags("instrumental_solo", culture="Indian")
+    assert "pure instrumental solo" in solo_tags
+    assert "zero vocals" in solo_tags
+
+    jugal_tags = build_vocal_suno_tags("instrumental_jugalbandi", culture="Indian")
+    assert "pure instrumental jugalbandi" in jugal_tags
+    assert "zero vocals" in jugal_tags
+
+    # 2. Pipeline routing
+    pipe_solo = get_music_video_pipeline("music/instrumental_solo", user_id="u1", channel_id="c1", episode_id="101")
+    assert isinstance(pipe_solo, InstrumentalPipeline)
+
+    pipe_jugal = get_music_video_pipeline("music/instrumental_jugalbandi", user_id="u1", channel_id="c1", episode_id="102")
+    assert isinstance(pipe_jugal, InstrumentalPipeline)
+
+    # 3. Dynamic poses
+    scenes = get_offline_dynamic_scene_poses(
+        country="India", culture="Indian", character_desc="Aarohi", gender="female", num_scenes=3, setting="instrumental_solo",
+    )
+    assert len(scenes) == 3
+    assert any("instrumental" in sc["character_pose"].lower() for sc in scenes)
+
+
+

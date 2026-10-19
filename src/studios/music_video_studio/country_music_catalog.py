@@ -26,20 +26,13 @@ COUNTRY_CATALOG: dict[str, CountrySpec] = {
     "India": CountrySpec(
         name="India", code="IN", default_language="te",
         languages=[
-            LanguageSpec("te", "Telugu", "తెలుగు", "south_indian", "Telugu"),
-            LanguageSpec("hi", "Hindi", "हिन्दी", "north_indian", "Devanagari"),
-            LanguageSpec("ta", "Tamil", "தமிழ்", "south_indian", "Tamil"),
-            LanguageSpec("kn", "Kannada", "ಕನ್ನಡ", "south_indian", "Kannada"),
-            LanguageSpec("ml", "Malayalam", "മലയാളം", "south_indian", "Malayalam"),
-            LanguageSpec("bn", "Bengali", "বাংলা", "east_indian", "Bengali"),
-            LanguageSpec("mr", "Marathi", "मराठी", "west_indian", "Devanagari"),
-            LanguageSpec("or", "Odia", "ଓଡ଼ିଆ", "east_indian", "Odia"),
-            LanguageSpec("gu", "Gujarati", "ગુજરાતી", "west_indian", "Gujarati"),
-            LanguageSpec("pa", "Punjabi", "ਪੰਜਾਬੀ", "north_indian", "Gurmukhi"),
-            LanguageSpec("ks", "Kashmiri", "कॉशुर", "north_indian", "Devanagari"),
-            LanguageSpec("sd", "Sindhi", "सिंधी", "west_indian", "Devanagari"),
-            LanguageSpec("as", "Assamese", "অসমীয়া", "east_indian", "Bengali"),
-            LanguageSpec("ur", "Urdu", "اردو", "north_indian", "Arabic"),
+            LanguageSpec("te", "Telugu", "తెలుగు", "south_indian", "Telugu"), LanguageSpec("hi", "Hindi", "हिन्दी", "north_indian", "Devanagari"),
+            LanguageSpec("ta", "Tamil", "தமிழ்", "south_indian", "Tamil"), LanguageSpec("kn", "Kannada", "ಕನ್ನಡ", "south_indian", "Kannada"),
+            LanguageSpec("ml", "Malayalam", "മലയാളം", "south_indian", "Malayalam"), LanguageSpec("bn", "Bengali", "বাংলা", "east_indian", "Bengali"),
+            LanguageSpec("mr", "Marathi", "मराठी", "west_indian", "Devanagari"), LanguageSpec("or", "Odia", "ଓଡ଼ିଆ", "east_indian", "Odia"),
+            LanguageSpec("gu", "Gujarati", "ગુજરાતી", "west_indian", "Gujarati"), LanguageSpec("pa", "Punjabi", "ਪੰਜਾਬੀ", "north_indian", "Gurmukhi"),
+            LanguageSpec("ks", "Kashmiri", "कॉशुर", "north_indian", "Devanagari"), LanguageSpec("sd", "Sindhi", "सिंधी", "west_indian", "Devanagari"),
+            LanguageSpec("as", "Assamese", "অসমীয়া", "east_indian", "Bengali"), LanguageSpec("ur", "Urdu", "اردو", "north_indian", "Arabic"),
         ],
         traditional_instruments=["Veena", "Mridangam", "Bansuri Flute", "Tabla", "Sitar", "Nadaswaram"],
         modern_instruments=["Acoustic Guitar", "Grand Piano", "Strings Section", "Synth Pads", "Bass"],
@@ -177,6 +170,7 @@ SCENERY_ARCHETYPES: dict[str, dict[str, str]] = {
     "local_nature_waterfall": {"title": "Forest Waterfall & Mist Glade", "prompt": "forest waterfall and mist glade", "vfx": "rain"},
     "local_historic_street": {"title": "Vibrant Historic Town Street & Lanterns", "prompt": "historic town street with lanterns", "vfx": "dust"},
     "mass_jathara_grounds": {"title": "Festive Mass Jathara & Fairgrounds", "prompt": "vibrant Indian festive jathara fairgrounds with temple banners, colorful swirling dust and energetic troupe crowd", "vfx": "dust"},
+    "ancient_temple_ghats": {"title": "Ancient Dravidian Temple Mandapam & Riverbank Ghats", "prompt": "monumental ancient stone temple mandapam, intricately carved granite pillars, tranquil riverbank ghats at twilight with warm brass oil lamps and floating water lilies", "vfx": "floating_petals_down"},
 }
 
 MUSIC_PERFORMANCE_TYPES = {
@@ -186,6 +180,10 @@ MUSIC_PERFORMANCE_TYPES = {
     "music/concert_live": "🎸 Concert & Live Acoustic Stage (Auditorium/Open-Air)",
     "music/dance_folk": "💃 Mass Folk & Cultural Troupe Dance",
     "music/mass_song": "🥁 Mass Song with Mass Beats (High-Energy Dappu, Teenmaar & Whistle Drops)",
+    "music/carnatic_fusion": "🪕 Carnatic Classical & Fusion (Acoustic Veena, Flute, Mridangam & Raga Duet)",
+    "music/golden_retro": "📻 Golden Retro Classics (60s, 70s, 80s, 90s Vintage Melodies)",
+    "music/instrumental_solo": "🪈 Solo Instrumental Virtuoso (Bansuri, Sitar, Guitar, Piano, Violin)",
+    "music/instrumental_jugalbandi": "🤝 Instrumental Jugalbandi (Sitar-Sarod, Flute-Violin, Guitar-Piano Duet)",
 }
 
 SONG_MOODS = {
@@ -195,6 +193,10 @@ SONG_MOODS = {
     "love_ballad": "🌹 Emotional Love Ballad (Deep Strings & Melancholic Swells)",
     "festival_celebration": "🪔 Festive & Cultural Celebration (Traditional Folk Percussion)",
     "spiritual_devotional": "🪷 Spiritual & Devotional (Meditative Sacred Chants & Flute)",
+    "carnatic_raga": "🪕 Classical Carnatic Raga (Pure Nattaikurinji / Kalyani Melody & Sangam Poetry)",
+    "retro_60s_70s": "📻 60s/70s Vintage Golden Melody (Live Orchestra, Harmonium & Tabla)",
+    "retro_80s": "🎸 80s Retro Melody (Bass Guitar, Acoustic Flute, Tape Warmth)",
+    "retro_90s": "🎻 90s Rahman/Mani Ratnam Era (Lush Ambient Strings & Classical Fusion)",
     "soulful_acoustic": "🎸 Soulful Unplugged & Melancholic",
     "mass_beats": "🥁 High-Energy Mass Beats (Thumping Dappu, Teenmaar & Whistle Drops)",
 }

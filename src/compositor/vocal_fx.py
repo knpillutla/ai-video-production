@@ -51,7 +51,7 @@ def ensure_fx_overlay(
     """Ensure a seamless 20-second continuous procedural atmospheric loop with harmonic periodicity."""
     FX_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     norm_seed = abs(seed) % 30
-    out_path = FX_CACHE_DIR / f"{fx_type}_s{norm_seed}_v4.mp4"
+    out_path = FX_CACHE_DIR / f"{fx_type}_s{norm_seed}_v6.mp4"
     if out_path.is_file() and out_path.stat().st_size > 1000:
         return out_path
 
@@ -108,63 +108,51 @@ def ensure_fx_overlay(
             vw.write(canvas)
 
     elif fx_type in ("vocal_decorators", "floating_petals_up", "floating_petals_down", "festive_flower_swirl"):
-        n = 55
-        # Multi-origin from all corners & edges: 0: Top, 1: Bottom, 2: Left, 3: Right, 4: Ambient midground
-        sides = rng.randint(0, 5, n)
-        start_x, start_y = np.zeros(n), np.zeros(n)
-        drift_x, drift_y = np.zeros(n), np.zeros(n)
-        for i in range(n):
-            s = sides[i]
-            if s == 0: start_x[i], start_y[i], drift_x[i], drift_y[i] = rng.uniform(-0.1 * width, 1.1 * width), rng.uniform(-70, -20), rng.uniform(-0.4 * width, 0.4 * width), rng.uniform(0.7 * height, 1.15 * height)
-            elif s == 1: start_x[i], start_y[i], drift_x[i], drift_y[i] = rng.uniform(-0.1 * width, 1.1 * width), rng.uniform(height + 20, height + 70), rng.uniform(-0.4 * width, 0.4 * width), -rng.uniform(0.7 * height, 1.15 * height)
-            elif s == 2: start_x[i], start_y[i], drift_x[i], drift_y[i] = rng.uniform(-70, -20), rng.uniform(-0.1 * height, 1.1 * height), rng.uniform(0.7 * width, 1.15 * width), rng.uniform(-0.3 * height, 0.3 * height)
-            elif s == 3: start_x[i], start_y[i], drift_x[i], drift_y[i] = rng.uniform(width + 20, width + 70), rng.uniform(-0.1 * height, 1.1 * height), -rng.uniform(0.7 * width, 1.15 * width), rng.uniform(-0.3 * height, 0.3 * height)
-            else: start_x[i], start_y[i], drift_x[i], drift_y[i] = rng.uniform(0.1 * width, 0.9 * width), rng.uniform(0.1 * height, 0.9 * height), rng.uniform(-0.25 * width, 0.25 * width), rng.uniform(-0.25 * height, 0.25 * height)
-
-        r_base = rng.uniform(8.0, 20.0, n)
-        lifespans = rng.choice([160, 220, 280, 340], n)
-        offsets = rng.uniform(0, 600, n)
-        sway_amp, sway_freq = rng.uniform(15.0, 40.0, n), 2.0 * math.pi * rng.randint(2, 6, n)
-        rot_speeds = rng.uniform(-200.0, 200.0, n)
-        # Auspicious festive palette: lotus lavender, peach rose, golden marigold, saffron, jasmine white
-        palette = [(215, 175, 255), (180, 210, 255), (70, 190, 255), (50, 150, 255), (240, 245, 255), (180, 130, 245)]
-        base_colors = [palette[i % len(palette)] for i in range(n)]
-        shape_types = [i % 4 for i in range(n)]
+        n_p, n_s = 18, 36
+        px, py = rng.uniform(0.05 * width, 0.95 * width, n_p), rng.uniform(-60, -10, n_p)
+        drift_x, drift_y = rng.uniform(-0.12 * width, 0.12 * width, n_p), rng.uniform(0.9 * height, 1.25 * height, n_p)
+        r_base = rng.uniform(3.0, 7.5, n_p)
+        lifespans, offsets = rng.choice([480, 540, 600], n_p), rng.uniform(0, 600, n_p)
+        sway_amp, sway_freq, rot_speeds = rng.uniform(10.0, 20.0, n_p), 2.0 * math.pi * rng.randint(2, 5, n_p), rng.uniform(-80.0, 80.0, n_p)
+        palette = [(215, 175, 255), (180, 210, 255), (70, 190, 255), (50, 150, 255), (240, 245, 255), (255, 210, 230)]
+        p_colors = [palette[i % len(palette)] for i in range(n_p)]
+        p_shapes = [i % 4 for i in range(n_p)]
+        sx, sy = rng.uniform(40, width - 40, n_s), rng.uniform(40, height - 40, n_s)
+        sr, sc = rng.uniform(2.0, 5.0, n_s), rng.randint(4, 12, n_s)
+        s_omega, s_phi = 2.0 * math.pi * sc / frames, rng.uniform(0, 2.0 * math.pi, n_s)
 
         for f in range(frames):
             canvas = np.zeros((height, width, 3), dtype=np.uint8)
-            for i in range(n):
+            for k in range(n_s):
+                tw = math.sin(f * s_omega[k] + s_phi[k]) ** 2
+                if tw > 0.18:
+                    rad = max(1, int(sr[k] * tw))
+                    cx, cy = int(sx[k]), int(sy[k])
+                    cv2.circle(canvas, (cx, cy), rad, (int(220 * tw), int(240 * tw), int(255 * tw)), -1, cv2.LINE_AA)
+                    glim = int(rad * 2.2)
+                    cv2.line(canvas, (cx - glim, cy), (cx + glim, cy), (int(160 * tw), int(215 * tw), int(255 * tw)), 1, cv2.LINE_AA)
+                    cv2.line(canvas, (cx, cy - glim), (cx, cy + glim), (int(160 * tw), int(215 * tw), int(255 * tw)), 1, cv2.LINE_AA)
+            for i in range(n_p):
                 prog = ((f + offsets[i]) % lifespans[i]) / float(lifespans[i])
-                # Smooth sinusoidal fade-in on entry (first 25%) and fade-out on departure (last 25%)
-                alpha = math.sin((prog / 0.25) * (math.pi / 2)) ** 2 if prog < 0.25 else (math.sin(((1.0 - prog) / 0.25) * (math.pi / 2)) ** 2 if prog > 0.75 else 1.0)
-                if alpha < 0.02:
-                    continue
-                cx = start_x[i] + prog * drift_x[i] + sway_amp[i] * math.sin(prog * sway_freq[i])
-                cy = start_y[i] + prog * drift_y[i] + (sway_amp[i] * 0.4) * math.cos(prog * sway_freq[i])
-                if cx < -60 or cx > width + 60 or cy < -60 or cy > height + 60:
-                    continue
-                center = (int(cx), int(cy))
-                angle = rot_speeds[i] * prog + 20.0 * math.sin(prog * sway_freq[i])
-                bc = base_colors[i]
-                c_eff = (int(bc[0] * alpha), int(bc[1] * alpha), int(bc[2] * alpha))
-                rb, st = int(r_base[i]), shape_types[i]
-
-                if st == 0:  # 5-Petal Blossom with central golden stamen
-                    for k in range(5):
-                        th = math.radians(angle + k * 72.0)
-                        lcx, lcy = int(cx + rb * 0.55 * math.cos(th)), int(cy + rb * 0.55 * math.sin(th))
-                        cv2.ellipse(canvas, (lcx, lcy), (int(rb * 0.55), int(rb * 0.38)), int(math.degrees(th)), 0, 360, c_eff, -1, cv2.LINE_AA)
-                    cv2.circle(canvas, center, max(1, int(rb * 0.22)), (int(70 * alpha), int(200 * alpha), int(255 * alpha)), -1, cv2.LINE_AA)
-                elif st == 1:  # Notched Sakura / Marigold Petal
-                    axes = (int(rb * 0.85), int(rb * 0.48))
-                    cv2.ellipse(canvas, center, axes, int(angle - 12), 0, 360, c_eff, -1, cv2.LINE_AA)
-                    cv2.ellipse(canvas, center, axes, int(angle + 12), 0, 360, c_eff, -1, cv2.LINE_AA)
-                elif st == 2:  # Curved Rose / Lotus Petal
-                    axes = (int(rb * 1.05), int(rb * 0.52))
-                    cv2.ellipse(canvas, center, axes, int(angle), 0, 360, c_eff, -1, cv2.LINE_AA)
-                else:  # Teardrop Petal
-                    axes = (rb, int(rb * 0.48))
-                    cv2.ellipse(canvas, center, axes, int(angle), 0, 360, c_eff, -1, cv2.LINE_AA)
+                alpha = math.sin(prog * math.pi) ** 2
+                if alpha < 0.05: continue
+                cx = px[i] + prog * drift_x[i] + sway_amp[i] * math.sin(prog * sway_freq[i])
+                cy = py[i] + prog * drift_y[i] + (sway_amp[i] * 0.3) * math.cos(prog * sway_freq[i])
+                if cx < -40 or cx > width + 40 or cy < -40 or cy > height + 40: continue
+                angle, bc = rot_speeds[i] * prog, p_colors[i]
+                c_eff, rb, st = (int(bc[0] * alpha), int(bc[1] * alpha), int(bc[2] * alpha)), max(2, int(r_base[i])), p_shapes[i]
+                pt = (int(cx), int(cy))
+                if st == 0:
+                    cv2.ellipse(canvas, pt, (rb, max(1, int(rb * 0.38))), int(angle), 0, 360, c_eff, -1, cv2.LINE_AA)
+                elif st == 1:
+                    cv2.ellipse(canvas, pt, (int(rb * 0.85), max(1, int(rb * 0.32))), int(angle - 20), 0, 360, c_eff, -1, cv2.LINE_AA)
+                    cv2.ellipse(canvas, pt, (int(rb * 0.85), max(1, int(rb * 0.32))), int(angle + 20), 0, 360, c_eff, -1, cv2.LINE_AA)
+                elif st == 2:
+                    cv2.ellipse(canvas, pt, (int(rb * 1.1), max(1, int(rb * 0.35))), int(angle + 40), 0, 360, c_eff, -1, cv2.LINE_AA)
+                else:
+                    for pa in (0, 90, 180, 270):
+                        cv2.ellipse(canvas, pt, (int(rb * 0.7), max(1, int(rb * 0.32))), int(angle + pa), 0, 360, c_eff, -1, cv2.LINE_AA)
+                    cv2.circle(canvas, pt, max(1, int(rb * 0.22)), (int(60 * alpha), int(210 * alpha), int(255 * alpha)), -1, cv2.LINE_AA)
             vw.write(canvas)
 
     elif fx_type == "romantic_bokeh_drift":
@@ -239,7 +227,8 @@ def ensure_fx_overlay(
 
 def _build_crossfade_filter(
     count: int, total_duration: float, segment_durations: list[float] | None = None, fps: int = 30,
-    enable_movement: bool = False,
+    enable_movement: bool = False, scene_movements: list[str] | None = None, is_mass: bool = False,
+    scene_speeds: list[str] | None = None,
 ) -> tuple[list[str], str]:
     if not enable_movement:
         if count <= 1:
@@ -250,16 +239,29 @@ def _build_crossfade_filter(
         for i in range(count):
             dur = segment_durations[i] if segment_durations and i < len(segment_durations) else (total_duration / count)
             d_frames = max(30, int(dur * fps))
-            if i % 3 == 0:
-                z_e, x_e, y_e = f"1.0+0.05*(on/{d_frames})", "'iw/2-(iw/zoom/2)'", "'ih/2-(ih/zoom/2)'"
-            elif i % 3 == 1:
-                z_e, x_e, y_e = f"1.05-0.05*(on/{d_frames})", "'iw/2-(iw/zoom/2)'", "'ih/2-(ih/zoom/2)'"
-            else:
-                z_e, x_e, y_e = "1.04", f"'(iw-iw/zoom)*(on/{d_frames})'", "'ih/2-(ih/zoom/2)'"
+            mov = (scene_movements[i] if scene_movements and i < len(scene_movements) else "").lower().strip()
+            spd = (scene_speeds[i] if scene_speeds and i < len(scene_speeds) else "").lower().strip()
+            if not mov: mov = ["dollyin", "tilt-up", "pan-right", "orbit-left", "dollyout"][i % 5]
             tag = "base" if count <= 1 else f"v_seg_{i}"
+            if any(w in mov for w in ("stay", "hold", "static", "fixed")) or spd == "steady":
+                chains.append(f"[{i}:v]scale=3840:2160,fps={fps},format=yuv420p,setsar=1[{tag}]"); continue
+
+            if is_mass or spd == "fast" or any(k in mov for k in ("crash", "punch", "snap", "drop")):
+                w_b = 6.283 / max(45, int(fps * (2.4 if spd == "fast" else 3.4)))
+                is_out = any(k in mov for k in ("dollyout", "zoomout", "pull"))
+                z_e = f"{1.11 if is_out else 1.03}{'-' if is_out else '+'}0.07*(0.5-0.5*cos(on*{w_b:.4f})){'-' if is_out else '+'}0.02*abs(sin(on*0.44))"
+                x_e = f"'(iw-iw/zoom)*(0.5+{'-' if 'left' in mov else ''}0.42*sin(on*{w_b:.4f}))'" if any(k in mov for k in ("pan", "orbit", "swirl", "left", "right")) else "'iw/2-(iw/zoom/2)'"
+                y_e = f"'(ih-ih/zoom)*(0.5+{'-' if any(k in mov for k in ('up', 'crane')) else ''}0.38*cos(on*{w_b:.4f}))'" if any(k in mov for k in ("tilt", "crane", "pedestal", "up", "down")) else "'ih/2-(ih/zoom/2)'"
+            else:
+                z_mag = 0.06 if spd == "slow" else 0.10
+                if any(k in mov for k in ("dollyout", "zoomout", "pull")): z_e = f"{1.0 + z_mag:.2f}-{z_mag:.2f}*(on/{d_frames})"
+                elif any(k in mov for k in ("dollyin", "zoomin", "push")): z_e = f"1.0+{z_mag:.2f}*(on/{d_frames})"
+                elif "orbit" in mov or "swirl" in mov: z_e = f"1.05+{z_mag*0.5:.2f}*sin(on/{d_frames}*3.14)"
+                else: z_e = "1.06"
+                x_e = f"'(iw-iw/zoom)*(1.0-on/{d_frames})'" if any(k in mov for k in ("left", "pan-left")) else (f"'(iw-iw/zoom)*(on/{d_frames})'" if any(k in mov for k in ("right", "pan-right", "orbit", "swirl")) else "'iw/2-(iw/zoom/2)'")
+                y_e = f"'(ih-ih/zoom)*(1.0-on/{d_frames})'" if any(k in mov for k in ("up", "tilt-up", "pedestal", "crane")) else (f"'(ih-ih/zoom)*(on/{d_frames})'" if any(k in mov for k in ("down", "tilt-down")) else "'ih/2-(ih/zoom/2)'")
             chains.append(f"[{i}:v]zoompan=z='{z_e}':x={x_e}:y={y_e}:d={d_frames}:s=3840x2160:fps={fps},format=yuv420p,setsar=1[{tag}]")
-        if count <= 1:
-            return chains, "base"
+        if count <= 1: return chains, "base"
 
     prev, cum_time = "v_seg_0", 0.0
     for k in range(1, count):
@@ -276,17 +278,17 @@ def _build_crossfade_filter(
 def compile_vocal_base_filter_complex(
     image_count: int, total_duration: float, sub_path: Path | None = None,
     fonts_dir: Path | str | None = None, fps: int = 30, segment_durations: list[float] | None = None,
-    enable_movement: bool = False,
+    enable_movement: bool = False, scene_movements: list[str] | None = None, is_mass: bool = False,
+    scene_speeds: list[str] | None = None,
 ) -> str:
     """Compile Stage 1 base filter complex: image crossfades + subtitles + 48k audio."""
     count = max(1, image_count)
-    filter_chains, current_stream = _build_crossfade_filter(count, total_duration, segment_durations=segment_durations, fps=fps, enable_movement=enable_movement)
+    filter_chains, current_stream = _build_crossfade_filter(count, total_duration, segment_durations=segment_durations, fps=fps, enable_movement=enable_movement, scene_movements=scene_movements, is_mass=is_mass, scene_speeds=scene_speeds)
     if sub_path and sub_path.is_file():
         clean_sub = sub_path.resolve().as_posix().replace(":", r"\\:")
         clean_font = f":fontsdir={Path(fonts_dir).resolve().as_posix().replace(':', r'\\:')}" if fonts_dir and Path(fonts_dir).is_dir() else ""
         filter_chains.append(f"[{current_stream}]subtitles=filename={clean_sub}{clean_font}[v_out]")
-    else:
-        filter_chains.append(f"[{current_stream}]null[v_out]")
+    else: filter_chains.append(f"[{current_stream}]null[v_out]")
     filter_chains.append(f"[{count}:a]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a_out]")
     return ";".join(filter_chains)
 

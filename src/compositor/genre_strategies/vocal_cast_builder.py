@@ -26,13 +26,13 @@ def build_vocal_suno_tags(
     """Compose musically accurate Suno genre tags aligned to mood and performer gender."""
     eff_sub = (sub_genre or "romantic_melody").lower()
     
-    # Vocal tag descriptor
+    # Vocal tag descriptor - anchored to prevent high-pitch vocoder cracking
     if gender == "male":
-        vocal_tag = "male vocals"
+        vocal_tag = "male vocals, smooth tenor, warm chest voice, clean melodic control"
     elif gender == "female":
-        vocal_tag = "female vocals"
+        vocal_tag = "female vocals, sweet melodic clarity"
     else:
-        vocal_tag = "duet, male and female vocals"
+        vocal_tag = "duet, male and female vocals, smooth tenor with warm chest resonance"
 
     if is_kids_song_genre(eff_sub):
         return (
@@ -40,6 +40,33 @@ def build_vocal_suno_tags(
             f"bouncy rhythm, handclaps, bright melodic whistle, memorable sing-along hook, joyful {vocal_tag}, "
             f"{max(96, tempo_bpm)} bpm, clean broadcast master"
         )
+
+    if "instrumental_jugalbandi" in eff_sub or ("instrumental" in eff_sub and "jugalbandi" in eff_sub):
+        return f"pure instrumental jugalbandi, virtuoso musical dialogue, acoustic bansuri flute and sitar, intricate melodic trade, mridangam, tabla, acoustic strings, dynamic crescendo, zero vocals, 88 bpm, audiophile broadcast master"
+
+    if "instrumental" in eff_sub:
+        return f"pure instrumental solo, {culture}, virtuoso acoustic performance, bansuri flute, resonant sitar strings, warm acoustic cello, zero vocals, pure acoustic clarity, {tempo_bpm} bpm, audiophile broadcast master"
+
+    if any(k in eff_sub for k in ("jugalbandi", "sawaal", "jawaab", "face_off")):
+        return (
+            f"vocal jugalbandi, classical fusion duet, sawaal jawaab call and response, intricate swara trade, "
+            f"alternating virtuoso vocal solos, acoustic bansuri flute, veena, mridangam, tabla, lush acoustic strings, "
+            f"expressive {vocal_tag}, dynamic crescendo, 84 bpm, clean broadcast master"
+        )
+
+    if any(k in eff_sub for k in ("carnatic", "raga", "narumugaye", "sangam")):
+        return (
+            f"carnatic classical fusion, nattaikurinji raga, acoustic bansuri flute, veena, mridangam, "
+            f"ghatam, lush acoustic strings orchestra, soulful romantic classical duet, expressive {vocal_tag}, "
+            f"pure acoustic warmth, 78 bpm, clean broadcast master"
+        )
+
+    if any(k in eff_sub for k in ("retro", "golden", "60s", "70s", "80s", "90s", "vintage")):
+        if any(k in eff_sub for k in ("60s", "70s")):
+            return f"1970s vintage golden melody, live acoustic orchestra, harmonium, acoustic sitar, tabla, expressive romantic duet, {vocal_tag}, warm analog tape saturation, 82 bpm, broadcast master"
+        elif "80s" in eff_sub:
+            return f"1980s melodic retro, melodic bass guitar, acoustic western flute, nylon guitar counterpoint, lush strings section, nostalgic analog warmth, {vocal_tag}, 85 bpm, clean broadcast master"
+        return f"1990s lush ambient classical fusion, acoustic bansuri flute, lush string orchestra, world percussion, expressive romantic duet, soulful {vocal_tag}, 80 bpm, 48khz broadcast master"
 
     if any(k in eff_sub for k in ("romantic", "romance", "ballad", "love")):
         return (
@@ -60,9 +87,10 @@ def build_vocal_suno_tags(
         )
 
     if any(k in eff_sub for k in ("mass", "dappu", "teenmaar")):
+        m_tag = "energetic hero male vocals, punchy chest resonance" if gender == "male" else vocal_tag
         return (
             f"catchy hummable mass commercial dance, heavy thumping dappu drums, fast teenmaar rhythm, {culture}, "
-            f"energetic brass trumpets, whistle drops, explosive earworm hook couplets, energetic {vocal_tag}, "
+            f"energetic brass trumpets, whistle drops, explosive earworm hook couplets, {m_tag}, "
             f"138 bpm, thumping bass downbeats, clean punchy 48khz broadcast master"
         )
 
@@ -79,16 +107,12 @@ def build_vocal_suno_tags(
 
 
 def build_cast_and_visual_directives(
-    slot: int,
-    fem: Any,
-    male: Any,
-    culture: str,
-    setting: str,
-    gender: str = "duet",
-    is_kids: bool = False,
+    slot: int, fem: Any, male: Any, culture: str, setting: str,
+    gender: str = "duet", is_kids: bool = False, is_jugalbandi: bool = False,
 ) -> Tuple[str, str]:
     """Generate prompt directives and negative prompt constraints for character staging."""
     eff_gender = (gender or "duet").lower()
+    _BASE_NEG = "nudity, naked, cleavage, sexualized outfit, revealing clothes, low cut, exposed midriff, provocative attire, translucent fabric, watch on shirt, chest badge, misplaced jewelry, plastic doll skin, wax figure, distorted anatomy, disembodied hands, floating hands, phantom limbs, extra limbs, duplicate wrists, duplicate watches, head cropped, cut off head, cut off face, head touching top edge, no headroom, blank expression, deadpan face, emotionless, neutral stare"
 
     if is_kids:
         # Child safety & platform ethics: 3D Pixar / Disney storybook animation style only
@@ -126,7 +150,8 @@ def build_cast_and_visual_directives(
     is_traditional_festive = any(k in s_low for k in (
         "dussera", "dussehra", "diwali", "deepavali", "sankranti", "pongal", "temple",
         "spiritual", "jathara", "bonalu", "navratri", "bathukamma", "pooja", "puja",
-        "traditional", "ethnic", "folk", "carnival", "village festival", "ugadi", "onam"
+        "traditional", "ethnic", "folk", "carnival", "village festival", "ugadi", "onam",
+        "carnatic", "raga", "narumugaye", "sangam", "classical",
     ))
 
     if eff_gender == "male":
@@ -175,13 +200,13 @@ def build_cast_and_visual_directives(
                 "in soft optical blur/bokeh dancing, clapping, and celebrating to create an authentic energetic party ambiance.\n"
                 "- STRICT PROHIBITION: No prominent male co-lead, no romantic couple intimacy, no dating partner.\n"
             )
-            neg_constraints = "male lead, male co-star, romantic couple, hand holding, romantic partner, boyfriend, dating couple, nudity, naked, cleavage, sexualized outfit, revealing clothes, low cut, exposed midriff, provocative attire, translucent fabric, misplaced accessories, heavy thick waist, watch on shirt, head cropped, cut off head, cut off face, head touching top edge, no headroom, blank expression, deadpan face, emotionless, neutral stare, robotic face, dull expression, glassy eyes"
+            neg_constraints = f"male lead, male co-star, romantic couple, hand holding, romantic partner, boyfriend, dating couple, {_BASE_NEG}"
         else:
             solo_fem_staging = (
                 "- STRICT NEGATIVE DIRECTIVE: SOLO FEMALE ONLY. The image MUST depict ONLY this female character alone in the landscape. "
                 "STRICTLY FORBIDDEN: NO MEN, NO MALE CHARACTERS, NO COUPLE, NO BOYFRIEND.\n"
             )
-            neg_constraints = "man, male, boy, men, couple, hand holding, romantic partner, boyfriend, dating couple, nudity, naked, cleavage, sexualized outfit, revealing clothes, low cut, exposed midriff, provocative attire, translucent fabric, misplaced accessories, heavy thick waist, watch on shirt, head cropped, cut off head, cut off face, head touching top edge, no headroom, blank expression, deadpan face, emotionless, neutral stare, robotic face, dull expression, glassy eyes"
+            neg_constraints = f"man, male, boy, men, couple, hand holding, romantic partner, boyfriend, dating couple, {_BASE_NEG}"
 
         if is_traditional_festive:
             fem_outfit_guide = (
@@ -223,8 +248,15 @@ def build_cast_and_visual_directives(
             if is_traditional_festive else
             f"  * Context-Matching & Attractive Designer Dress: Breathtakingly beautiful, colorful, elegant designer gown in {fem.palette} with delicate floral embroidery or fine threadwork designs, tailored to flatter her graceful slim waist and silhouette (strictly NO boxy, loose, or shapeless tunics).\n"
         )
+        staging_title = "VOCAL JUGALBANDI STAGING (SAWAAL-JAWAAB FACE-OFF)" if is_jugalbandi else f"COORDINATED COUPLE DIRECTIVE (SLOT #{slot} - DUET STAGING)"
+        jugalbandi_notes = (
+            f"- VOCAL JUGALBANDI FACE-OFF DIRECTIVE:\n"
+            f"  * The two vocal masters '{fem.name}' and '{male.name}' engage in a virtuoso musical face-off (Sawaal-Jawaab).\n"
+            f"  * Alternating camera framing: When one sings with expressive mudras/gestures, frame them in sharp 50mm focus while the other listens with appreciative nods (waah!). Frame them together for the grand unison climax.\n"
+            if is_jugalbandi else ""
+        )
         cast_dir = (
-            f"COORDINATED COUPLE DIRECTIVE (SLOT #{slot} - DUET STAGING):\n"
+            f"{staging_title}:\n"
             f"- FEMALE LEAD: '{fem.name}', Age {fem.age}, natural fit medium-slender graceful slim build with defined waist and natural feminine curves (graceful SLIM build), {fem.skin} skin, {fem.face}, {fem.hair}.\n"
             f"{fem_duet_outfit}"
             f"  * STRICT MODESTY (FAMILY-FRIENDLY & ZERO NUDITY): Elegant modest high boat neckline, mandarin collar, or high round neck with full upper chest coverage. Strictly zero cleavage, zero plunging necklines, zero low V-necks, zero bare midriff.\n"
@@ -240,16 +272,9 @@ def build_cast_and_visual_directives(
             f"- DIRECTORIAL FRAMING & ANTI-HALLUCINATION GUARD:\n"
             f"  * Both leads must be framed together naturally or solo. NEVER describe an off-screen partner's hands reaching into the frame.\n"
             f"  * Authentic romantic chemistry engaging with the background, zero stiff separated stances.\n"
+            f"{jugalbandi_notes}"
         )
-        neg_constraints = (
-            "nudity, naked, cleavage, sexualized outfit, revealing clothes, low cut, exposed midriff, "
-            "provocative attire, translucent fabric, watch on shirt, chest badge, misplaced jewelry, "
-            "plastic doll skin, wax figure, distorted anatomy, zero outfit distortion, disembodied hands, floating hands, "
-            "phantom limbs, severed arms, severed hands, extra limbs, off-screen reaching, boxy tunic, "
-            "baggy loungewear, shapeless clothing, low V-neck, plunging neckline, stiff posture, standing separated, "
-            "head cropped, cut off head, cut off face, head touching top edge, no headroom, tight headroom, top frame cut off, forehead cropped, hair touching top frame, "
-            "blank expression, deadpan face, emotionless, neutral stare, robotic face, dull expression, glassy eyes"
-        )
+        neg_constraints = f"off-screen reaching, boxy tunic, baggy loungewear, shapeless clothing, low V-neck, plunging neckline, stiff posture, standing separated, tight headroom, top frame cut off, forehead cropped, hair touching top frame, {_BASE_NEG}"
 
     return cast_dir, neg_constraints
 

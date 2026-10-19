@@ -80,7 +80,7 @@ class ProductionPipelineCoordinator:
         ep_code = f"ep-{episode.episode_number:03d}" if episode.episode_number else "ep-001"
         u_ent = repo.get_user(user_id)
         u_target = getattr(u_ent, "storage_container_name", None) or getattr(u_ent, "email", None) or str(user_id)
-        ep_dir = storage_service.get_channel_format_production_episode_path(u_target, network, clean_fmt, clean_prod, ep_code)
+        ep_dir = kwargs.get("ep_dir") or storage_service.get_channel_format_production_episode_path(u_target, network, clean_fmt, clean_prod, ep_code)
         scenes_dir, stems_dir, renders_dir = ep_dir / "scenes", ep_dir / "audio_stems", ep_dir / "master_renders"
         for d in (scenes_dir, stems_dir, renders_dir): d.mkdir(parents=True, exist_ok=True)
 
@@ -140,6 +140,8 @@ class ProductionPipelineCoordinator:
                 no_movements=kwargs.get("no_movements", False),
                 mass_song=kwargs.get("mass_song", False),
                 force_movements=kwargs.get("force_movements", False),
+                carnatic_song=kwargs.get("carnatic_song", False),
+                retro_song=kwargs.get("retro_song", False),
             )
 
         from src.providers.dance.fal_video_factory import resolve_video_motion_adapter

@@ -181,3 +181,19 @@ async def get_country_hierarchy_endpoint(
     hierarchy = await get_or_curate_country_hierarchy(country=country, force_refresh=refresh)
     return hierarchy
 
+
+@router.get("/regional-styles")
+async def get_regional_styles_endpoint(
+    language: str = "te",
+    name: Optional[str] = None,
+    culture: Optional[str] = None,
+    refresh: bool = False,
+):
+    """Retrieve or autonomously curate authentic regional musical styles with disk caching."""
+    from src.studios.music_video_studio.regional_style_curator import get_or_curate_regional_musical_styles
+    styles = await get_or_curate_regional_musical_styles(
+        language_code=language, language_name=name, culture=culture, force_refresh=refresh,
+    )
+    return {"language": language, "styles": styles}
+
+

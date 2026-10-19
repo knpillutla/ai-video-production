@@ -327,6 +327,11 @@ function selectStudioFormat(fmtKey, preserveGenre = null) {
     }
   }
 
+  const archLbl = document.getElementById("studio-archetype-label");
+  const archSubLbl = document.getElementById("studio-archetype-sublabel");
+  if (archLbl) archLbl.textContent = (fmtKey === "music_video") ? "6. Background & Setting:" : "6. Archetype (Setting Template):";
+  if (archSubLbl) archSubLbl.textContent = (fmtKey === "music_video") ? "Environment & Location" : "Template";
+
   fetchAndPopulateExistingSeries(chSlug, fmtKey);
   syncGenreDropdownOnly(chSlug, preserveGenre);
 }
@@ -435,6 +440,11 @@ function onStudioCountryChange(countryVal, preserveSubRegion = null, preserveLan
 
   const chSlug = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : "telugu_rhythms";
   fetchAndPopulateExistingSeries(chSlug, activeStudioFormat);
+  if (activeStudioFormat === "music_video") {
+    const gSelector = document.getElementById("studio-genre-selector");
+    const subSelector = document.getElementById("studio-subgenre-selector");
+    updateArchetypeOptions(gSelector ? gSelector.value : "music/duet_romance", subSelector ? subSelector.value : "");
+  }
 }
 
 function _renderSubRegions(regions, preserveSubRegion = null, preserveLang = null) {
@@ -648,7 +658,12 @@ function updateArchetypeOptions(genreVal, subGenreVal, preserveArch = null) {
   const archMap = (typeof STUDIO_ARCHETYPES_MAP !== "undefined") ? STUDIO_ARCHETYPES_MAP : {};
   let list = [];
 
-  if (genreVal === "documentary") {
+  const isMusic = (activeStudioFormat === "music_video" || (genreVal && (genreVal.startsWith("music/") || genreVal.startsWith("dance/"))));
+  if (isMusic) {
+    list = (typeof MUSIC_VIDEO_BACKGROUND_ARCHETYPES !== "undefined")
+      ? MUSIC_VIDEO_BACKGROUND_ARCHETYPES
+      : (archMap["music_video"] || archMap[genreVal] || []);
+  } else if (genreVal === "documentary") {
     if (subGenreVal === "travel_itinerary_tour" || subGenreVal === "doc_places") {
       list = archMap["documentary:tour"] || [];
     } else {
@@ -663,15 +678,31 @@ function updateArchetypeOptions(genreVal, subGenreVal, preserveArch = null) {
   } else {
     list = archMap[genreVal] || archMap["relax/nature"] || [];
   }
-  
+
+  const countryVal = document.getElementById("studio-country-selector")?.value || "";
+  const countryDef = (typeof COUNTRY_MUSIC_BACKGROUND_DEFAULTS !== "undefined") ? COUNTRY_MUSIC_BACKGROUND_DEFAULTS[countryVal] : null;
+
+  let smartDefault = null;
+  if (isMusic) {
+    if (subGenreVal === "jugalbandi" || (genreVal && genreVal.includes("jugalbandi"))) {
+      smartDefault = "concert_hall_stage";
+    } else if (subGenreVal === "mass_beats" || (genreVal && genreVal.includes("mass"))) {
+      smartDefault = "village_jathara_square";
+    } else if (countryDef && list.some(x => x.val === countryDef)) {
+      smartDefault = countryDef;
+    }
+  }
+
   const currentArch = preserveArch || archSelector.value;
   const targetArch = (currentArch && list.some(x => x.val === currentArch))
     ? currentArch
-    : (genreVal === "documentary" && subGenreVal === "doc_architecture" && list.some(x => x.val === "ancient_civilizations_history")
-      ? "ancient_civilizations_history"
-      : (genreVal === "documentary" && subGenreVal === "travel_itinerary_tour" && list.some(x => x.val === "itinerary_map_tour")
-        ? "itinerary_map_tour"
-        : (subGenreVal && (subGenreVal.includes("bedroom") || subGenreVal.includes("cabin")) && list.find(x => x.val.includes("bedroom") || x.val.includes("cabin"))?.val) || list[0]?.val || ""));
+    : (smartDefault && list.some(x => x.val === smartDefault)
+      ? smartDefault
+      : (genreVal === "documentary" && subGenreVal === "doc_architecture" && list.some(x => x.val === "ancient_civilizations_history")
+        ? "ancient_civilizations_history"
+        : (genreVal === "documentary" && subGenreVal === "travel_itinerary_tour" && list.some(x => x.val === "itinerary_map_tour")
+          ? "itinerary_map_tour"
+          : (subGenreVal && (subGenreVal.includes("bedroom") || subGenreVal.includes("cabin")) && list.find(x => x.val.includes("bedroom") || x.val.includes("cabin"))?.val) || list[0]?.val || "")));
 
   archSelector.innerHTML = list.map(item => `<option value="${item.val}" ${item.val === targetArch ? 'selected' : ''}>${item.label}</option>`).join("");
   archSelector.value = targetArch;

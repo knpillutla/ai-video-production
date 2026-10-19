@@ -15,6 +15,7 @@ def build_environmental_pose_directive(
     theme: str = "soulful romantic melody",
     culture: str = "Indian",
     num_scenes: int = 3,
+    is_mass: bool = False,
 ) -> str:
     """Build authoritative Gemini prompt directive for dynamic, background-specific poses."""
     eff_gender = (gender or "duet").lower()
@@ -40,6 +41,15 @@ def build_environmental_pose_directive(
             "     - Engage dynamically with surroundings (e.g., twirling in open meadows with flowing fabric, enjoying the mountain breeze, candid reflective smiles, touching hair ornaments).\n"
             "     - Never depict a stiff passport photo standing straight with hands down.\n"
         )
+
+    mass_inserts_text = (
+        "8. AUTONOMOUS CONTEXTUAL CUTAWAYS & DRONE INSERTS (MASS SONGS ONLY):\n"
+        "   - In mass songs, do NOT show the lead character in every single image! Gemini must autonomously decide where to interleave 1 to 2 high-impact CONTEXTUAL INSERT / CUTAWAY scenes (e.g. during percussive bridge rolls, fast drum buildups, or scene transitions):\n"
+        "     * Archetype A (Percussion Close-up): Macro shot of energetic village drummers' hands beating dappu frame drums with wooden karras in swirling dust ('dummu'). (Camera: 'punch' / 'crash-zoom' or 'dollyin').\n"
+        "     * Archetype B (Festival Aerial / Drone Flight): Sweeping panoramic drone flyover across illuminated festival grounds, effigies, lanterns, and cheering crowd under twilight sky. (Camera: 'drift-up-right' / 'pedestal-rise').\n"
+        "     * Archetype C (Troupe Whirl Formation): Dynamic wide shot of coordinated male and female troupe dancers spinning in colorful lehengas/dhotis throwing flower petals into the air. (Camera: 'orbit' / 'dollyout').\n"
+        "   - For these contextual scenes, set 'character_pose': 'Contextual Cutaway: <description>', and omit the lead hero/heroine so the camera can execute breathtaking drone and cinematography movements on the festival environment and troupe!\n"
+    ) if is_mass else ""
 
     return (
         "AUTONOMOUS CONTEXT-DRIVEN POSE & FRAMING DIRECTIVE (NO HARDCODED POSES):\n"
@@ -67,7 +77,17 @@ def build_environmental_pose_directive(
         "   - The midground and background MUST feature an energetic, coordinated dance troupe of BOTH male and female backup dancers in matching colorful festive attire.\n"
         "   - Direct background dancers performing synchronized hook steps, clapping on the downbeat, or cheering in soft optical bokeh/depth of field.\n"
         "   - The solo lead remains the radiant centerstage superstar in sharp foreground focus with full 4-zone accessories and modest attire.\n"
-        "8. MANDATORY CONTEXT-DRIVEN FACIAL EXPRESSIONS & EMOTIVE ACTING (ABHINAYA):\n"
+        f"{mass_inserts_text}"
+        "8. LIVE CONCERT & STAGE PERFORMANCES (ACCOMPANISTS, TROUPE & AUDIENCE - MANDATORY):\n"
+        "   - When setting is a concert (classical sabha, singing arena, dance recital, amphitheatre), NEVER depict an empty or deserted stage!\n"
+        "   - Classical Concert / Sabha: Seated on raised carpeted dais, authentic accompanists (mridangam/tabla, tanpura, violin), brass lamps, and seated connoisseur audience in soft optical bokeh.\n"
+        "   - Live Singing Concert / Arena: Lead singer at center stage with dynamic microphone, illuminated proscenium, stage spot beams, and cheering audience with lightsticks.\n"
+        "   - Dance Concert / Recital: Expansive performance proscenium floor, coordinated background troupe flanking leads, theatrical lighting cues, and engaged audience in auditorium.\n"
+        "   - Instrumental Virtuoso Performance & Jugalbandi:\n"
+        "     * Characters hold and actively play their signature instruments: graceful fingers on flute holes, plucking sitar/veena/guitar strings, or bowing violin/cello with emotional absorption (bhava).\n"
+        "     * Macro cinematic camera: close-up on instrument craftsmanship (polished wood grain, vibrating strings) intercut with medium shots of the musician completely immersed in the melody. Zero singing or mouthing lyrics.\n"
+        "   - Leads remain in razor-sharp foreground focus; audience, stage rigging, and accompanists provide rich cinematic depth-of-field.\n"
+        "9. MANDATORY CONTEXT-DRIVEN FACIAL EXPRESSIONS & EMOTIVE ACTING (ABHINAYA):\n"
         "   - Strictly prohibit blank, deadpan, expressionless, neutral staring, or robotic faces.\n"
         "   - Every scene's 'visual_prompt' MUST explicitly direct vivid, authentic facial expressions matching the lyrical context:\n"
         "     * Romantic / Soulful Melodies: Tender affectionate smile, soft dreamy gaze, gentle warmth, eyes full of emotion and longing.\n"
@@ -90,7 +110,42 @@ def get_offline_dynamic_scene_poses(
     """Return deterministic, high-CTR dynamic poses for offline mock pipelines (Rule 8 $0.00 spend)."""
     eff_gender = (gender or "female").lower()
 
-    if eff_gender == "duet":
+    is_concert = any(k in setting.lower() for k in ("concert", "stage", "sabha", "recital", "theatre", "amphitheatre"))
+    is_instrumental = any(k in setting.lower() for k in ("instrumental", "bansuri", "sitar", "veena", "guitar", "piano", "violin"))
+
+    if is_instrumental:
+        if eff_gender == "duet":
+            pose_catalog = [
+                {"shot_type": "medium_shot", "pose": "Virtuoso instrumental jugalbandi dialogue, exchanging intricate melodic phrases", "prompt_ext": "Seated gracefully playing signature acoustic instruments in intense harmonious dialogue, exchanging joyful musical smiles as melodies intertwine."},
+                {"shot_type": "wide_cinematic", "pose": "Atmospheric wide panoramic shot of both master musicians on stage or scenic setting", "prompt_ext": "Cinematic wide perspective of the two instrumentalists performing in full flow, beautiful scenic background and warm acoustic lighting."},
+                {"shot_type": "close_up", "pose": "Extreme macro close-up of fingers dancing across instrument strings or flute holes", "prompt_ext": "Crisp macro close-up of skilled fingers plucking instrument strings and sliding across frets, wood grain texture and vibrating strings in razor-sharp focus."},
+            ]
+        else:
+            pose_catalog = [
+                {"shot_type": "medium_shot", "pose": "Deeply absorbed solo instrumental performance, fingers gliding effortlessly", "prompt_ext": "Seated gracefully with signature instrument in hands, fingers executing intricate melodic ornamentations, face serene and lost in musical bliss."},
+                {"shot_type": "wide_cinematic", "pose": "Expansive scenic view of solo virtuoso performing against breathtaking landscape", "prompt_ext": "Wide cinematic vista of the master instrumentalist playing in the serene open setting, gentle breeze and soft natural lighting."},
+                {"shot_type": "close_up", "pose": "Macro close-up on instrument craftsmanship and expressive hand movement", "prompt_ext": "Detailed macro close-up of fingers dancing across the instrument, warm wood finish, soulful emotive expression on musician's face."},
+            ]
+    elif is_concert:
+        if eff_gender == "duet":
+            pose_catalog = [
+                {"shot_type": "medium_shot", "pose": "Harmonious duet performance at center stage, trading melodious vocal lines", "prompt_ext": "Performing together at center stage under warm theatrical spotlights, smiling as they harmonize, live accompanists and engaged audience in soft optical bokeh."},
+                {"shot_type": "wide_cinematic", "pose": "Grand stage panoramic two-shot with ambient stage lighting and audience silhouette", "prompt_ext": "Wide proscenium stage perspective with glowing stage backdrops, couple singing together in sharp focus with audience silhouettes in foreground."},
+                {"shot_type": "close_up", "pose": "Soulful emotive harmony close-up, feeling the melodic climax", "prompt_ext": "Intense emotive close-up of both vocalists singing the signature hook couplet with radiant heartfelt smiles under warm spotlight beams."},
+            ]
+        elif eff_gender == "male":
+            pose_catalog = [
+                {"shot_type": "medium_shot", "pose": "Confident stage performance at microphone stand, gesturing to the rhythm", "prompt_ext": "Singing at center stage into a vintage dynamic microphone, chronograph watch visible on left wrist, stage spot beams and live band in soft bokeh."},
+                {"shot_type": "wide_cinematic", "pose": "Expansive live concert stage view, interacting warmly with audience", "prompt_ext": "Wide stage view under sweeping architectural spotlights, lead singer holding the stage with backing musicians and audience silhouettes in soft focus."},
+                {"shot_type": "close_up", "pose": "Emotive vocal delivery with eyes closed, lost in the melodic cadence", "prompt_ext": "Expressive close-up singing with heartfelt emotion, hand near chest feeling the resonance, warm stage rim light catching his hair."},
+            ]
+        else:  # female
+            pose_catalog = [
+                {"shot_type": "medium_shot", "pose": "Graceful stage performance, emotive singing or dance mudra under spotlights", "prompt_ext": "Performing at center stage in elegant modest designer dress, singing with expressive hand gestures, live accompanists and audience in soft optical bokeh."},
+                {"shot_type": "wide_cinematic", "pose": "Grand stage perspective with dramatic lighting, shimmering attire", "prompt_ext": "Expansive proscenium stage view with theatrical warm glow, graceful lead singer centerstage with 4-zone accessories shining under spotlights, audience silhouettes."},
+                {"shot_type": "close_up", "pose": "Expressive soulful facial emotion (abhinaya) during melodic hook", "prompt_ext": "Soulful close-up, radiant expressive eyes and serene smile singing the earworm hook, soft stage bokeh in background."},
+            ]
+    elif eff_gender == "duet":
         pose_catalog = [
             {
                 "shot_type": "medium_shot",
@@ -156,13 +211,17 @@ def get_offline_dynamic_scene_poses(
         ]
 
     scenes = []
+    motions = ["dollyin", "tilt-up", "pan-right", "orbit-left", "dollyout"]
     for i in range(max(1, num_scenes)):
         idx = i % len(pose_catalog)
         item = pose_catalog[idx]
+        m = motions[i % len(motions)]
         scenes.append({
             "scene_index": i + 1,
             "camera_shot_type": item["shot_type"],
             "character_pose": item["pose"],
+            "camera_motion": m,
+            "local_drone": {"movement": m, "start_pan": "center", "start_zoom": "normal", "start_tilt": "center", "rationale": "Choreographic beat progression"},
             "location_hub": f"Scenic Setting {i+1} ({country})",
             "visual_prompt": f"4K photorealistic cinematic music video scene in {country}, {setting}. {character_desc}. {item['prompt_ext']}",
         })
