@@ -34,8 +34,10 @@ GLOBAL HEALING SANCTUARY DIRECTORIAL RULES & CINEMATOGRAPHY:
    - Illumination: Soft, warm ethereal morning light (5200K-5600K) or golden dawn caustics shimmering on crystal-clear mineral water with gentle rising thermal vapors.
    - PURE SANCTUARY PURITY GUARD: Strictly mandate zero humans, zero tourists, zero swimmers, zero modern clutter, zero vehicles, zero man-made trash.
 
-2. ACOUSTIC SOUNDSCAPE & 432Hz/528Hz SOLFEGGIO MASTERING:
-   - Suno tags: "432Hz Solfeggio healing resonance, Tibetan singing bowl vibration, warm crystal singing bowls, soothing Celtic harp, gentle sacred spring trickle, velvet anti-fatigue -14 LUFS".
+2. ACOUSTIC SOUNDSCAPE & 432Hz/528Hz SOLFEGGIO MASTERING (DYNAMIC INSTRUMENTS):
+   - Pure relaxation sound: Zero background song, zero vocals.
+   - Dynamic soothing instruments: Do NOT hardcode fixed instruments. Randomly select soothing acoustic combinations on every execution (e.g. bansuri flute, shakuhachi, Celtic harp, koto, guzheng, classical nylon guitar, santur, sarod, kalimba, warm cello, Tibetan/crystal singing bowls, handpan, felted piano, 432Hz/528Hz Solfeggio velvet pads).
+   - Suno tags: "432Hz Solfeggio healing resonance, pure relaxation, <randomly selected soothing instruments>, gentle sacred water trickle, velvet anti-fatigue, zero drums, zero vocals, -14 LUFS".
    - Spoken narration: Poetic, restorative contemplation on cellular renewal, spiritual peace, ancient earth energy, and deep body-mind alignment.
 
 3. CINEMAGRAPH KINETICS (Wan 2.1 & Kling v1.6 Pro):

@@ -160,7 +160,7 @@ async def generate_zen_storyboard_gemini(
             f"- 'destination_name': Real Zen garden or bamboo sanctuary name\n"
             f"- 'country': Destination country\n"
             f"- 'cluster': Geographic region identifier\n"
-            f"- 'audio_tags': 432Hz deep meditative anti-fatigue acoustic tags (bamboo flute, Celtic harp, gentle stream, zero harshness)\n"
+            f"- 'audio_tags': 432Hz deep meditative anti-fatigue acoustic tags (randomly pick soothing instruments: harp, koto, bansuri, cedar flute, pan flute, cello, singing bowls, handpan, felted piano, 432Hz pads, zero drums, zero vocals)\n"
             f"- 'scenes': Array of 2 scene objects each containing:\n"
             f"    - 'scene_index': int (1, 2)\n"
             f"    - 'perspective_type': 'wide_zen_landscape' or 'intimate_lotus_stream'\n"
@@ -205,7 +205,7 @@ async def generate_zen_storyboard_gemini(
                 cluster=data.get("cluster", ""),
                 total_duration=duration_seconds,
                 recommended_fps=24,
-                audio_tags=data.get("audio_tags") or "healing meditation music, 432Hz deep inner peace, bamboo shakuhachi flute, 48kHz master",
+                audio_tags=data.get("audio_tags") or __import__("src.services.relaxation_instruments", fromlist=["get_random_soothing_instrument_set"]).get_random_soothing_instrument_set().suno_tags,
                 scenes=scenes,
             )
             print(f"[GEMINI HEALING STORYBOARD SUCCESS] Synthesized '{sb.title}' with 2 custom perspectives.")

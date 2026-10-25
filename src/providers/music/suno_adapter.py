@@ -99,10 +99,10 @@ class SunoMusicAdapter(MusicProviderProtocol):
                 task_sidecar.unlink(missing_ok=True)
 
         if lyrics:
-            v_g = (vocal_gender or "").lower()
+            v_g = (vocal_gender or "").lower().strip()
             v_map = {"male": "smooth tenor male vocals", "female": "sweet expressive female vocals", "duet": "duet vocals"}
-            v_prefix = f"{v_map.get(v_g, f'{v_g} vocals')}, " if v_g else ""
-            clean_genre = genre.replace("female vocals", "").replace("male vocals", "").strip(", ")
+            v_prefix = f"{v_map[v_g]}, " if v_g in v_map else ("" if v_g in ("none", "instrumental", "no", "zero", "") else f"{v_g} vocals, ")
+            clean_genre = genre.replace("female vocals", "").replace("male vocals", "").replace("none vocals", "").strip(", ")
             tags_str = f"{v_prefix}{clean_genre}, {mood}".strip(", ")
             body = {
                 "custom_mode": True, "prompt": lyrics, "tags": tags_str[:180],

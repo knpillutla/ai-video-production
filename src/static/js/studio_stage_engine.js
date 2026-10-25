@@ -359,7 +359,13 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           return vid.primaryArchetypeLabel || vid.primary_archetype_label || (archMap[g]?.find(x => x.val === arch)?.label) || document.getElementById("studio-archetype-selector")?.selectedOptions?.[0]?.textContent?.trim() || "";
         })(),
         weather: (document.querySelector('input[name="studio_weather"]:checked')?.value || "normal"),
-        vocal_gender: (vid.vocal_gender || document.getElementById("studio-vocal-gender-selector")?.value || "female"),
+        vocal_gender: (function() {
+          const g = vid.genre || document.getElementById("studio-genre-selector")?.value || "";
+          const fmt = vid.format_slug || (vid.format && !["16:9", "9:16"].includes(vid.format) ? vid.format : null) || document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "");
+          const isMusic = fmt === "music_video" || g.startsWith("music/") || g.startsWith("dance/");
+          if (!isMusic) return "none";
+          return vid.vocal_gender || document.getElementById("studio-vocal-gender-selector")?.value || "female";
+        })(),
         continent: (vid.continent || document.getElementById("studio-continent-selector")?.value || null),
         country: (vid.country || document.getElementById("studio-country-selector")?.value || null),
         sub_region: (vid.sub_region || document.getElementById("studio-subregion-selector")?.value || null),

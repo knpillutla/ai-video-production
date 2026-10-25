@@ -282,10 +282,15 @@ class StudioProducer:
             if bgm_path.is_file() and bgm_path.stat().st_size >= 1000 and not force_rerun:
                 log_pipeline_step("checking audio", "BGM Soundtrack", "completed", "soundtrack exists, soundtrack not recreated", {"file": bgm_path.name, "cost": "$0.00"})
             else:
-                log_pipeline_step("checking audio", "BGM Soundtrack", "started", "soundtrack missing, synthesizing via Suno/DSP", {"file": bgm_path.name})
+                from src.services.relaxation_instruments import get_random_soothing_instrument_set
+                dyn_palette = get_random_soothing_instrument_set(setting_context=f"{getattr(sb, 'genre', '')} {getattr(sb, 'primary_archetype', '')}")
+                eff_tags = getattr(sb, "audio_tags", "") or dyn_palette.suno_tags
+                eff_prompt = getattr(sb, "audio_prompt", "") or (sb.audio_master.suno_prompt if hasattr(sb, "audio_master") and getattr(sb, "audio_master") and hasattr(sb.audio_master, "suno_prompt") else "") or dyn_palette.suno_prompt
                 bgm_path = await soundtrack_service.synthesize_ambient_soundtrack(
-                    title=sb.title, tags=sb.audio_tags or "432Hz ambient soundscape, deep relaxation, -14 LUFS",
-                    out_path=bgm_path, total_duration=sb.total_duration, genre=f"{getattr(sb, 'cluster', 'studio')} soundscape", episode_id=ep_dir.name,
+                    title=sb.title, tags=eff_tags,
+                    out_path=bgm_path, total_duration=sb.total_duration, genre=f"{getattr(sb, 'genre', 'relax')} {getattr(sb, 'cluster', 'studio')} soundscape",
+                    episode_id=ep_dir.name, archetype=getattr(sb, "primary_archetype", ""),
+                    prompt=eff_prompt, force_rerun=force_rerun,
                 )
                 log_pipeline_step("checking audio", "BGM Soundtrack", "completed", "soundtrack synthesized", {"file": bgm_path.name})
             if bgm_path and bgm_path.is_file():

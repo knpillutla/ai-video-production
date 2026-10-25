@@ -44,10 +44,11 @@ class SoundtrackService:
             sub_genre=genre,
             title=title,
             tags=tags,
+            randomize=True,
         )
 
         eff_prompt = prompt.strip() if prompt and prompt.strip() else profile.suno_prompt
-        clean_tags = tags.strip() if tags and tags.strip() and "guitar" not in tags.lower() else profile.suno_tags
+        clean_tags = tags.strip() if tags and tags.strip() else profile.suno_tags
 
         # Rule 3 Tier 1 & 3: AudioVault Local Stem Cache Check with Cultural Key Isolation ($0.00 spend)
         if not force_rerun:

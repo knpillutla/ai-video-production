@@ -29,8 +29,10 @@ SILENT HEARTH & BEACH CAMPFIRE DIRECTORIAL RULES:
    - In the immediate background: Gentle rhythmic ocean waves roll and surge along the coastline under a dark indigo twilight or night sky with soft coastal mist.
    - STRICT NEGATIVE DIRECTIVE: Strictly prohibit indoor rooms, living rooms, interior walls, ceilings, indoor sofas, couches, cushions, rugs, indoor tables, and glass window frames.
 
-2. ACOUSTIC SOUNDSCAPE & NARRATION DIRECTIVE:
-   - Audio tags: "432Hz ambient soundscape, deep crackling oak campfire foley, gentle rhythmic ocean surf, soft acoustic drone, velvety low-frequency resonance, binaural relaxation, -14 LUFS".
+2. ACOUSTIC SOUNDSCAPE & NARRATION DIRECTIVE (DYNAMIC SOOTHING INSTRUMENTS):
+   - Pure relaxation sound: Zero background song, zero vocals.
+   - Dynamic soothing instruments: Do NOT hardcode fixed instruments. Randomly select soothing acoustic combinations on every execution (e.g. felted upright piano, Rhodes piano, warm cello harmonics, Native American cedar flute, acoustic nylon guitar, singing bowls, handpan, warm 432Hz velvet pads).
+   - Audio tags: "432Hz ambient soundscape, pure relaxation, deep crackling oak campfire foley, gentle rhythmic ocean surf, <randomly selected soothing instruments>, binaural relaxation, zero drums, zero vocals, -14 LUFS".
    - Spoken narration: Poetic, soothing reflection on the nocturnal rhythm of coastal waves, primal warmth of firelight, and tranquil cosmic solitude.
 
 3. CINEMAGRAPH KINETICS (Wan 2.1 & Kling v1.6 Pro):

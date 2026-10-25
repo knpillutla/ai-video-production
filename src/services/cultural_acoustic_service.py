@@ -25,6 +25,7 @@ def resolve_cultural_acoustic_profile(
     title: str = "",
     tags: str = "",
     weather: Optional[str] = "normal",
+    randomize: bool = False,
 ) -> CulturalAcousticProfile:
     """Resolve culturally authentic instruments and hummable melody specifications for any relax scene."""
     combo = f"{archetype} {sub_genre} {title} {tags}".lower()
@@ -58,18 +59,29 @@ def resolve_cultural_acoustic_profile(
         key = "ocean" if "water" in combo else "swiss_alps"
 
     raw = CULTURAL_PROFILES.get(key, CULTURAL_PROFILES["swiss_alps"])
+
+    if randomize and key != "party_lounge":
+        from src.services.relaxation_instruments import get_random_soothing_instrument_set
+        palette = get_random_soothing_instrument_set(setting_context=combo)
+        lead_instrument = palette.lead_instrument
+        secondary_textures = f"{palette.accompaniment}, {palette.ambient_texture}"
+        suno_prompt = palette.suno_prompt
+        suno_tags = palette.suno_tags
+    else:
+        lead_instrument = raw["lead_instrument"]
+        secondary_textures = raw["secondary_textures"]
+        suno_prompt = raw["suno_prompt"]
+        suno_tags = raw["suno_tags"]
+
     h = int(hashlib.md5(combo.encode()).hexdigest(), 16)
     motifs = MOTIF_VARIATIONS.get(key, [])
     selected_motif = motifs[h % len(motifs)] if motifs else ""
 
-    suno_prompt = raw["suno_prompt"]
     if selected_motif and "[Lead Melody: " in suno_prompt:
         suno_prompt = suno_prompt.replace(
             "[Lead Melody: ",
             f"[Lead Motif: {selected_motif}]\n[Lead Melody: "
         )
-
-    suno_tags = raw["suno_tags"]
 
     # Weather acoustic layering
     w_key = (weather or "normal").lower().strip()
@@ -86,8 +98,8 @@ def resolve_cultural_acoustic_profile(
 
     return CulturalAcousticProfile(
         culture_key=raw["culture_key"],
-        lead_instrument=raw["lead_instrument"],
-        secondary_textures=raw["secondary_textures"],
+        lead_instrument=lead_instrument,
+        secondary_textures=secondary_textures,
         scale_and_tuning=raw["scale_and_tuning"],
         rhythm_and_tempo=raw["rhythm_and_tempo"],
         emotional_purpose=raw["emotional_purpose"],

@@ -179,12 +179,10 @@ STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
    - Select one destination and derive a fresh title and story around its authentic landscape, while excluding previously produced topics listed above.
    - If the user supplied a prompt, treat it as the creative anchor and do not replace it with an unrelated destination.
 
-10. BESPOKE HUMMABLE SLOW MOTIF AUDIO DIRECTIVE (MANDATORY NOVELTY FOR EVERY CREATION):
-   - You MUST synthesize a bespoke "suno_prompt" and "suno_musical_tags" tailored to the exact destination, landscape, and time-of-day. Every creation must sound fresh and distinct.
-   - Compose a hummable slow motif rhythm at 48-52 BPM (resting heartbeat entrainment) with gentle breathing pauses.
-   - Choose authentic solo instruments (Ney flute for Middle East/Arabian desert; Alpine flute/Zither for Alps; Shakuhachi/Koto for Japan; Bansuri for Himalayas; Handpan/Kalimba for coastal; Cedar flute for American woodlands; Felted piano/Cello for cozy hearths).
-   - Solfeggio 432Hz/528Hz velvet bed; joyful, enlightened, lovely, soothing anxiety, and inducing restorative sleep.
-   - STRICT ZERO: zero fast arpeggios, zero guitars, zero upbeat percussion, zero generic synth washes, zero simulated wind noise (demand pristine crystal-clear studio recording, zero background hiss).
+10. BESPOKE SOOTHING RELAXATION AUDIO DIRECTIVE FOR SUNO (STRICT DIVERSITY):
+   - Pure Relaxation Sound: Zero background song, zero vocals. Set vocal_gender: "none", singing_lyrics_spec: "".
+   - Stochastic Instrument Diversity (Strict Ban on Hardcoded Repetition): NEVER hardcode or repeat the same instruments across productions. On every execution, Gemini MUST autonomously pick a fresh, unique blend of soothing instruments from diverse organic categories: Plucked (Celtic harp, koto, guzheng, classical nylon guitar, santur, sarod, kalimba, mbira, zither); Bowed (warm cello, gentle viola, erhu, acoustic bass drone); Winds (shakuhachi, bansuri bamboo flute, Native American cedar flute, pan flute, ocarina, wooden ney); Resonators & Bells (Tibetan singing bowls, crystal singing bowls, tuned handpan, wind chimes, celesta, vibraphone); Keys & Pads (felted upright piano, Rhodes, warm 432Hz/528Hz Solfeggio analog pads).
+   - Direct Suno with Proper Soothing Instructions: Slow resting heartbeat tempo (48-54 BPM), 432Hz Solfeggio tuning, gentle note attacks with long smooth decays, zero harsh percussion, zero brass, zero vocals, pristine studio recording, zero background hiss.
 {exclusion_block}
 ======================================================================
 PRODUCTION SPECIFICATIONS:
@@ -220,8 +218,8 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
     "audio_mode": "ambient_nature",
     "spoken_narration_script": "Authoritative, poetic voiceover sentence describing the timeless geological wonder and geographic lore.",
     "singing_lyrics_spec": "",
-    "suno_musical_tags": "432Hz Solfeggio, authentic solo cultural instrument (e.g. wooden ney, bansuri, handpan), warm velvet pads, 50 BPM, -21 LUFS",
-    "suno_prompt": "[Instrumental Meditative Landscape]\\n[Tempo: 50 BPM]\\n[Tuning: 432Hz Solfeggio]\\n[Lead Motif: Gentle hummable 5-note melodic motif on <Solo Cultural Instrument>]\\n[Atmosphere: Warm velvet ambient pads, tranquil, zero guitars]\\n[Emotion: Joyful, deep stress and anxiety reduction, peaceful sleep]",
+    "suno_musical_tags": "432Hz Solfeggio, pure instrumental relaxation, <randomly selected lead instrument>, <accompaniment>, <texture>, peaceful soundscape, zero drums, zero vocals, -21 LUFS",
+    "suno_prompt": "[Instrumental Ambient Meditation]\\n[Tempo: 50 BPM - Resting Heartbeat Pulse]\\n[Tuning: 432Hz Solfeggio Velvet Resonance]\\n[Lead Melody: Hypnotic, slow, tranquil phrasing on <Randomly Chosen Soothing Lead Instrument>]\\n[Accompaniment: Soft acoustic harmonies on <Randomly Chosen Second Instrument>]\\n[Atmosphere: <Randomly Chosen Resonator/Pad>, warm velvet ambient pads, long smooth reverb decays]\\n[Acoustic Direction: Studio master recording, zero harsh percussion, zero brass, zero vocals, zero hiss]\\n[Emotion: Deep tranquil peace, anxiety reduction, restorative sleep induction]\\n[Outro: Lingering resonant acoustic dissolve]",
     "vocal_gender": "none", "tempo_bpm": 50, "target_lufs": -21.0, "ducking_db": -18.0
   }},
   "scenes": [

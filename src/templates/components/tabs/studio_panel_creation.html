@@ -121,29 +121,23 @@
       </div>
     </div>
 
-    <!-- 2. PRODUCTION (Options Dropdown + Optional Custom Input) & EPISODE NUMBER -->
+    <!-- 2. PRODUCTION TITLE & EPISODE NUMBER -->
     <div class="p-2.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
       <div class="flex items-center justify-between">
-        <label for="studio-existing-series-select" class="text-xs font-bold text-[var(--text)] flex items-center gap-1.5">
+        <label for="studio-production-name" class="text-xs font-bold text-[var(--text)] flex items-center gap-1.5">
           <i class="fa-solid fa-clapperboard text-xs text-[var(--accent)]"></i>
-          <span>2. Production:</span>
+          <span>2. Production Title:</span>
           <span class="text-[10px] font-normal text-[var(--text-muted)]">(Optional)</span>
         </label>
-        <div class="segmented-track text-xs">
-          <button type="button" onclick="setSeriesMode('existing')" id="series-mode-existing-btn" class="segmented-btn py-0.5 px-2 active" title="Select options"><i class="fa-solid fa-list-ul text-[10px]"></i><span>Options</span></button>
-          <button type="button" onclick="setSeriesMode('new')" id="series-mode-new-btn" class="segmented-btn py-0.5 px-2" title="Type custom name"><i class="fa-solid fa-pen text-[10px]"></i><span>+ Custom</span></button>
-        </div>
+        <span class="text-[9px] font-mono text-[var(--text-muted)]">Episode Identifier</span>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-[1fr_95px] gap-2 items-center">
-        <div id="series-existing-container">
-          <select id="studio-existing-series-select" onchange="onExistingSeriesSelect(this.value)" class="w-full px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]"><option value="">Loading production options...</option></select>
-        </div>
-        <div id="series-new-container" class="hidden">
-          <input type="text" id="studio-production-name" oninput="onNewSeriesNameInput(this.value)" placeholder="Custom series name (optional)..." class="w-full px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-medium placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
+        <div>
+          <input type="text" id="studio-production-name" oninput="onNewSeriesNameInput(this.value)" placeholder="Enter title / production name (optional)..." class="w-full px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-medium placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
         </div>
         <div>
-          <input type="text" id="studio-episode-code" placeholder="EP-001" title="Episode Identifier" class="w-full px-2 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-mono font-bold text-center placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
+          <input type="text" id="studio-episode-code" placeholder="EP-001" value="EP-001" title="Episode Identifier" class="w-full px-2 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-mono font-bold text-center placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]">
         </div>
       </div>
     </div>
@@ -188,8 +182,22 @@
         </select>
       </div>
 
-      <!-- 5. Vocal Performer Modality (Solo Female / Solo Male / Duet) -->
-      <div id="studio-vocal-gender-container" class="space-y-0.5">
+      <!-- 5. Ecosystem Archetype Selector (Setting Template) -->
+      <div class="space-y-0.5">
+        <label for="studio-archetype-selector" class="text-xs font-bold text-[var(--text)] flex items-center justify-between">
+          <span class="flex items-center gap-1">
+            <i class="fa-solid fa-mountain-sun text-[var(--accent)] text-[10px]"></i>
+            <span id="studio-archetype-label">5. Archetype (Setting Template):</span>
+          </span>
+          <span class="text-[9px] font-mono text-[var(--text-muted)]" id="studio-archetype-sublabel">Template</span>
+        </label>
+        <select id="studio-archetype-selector" onchange="onArchetypeChange(this.value)" class="w-full px-2.5 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]">
+          <option value="rainy_cabin_bedroom" selected>🛏️ Glass Cabin Bedroom (Rain on Panoramic Window)</option>
+        </select>
+      </div>
+
+      <!-- Vocal Performer Modality (Visible ONLY in Music Video format) -->
+      <div id="studio-vocal-gender-container" class="space-y-0.5 hidden">
         <label for="studio-vocal-gender-selector" class="text-xs font-bold text-[var(--text)] flex items-center gap-1">
           <i class="fa-solid fa-microphone-lines text-[var(--accent)] text-[10px]"></i>
           <span>Vocal Performer (Modality):</span>
@@ -198,20 +206,6 @@
           <option value="female" selected>👩 Solo - Female</option>
           <option value="male">👨 Solo - Male</option>
           <option value="duet">💑 Duet - Male &amp; Female</option>
-        </select>
-      </div>
-
-      <!-- 6. Ecosystem Archetype Selector (Setting Template) -->
-      <div class="space-y-0.5">
-        <label for="studio-archetype-selector" class="text-xs font-bold text-[var(--text)] flex items-center justify-between">
-          <span class="flex items-center gap-1">
-            <i class="fa-solid fa-mountain-sun text-[var(--accent)] text-[10px]"></i>
-            <span id="studio-archetype-label">6. Archetype (Setting Template):</span>
-          </span>
-          <span class="text-[9px] font-mono text-[var(--text-muted)]" id="studio-archetype-sublabel">Template</span>
-        </label>
-        <select id="studio-archetype-selector" onchange="onArchetypeChange(this.value)" class="w-full px-2.5 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:outline-none focus:border-[var(--accent)]">
-          <option value="rainy_cabin_bedroom" selected>🛏️ Glass Cabin Bedroom (Rain on Panoramic Window)</option>
         </select>
       </div>
 

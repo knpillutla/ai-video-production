@@ -198,8 +198,8 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
    - Per-Scene Word Formula: Max words = (duration_seconds - 1.5s) * {speech_words_per_sec:.2f}. Total script ~{target_words} words.
    - Divide narration smoothly across 'scenes[].narration_text' perfectly matching each shot's 'duration_seconds'.
    - MANDATORY AUDIO-VISUAL GROUNDING (SHOW-AND-TELL RULE): Every scene's 'narration_text' MUST DIRECTLY DESCRIBE AND INTERPRET WHAT IS VISIBLE ON SCREEN in that scene's 'visual_prompt'. Strictly prohibit phantom subjects (e.g., describing rivers when viewing desert reservoirs, or narrating handheld artifacts in wide drone vistas).
-   - Continuous Camera Motion: Visual camera motion runs for the FULL duration of the scene, ensuring continuous flight while narration speaks with ZERO frozen frames.
-    - "suno_musical_tags" & "tempo_bpm": Autonomously compose bespoke genre tags matching the scene mood (e.g. Modern Luxury: chic chillout lounge/downtempo, nylon guitar, 85 BPM; Party/Upbeat: energetic tropical house/groove, 120 BPM; Relax/Sleep: 432Hz ambient pads, soundbath, 64 BPM; Documentary: grand orchestral score).
+    - Continuous Camera Motion: Visual camera motion runs for the FULL duration of the scene, ensuring continuous flight while narration speaks with ZERO frozen frames.
+    - "suno_musical_tags" & "tempo_bpm": For relaxation, Gemini MUST NOT hardcode specific instruments; pick random soothing instruments on each execution (harp, koto, bansuri, cedar flute, pan flute, cello, singing bowls, handpan, felted piano, 432Hz pads) directing Suno to pure soothing sound (50-54 BPM, long decays, zero percussion, zero vocals, -21 LUFS). For docs: grand orchestral score.
 
 {specific_rules}
 {landmarks_block}
@@ -253,7 +253,7 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
     "audio_mode": "ambient_nature",
     "spoken_narration_script": "Continuous unbroken master voiceover (~{target_words} words for {duration_seconds}s at 125 WPM), seamlessly narrating the journey without loops.",
     "singing_lyrics_spec": "",
-    "suno_musical_tags": "Autonomously compose scene-matched tags (e.g. chic modern chillout lounge / energetic tropical house / 432Hz peaceful soundbath), -21 LUFS",
+    "suno_musical_tags": "432Hz Solfeggio, pure instrumental relaxation, <randomly selected soothing instruments>, warm velvet pads, 52 BPM, zero vocals, zero drums, -21 LUFS",
     "vocal_gender": "none", "tempo_bpm": 80, "speech_cadence_wpm": 125, "target_lufs": -14.0, "ducking_db": -18.0
   }},
   "scenes": [

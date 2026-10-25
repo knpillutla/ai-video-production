@@ -327,9 +327,16 @@ function selectStudioFormat(fmtKey, preserveGenre = null) {
     }
   }
 
+  // Show/Hide Vocal Performer Container (STRICTLY for Music Video format only)
+  const vocalContainer = document.getElementById("studio-vocal-gender-container");
+  if (vocalContainer) {
+    const isMusic = (fmtKey === "music_video");
+    vocalContainer.classList.toggle("hidden", !isMusic);
+  }
+
   const archLbl = document.getElementById("studio-archetype-label");
   const archSubLbl = document.getElementById("studio-archetype-sublabel");
-  if (archLbl) archLbl.textContent = (fmtKey === "music_video") ? "6. Background & Setting:" : "6. Archetype (Setting Template):";
+  if (archLbl) archLbl.textContent = (fmtKey === "music_video") ? "5. Background & Setting:" : "5. Archetype (Setting Template):";
   if (archSubLbl) archSubLbl.textContent = (fmtKey === "music_video") ? "Environment & Location" : "Template";
 
   fetchAndPopulateExistingSeries(chSlug, fmtKey);
@@ -629,6 +636,11 @@ function onGenreChange(genreVal, preserveSubGenre = null, preserveArch = null) {
 
   if (typeof syncTravelShotUI === "function") {
     syncTravelShotUI();
+  }
+  const vocalContainer = document.getElementById("studio-vocal-gender-container");
+  if (vocalContainer) {
+    const isMusic = (activeStudioFormat === "music_video" || (genreVal && (genreVal.startsWith("music/") || genreVal.startsWith("dance/"))));
+    vocalContainer.classList.toggle("hidden", !isMusic);
   }
   if (typeof calculateLiveCostEstimate === "function") {
     calculateLiveCostEstimate();

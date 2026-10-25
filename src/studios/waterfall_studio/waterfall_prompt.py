@@ -32,8 +32,10 @@ WATERFALL DIRECTORIAL RULES & FRAMING:
    - For Alpine Cliffside Waterfalls (e.g. Lauterbrunnen / Staubbach Falls): Towering 300-meter vertical limestone cliff walls with a graceful cascading water veil plunging into a lush emerald green alpine meadow and crystal-clear glacial stream, with distant snow-capped peaks under crisp natural 5400K daylight.
    - Strictly zero humans, zero tourists, zero boats, zero railings, zero bridges, zero modern structures.
 
-2. ACOUSTIC SOUNDSCAPE & NARRATION DIRECTIVE:
-   - Audio tags: "432Hz ambient soundscape, peaceful cascading water foley, Celtic harp and acoustic cello, gentle alpine stream murmur, deep relaxation, -14 LUFS".
+2. ACOUSTIC SOUNDSCAPE & NARRATION DIRECTIVE (DYNAMIC SOOTHING INSTRUMENTS):
+   - Pure relaxation sound: Zero background song, zero vocals.
+   - Dynamic soothing instruments: Do NOT hardcode fixed instruments. Randomly select soothing acoustic combinations on every execution (e.g. mix Celtic harp, koto, guzheng, classical nylon guitar, bansuri flute, pan flute, warm cello, singing bowls, handpan, felted piano, 432Hz Solfeggio velvet pads).
+   - Audio tags: "432Hz ambient soundscape, pure relaxation, peaceful cascading water foley, <randomly selected soothing instruments>, gentle alpine stream murmur, deep relaxation, zero drums, zero vocals, -14 LUFS".
    - Spoken narration: Poetic, educational commentary exploring the geological hydrology, ancient glacial valleys, and tranquil majesty of the cascading waters.
 
 3. CINEMAGRAPH KINETICS (Wan 2.1 & Kling v1.6 Pro):
