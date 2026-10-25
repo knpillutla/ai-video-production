@@ -43,7 +43,7 @@ async def run_production(
     force_live: bool = False, auto_confirm: bool = False, allow_fallback: bool = False,
     local: bool = False, tier: str | None = None, media_format: str = "vocal_song", country: str | None = None,
     culture: str | None = None, costume_style: str | None = None, dance_type: str | None = None,
-    character_name: str | None = None, gender: str = "female", art_style: str | None = None,
+    character_name: str | None = None, chars: str | None = None, gender: str = "female", art_style: str | None = None,
     theme: str | None = None, idea: str | None = None, script: str | None = None,
     refine_script: bool = False, voice_gender: str | None = None, target_languages: str | None = None,
     voice_over: bool = False, narration_male: bool = False, narration_female: bool = False,
@@ -51,7 +51,7 @@ async def run_production(
     restart_id: str | None = None, profile: str = "development",
     music_style: str | None = None, similar_to: str | None = None,
     user_id: str | None = None, network: str | None = None,
-    num_images: int = 1, use_loras: bool = False,
+    num_images: int | str | None = None, auto_images: bool = True, use_loras: bool = False,
     preview_only: bool = False, full_confirmed: bool = False,
     solo_male: bool = False, solo_female: bool = False, duet: bool = False,
     mass_song: bool = False,
@@ -62,9 +62,70 @@ async def run_production(
     no_movements: bool = False,
     force_movements: bool = False,
     vfx: bool = False,
+    dance: str | bool | None = None,
+    use_kling: bool = False,
+    virtual_artist: bool = False,
+    artist_mode: str = "scenic",
+    instrument: str | None = None,
+    orchestra: bool = False,
+    scenic: str | None = None,
+    landmark: str | None = None,
+    continuous_motion: bool = False,
+    model: str | None = None,
+    lora_model: str | None = None,
+    dataset_model: str | None = None,
+    **kwargs,
 ):
-    """Execute the Phase 2 & 3 end-to-end video production and compliance pipeline."""
+    if (language or "en").lower().strip() == "en" and not country:
+        country = "USA"
+        if not culture:
+            culture = "western"
     duration = parse_duration(duration)
+    raw_model = str(model or "").lower().strip()
+    if not raw_model:
+        eff_model = "flux"
+    elif any(k in raw_model for k in ("ultra", "flux-ultra", "flux ultra", "flux_ultra", "flux-pro-ultra")):
+        eff_model = "flux-ultra"
+    elif "z" in raw_model:
+        eff_model = "z-image"
+    else:
+        eff_model = "flux"
+
+    raw_lora = str(lora_model or "").lower().strip()
+    if not raw_lora:
+        eff_lora = "z-image" if eff_model == "z-image" else "flux"
+    elif "z" in raw_lora:
+        eff_lora = "z-image"
+    else:
+        eff_lora = "flux"
+
+    raw_dataset = str(dataset_model or "").lower().strip()
+    if not raw_dataset:
+        eff_dataset = "z-image"
+    elif "flux" in raw_dataset:
+        eff_dataset = "flux"
+    else:
+        eff_dataset = "z-image"
+    model, lora_model, dataset_model = eff_model, eff_lora, eff_dataset
+    eff_auto = auto_images or (num_images is None) or str(num_images).lower() in ("auto", "none", "0", "")
+    if eff_auto:
+        num_images = "auto"
+    else:
+        try:
+            num_images = int(num_images)
+        except (ValueError, TypeError):
+            num_images = "auto"
+    eff_chars = chars or character_name
+    if not eff_chars:
+        for text_source in (prompt, theme, idea):
+            if text_source and ("char:" in text_source.lower() or "chars:" in text_source.lower() or "character:" in text_source.lower()):
+                m_c = re.search(r"\b(?:chars?|characters?):\s*([a-zA-Z0-9_]+(?:\s*,\s*[a-zA-Z0-9_]+)*)", text_source, re.IGNORECASE)
+                if m_c:
+                    eff_chars = m_c.group(1).strip()
+                    chars = eff_chars
+                    break
+    if eff_chars and not character_name:
+        character_name = eff_chars.split(",")[0].strip()
     if local:
         profile = "local"
     artifact_profile = get_artifact_profile(profile)
@@ -97,6 +158,37 @@ async def run_production(
             if country: user.home_country = country
             if culture: user.cultural_heritage = culture
     repo.save_user(user)
+
+    # Validate character LoRA existence & enforce --loras training requirement
+    if not restart_id and eff_chars:
+        char_list = [c.strip() for c in eff_chars.split(",") if c.strip()]
+        from src.services.core_lora_service import core_lora_service
+        net_slug = network or "default_network"
+        u_slug = str(getattr(user, "id", user_id or "knpillutla@gmail.com"))
+        existing_loras = core_lora_service.resolve_character_loras(user_id=u_slug, network=net_slug)
+        matched_chars = []
+        missing_chars = []
+        for cn in char_list:
+            if any(cn.lower() in str(l.get("character_name", "")).lower() or cn.lower() in str(l.get("trigger_word", "")).lower() for l in existing_loras):
+                matched_chars.append(cn)
+            else:
+                missing_chars.append(cn)
+
+        if matched_chars and not missing_chars:
+            use_loras = True
+            logger.info(f"existing_character_loras_auto_enabled: chars={matched_chars}")
+        elif missing_chars:
+            if not use_loras:
+                avail_names = sorted(list(set(l.get("character_name") for l in existing_loras if l.get("character_name"))))
+                avail_display = ", ".join(avail_names) if avail_names else "None"
+                print("\n" + "=" * 74)
+                print(f"[!] ERROR: Character '{', '.join(missing_chars)}' has no existing trained LoRA in network '{net_slug}'.")
+                print(f"    Available trained character LoRAs in '{net_slug}': [{avail_display}]")
+                print(f"    To automatically train a new LoRA for '{', '.join(missing_chars)}', please pass '--loras' on the CLI.")
+                print("=" * 74 + "\n")
+                return None
+            else:
+                logger.info(f"character_lora_missing_will_train: chars={missing_chars} (flag --loras present)")
 
     # ---------------------------------------------------------------------------
     # Restart/Resume Logic: If --id passed, reload existing episode & skip metadata steps
@@ -221,16 +313,34 @@ async def run_production(
                     similar_to = similar_to or stored_inputs.get("similar_to")
                     language = stored_inputs.get("language", language)
                     character_name = character_name or stored_inputs.get("character_name")
+                    chars = chars or stored_inputs.get("chars") or stored_inputs.get("character_name")
+                    if not chars:
+                        for text_source in (stored_inputs.get("prompt"), stored_inputs.get("theme"), stored_inputs.get("idea")):
+                            if text_source and ("char:" in text_source.lower() or "chars:" in text_source.lower() or "character:" in text_source.lower()):
+                                m_c = re.search(r"\b(?:chars?|characters?):\s*([a-zA-Z0-9_]+(?:\s*,\s*[a-zA-Z0-9_]+)*)", str(text_source), re.IGNORECASE)
+                                if m_c:
+                                    chars = m_c.group(1).strip()
+                                    break
+                    eff_chars = chars or character_name
+                    if eff_chars and not character_name:
+                        character_name = eff_chars.split(",")[0].strip()
                     country = country or stored_inputs.get("country")
                     culture = culture or stored_inputs.get("culture")
                     costume_style = costume_style or stored_inputs.get("costume_style")
                     dance_type = dance_type or stored_inputs.get("dance_type")
                     art_style = art_style or stored_inputs.get("art_style")
                     active_sub = stored_inputs.get("subtitle_language", subtitle_language or "en")
-                    if num_images == 1 and "num_images" in stored_inputs:
-                        num_images = int(stored_inputs["num_images"])
+                    if num_images == "auto" and "num_images" in stored_inputs:
+                        num_images = stored_inputs["num_images"]
                     if not use_loras and "use_loras" in stored_inputs:
                         use_loras = bool(stored_inputs["use_loras"])
+                    if not use_loras and eff_chars:
+                        from src.services.core_lora_service import core_lora_service
+                        net_slug = network or stored_inputs.get("network") or (show.slug if show else "default_network")
+                        u_slug = str(getattr(user, "id", "knpillutla@gmail.com"))
+                        c_loras = core_lora_service.resolve_character_loras(user_id=u_slug, network=net_slug)
+                        if any(any(cn.strip().lower() in l.get("character_name", "").lower() for cn in eff_chars.split(",")) for l in c_loras):
+                            use_loras = True
                     if not (solo_male or solo_female or duet):
                         duet = stored_inputs.get("duet", False) or (stored_inputs.get("gender") == "duet")
                         solo_male = stored_inputs.get("solo_male", False) or (stored_inputs.get("gender") == "male")
@@ -240,7 +350,29 @@ async def run_production(
                     is_voice_over = stored_inputs.get("enable_voice_over", False)
                     enable_bgm = stored_inputs.get("enable_bgm", True)
                     enable_lipsync = stored_inputs.get("enable_lipsync", True)
+                    if not dance and "dance" in stored_inputs:
+                        dance = stored_inputs["dance"]
+                    if not use_kling and "use_kling" in stored_inputs:
+                        use_kling = stored_inputs["use_kling"]
+                    if not virtual_artist and "virtual_artist" in stored_inputs:
+                        virtual_artist = bool(stored_inputs["virtual_artist"])
+                    if not artist_mode and "artist_mode" in stored_inputs:
+                        artist_mode = stored_inputs["artist_mode"]
+                    if not instrument and "instrument" in stored_inputs:
+                        instrument = stored_inputs["instrument"]
+                    if not orchestra and "orchestra" in stored_inputs:
+                        orchestra = bool(stored_inputs["orchestra"])
+                    if not scenic and "scenic" in stored_inputs:
+                        scenic = stored_inputs["scenic"]
+                    if not landmark and "landmark" in stored_inputs:
+                        landmark = stored_inputs["landmark"]
+                    if not continuous_motion and "continuous_motion" in stored_inputs:
+                        continuous_motion = bool(stored_inputs["continuous_motion"])
+                    if not lora_model and "lora_model" in stored_inputs:
+                        lora_model = stored_inputs["lora_model"]
                 except Exception: pass
+            if use_kling:
+                dance = dance or True
             
             # Preserve existing master renders on resume (Rule 3 Tier 1 Disk Check)
             renders_dir = ep_ws / "master_renders"
@@ -278,6 +410,7 @@ async def run_production(
                     target_languages=None, voice_over=voice_over, narration_male=narration_male,
                     narration_female=narration_female, bgm=bgm, tts=tts,
                     youtube_reference_link=youtube_reference_link, prompt=prompt, profile=profile,
+                    dance=dance, use_kling=use_kling,
                 )
                 results.append(res)
             return results
@@ -476,6 +609,12 @@ async def run_production(
         retro_desc = "golden retro classics, live acoustic orchestra, harmonium, acoustic sitar, tabla, analog tape warmth"
         if not music_style or "retro" not in music_style.lower(): music_style = f"{retro_desc}, {music_style}" if music_style else retro_desc
 
+    if virtual_artist or any(k in str(x).lower() for x in (genre, music_style, media_format, theme, idea) for k in ("virtual_artist", "virtual_singer", "lara_aredo")):
+        virtual_artist = True
+        media_format = "virtual_artist"
+        if genre in ("vocal", "vocal_song", "song"): genre = "music/virtual_artist"
+        enable_lipsync = True
+
     is_voice_over = False
     enable_lipsync = False
     enable_bgm = bool(bgm)
@@ -489,7 +628,7 @@ async def run_production(
         if not (solo_male or solo_female or duet):
             effective_voice_gender = voice_gender or ("male" if resolved_format in (MediaFormat.WALKING_TOUR, MediaFormat.MOVIE_CINEMATIC, MediaFormat.EPIC_CINEMATIC) and gender == "female" else (gender or "female"))
 
-    if resolved_format in (MediaFormat.DANCE_VIDEO, MediaFormat.MUSIC_VIDEO):
+    if resolved_format in (MediaFormat.DANCE_VIDEO, MediaFormat.MUSIC_VIDEO, MediaFormat.VOCAL_SONG) or virtual_artist:
         enable_bgm, enable_lipsync, is_voice_over = True, True, False
     elif resolved_format in (MediaFormat.SCENIC_RELAXATION, MediaFormat.WALKING_TOUR, MediaFormat.SCENIC_DRIVE, MediaFormat.AMBIENT_LOUNGE, MediaFormat.NATURE_SANCTUARY, MediaFormat.TRAVEL_GUIDE, MediaFormat.TOURIST_GUIDE):
         enable_bgm = True
@@ -527,7 +666,7 @@ async def run_production(
         "title": ep_title, "duration_seconds": duration, "format": fmt_str, "genre": genre,
         "theme": eff_theme, "idea": eff_idea, "prompt": prompt, "script": script_text, "youtube_reference_url": youtube_reference_link,
         "tier": tier, "profile": profile, "language": language, "subtitle_language": active_sub,
-        "gender": effective_voice_gender, "voice_gender": voice_gender, "character_name": character_name,
+        "gender": effective_voice_gender, "voice_gender": voice_gender, "character_name": character_name, "chars": eff_chars,
         "solo_male": solo_male, "solo_female": solo_female, "duet": duet,
         "mass_song": mass_song, "jugalbandi": jugalbandi,
         "music_style": music_style, "style": music_style, "similar_to": similar_to,
@@ -536,6 +675,10 @@ async def run_production(
         "enable_voice_over": is_voice_over, "enable_bgm": enable_bgm, "enable_lipsync": enable_lipsync,
         "reference_attributes": ref_attrs.model_dump(mode="json") if ref_attrs else None,
         "target_languages": episode.options.target_languages, "num_images": num_images, "use_loras": use_loras,
+        "dance": dance, "use_kling": use_kling,
+        "virtual_artist": virtual_artist, "artist_mode": artist_mode, "instrument": instrument,
+        "orchestra": orchestra, "scenic": scenic, "landmark": landmark, "continuous_motion": continuous_motion,
+        "model": model, "lora_model": lora_model, "dataset_model": dataset_model,
         "network": eff_net, "created_at": time.time(),
     }
     with open(ep_ws / "user_inputs.json", "w", encoding="utf-8") as f: json.dump(user_inputs, f, indent=2, ensure_ascii=False)
@@ -574,8 +717,17 @@ async def run_production(
             "duet": user_inputs["duet"], "solo_male": user_inputs["solo_male"],
             "solo_female": user_inputs["solo_female"], "mass_song": user_inputs.get("mass_song", False),
             "jugalbandi": user_inputs.get("jugalbandi", False),
-            "art_style": user_inputs["art_style"],
-            "culture_ctx": culture_context, "character_name": user_inputs["character_name"],
+            "art_style": user_inputs["art_style"], "costume_style": user_inputs.get("costume_style"),
+            "culture_ctx": culture_context, "character_name": user_inputs["character_name"], "chars": user_inputs.get("chars"),
+            "dance": user_inputs.get("dance"), "use_kling": user_inputs.get("use_kling", False),
+            "virtual_artist": user_inputs.get("virtual_artist", False),
+            "artist_mode": user_inputs.get("artist_mode", "scenic"),
+            "instrument": user_inputs.get("instrument"),
+            "has_orchestra": user_inputs.get("orchestra", False),
+            "scenic": user_inputs.get("scenic"), "landmark": user_inputs.get("landmark"),
+            "model": user_inputs.get("model", "flux"),
+            "lora_model": user_inputs.get("lora_model", "flux"),
+            "dataset_model": user_inputs.get("dataset_model", "z-image"),
             "prompt": user_inputs["prompt"], "user_id": user_inputs["user_id"],
             "network": user_inputs["network"], "episode_number": user_inputs["episode_number"],
         }
@@ -638,6 +790,16 @@ async def run_production(
                 thumb_dir = ep_ws / "thumbnails"
                 storyboard_path = ep_ws / "storyboard.json"
 
+    # Interactive Script & Storyboard Review Gate
+    from src.scripts.script_review_gate import prompt_script_review_gate
+    proceed_script, storyboard_data = prompt_script_review_gate(
+        storyboard_data=storyboard_data,
+        storyboard_path=storyboard_path,
+        auto_confirm=auto_confirm,
+    )
+    if not proceed_script:
+        return None
+
     start_user_balance = float(user.api_credit_balance_usd)
     episode.cost_record = calculate_preflight_estimate(episode)
     episode.estimated_cost_usd = episode.cost_record.predicted_total_usd; repo.save_episode(episode)
@@ -679,7 +841,7 @@ async def run_production(
     final_video = await pipeline_coordinator.produce_episode_master(
         user_id=user.id, episode_id=episode.id, dry_run=effective_dry_run, language=language,
         subtitle_language=active_sub, force_live=force_live, strict=not is_local_mode, tier=selected_tier,
-        character_name=character_name, culture=culture, costume_style=costume_style, dance_type=dance_type,
+        character_name=character_name, chars=eff_chars, culture=culture, costume_style=costume_style, dance_type=dance_type,
         gender=effective_voice_gender, art_style=art_style, custom_script=script_text, idea=idea, theme=theme,
         refine_script=refine_script, enable_voice_over=is_voice_over, enable_bgm=enable_bgm, enable_lipsync=enable_lipsync,
         auto_confirm=auto_confirm, profile=profile, music_style=music_style, similar_to=similar_to, country=country,
@@ -687,7 +849,10 @@ async def run_production(
         preview_only=preview_only, full_confirmed=full_confirmed,
         no_movements=no_movements, mass_song=mass_song, force_movements=force_movements,
         carnatic_song=carnatic_song, retro_song=retro_song, jugalbandi=jugalbandi, ep_dir=ep_ws,
-        vfx=vfx, enable_vfx=vfx,
+        vfx=vfx, enable_vfx=vfx, dance=dance, use_kling=use_kling,
+        virtual_artist=virtual_artist, artist_mode=artist_mode, instrument=instrument,
+        has_orchestra=orchestra, scenic=scenic, landmark=landmark, continuous_motion=continuous_motion,
+        model=model, lora_model=lora_model, dataset_model=dataset_model,
     )
     if not final_video:
         print("[!] Production stopped at Image Quality Gate. No video rendered.\n")
@@ -720,6 +885,16 @@ async def run_production(
 
 
 def main():
+    import sys
+    # Normalize colon-style CLI flags e.g. --chars:Vennela,Karthik -> --chars Vennela,Karthik
+    normalized_argv = []
+    for arg in sys.argv[1:]:
+        if arg.startswith(("--chars:", "--characters:", "--char:")):
+            _, val = arg.split(":", 1)
+            normalized_argv.extend(["--chars", val])
+        else:
+            normalized_argv.append(arg)
+
     p = argparse.ArgumentParser(description="Produce a 4K Music Video with Suno vocals, multi-scene keyframes, and kinetic native lyrics.")
     for fl, d, t, h, dst in [
         ("--title", "Soulful Romantic Melody", str, "Title", None), ("--episode", None, int, "Episode #", "episode_number"),
@@ -728,7 +903,9 @@ def main():
         ("--script", None, str, "Script", None), ("--duration", "10s", parse_duration, "Duration (e.g. 10s, 30m, 1h, 20)", None), ("--language", "en", str, "Lang", None),
         ("--subtitle-language", None, str, "Sub", None), ("--tier", None, str, "Tier", None), ("--country", None, str, "Country", None),
         ("--culture", None, str, "Culture", None), ("--costume", None, str, "Costume", "costume_style"),
-        ("--dance", None, str, "Dance", "dance_type"), ("--character", None, str, "Char", "character_name"),
+        ("--dance-type", None, str, "Dance style or genre", "dance_type"), ("--character", None, str, "Char", "character_name"),
+        ("--chars", None, str, "Character(s) e.g. --chars Vennela,Karthik", "chars"),
+        ("--characters", None, str, "Characters alias", "chars"),
         ("--gender", "female", str, "Gender", None), ("--type", "music_video", str, "Format (default: music_video)", "media_format"),
         ("--style", None, str, "Musical style (e.g. soft, energetic, poetic, festive, romantic)", "music_style"),
         ("--similar-to", None, str, "Reference famous song for mood/tenderness/pattern", "similar_to"),
@@ -741,10 +918,21 @@ def main():
         ("--languages", None, str, "Target Languages (e.g. en,te,hi)", "target_languages"),
         ("--target-languages", None, str, "Target Languages alias (e.g. en,te,hi)", "target_languages"),
         ("--prompt", None, str, "Prompt directive", None),
-        ("--images", 1, int, "Number of images to generate and rotate across song duration (default: 1)", "num_images"),
+        ("--artist-mode", "scenic", str, "Virtual artist performance mode: scenic, concert, or acoustic", "artist_mode"),
+        ("--instrument", None, str, "Virtual artist instrument: acoustic_guitar, piano, violin, mic, etc.", "instrument"),
+        ("--scenic", None, str, "Scenic backdrop setting: meadows, mountains, valleys, desert, coastal, etc.", "scenic"),
+        ("--landmark", None, str, "Iconic world or city landmark: eiffel_tower, taj_mahal, swiss_alps, etc.", "landmark"),
+        ("--dataset-model", None, str, "Model for character training dataset: z-image (default, fast/cost-effective) or flux", "dataset_model"),
+        ("--lora-model", None, str, "Base model architecture for character LoRA training/inference: flux (default) or z-image", "lora_model"),
+        ("--model", None, str, "Visual scene generation model: flux (default, FLUX.1 [dev]), z-image, or flux-ultra", "model"),
+        ("--visual-model", None, str, "Visual generation model alias", "model"),
+        ("--image-model", None, str, "Visual generation model alias", "model"),
     ]:
         p.add_argument(fl, **{"type": t, "default": d, "help": h, **({"dest": dst} if dst else {})})
+    p.add_argument("--images", default=None, help="Manual override for number of scene images (default: autonomous duration-based pacing)", dest="num_images")
+    p.add_argument("--dance", nargs="?", const="true", default=None, help="Enable dynamic Gemini video motion for peak dance hook scenes (Wan 2.1 default, Kling with --kling) or specify dance style", dest="dance")
     for fls, h, dst in [
+        (["--auto-images"], "Autonomously derive optimal image count based on song duration and tempo (default: True)", "auto_images"),
         (["--dry-run"], "Dry run", "dry_run"),
         (["-y", "--yes"], "Auto confirm", "auto_confirm"), (["--allow-fallback"], "Fallback", "allow_fallback"),
         (["--voice-over"], "Voiceover", "voice_over"),
@@ -765,13 +953,17 @@ def main():
         (["--retro", "--golden-classics", "--retro-classics"], "Golden retro classics (60s, 70s, 80s, 90s vintage)", "retro_song"),
         (["--jugalbandi", "--sawaal-jawaab"], "Vocal Jugalbandi / Sawaal-Jawaab face-off duet", "jugalbandi"),
         (["--vfx", "--enable-vfx"], "Enable procedural atmospheric VFX overlay (petals, sparks, bokeh; default: off)", "vfx"),
+        (["--kling", "--use-kling"], "Use Kling 1.6 Pro for dance video motion synthesis instead of default Wan 2.1", "use_kling"),
+        (["--virtual-artist", "--artist"], "Produce a photorealistic Virtual Artist music video (Lara Aredo style)", "virtual_artist"),
+        (["--orchestra", "--live-orchestra", "--backing-band"], "Enable live backing orchestra/band and cutaways in concert mode", "orchestra"),
+        (["--continuous-motion", "--performance-motion"], "Enable continuous natural singer performance motion for all scenes", "continuous_motion"),
     ]:
         p.add_argument(*fls, action="store_true", default=False, help=h, dest=dst)
     profile_group = p.add_mutually_exclusive_group()
     profile_group.add_argument("--local", dest="profile", action="store_const", const="local", help="Offline deterministic production")
     profile_group.add_argument("--dev", dest="profile", action="store_const", const="development", help="Live providers with development fallbacks")
     profile_group.add_argument("--live", dest="profile", action="store_const", const="production", help="Live production providers, strict fallback policy")
-    args = vars(p.parse_args())
+    args = vars(p.parse_args(normalized_argv))
     if args.get("name_alias"):
         args["title"] = args.pop("name_alias")
     else:

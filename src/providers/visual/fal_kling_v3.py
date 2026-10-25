@@ -18,6 +18,7 @@ import httpx
 from src.core.telemetry import logger
 from src.providers.base import is_mock_mode
 from src.providers.fal_storage import _fal_api_key, upload_to_fal
+from src.services.video_4k_encoder import ensure_video_4k
 
 _KLING_V3_4K_ENDPOINT = "https://queue.fal.run/fal-ai/kling-video/v3/4k/image-to-video"
 _POLL_INTERVAL_S = 4.0
@@ -113,6 +114,7 @@ async def _download_video_stream(client: httpx.AsyncClient, vid_url: str, out: P
             v_bytes = (await client.get(vid_url, timeout=180.0)).content
             if len(v_bytes) > 5000:
                 out.write_bytes(v_bytes)
+                ensure_video_4k(out)
                 return True
         except Exception as dl_err:
             logger.warning(f"fal_kling_v3_dl_retry: attempt {attempt+1}/{max_attempts} failed ({dl_err})")
@@ -143,15 +145,16 @@ class FalKlingV3Adapter:
         out.parent.mkdir(parents=True, exist_ok=True)
 
         if out.exists() and out.stat().st_size > 500_000:
-            logger.info(f"fal_kling_v3_cache_hit: {out.name} ({out.stat().st_size} B)")
+            ensure_video_4k(out)
+            logger.info(f"fal_kling_v3_cache_hit [model=fal-ai/kling-video/v3/4k/image-to-video]: {out.name} ({out.stat().st_size} B, 4K)")
             return f"file://{out}", out
 
         saved_url = _find_saved_video_url(out, req_file)
         if saved_url:
-            logger.info(f"fal_kling_v3_reusing_remote_url: {out.name} downloading from {saved_url} ($0.00 spend)")
+            logger.info(f"fal_kling_v3_reusing_remote_url [model=fal-ai/kling-video/v3/4k/image-to-video]: {out.name} downloading from {saved_url} ($0.00 spend)")
             async with httpx.AsyncClient(timeout=httpx.Timeout(180.0, connect=30.0, read=180.0)) as dl_client:
                 if await _download_video_stream(dl_client, saved_url, out):
-                    logger.info(f"fal_kling_v3_redownload_ok: {out.name} ({out.stat().st_size} B) ($0.00 spend)")
+                    logger.info(f"fal_kling_v3_redownload_ok [model=fal-ai/kling-video/v3/4k/image-to-video]: {out.name} ({out.stat().st_size} B) ($0.00 spend)")
                     return saved_url, out
 
         if is_mock_mode() and not force_live:
@@ -193,11 +196,12 @@ class FalKlingV3Adapter:
                 s_u, r_u = job_data.get("status_url"), job_data.get("response_url")
                 if s_u and r_u:
                     status_url, response_url = s_u, r_u
-                    logger.info(f"fal_kling_v3_resuming_job: from {cand.name} response_url={response_url}")
+                    logger.info(f"fal_kling_v3_resuming_job [model=fal-ai/kling-video/v3/4k/image-to-video]: from {cand.name} response_url={response_url}")
                     break
             except Exception:
                 pass
 
+        logger.info(f"synthesizing_motion [model=fal-ai/kling-video/v3/4k/image-to-video]: {out.name} prompt={motion_prompt[:70]}...")
         async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0, read=300.0)) as client:
             if not status_url or not response_url:
                 sub = await client.post(self.endpoint, headers=headers, json=payload)
@@ -220,7 +224,7 @@ class FalKlingV3Adapter:
                         _persist_video_url(out, vid_url, response_url, status_url, req_file)
                         if await _download_video_stream(client, vid_url, out, max_attempts=5):
                             job_sidecar.unlink(missing_ok=True)
-                            logger.info(f"fal_kling_v3_ok: {out.name} ({out.stat().st_size} B)")
+                            logger.info(f"fal_kling_v3_ok [model=fal-ai/kling-video/v3/4k/image-to-video]: {out.name} ({out.stat().st_size} B)")
                             return vid_url, out
                         raise RuntimeError(f"Failed to download Kling v3 video from {vid_url}. URL saved to sidecar.")
 
@@ -247,6 +251,7 @@ class FalKlingV3Adapter:
         exe = imageio_ffmpeg.get_ffmpeg_exe()
         cmd = [exe, "-y", "-f", "lavfi", "-i", f"color=c=0x0f172a:s=3840x2160:d={duration}:r=24", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", str(out)]
         subprocess.run(cmd, check=True, capture_output=True)
+        ensure_video_4k(out)
         return f"file://{out}", out
 
 

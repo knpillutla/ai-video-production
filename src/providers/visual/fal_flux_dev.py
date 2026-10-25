@@ -17,6 +17,7 @@ from src.core.config import settings
 from src.core.telemetry import logger
 from src.providers.base import is_mock_mode
 from src.providers.fal_storage import upload_to_fal, _fal_api_key
+from src.services.image_4k_encoder import ensure_image_4k
 
 
 _FAL_FLUX_ENDPOINT = "https://queue.fal.run/fal-ai/flux/dev"
@@ -44,6 +45,8 @@ class FalFluxDevAdapter:
         force_live: bool = False,
         loras: list[dict[str, Any]] | None = None,
         seed: int | None = None,
+        upscale_4k: bool = True,
+        **kwargs: Any,
     ) -> tuple[str, Path]:
         """Generate and save a photorealistic keyframe.
 
@@ -55,16 +58,18 @@ class FalFluxDevAdapter:
 
         # Artifact caching guard (Directive 3)
         if out.exists() and out.stat().st_size > 50_000:
-            logger.info(f"fal_flux_cache_hit: {out.name} ({out.stat().st_size} B)")
+            if upscale_4k:
+                await ensure_image_4k(out, aspect_ratio=aspect_ratio, force_live=force_live, api_key=self.api_key)
+            logger.info(f"fal_flux_cache_hit [model=fal-ai/flux/dev]: {out.name} ({out.stat().st_size} B)")
             fal_url = await upload_to_fal(out, self.api_key)
             return fal_url, out
 
         if is_mock_mode() and not force_live:
-            return await self._fallback_local(prompt, out, aspect_ratio, loras, seed)
+            return await self._fallback_local(prompt, out, aspect_ratio, loras, seed, upscale_4k=upscale_4k)
 
         if not self.api_key:
-            logger.warning("fal_flux: no FAL_KEY — using local placeholder")
-            return await self._fallback_local(prompt, out, aspect_ratio, loras, seed)
+            logger.warning("fal_flux [model=fal-ai/flux/dev]: no FAL_KEY — using local placeholder")
+            return await self._fallback_local(prompt, out, aspect_ratio, loras, seed, upscale_4k=upscale_4k)
 
         headers = {"Authorization": f"Key {self.api_key}", "Content-Type": "application/json"}
         image_size = {"width": 1920, "height": 1080} if aspect_ratio == "16:9" else {"width": 1080, "height": 1920}
@@ -86,10 +91,11 @@ class FalFluxDevAdapter:
                 job_data = json.loads(job_sidecar.read_text(encoding="utf-8"))
                 status_url = job_data.get("status_url")
                 response_url = job_data.get("response_url")
-                logger.info(f"fal_flux_dev_job_resume: found existing queue job for {out.name}, resuming polling...")
+                logger.info(f"fal_flux_dev_job_resume [model=fal-ai/flux/dev]: found existing queue job for {out.name}, resuming polling...")
             except Exception:
                 status_url, response_url = None, None
 
+        logger.info(f"generating_image [model=fal-ai/flux/dev]: {out.name} prompt={prompt[:70]}...")
         async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=15.0)) as client:
             try:
                 if not status_url or not response_url:
@@ -109,8 +115,10 @@ class FalFluxDevAdapter:
                         img_url: str = res["images"][0]["url"]
                         img_bytes = (await client.get(img_url, timeout=60.0)).content
                         out.write_bytes(img_bytes)
+                        if upscale_4k:
+                            await ensure_image_4k(out, aspect_ratio=aspect_ratio, force_live=force_live, api_key=self.api_key)
                         job_sidecar.unlink(missing_ok=True)
-                        logger.info(f"fal_flux_dev_ok: {out.name} ({out.stat().st_size} B)")
+                        logger.info(f"fal_flux_dev_ok [model=fal-ai/flux/dev]: {out.name} ({out.stat().st_size} B)")
                         return img_url, out
                     if s.get("status") in ("FAILED", "CANCELLED"):
                         job_sidecar.unlink(missing_ok=True)
@@ -133,6 +141,7 @@ class FalFluxDevAdapter:
         aspect_ratio: str,
         loras: list[dict[str, Any]] | None,
         seed: int | None,
+        upscale_4k: bool = True,
     ) -> tuple[str, Path]:
         """Fallback to a deterministic local placeholder without switching models."""
         from PIL import Image, ImageDraw
@@ -141,8 +150,9 @@ class FalFluxDevAdapter:
         draw = ImageDraw.Draw(image)
         draw.text((60, target_size[1] // 2 - 20), f"[FLUX Dev unavailable] {prompt[:70]}...", fill=(240, 240, 250))
         image.save(out, format="JPEG", quality=90)
-        result_path = out
-        return f"file://{result_path}", result_path
+        if upscale_4k:
+            await ensure_image_4k(out, aspect_ratio=aspect_ratio, force_live=False, api_key=self.api_key)
+        return f"file://{out}", out
 
 
 fal_flux_dev_adapter = FalFluxDevAdapter()

@@ -17,6 +17,7 @@ from src.core.config import settings
 from src.core.telemetry import logger
 from src.providers.base import is_mock_mode
 from src.providers.fal_storage import upload_to_fal, _fal_api_key
+from src.services.image_4k_encoder import ensure_image_4k
 
 _TRAIN_ENDPOINT = "https://queue.fal.run/fal-ai/flux-lora-portrait-trainer"
 _INFER_ENDPOINT = "https://queue.fal.run/fal-ai/flux-lora"
@@ -115,16 +116,20 @@ class FalFluxLoraAdapter:
         prompt: str,
         lora_url: str,
         output_path: Path | str,
-        lora_scale: float = 1.0,
+        lora_scale: float = 0.82,
         aspect_ratio: str = "16:9",
         seed: int | None = None,
+        upscale_4k: bool = True,
+        **kwargs: Any,
     ) -> tuple[str, Path]:
         """Generate a consistent character scene using FLUX with the trained LoRA."""
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 
         if out.exists() and out.stat().st_size > 50_000:
-            logger.info(f"flux_lora_cache_hit: {out.name}")
+            if upscale_4k:
+                await ensure_image_4k(out, aspect_ratio=aspect_ratio, api_key=self.api_key)
+            logger.info(f"flux_lora_cache_hit [model=fal-ai/flux-lora]: {out.name}")
             fal_url = await upload_to_fal(out, self.api_key)
             return fal_url, out
 
@@ -134,6 +139,8 @@ class FalFluxLoraAdapter:
             draw = ImageDraw.Draw(img)
             draw.text((100, 500), f"[LoRA Scene: {prompt[:70]}]", fill=(255, 255, 255))
             img.save(out, format="JPEG", quality=90)
+            if upscale_4k:
+                await ensure_image_4k(out, aspect_ratio=aspect_ratio, force_live=False, api_key=self.api_key)
             return f"file://{out}", out
 
         job_sidecar = out.with_suffix(out.suffix + ".fal_job.json")
@@ -143,7 +150,7 @@ class FalFluxLoraAdapter:
                 jdata = json.loads(job_sidecar.read_text(encoding="utf-8"))
                 status_url, response_url = jdata.get("status_url"), jdata.get("response_url")
                 if status_url and response_url:
-                    logger.info(f"flux_lora_resume: found in-flight scene job for {out.name}, resuming polling...")
+                    logger.info(f"flux_lora_resume [model=fal-ai/flux-lora]: found in-flight scene job for {out.name}, resuming polling...")
             except Exception:
                 status_url, response_url = None, None
 
@@ -159,7 +166,10 @@ class FalFluxLoraAdapter:
         }
         if seed is not None:
             payload["seed"] = seed
+        if kwargs.get("negative_prompt"):
+            payload["negative_prompt"] = str(kwargs["negative_prompt"]).strip()
 
+        logger.info(f"generating_image [model=fal-ai/flux-lora]: {out.name} prompt={prompt[:70]}... (lora_scale={lora_scale})")
         async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=15.0)) as client:
             if not status_url or not response_url:
                 resp = await client.post(_INFER_ENDPOINT, headers=headers, json=payload)
@@ -177,9 +187,11 @@ class FalFluxLoraAdapter:
                     img_url = res["images"][0]["url"]
                     img_bytes = (await client.get(img_url, timeout=60.0)).content
                     out.write_bytes(img_bytes)
+                    if upscale_4k:
+                        await ensure_image_4k(out, aspect_ratio=aspect_ratio, api_key=self.api_key)
                     if job_sidecar.exists():
                         job_sidecar.unlink(missing_ok=True)
-                    logger.info(f"flux_lora_ok: {out.name}")
+                    logger.info(f"flux_lora_ok [model=fal-ai/flux-lora]: {out.name}")
                     return img_url, out
                 if st_resp.get("status") in ("FAILED", "CANCELLED"):
                     if job_sidecar.exists():

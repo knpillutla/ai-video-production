@@ -41,7 +41,8 @@ def save_network_lora(
         gender=lora_data.get("gender", "female"),
         lora_url=lora_data.get("lora_url") or lora_data.get("path", ""),
         trigger_word=lora_data.get("trigger_word", f"{character_key.upper()}_TRIGGER"),
-        scale=float(lora_data.get("scale", 1.0)),
+        scale=float(lora_data.get("scale", 0.82)),
+        base_model=lora_data.get("base_model", "z-image"),
         body_composition=lora_data.get("body_composition", "graceful medium-thin build with natural feminine curves"),
     )
     rec = core_lora_service.register_character_lora(

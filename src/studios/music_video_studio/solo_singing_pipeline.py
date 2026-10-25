@@ -52,7 +52,7 @@ class SoloSingingPipeline(BaseMusicVideoPipeline):
         )
         return json.loads(sb_path.read_text("utf-8"))
 
-    async def stage_2_keyframes(self, sb_data: dict[str, Any], num_shots: int = 3, force_live: bool = False) -> list[dict[str, Any]]:
+    async def stage_2_keyframes(self, sb_data: dict[str, Any], num_shots: int = 3, force_live: bool = False, use_loras: bool = False, chars: str | list[str] | None = None, **kwargs: Any) -> list[dict[str, Any]]:
         cached = sorted([p for p in self.scenes_dir.glob("scene_*.jpg") if p.stat().st_size > 1000])
         if cached and len(cached) >= num_shots:
             logger.info(f"solo_singing_keyframes_reused: {len(cached)} scenes")
@@ -63,7 +63,7 @@ class SoloSingingPipeline(BaseMusicVideoPipeline):
                 lambda: synthesize_vocal_scenes(
                     storyboard_data=sb_data, scenes_dir=self.scenes_dir, num_images=num_shots,
                     user_id=self.user_id, network=self.channel_id, force_live=force_live,
-                    episode_id=self.episode_id, use_loras=True,
+                    episode_id=self.episode_id, use_loras=use_loras, chars=chars,
                 ),
             )
         avg_t = float(sb_data.get("duration_seconds", 60.0)) / max(1, len(img_paths))

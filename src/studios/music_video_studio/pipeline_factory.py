@@ -21,6 +21,7 @@ from src.studios.music_video_studio.instrumental_pipeline import InstrumentalPip
 from src.studios.music_video_studio.mass_song_pipeline import MassSongPipeline
 from src.studios.music_video_studio.solo_singing_pipeline import SoloSingingPipeline
 from src.studios.music_video_studio.static_vocal_pipeline import StaticVocalPipeline
+from src.studios.music_video_studio.virtual_artist_pipeline import VirtualArtistPipeline
 
 
 def get_music_video_pipeline(
@@ -32,6 +33,8 @@ def get_music_video_pipeline(
 ) -> BaseMusicVideoPipeline:
     """Instantiate the specialized pipeline matching the music video genre."""
     g = (genre or "").lower().strip()
+    if "virtual_artist" in g or "artist" in g or "lara_aredo" in g:
+        return VirtualArtistPipeline(user_id=user_id, channel_id=channel_id, episode_id=episode_id, production_name=production_name)
     if "instrumental" in g:
         return InstrumentalPipeline(user_id=user_id, channel_id=channel_id, episode_id=episode_id, production_name=production_name)
     if "mass" in g:
@@ -56,4 +59,5 @@ __all__ = [
     "DanceFolkPipeline",
     "MassSongPipeline",
     "InstrumentalPipeline",
+    "VirtualArtistPipeline",
 ]

@@ -68,6 +68,7 @@ def resolve_cast_archetypes(
     slot: int,
     culture: str = "te",
     language: str = "te",
+    custom_names: str | list[str] | tuple[str, ...] | None = None,
 ) -> tuple[ArchetypeSpec, ArchetypeSpec]:
     """Return the exact (Female, Male) ArchetypeSpec dynamically created or retrieved for this language."""
     from src.services.dynamic_character_service import get_or_create_language_archetypes_sync
@@ -75,7 +76,40 @@ def resolve_cast_archetypes(
     fem_list, male_list = get_or_create_language_archetypes_sync(language=language, culture=culture)
     norm_fem_slot = slot % len(fem_list)
     norm_male_slot = slot % len(male_list)
-    return fem_list[norm_fem_slot], male_list[norm_male_slot]
+    selected_fem = fem_list[norm_fem_slot]
+    selected_male = male_list[norm_male_slot]
+
+    if custom_names:
+        if isinstance(custom_names, str):
+            names = [n.strip() for n in custom_names.replace(";", ",").split(",") if n.strip()]
+        else:
+            names = [str(n).strip() for n in custom_names if str(n).strip()]
+
+        for i, n in enumerate(names):
+            fem_match = next((f for f in fem_list if f.name.lower() == n.lower()), None)
+            if fem_match:
+                selected_fem = fem_match
+                continue
+            male_match = next((m for m in male_list if m.name.lower() == n.lower()), None)
+            if male_match:
+                selected_male = male_match
+                continue
+            # If not in catalog, assign positionally
+            from src.services.character_archetype_catalog import ArchetypeSpec
+            if i == 0:
+                selected_fem = ArchetypeSpec(
+                    name=n.strip().title(), age=selected_fem.age, face=selected_fem.face,
+                    hair=selected_fem.hair, skin=selected_fem.skin, palette=selected_fem.palette,
+                    seed_offset=selected_fem.seed_offset,
+                )
+            else:
+                selected_male = ArchetypeSpec(
+                    name=n.strip().title(), age=selected_male.age, face=selected_male.face,
+                    hair=selected_male.hair, skin=selected_male.skin, palette=selected_male.palette,
+                    seed_offset=selected_male.seed_offset,
+                )
+
+    return selected_fem, selected_male
 
 
 def build_fresh_cast_prompt_directive(

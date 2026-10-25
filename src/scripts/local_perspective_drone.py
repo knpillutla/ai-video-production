@@ -374,6 +374,9 @@ VALID_ACTIONS = {
     "--orbit-right": "orbit-right",
     "--pan-right-zoom-out": "pan-right-zoom-out",
     "--pan-left-zoom-out": "pan-left-zoom-out",
+    "--orbit-stage-to-audience": "orbit-stage-to-audience",
+    "--stage-audience-split": "stage-audience-split",
+    "--sweep-to-crowd": "sweep-to-crowd",
 }
 
 
@@ -436,6 +439,15 @@ def normalize_choreography_sequence(choreography: Union[list, dict, str, None], 
         dur = max(1.0, float(default_duration))
         if any(w in mov for w in ("stay", "hold", "fixed", "locked", "tripod", "static", "cinemagraph", "still")):
             return [("stay", dur)]
+        elif any(k in mov for k in ("orbit-stage", "orbit_stage", "stage-audience", "stage_audience", "sweep-to-crowd", "sweep_to_crowd")):
+            p1 = round(dur * 0.40, 2)
+            p2 = round(dur * 0.35, 2)
+            p3 = round(max(0.5, dur - p1 - p2), 2)
+            return [
+                ("parallel", [("dollyout", p1), ("pan-right", p1), ("orbit-left", p1)]),
+                ("parallel", [("pan-right", p2), ("tilt-up", p2)]),
+                ("parallel", [("dollyin", p3), ("level", p3)]),
+            ]
         elif "orbit-left" in mov or "orbit_left" in mov:
             return [("orbit-left", dur)]
         elif "orbit-right" in mov or "orbit_right" in mov:
@@ -465,7 +477,19 @@ def normalize_choreography_sequence(choreography: Union[list, dict, str, None], 
         if isinstance(item, tuple) and len(item) == 2:
             norm.append(item)
         elif isinstance(item, str):
-            norm.append((item.lower().replace("_", "-"), default_duration / max(1, len(choreography))))
+            mov_str = item.lower().replace("_", "-")
+            dur = default_duration / max(1, len(choreography))
+            if any(k in mov_str for k in ("orbit-stage", "stage-audience", "sweep-to-crowd")):
+                p1 = round(dur * 0.40, 2)
+                p2 = round(dur * 0.35, 2)
+                p3 = round(max(0.5, dur - p1 - p2), 2)
+                norm.extend([
+                    ("parallel", [("dollyout", p1), ("pan-right", p1), ("orbit-left", p1)]),
+                    ("parallel", [("pan-right", p2), ("tilt-up", p2)]),
+                    ("parallel", [("dollyin", p3), ("level", p3)]),
+                ])
+            else:
+                norm.append((mov_str, dur))
         elif isinstance(item, dict):
             # Supports Gemini Stage format: {"stage": 1, "duration": 4.0, "movements": ["dollyin", "pan-left"]}
             # Sequential format: {"movement": "dollyin", "duration": 6.0}
@@ -473,7 +497,16 @@ def normalize_choreography_sequence(choreography: Union[list, dict, str, None], 
             dur = float(item.get("duration") or item.get("duration_seconds") or (default_duration / max(1, len(choreography))))
             dur = max(0.5, dur)
             moves = item.get("movements") or item.get("movement") or item.get("motion") or item.get("action")
-            if isinstance(moves, list):
+            if isinstance(moves, str) and any(k in moves.lower() for k in ("orbit-stage", "orbit_stage", "stage-audience", "stage_audience", "sweep-to-crowd", "sweep_to_crowd")):
+                p1 = round(dur * 0.40, 2)
+                p2 = round(dur * 0.35, 2)
+                p3 = round(max(0.5, dur - p1 - p2), 2)
+                norm.extend([
+                    ("parallel", [("dollyout", p1), ("pan-right", p1), ("orbit-left", p1)]),
+                    ("parallel", [("pan-right", p2), ("tilt-up", p2)]),
+                    ("parallel", [("dollyin", p3), ("level", p3)]),
+                ])
+            elif isinstance(moves, list):
                 if len(moves) == 1:
                     norm.append((str(moves[0]).lower().replace("_", "-"), dur))
                 else:
@@ -483,6 +516,70 @@ def normalize_choreography_sequence(choreography: Union[list, dict, str, None], 
             elif "action" in item:
                 norm.append((str(item["action"]).lower().replace("_", "-"), dur))
     return norm if norm else [("dollyin", max(1.0, float(default_duration)))]
+
+
+_ONNX_YOLO_FACE_SESSION = None
+
+
+def _get_local_yolo_session():
+    global _ONNX_YOLO_FACE_SESSION
+    if _ONNX_YOLO_FACE_SESSION is None:
+        try:
+            import onnxruntime as ort
+            from pathlib import Path
+            model_path = Path(__file__).resolve().parents[2] / "models" / "yolov8n.onnx"
+            if model_path.is_file():
+                opts = ort.SessionOptions()
+                opts.intra_op_num_threads = 2
+                opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+                _ONNX_YOLO_FACE_SESSION = ort.InferenceSession(
+                    str(model_path), sess_options=opts, providers=["CPUExecutionProvider"]
+                )
+        except Exception:
+            _ONNX_YOLO_FACE_SESSION = False
+    return _ONNX_YOLO_FACE_SESSION if _ONNX_YOLO_FACE_SESSION is not False else None
+
+
+def detect_lead_face_center(img: np.ndarray) -> Optional[Tuple[float, float]]:
+    """Detects lead character face center (cx, cy) in pixels using local lightweight ONNX YOLOv8n."""
+    try:
+        session = _get_local_yolo_session()
+        if session is not None and img is not None:
+            h, w = img.shape[:2]
+            scale = min(640.0 / w, 640.0 / h)
+            nw, nh = int(w * scale), int(h * scale)
+            resized = cv2.resize(img, (nw, nh), interpolation=cv2.INTER_LINEAR)
+            canvas = np.zeros((640, 640, 3), dtype=np.uint8)
+            pad_x = (640 - nw) // 2
+            pad_y = (640 - nh) // 2
+            canvas[pad_y:pad_y + nh, pad_x:pad_x + nw] = resized
+            inp = (canvas[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0)[None, ...]
+            out = session.run(None, {"images": inp})[0]
+            preds = out[0].T
+            boxes, scores = preds[:, :4], preds[:, 4:]
+            class_ids, confs = np.argmax(scores, axis=1), np.max(scores, axis=1)
+            mask = (class_ids == 0) & (confs > 0.35)
+            if np.any(mask):
+                p_b, p_c = boxes[mask], confs[mask]
+                best_cand, best_score = None, -1.0
+                for (bx, by, bw, bh), conf in zip(p_b, p_c):
+                    x1 = (bx - bw / 2 - pad_x) / scale
+                    y1 = (by - bh / 2 - pad_y) / scale
+                    x2 = (bx + bw / 2 - pad_x) / scale
+                    y2 = (by + bh / 2 - pad_y) / scale
+                    area = (x2 - x1) * (y2 - y1)
+                    cx = (x1 + x2) / 2.0
+                    dist_c = abs(cx - w / 2.0) / (w / 2.0)
+                    score = area * (float(conf) ** 0.5) * (1.0 - 0.25 * dist_c)
+                    if score > best_score:
+                        best_score = score
+                        head_y = y1 + (y2 - y1) * 0.12
+                        best_cand = (float(cx), float(head_y))
+                if best_cand:
+                    return best_cand
+    except Exception:
+        pass
+    return None
 
 
 def precompute_sequence_matrices(
@@ -495,6 +592,7 @@ def precompute_sequence_matrices(
     start_zoom: str = "normal",
     start_tilt: str = "center",
     curve: str = "cosine",
+    face_target: Optional[Tuple[float, float]] = None,
 ) -> tuple:
     """Precomputes 2D perspective / homography transformation matrices along camera timeline."""
     h, w = img_shape[:2]
@@ -517,6 +615,20 @@ def precompute_sequence_matrices(
         dtype=np.float32,
     )
 
+    cw_min = base_w * (1.0 - max_depth)
+    ch_min = base_h * (1.0 - max_depth)
+    avail_pan_x_min = max(1.0, (float(w) - cw_min) / 2.0)
+    avail_tilt_y_min = max(1.0, (float(h) - ch_min) / 2.0)
+
+    if face_target is not None:
+        face_x, face_y = face_target
+        singer_target_p = max(-0.95, min(0.95, (face_x - base_cx) / avail_pan_x_min))
+        singer_target_t = max(-0.95, min(0.95, (face_y - base_cy) / avail_tilt_y_min))
+    else:
+        # Default stage lead singer center-left framing
+        singer_target_p = -0.28
+        singer_target_t = -0.68
+
     has_pan = any(
         any(k in act for k in ("pan", "drift", "orbit", "left", "right"))
         for item in sequence
@@ -530,7 +642,7 @@ def precompute_sequence_matrices(
         if not any(w in act for w in ("stay", "hold", "fixed", "locked", "tripod", "static"))
     )
 
-    cur_depth = 1.0 if start_zoom in ("in", "zoomed", "tight") else (0.35 if (has_pan or has_tilt) else 0.0)
+    cur_depth = 1.0 if start_zoom in ("in", "zoomed", "tight", "face", "closeup") else (0.35 if (has_pan or has_tilt) else 0.0)
 
     first_act = sequence[0][1][0][0] if (sequence and sequence[0][0] == "parallel" and sequence[0][1]) else (sequence[0][0] if sequence else "")
     first_act = str(first_act).lower()
@@ -539,6 +651,8 @@ def precompute_sequence_matrices(
         cur_pan = -1.0
     elif start_pan in ("right", "far-right"):
         cur_pan = 1.0
+    elif start_pan in ("face", "singer", "vocal"):
+        cur_pan = singer_target_p
     else:
         if "pan-right" in first_act or "panright" in first_act:
             cur_pan = -0.85
@@ -553,10 +667,19 @@ def precompute_sequence_matrices(
 
     if start_tilt in ("up", "top"):
         cur_tilt = -1.0
+    elif start_tilt in ("face", "singer", "vocal"):
+        cur_tilt = singer_target_t
     elif start_tilt in ("down", "bottom"):
         cur_tilt = 1.0
     else:
-        if any(k in first_act for k in ("tilt-up", "tiltup", "crane-up", "pedestal-up", "ascend")):
+        if any(k in first_act for k in ("face", "singer", "vocal", "closeup")):
+            if any(w in first_act for w in ("stay", "hold", "steady", "fixed", "tight", "eye")):
+                cur_tilt = singer_target_t
+                cur_pan = singer_target_p
+                cur_depth = 1.0
+            else:
+                cur_tilt = 0.0
+        elif any(k in first_act for k in ("tilt-up", "tiltup", "crane-up", "pedestal-up", "ascend")):
             cur_tilt = 0.85
         elif any(k in first_act for k in ("tilt-down", "tiltdown", "crane-down", "pedestal-down", "descend")):
             cur_tilt = -0.85
@@ -570,10 +693,53 @@ def precompute_sequence_matrices(
     def resolve_target(action_name, s_d, s_p, s_t, s_r):
         act = action_name.lower().replace("_", "-").replace(" ", "-")
         t_d, t_p, t_t, t_r = s_d, s_p, s_t, s_r
-        if any(w in act for w in ("stay", "hold", "static", "locked", "tripod", "fixed")):
+        if any(w in act for w in ("stay", "hold", "static", "locked", "tripod", "fixed")) and not any(k in act for k in ("face", "singer")):
             pass
+        elif act in ("steady-face", "steady-singer", "tight-face", "face-hold", "singer-hold"):
+            t_d = 1.0
+            t_t = singer_target_t
+            t_p = singer_target_p
+            t_r = 0.0
+        elif act in ("zoom-in-singer", "zoom-in-face", "vocal-close-up", "face-close-up", "tight-face", "singer-close-up", "close-up", "closeup"):
+            t_d = 1.0
+            t_t = singer_target_t
+            t_p = singer_target_p
+            t_r = 0.0
+        elif act in ("pan-to-guitarist", "guitarist", "lead-guitarist"):
+            t_d = 0.65
+            t_t = -0.20
+            t_p = 0.85
+            t_r = 0.0
+        elif act in ("pan-to-drummer", "drummer", "drums"):
+            t_d = 0.60
+            t_t = -0.45
+            t_p = 0.0
+            t_r = 0.0
+        elif act in ("stage-audience-split", "stage-audience", "orbit-stage-to-audience"):
+            t_d = 0.35
+            t_t = -0.15
+            t_p = 0.55
+            t_r = 2.0
+        elif act in ("sweep-to-crowd", "pan-to-audience", "crowd-sweep", "crowd-cheer"):
+            t_d = 0.65
+            t_t = -0.35
+            t_p = 0.90
+            t_r = 0.0
+        elif act in ("wide-stage-pullback", "pullback", "zoom-out-stage", "arena-pullback"):
+            t_d = 0.0
+            t_t = 0.0
+            t_p = 0.0
+            t_r = 0.0
+        elif act in ("steady-eye-level", "eye-level", "steady-stage"):
+            t_d = 0.35
+            t_t = -0.15
+            t_p = 0.0
+            t_r = 0.0
         elif act in ("dollyin", "dolly-in", "zoomin", "zoom-in"):
             t_d = 1.0
+            if face_target is not None:
+                t_p = singer_target_p
+                t_t = singer_target_t
         elif act in ("dollyout", "dolly-out", "zoomout", "zoom-out"):
             t_d = 0.0
         elif act in ("pan-left", "panleft"):
@@ -657,11 +823,11 @@ def precompute_sequence_matrices(
                     prog = min(1.0, f / max(1, sub_frames - 1)) if sub_frames > 1 else 1.0
                     e = calculate_easing(prog, curve)
                     act = sub_act.lower().replace("_", "-").replace(" ", "-")
-                    if any(k in act for k in ("dollyin", "zoom-in", "zoomin", "dollyout", "zoom-out", "zoomout")):
+                    if any(k in act for k in ("dollyin", "zoom-in", "zoomin", "dollyout", "zoom-out", "zoomout", "singer", "face", "close")):
                         d_val = start_d + e * (tgt_d - start_d)
-                    if any(k in act for k in ("pan", "drift", "orbit", "left", "right")):
+                    if any(k in act for k in ("pan", "drift", "orbit", "left", "right", "guitarist")):
                         p_val = start_p + e * (tgt_p - start_p)
-                    if any(k in act for k in ("tilt", "pedestal", "crane", "drift", "up", "down", "ascend", "descend")):
+                    if any(k in act for k in ("tilt", "pedestal", "crane", "drift", "up", "down", "ascend", "descend", "singer", "face", "close", "guitarist", "drummer")):
                         t_val = start_t + e * (tgt_t - start_t)
                     if any(k in act for k in ("roll", "orbit", "level")):
                         r_val = start_r + e * (tgt_r - start_r)
@@ -670,11 +836,11 @@ def precompute_sequence_matrices(
 
             for sub_act, tgt_d, tgt_p, tgt_t, tgt_r, _ in channels:
                 act = sub_act.lower().replace("_", "-").replace(" ", "-")
-                if any(k in act for k in ("dollyin", "zoom-in", "zoomin", "dollyout", "zoom-out", "zoomout")):
+                if any(k in act for k in ("dollyin", "zoom-in", "zoomin", "dollyout", "zoom-out", "zoomout", "singer", "face", "close")):
                     cur_depth = tgt_d
-                if any(k in act for k in ("pan", "drift", "orbit", "left", "right")):
+                if any(k in act for k in ("pan", "drift", "orbit", "left", "right", "guitarist")):
                     cur_pan = tgt_p
-                if any(k in act for k in ("tilt", "pedestal", "crane", "drift", "up", "down", "ascend", "descend")):
+                if any(k in act for k in ("tilt", "pedestal", "crane", "drift", "up", "down", "ascend", "descend", "singer", "face", "close", "guitarist", "drummer")):
                     cur_tilt = tgt_t
                 if any(k in act for k in ("roll", "orbit", "level")):
                     cur_roll = tgt_r
@@ -769,6 +935,8 @@ def render_perspective_drone_clip_sync(
     start_zoom: str = "normal",
     start_tilt: str = "center",
     curve: str = "cosine",
+    motion_curve: Optional[str] = None,
+    max_depth: Optional[float] = None,
     rain: bool = False,
     rain_intensity: str = "light",
     snow: bool = False,
@@ -781,6 +949,7 @@ def render_perspective_drone_clip_sync(
     smoke: bool = False,
     clouds: bool = False,
     kinetic_objects: bool = False,
+    **kwargs,
 ) -> Path:
     """Render calm, cinematic 4K perspective drone shot on CPU via subpixel homography and procedural dynamics."""
     out = Path(output_path)
@@ -788,9 +957,19 @@ def render_perspective_drone_clip_sync(
     if not force_rerun and out.is_file() and out.stat().st_size > 1000:
         return out
 
-    img = cv2.imread(str(image_path))
-    if img is None:
-        raise FileNotFoundError(f"Cannot load image for perspective drone shot: {image_path}")
+    effective_curve = motion_curve or curve or "cosine"
+
+    is_video = str(image_path).lower().endswith((".mp4", ".mov", ".mkv", ".webm"))
+    cap = None
+    if is_video:
+        cap = cv2.VideoCapture(str(image_path))
+        ret, img = cap.read()
+        if not ret or img is None:
+            raise FileNotFoundError(f"Cannot read video frames from: {image_path}")
+    else:
+        img = cv2.imread(str(image_path))
+        if img is None:
+            raise FileNotFoundError(f"Cannot load image for perspective drone shot: {image_path}")
 
     # Enforce duration bounds [2.0s, 60.0s]
     duration_seconds = max(2.0, min(60.0, float(duration_seconds)))
@@ -817,17 +996,32 @@ def render_perspective_drone_clip_sync(
     # 4-stage optical pipeline enhancement
     img_enhanced = enhance_image_ultra_clarity(img, target_w, target_h)
 
+    # Auto-derive max_depth if not specified: face close-ups need 0.72 depth for tight portrait framing
+    if max_depth is None:
+        has_face_closeup = any(
+            any(k in str(act).lower() for k in ("face", "singer", "closeup", "close-up", "vocal"))
+            for item in sequence
+            for act in ([x[0] for x in item[1]] if item[0] == "parallel" else [item[0]])
+        )
+        effective_max_depth = 0.72 if has_face_closeup else 0.50
+    else:
+        effective_max_depth = float(max_depth)
+
+    # Detect lead face center for intelligent auto-framing
+    face_center = detect_lead_face_center(img)
+
     # Matrices precomputation
     matrices, total_frames = precompute_sequence_matrices(
         img_shape=img_enhanced.shape,
         sequence=sequence,
         fps=fps,
         output_size=output_size,
-        max_depth=0.50,
+        max_depth=effective_max_depth,
         start_pan=start_pan,
         start_zoom=start_zoom,
         start_tilt=start_tilt,
-        curve=curve,
+        curve=effective_curve,
+        face_target=face_center,
     )
 
     living_env = LivingEnvironmentEngine(
@@ -880,9 +1074,24 @@ def render_perspective_drone_clip_sync(
 
     try:
         for i in range(total_frames):
-            source_plate = living_env.get_source_plate(i)
+            if is_video and cap is not None:
+                ret, v_frame = cap.read()
+                if not ret or v_frame is None:
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret, v_frame = cap.read()
+                if ret and v_frame is not None:
+                    if v_frame.shape[1] != target_w or v_frame.shape[0] != target_h:
+                        source_plate = cv2.resize(v_frame, (target_w, target_h), interpolation=cv2.INTER_LANCZOS4)
+                    else:
+                        source_plate = v_frame
+                else:
+                    source_plate = img_enhanced
+            else:
+                source_plate = living_env.get_source_plate(i)
+
             frame = cv2.warpPerspective(source_plate, matrices[i], output_size, flags=warp_flag, borderMode=cv2.BORDER_REPLICATE)
-            frame = living_env.apply(frame, i)
+            if not is_video:
+                frame = living_env.apply(frame, i)
             if rain_engine:
                 frame = rain_engine.render(frame)
             elif snow_engine:
@@ -915,6 +1124,8 @@ def render_perspective_drone_clip_sync(
             else:
                 video_writer.write(frame)
     finally:
+        if cap is not None:
+            cap.release()
         if ffmpeg_proc:
             ffmpeg_proc.stdin.close()
             ffmpeg_proc.wait()
@@ -926,6 +1137,8 @@ def render_perspective_drone_clip_sync(
             subprocess.run(cmd_h264, capture_output=True, text=True)
             temp_raw.unlink(missing_ok=True)
 
+    from src.services.video_4k_encoder import ensure_video_4k
+    ensure_video_4k(out)
     return out
 
 

@@ -51,6 +51,45 @@ storage/*
 *.png
 *.webp
 
+# Machine Learning Models, Checkpoints & Large Binary Weights
+models/
+models/*
+!models/.gitkeep
+tools/
+tools/*
+checkpoints/
+weights/
+*.onnx
+*.pth
+*.pt
+*.pth.tar
+*.safetensors
+*.bin
+*.ckpt
+*.weights
+*.pkl
+*.pickle
+*.h5
+*.tflite
+*.engine
+*.plan
+
+# Archives & Compressed Packages
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.rar
+
+# Node / JS Packages
+node_modules/
+
+# Scratch & Temporary Testing Directories
+scratch/
+tmp/
+temp/
+
 # Unit test & coverage reports
 .pytest_cache/
 .coverage

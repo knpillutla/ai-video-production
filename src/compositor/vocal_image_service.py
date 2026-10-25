@@ -175,7 +175,7 @@ async def synthesize_vocal_scenes(
             logger.info(f"generating_vocal_scene_{idx:02d} (attempt {attempt}/{max_attempts}): prompt={cur_prompt[:80]}... (seed={scene_seed})")
             if loras:
                 primary_lora = loras[0]["path"]
-                scale = float(loras[0].get("scale", 1.0))
+                scale = float(os.getenv("LORA_SCALE") or loras[0].get("scale", 0.82))
                 await flux_adapter.generate_with_lora(
                     prompt=cur_prompt, lora_url=primary_lora, output_path=scene_path,
                     lora_scale=scale, aspect_ratio="16:9", seed=scene_seed,

@@ -47,15 +47,20 @@ def build_vocal_subtitles(
             s["start"] = round(min(total_duration - 1.0, s["start"] + shift), 2)
             s["end"] = round(min(total_duration, s["end"] + shift), 2)
     elif not segments:
-        lyrics = [l.strip() for l in str(storyboard_data.get("lyrics") or "").splitlines() if l.strip() and not l.startswith("[")]
-        lines = lyrics or [storyboard_data.get("title_localized") or storyboard_data.get("title_en") or ""]
+        import re
+        raw_lyrics = str(storyboard_data.get("lyrics") or "")
+        # Remove bracketed section tags like [Hook], [Verse 1], etc.
+        cleaned_lyrics = re.sub(r"\[.*?\]", "\n", raw_lyrics)
+        # Split on newlines, exclamation marks, or commas followed by space
+        raw_phrases = [p.strip() for p in re.split(r"[\n\r!]+", cleaned_lyrics) if p.strip()]
+        lines = raw_phrases or [storyboard_data.get("title_localized") or storyboard_data.get("title_en") or ""]
         tpl = max(3.5, (total_duration - min_intro) / max(1, len(lines)))
         curr = min_intro
         for l in lines:
             end_t = min(total_duration, curr + tpl)
             segments.append({"start": round(curr, 2), "end": round(end_t, 2), "text": l})
             curr = end_t
-    sub_file = generate_kinetic_ass(segments=segments, output_path=out_ass_path, language=language, font_size=52, alignment=5, font_name=font_name)
+    sub_file = generate_kinetic_ass(segments=segments, output_path=out_ass_path, language=language, font_size=42, alignment=2, font_name=font_name)
     try:
         from src.scripts.local_subtitles import generate_srt, generate_vtt
         en_segs = [{"start": float(s["start"]), "end": min(total_duration, float(s["end"])), "text": str(s.get("text_en") or s.get("text")).strip()} for s in raw_segs if isinstance(s, dict)] or segments

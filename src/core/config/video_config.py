@@ -12,7 +12,7 @@ class VideoSettings(BaseSettings):
     kling_api_key: str = ""
 
 
-    default_lipsync_model: str = "fal-ai/latentsync"
+    default_lipsync_model: str = "wav2lip"
     default_video_motion_model: str = "fal-ai/kling-video/v1.5/pro/image-to-video"
     default_dance_model: str = "fal-ai/mimic-motion"
 

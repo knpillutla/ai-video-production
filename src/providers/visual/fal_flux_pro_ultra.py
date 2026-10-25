@@ -19,6 +19,7 @@ import httpx
 from src.core.telemetry import logger
 from src.providers.base import is_mock_mode
 from src.providers.fal_storage import upload_to_fal, _fal_api_key
+from src.services.image_4k_encoder import ensure_image_4k
 
 _FAL_FLUX_ULTRA_ENDPOINT = "https://queue.fal.run/fal-ai/flux-pro/v1.1-ultra"
 _POLL_INTERVAL_S = 2.0
@@ -40,6 +41,7 @@ class FalFluxProUltraAdapter:
         force_live: bool = False,
         seed: int | None = None,
         loras: list | None = None,
+        upscale_4k: bool = True,
         **kwargs: Any,
     ) -> tuple[str, Path]:
         """Generate and save an ultra-high-resolution photorealistic keyframe."""
@@ -47,16 +49,18 @@ class FalFluxProUltraAdapter:
         out.parent.mkdir(parents=True, exist_ok=True)
 
         if out.exists() and out.stat().st_size > 50_000:
-            logger.info(f"fal_flux_pro_ultra_cache_hit: {out.name} ({out.stat().st_size} B)")
+            if upscale_4k:
+                await ensure_image_4k(out, aspect_ratio=aspect_ratio, force_live=force_live, api_key=self.api_key)
+            logger.info(f"fal_flux_pro_ultra_cache_hit [model=fal-ai/flux-pro/v1.1-ultra]: {out.name} ({out.stat().st_size} B)")
             fal_url = await upload_to_fal(out, self.api_key)
             return fal_url, out
 
         if is_mock_mode() and not force_live:
-            return await self._fallback_local(prompt, out, aspect_ratio)
+            return await self._fallback_local(prompt, out, aspect_ratio, upscale_4k=upscale_4k)
 
         if not self.api_key:
-            logger.warning("fal_flux_pro_ultra: no FAL_KEY — using local placeholder")
-            return await self._fallback_local(prompt, out, aspect_ratio)
+            logger.warning("fal_flux_pro_ultra [model=fal-ai/flux-pro/v1.1-ultra]: no FAL_KEY — using local placeholder")
+            return await self._fallback_local(prompt, out, aspect_ratio, upscale_4k=upscale_4k)
 
         headers = {"Authorization": f"Key {self.api_key}", "Content-Type": "application/json"}
         payload: dict[str, Any] = {
@@ -78,6 +82,7 @@ class FalFluxProUltraAdapter:
             except Exception:
                 status_url, response_url = None, None
 
+        logger.info(f"generating_image [model=fal-ai/flux-pro/v1.1-ultra]: {out.name} prompt={prompt[:70]}...")
         async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=15.0)) as client:
             try:
                 if not status_url or not response_url:
@@ -103,8 +108,10 @@ class FalFluxProUltraAdapter:
                             raise RuntimeError(f"Could not parse image url from response: {res}")
                         img_bytes = (await client.get(img_url, timeout=60.0)).content
                         out.write_bytes(img_bytes)
+                        if upscale_4k:
+                            await ensure_image_4k(out, aspect_ratio=aspect_ratio, force_live=force_live, api_key=self.api_key)
                         job_sidecar.unlink(missing_ok=True)
-                        logger.info(f"fal_flux_pro_ultra_ok: {out.name} ({out.stat().st_size} B)")
+                        logger.info(f"fal_flux_pro_ultra_ok [model=fal-ai/flux-pro/v1.1-ultra]: {out.name} ({out.stat().st_size} B)")
                         return img_url, out
                     if s.get("status") in ("FAILED", "CANCELLED"):
                         job_sidecar.unlink(missing_ok=True)
@@ -118,13 +125,15 @@ class FalFluxProUltraAdapter:
                 logger.error(f"fal_flux_pro_ultra_error: {ex}")
                 raise RuntimeError(f"Fal FLUX Pro Ultra failed: {ex}") from ex
 
-    async def _fallback_local(self, prompt: str, out: Path, aspect_ratio: str) -> tuple[str, Path]:
+    async def _fallback_local(self, prompt: str, out: Path, aspect_ratio: str, upscale_4k: bool = True) -> tuple[str, Path]:
         from PIL import Image, ImageDraw
         target_size = (1920, 1080) if aspect_ratio == "16:9" else (1080, 1920)
         image = Image.new("RGB", target_size, (15, 23, 42))
         draw = ImageDraw.Draw(image)
         draw.text((60, target_size[1] // 2 - 20), f"[FLUX Pro Ultra Placeholder] {prompt[:70]}...", fill=(240, 240, 250))
         image.save(out, format="JPEG", quality=90)
+        if upscale_4k:
+            await ensure_image_4k(out, aspect_ratio=aspect_ratio, force_live=False, api_key=self.api_key)
         return f"file://{out}", out
 
 

@@ -73,7 +73,7 @@ class FalH3MaxTurboAdapter:
         out.parent.mkdir(parents=True, exist_ok=True)
 
         if out.exists() and out.stat().st_size > 50_000:
-            logger.info(f"fal_h3_turbo_cache_hit: {out.name} ({out.stat().st_size} B)")
+            logger.info(f"fal_h3_turbo_cache_hit [model=minimax/h3-max]: {out.name} ({out.stat().st_size} B)")
             return f"file://{out}", out
 
         if is_mock_mode() and not force_live:
@@ -82,7 +82,7 @@ class FalH3MaxTurboAdapter:
         if not self.api_key:
             if force_live:
                 raise ValueError("FAL_KEY is required for LIVE H3 Max Turbo generation")
-            logger.warning("fal_h3_turbo: no FAL_KEY — falling back to local synthesis")
+            logger.warning("fal_h3_turbo [model=minimax/h3-max]: no FAL_KEY — falling back to local synthesis")
             return await self._fallback_local(image_url, motion_prompt, out, duration)
 
         try:
@@ -109,9 +109,11 @@ class FalH3MaxTurboAdapter:
                     status_url = job_data.get("status_url")
                     response_url = job_data.get("response_url")
                     print(f"    [i] Fal.ai H3 Max Turbo: Resuming existing queue job for {out.name}...")
+                    logger.info(f"fal_h3_turbo_resume [model=minimax/h3-max]: {out.name}")
                 except Exception:
                     status_url, response_url = None, None
 
+            logger.info(f"synthesizing_motion [model=minimax/h3-max]: {out.name} prompt={motion_prompt[:70]}...")
             async with httpx.AsyncClient(timeout=300.0) as client:
                 if not status_url or not response_url:
                     print(f"    [~] Fal.ai H3 Max Turbo: Submitting {out.name} to GPU queue...")
@@ -158,12 +160,12 @@ class FalH3MaxTurboAdapter:
                                 msg = lg.get("message") if isinstance(lg, dict) else str(lg)
                                 if msg:
                                     print(f"    [Fal Queue Log]: {msg}")
-                                    logger.info(f"fal_h3_log: {msg}")
+                                    logger.info(f"fal_h3_log [model=minimax/h3-max]: {msg}")
 
                         if status in ("IN_QUEUE", "IN_PROGRESS"):
                             if attempt % 3 == 0:
                                 print(f"    [~] Fal.ai H3 Max Turbo: Cloud GPU rendering {out.name} ({status}, {int(attempt * 2.0)}s)...")
-                                logger.info(f"fal_h3_turbo_queue: {out.name} status={status} ({int(attempt * 2.0)}s elapsed)")
+                                logger.info(f"fal_h3_turbo_queue [model=minimax/h3-max]: {out.name} status={status} ({int(attempt * 2.0)}s elapsed)")
                         elif status == "COMPLETED":
                             if response_url:
                                 resp_res = await client.get(response_url, headers=headers)
@@ -188,7 +190,7 @@ class FalH3MaxTurboAdapter:
                     job_sidecar.unlink(missing_ok=True)
                     print(f"\n    [SUCCESS] Draft Generated: {out.name}")
                     print(f"    👉 Open this link to evaluate the camera path: {video_url}\n")
-                    logger.info(f"fal_h3_turbo_download_complete: {out.name} ({len(dl_res.content)} B)")
+                    logger.info(f"fal_h3_turbo_download_complete [model=minimax/h3-max]: {out.name} ({len(dl_res.content)} B)")
                     return video_url, out
                 job_sidecar.unlink(missing_ok=True)
                 raise RuntimeError(f"Failed to download video from {video_url}")

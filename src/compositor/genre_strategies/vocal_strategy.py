@@ -18,89 +18,8 @@ from src.compositor.genre_strategies.vocal_cast_builder import (
 )
 
 
-def vocal_gemini_schema() -> dict:
-    """Return strict JSON schema for vocal lyrical video structured output."""
-    character = {
-        "type": "OBJECT",
-        "properties": {"name": {"type": "STRING"}, "gender": {"type": "STRING"}, "age": {"type": "INTEGER"}, "body_composition": {"type": "STRING"}, "hair_and_facial_features": {"type": "STRING"}, "outfit_description": {"type": "STRING"}},
-        "required": ["name", "gender", "age", "body_composition", "outfit_description"],
-    }
-    lyrics_seg = {
-        "type": "OBJECT",
-        "properties": {"start": {"type": "NUMBER"}, "end": {"type": "NUMBER"}, "text": {"type": "STRING"}, "text_en": {"type": "STRING"}},
-        "required": ["start", "end", "text", "text_en"],
-    }
-    prompts_model = {
-        "type": "OBJECT",
-        "properties": {"z_image": {"type": "STRING"}, "flux_dev": {"type": "STRING"}, "flux_pro_ultra": {"type": "STRING"}, "imagen3": {"type": "STRING"}, "midjourney": {"type": "STRING"}},
-        "required": ["z_image", "flux_dev", "flux_pro_ultra", "imagen3", "midjourney"],
-    }
-    youtube_meta = {
-        "type": "OBJECT",
-        "properties": {"title": {"type": "STRING"}, "description": {"type": "STRING"}, "tags": {"type": "ARRAY", "items": {"type": "STRING"}}, "pinned_comment": {"type": "STRING"}, "thumbnail_prompt": {"type": "STRING"}, "category_id": {"type": "STRING"}},
-        "required": ["title", "description", "tags", "pinned_comment"],
-    }
-    anim_cue = {
-        "type": "OBJECT",
-        "properties": {"start_time": {"type": "NUMBER"}, "end_time": {"type": "NUMBER"}, "musical_phase": {"type": "STRING"}, "camera_motion": {"type": "STRING"}, "effect_type": {"type": "STRING"}, "intensity": {"type": "STRING"}, "rationale": {"type": "STRING"}},
-        "required": ["start_time", "end_time", "camera_motion", "effect_type"],
-    }
-    return {
-        "type": "OBJECT",
-        "properties": {
-            "title_en": {"type": "STRING"},
-            "title_localized": {"type": "STRING"},
-            "song_type": {"type": "STRING"},
-            "mood": {"type": "STRING"},
-            "language": {"type": "STRING"},
-            "country": {"type": "STRING"},
-            "tempo_bpm": {"type": "INTEGER"},
-            "hook_thesis": {"type": "STRING"},
-            "suno_tags": {"type": "STRING"},
-            "vocal_gender": {"type": "STRING"},
-            "lyrics": {"type": "STRING"},
-            "prompts_by_model": prompts_model,
-            "characters": {"type": "ARRAY", "items": character},
-            "lyrics_segments": {"type": "ARRAY", "items": lyrics_seg},
-            "animation_timeline": {"type": "ARRAY", "items": anim_cue},
-            "youtube_metadata": youtube_meta,
-            "scenes": {
-                "type": "ARRAY",
-                "items": {
-                    "type": "OBJECT",
-                    "properties": {
-                        "scene_index": {"type": "INTEGER"},
-                        "duration_seconds": {"type": "NUMBER"},
-                        "location_hub": {"type": "STRING"},
-                        "character_pose": {"type": "STRING"},
-                        "camera_shot_type": {"type": "STRING"},
-                        "camera_motion": {"type": "STRING"},
-                        "camera_speed": {"type": "STRING", "enum": ["slow", "medium", "fast", "steady"]},
-                        "local_drone": {
-                            "type": "OBJECT",
-                            "properties": {
-                                "movement": {"type": "STRING"},
-                                "speed": {"type": "STRING", "enum": ["slow", "medium", "fast", "steady"]},
-                                "parallel_movements": {"type": "ARRAY", "items": {"type": "STRING"}},
-                                "start_pan": {"type": "STRING"},
-                                "start_zoom": {"type": "STRING"},
-                                "start_tilt": {"type": "STRING"},
-                                "rationale": {"type": "STRING"},
-                            },
-                        },
-                        "visual_prompt": {"type": "STRING"},
-                        "dialogue": {"type": "STRING"},
-                    },
-                    "required": ["scene_index", "duration_seconds", "location_hub", "character_pose", "camera_shot_type", "visual_prompt"],
-                },
-            },
-        },
-        "required": [
-            "title_en", "title_localized", "hook_thesis", "suno_tags",
-            "vocal_gender", "lyrics", "prompts_by_model", "characters",
-            "lyrics_segments", "youtube_metadata", "scenes",
-        ],
-    }
+from src.compositor.genre_strategies.vocal_schema import vocal_gemini_schema
+
 
 
 def _format_lyrics_directives(language: str, culture: str, theme: str, duration_seconds: int = 60) -> str:
@@ -122,8 +41,9 @@ def _format_lyrics_directives(language: str, culture: str, theme: str, duration_
         meter_spec = "Cultural meter (Mukhda chorus, Antras) with strict qafiya, radif, and poetic flow."
     else:
         meter_spec = "Metric rhyme scheme, infectious rhythm, and radio-friendly melodic hook."
+    lang_name = "ENGLISH" if lang == "en" else f"NATIVE SCRIPT of {language}"
     return (
-        f"1. Write complete rhyming lyrics in NATIVE SCRIPT of {language} celebrating '{theme}'.\n"
+        f"1. Write complete rhyming lyrics in {lang_name} celebrating '{theme}'.\n"
         f"2. CATCHY & HUMMABLE HIGH-CTR HOOK MANDATE:\n"
         f"   - Opening Chorus/Pallavi/Mukhda couplet MUST be extremely catchy, simple, rhythmically symmetrical, and instantly hummable. Repeat signature hook 3-4 times across stanzas for retention.\n"
         f"3. SUNO COMPOSITION INSTRUCTIONS & SECTION HEADERS:\n"
@@ -170,12 +90,9 @@ class VocalStrategy:
             eff_gender = "female"
         else:
             eff_gender = (gender or kwargs.get("vocal_gender") or "duet").lower()
-        eff_country = country or "India"
-        if not culture:
-            from src.studios.music_video_studio.country_music_catalog import resolve_culture_for_country_and_language
-            eff_culture = resolve_culture_for_country_and_language(eff_country, language)
-        else:
-            eff_culture = culture
+        is_lang_en = (language or "en").lower().strip() == "en"
+        eff_country = country or ("USA" if is_lang_en else None)
+        eff_culture = culture or ("western" if is_lang_en else None)
         eff_theme = theme or kwargs.get("theme") or idea or "soulful romantic melody"
 
         user_id = str(kwargs.get("user_id") or "default_user")
@@ -187,33 +104,94 @@ class VocalStrategy:
             resolve_cast_archetypes,
         )
         slot = get_and_increment_production_slot(user_id=user_id, network=network, episode_number=ep_num)
-        fem_spec, male_spec = resolve_cast_archetypes(slot=slot, culture=eff_culture, language=language)
+        chars_req = kwargs.get("chars") or kwargs.get("chars_arg") or kwargs.get("character_name")
+        fem_spec, male_spec = resolve_cast_archetypes(slot=slot, culture=eff_culture, language=language, custom_names=chars_req)
 
         is_kids = is_kids_song_genre(genre, eff_theme)
         is_jugalbandi = bool(kwargs.get("jugalbandi") or any(k in f"{genre} {eff_theme}".lower() for k in ("jugalbandi", "sawaal", "jawaab")))
+        is_va = bool(kwargs.get("virtual_artist") or "virtual_artist" in genre or "artist" in genre)
+        costume_hint = kwargs.get("costume_style") or kwargs.get("costume") or kwargs.get("costume_hint")
         cast_directive, neg_constraints = build_cast_and_visual_directives(
             slot=slot, fem=fem_spec, male=male_spec, culture=eff_culture,
             setting=eff_theme, gender=eff_gender, is_kids=is_kids, is_jugalbandi=is_jugalbandi,
+            costume_hint=costume_hint, is_va=is_va,
         )
 
         suno_hint = build_vocal_suno_tags(genre if not is_jugalbandi else "jugalbandi", eff_culture, gender=eff_gender, tempo_bpm=100)
 
+        is_lang_en = (language or "en").lower() == "en"
         is_generic_title = not title or any(k in str(title).lower() for k in ("wfh confusions", "melody - lyrical song", "custom screenplay", "standalone", "new song", "soulful romantic melody"))
         if is_generic_title:
-            title_directive = (
-                f"- TITLE INVENTION (CRITICAL DIRECTIVE):\n"
-                f"  * Invent an evocative, poetic, and culturally authentic title for this song celebrating '{eff_theme}'.\n"
-                f"  * 'title_en': Return ONLY the pure Romanized song title in English alphabet (e.g. 'Preyasi Priyatama', 'Sous Le Ciel'). Prohibit 'Episode X'.\n"
-                f"  * 'title_localized': Native script title followed by Romanized title in parentheses."
-            )
+            if is_lang_en:
+                title_directive = (
+                    f"- TITLE INVENTION (CRITICAL DIRECTIVE):\n"
+                    f"  * Invent an evocative, poetic song title for this song celebrating '{eff_theme}'.\n"
+                    f"  * 'title_en': Return the English song title (e.g. 'Whispers of My Heart', 'Endless Horizon'). Prohibit 'Episode X'.\n"
+                    f"  * 'title_localized': Return the exact same English title as 'title_en' (strictly prohibit non-English or foreign script when language is English)."
+                )
+            else:
+                title_directive = (
+                    f"- TITLE INVENTION (CRITICAL DIRECTIVE):\n"
+                    f"  * Invent an evocative, poetic, and culturally authentic title for this song celebrating '{eff_theme}'.\n"
+                    f"  * 'title_en': Return ONLY the pure Romanized song title in English alphabet (e.g. 'Preyasi Priyatama', 'Sous Le Ciel'). Prohibit 'Episode X'.\n"
+                    f"  * 'title_localized': Native script title followed by Romanized title in parentheses."
+                )
         else:
             clean_in_title = re.sub(r"\s*-\s*episode\s*\d+", "", str(title), flags=re.IGNORECASE).strip()
             title_directive = f"- Title: {clean_in_title} ('title_en' is clean Romanized song title; 'title_localized' is native script)"
 
-        num_images = int(kwargs.get("num_images") or 1)
+        raw_num = kwargs.get("num_images")
+        auto_mode = kwargs.get("auto_images", True)
+        forced_n: int | None = None
+        if raw_num not in (None, "", "auto", "None", 0, "0"):
+            try:
+                val = int(raw_num)
+                if val > 0:
+                    forced_n = val
+                    auto_mode = False
+            except (ValueError, TypeError):
+                pass
+
         is_mass = kwargs.get("mass_song", False) or any(k in f"{genre} {eff_theme}".lower() for k in ("mass", "dappu", "teenmaar", "mass_beats"))
-        from src.compositor.genre_strategies.vocal_poses import build_environmental_pose_directive
-        pose_directive = build_environmental_pose_directive(gender=eff_gender, theme=eff_theme, culture=eff_culture, num_scenes=num_images, is_mass=is_mass)
+        if auto_mode or forced_n is None:
+            sec_win = (7, 11) if is_mass else (12, 18)
+            min_sc = max(2, int(round(duration_seconds / sec_win[1])))
+            max_sc = min(15, max(min_sc + 1, int(round(duration_seconds / sec_win[0]))))
+            scene_rotation_directive = (
+                f"- AUTONOMOUS DURATION-BASED SCENE PACING (DEFAULT):\n"
+                f"  * Total Song Duration: {duration_seconds}s | Pacing Window: {'7-11s (mass beats)' if is_mass else '12-18s (melody)'}.\n"
+                f"  * Autonomously determine optimal visual scenes count (recommended: {min_sc} to {max_sc} scenes) "
+                f"matching musical movements (Intro, Verses, Chorus, Beat Drops, Outro).\n"
+                f"  * Each scene MUST represent a distinct visual tableau or location hub (no visual stagnation)."
+            )
+            pose_scene_lbl = f"AUTONOMOUS {min_sc}-{max_sc}"
+        else:
+            scene_rotation_directive = f"- MULTI-SCENE ROTATION ({forced_n} SCENES): Rotate camera perspective across exactly {forced_n} scenes matching {eff_theme}."
+            pose_scene_lbl = str(forced_n)
+
+        self._is_va = bool(is_va)
+        if is_va:
+            from src.compositor.genre_strategies.virtual_artist_directives import build_virtual_artist_directives
+            pose_directive = build_virtual_artist_directives(
+                gender=eff_gender, artist_mode=kwargs.get("artist_mode", "scenic"),
+                instrument=kwargs.get("instrument"), has_orchestra=bool(kwargs.get("has_orchestra") or kwargs.get("orchestra")),
+                scenic_archetype=kwargs.get("scenic"), landmark=kwargs.get("landmark"),
+                culture=eff_culture, country=eff_country, theme=eff_theme,
+            )
+            dyn_motion_dir = (
+                "DYNAMIC SINGER PERFORMANCE MOTION DIRECTIVE (scenes[i].render_mode & motion_prompts):\n"
+                "- Set 'render_mode': 'motion' for performance scenes.\n"
+                "- In 'motion_prompts', direct pitch-inflected singer hand gestures (free hand lifting upward/outward on high notes and vocal climaxes, lowering gently near chest/heart on tender notes, subtle rhythm sway, emotive eyes/mouth), strictly NO two-handed rigid mic clutching and NO high-energy dance jumps.\n\n"
+            )
+        else:
+            from src.compositor.genre_strategies.vocal_poses import build_environmental_pose_directive
+            pose_directive = build_environmental_pose_directive(gender=eff_gender, theme=eff_theme, culture=eff_culture, num_scenes=pose_scene_lbl, is_mass=is_mass)
+            dyn_motion_dir = (
+                "DYNAMIC MOTION DANCE DIRECTIVE (scenes[i].render_mode & motion_prompts):\n"
+                "Evaluate musical pacing and choreographic intensity of each scene:\n"
+                "- 'motion': Select for 1 (or max 2) peak musical energy moments. Provide tailored wan and kling prompts.\n"
+                "- 'still': For all other scenes, set 'render_mode': 'still' and leave motion_prompts empty.\n\n"
+            )
 
         if is_jugalbandi:
             vocal_perspective_directive = "5. VOCAL PERFORMER PERSPECTIVE (VOCAL JUGALBANDI / SAWAAL-JAWAAB):\n   * Structure lyrics as a virtuoso vocal face-off between [Vocalist A] and [Vocalist B] with counter-melodies, rapid 2-line trades, and a grand Sangam unison climax. Label each stanza: [Vocalist A], [Vocalist B], or [Both].\n\n"
@@ -230,6 +208,20 @@ class VocalStrategy:
         ) if similar_to else ""
         art_line = f"- Visual & Architectural Art Style: {art_style}\n" if art_style else ""
 
+        if eff_country:
+            country_directive = (
+                f"- Country / Region: {eff_country} | Culture: {eff_culture or 'authentic regional'}\n"
+                f"- 'country' in output JSON MUST be '{eff_country}'. 'language' in output JSON MUST be '{language}'."
+            )
+        else:
+            country_directive = (
+                f"- AUTONOMOUS COUNTRY & CULTURE DERIVATION (GEMINI MANDATORY DIRECTIVE):\n"
+                f"  * The user did not specify a country. Gemini MUST autonomously identify and derive the authentic 'country' based on the language '{language.upper()}', musical genre, and narrative setting.\n"
+                f"  * If language is English ('en') without an explicit country, Gemini MUST default 'country' to a Western country (e.g. 'United States' or 'United Kingdom') and 'culture' to 'western' with Western contemporary musical composition, instrumentation, staging, and attire.\n"
+                f"  * For other languages, Gemini MUST autonomously assign the native country of that language (e.g. Telugu -> India, Japanese -> Japan, French -> France).\n"
+                f"  * Record your autonomously derived country in the top-level 'country' field of the response JSON. 'language' in output JSON MUST be '{language}'."
+            )
+
         return (
             f"You are an acclaimed master lyricist, music director, and visual artist.\n"
             f"Create a full broadcast-grade musical release in the {language.upper()} language.\n\n"
@@ -237,17 +229,15 @@ class VocalStrategy:
             f"{title_directive}\n"
             f"- Setting / Premise: {eff_theme}\n"
             f"- SETTING & SCENIC LOCATION FIDELITY: {eff_theme.title()}\n"
-            f"- MULTI-SCENE ROTATION ({num_images} SCENES): Rotate camera perspective and framing across scenes matching {eff_theme}.\n"
-            f"- Country / Region: {eff_country} | Culture: {eff_culture}\n"
+            f"{scene_rotation_directive}\n"
+            f"{country_directive}\n"
             f"- Music Tone: {genre.replace('_', ' ').title()} | Vocal Performer: {eff_gender.upper()}\n"
             f"{ref_line}{art_line}"
             f"- High-CTR Earworm & Hummability Mandate: 'hook_thesis' MUST define the central hummable melodic hook. 'suno_tags' MUST include explicit keywords: 'catchy hummable melody, memorable sing-along hook, earworm refrain' along with authentic instruments and rhythm.\n"
             f"- Suno Music Tags Reference: '{suno_hint}'\n\n"
             f"LYRICS SPECIFICATION:\n"
             f"{_format_lyrics_directives(language, eff_culture, eff_theme, duration_seconds=duration_seconds)}"
-            f"6. DUAL-LINE SUBTITLES (MANDATORY): For every line in 'lyrics_segments', provide:\n"
-            f"   * 'text': Native script of {language}.\n"
-            f"   * 'text_en': Romanized transliteration + concise English meaning.\n"
+            f"{'6. SUBTITLES SPECIFICATION (ENGLISH MASTER): For every line in lyrics_segments, text MUST be the clean English lyric line, and text_en MUST be IDENTICAL to text (do NOT add transliterations or translations in parentheses).' if is_lang_en else f'6. DUAL-LINE SUBTITLES (MANDATORY): For every line in lyrics_segments, text is native script of {language}, and text_en is Romanized transliteration + concise English meaning.'}\n"
             f"7. First segment starts after the opening title card (~6-8s), pacing across {duration_seconds}s.\n"
             f"{vocal_perspective_directive}"
             f"{pose_directive}"
@@ -263,15 +253,22 @@ class VocalStrategy:
             f"- Parallel / Compound Movements: 'drift-up-right', 'drift-up-left', 'dollyin+tilt-up' (crane push-in), 'dollyin+pan-right', 'dollyout+tilt-down'.\n"
             f"- 'camera_motion': Single or compound motion (e.g. 'dollyin+tilt-up', 'orbit-left', 'drift-up-right').\n"
             f"  * Speed Control ('camera_speed'): 'slow'|'medium'|'fast'|'steady'. Mass songs MUST vary speed: 'slow' for lyrics/story/portraits so details are crystal clear; 'fast' strictly for beat drops & hook steps. Carnatic/Melody/Others must ALWAYS be 'slow' or 'steady' (tranquil glide).\n\n"
+            f"{dyn_motion_dir}"
             f"VISUAL EFFECTS & ANIMATIONS (animation_timeline):\n"
             f"Direct 3-5 timed particle cues: effect_type in ('floating_petals_down', 'golden_fireflies', 'golden_light_leak', 'shimmering_sparkles', 'floating_petals_up', 'romantic_bokeh_drift', 'monsoon_rain_mist').\n"
         )
 
-    def build_gemini_schema(self) -> dict:
+    def build_gemini_schema(self, **kwargs) -> dict:
+        if kwargs.get("virtual_artist") or getattr(self, "_is_va", False):
+            from src.compositor.genre_strategies.virtual_artist_schema import virtual_artist_gemini_schema
+            return virtual_artist_gemini_schema()
         return vocal_gemini_schema()
 
     def validate_storyboard(self, storyboard: dict) -> list[str]:
         issues = default_storyboard_sanity_check(storyboard)
+        scenes = storyboard.get("scenes") or []
+        for i, s in enumerate(scenes):
+            s["scene_index"] = i + 1
         if not storyboard.get("lyrics"):
             issues.append("vocal storyboard has no lyrics")
         if not storyboard.get("suno_tags"):

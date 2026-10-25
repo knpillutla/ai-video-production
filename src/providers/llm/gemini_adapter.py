@@ -66,10 +66,19 @@ def get_live_gemini_api_key(explicit_key: str | None = None) -> str | None:
 class GeminiLLMAdapter(LLMProviderProtocol):
     """Tier-2 Flagship LLM Adapter powered by Gemini 1.5 Pro via non-blocking Async HTTP."""
 
-    def __init__(self, api_key: str | None = None, strict: bool = False):
+    def __init__(self, api_key: str | None = None, model: str | None = None, strict: bool = False):
         self.api_key = get_live_gemini_api_key(api_key)
-        self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+        self.provider = "gemini"
+        import os
+        self.model = model or os.getenv("GEMINI_MODEL") or "gemini-flash-latest"
+        self.base_url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
         self.strict = strict
+        prov = (os.getenv("LLM_PROVIDER") or getattr(settings.llm, "effective_llm_provider", "gemini")).lower()
+        if prov in ("openai", "gpt-4o", "chatgpt"):
+            from src.providers.llm.openai_adapter import OpenAILLMAdapter
+            self._openai_delegate = OpenAILLMAdapter(strict=strict)
+        else:
+            self._openai_delegate = None
 
     async def _post_with_retry(
         self, body: dict[str, Any], timeout: float = 180.0, max_retries: int = 2
@@ -122,6 +131,9 @@ class GeminiLLMAdapter(LLMProviderProtocol):
 
     async def generate_text(self, prompt: str, system_prompt: str = "", temperature: float = 0.7) -> str:
         """Generate unstructured retention narrative text."""
+        if getattr(self, "_openai_delegate", None):
+            return await self._openai_delegate.generate_text(prompt, system_prompt=system_prompt, temperature=temperature)
+
         if is_mock_mode():
             return f"[Generated Script] Topic: {prompt[:80]} | Retention Hook: Did you know this changed everything?"
 
@@ -149,14 +161,21 @@ class GeminiLLMAdapter(LLMProviderProtocol):
         from src.providers.llm.mock_storyboards import resolve_mock_storyboard
         return resolve_mock_storyboard(prompt)
 
-    async def generate_structured(self, prompt: str, schema: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def generate_structured(
+        self,
+        prompt: str,
+        schema: dict[str, Any] | None = None,
+        audio_path: str | Any | None = None,
+    ) -> dict[str, Any]:
         """Generate structured JSON scene plan obeying Pydantic storyboard contracts."""
+        if getattr(self, "_openai_delegate", None):
+            return await self._openai_delegate.generate_structured(prompt, schema=schema, audio_path=audio_path)
+
         fallback_plan = self._build_storyboard_for_prompt(prompt)
 
         if is_mock_mode() and not self.strict:
             return fallback_plan
 
-        # sys_prompt = "You are a broadcast video director. Return ONLY valid JSON adhering to the ScenePlan specification."
         sys_prompt = (
             "You are a broadcast video director. Return ONLY valid JSON adhering to the ScenePlan specification.\n\n"
             "CRITICAL VISUAL QUALITY DIRECTIVES FOR ALL SCENES:\n"
@@ -168,8 +187,7 @@ class GeminiLLMAdapter(LLMProviderProtocol):
         if schema is None:
             raw = await self.generate_text(prompt, system_prompt=sys_prompt)
         else:
-            raw = await self._generate_structured_json(prompt, schema, sys_prompt)
-
+            raw = await self._generate_structured_json(prompt, schema, sys_prompt, audio_path=audio_path)
 
         # Clean markdown codeblocks if model returned ```json ... ```
         clean_json = raw.strip()
@@ -181,7 +199,10 @@ class GeminiLLMAdapter(LLMProviderProtocol):
         try:
             parsed = json.loads(clean_json)
             if isinstance(parsed, list):
-                return {"scenes": parsed}
+                parsed = {"scenes": parsed}
+            if isinstance(parsed, dict):
+                parsed.setdefault("llm_provider", "gemini")
+                parsed.setdefault("llm_model", self.model)
             return parsed
         except Exception as ex:
             if self.strict:
@@ -189,17 +210,31 @@ class GeminiLLMAdapter(LLMProviderProtocol):
             return fallback_plan
 
     async def _generate_structured_json(
-        self, prompt: str, schema: dict[str, Any], system_prompt: str,
+        self,
+        prompt: str,
+        schema: dict[str, Any],
+        system_prompt: str,
+        audio_path: str | Any | None = None,
     ) -> str:
-        """Request Gemini JSON with an API-enforced response schema."""
+        """Request Gemini JSON with an API-enforced response schema and optional multimodal audio."""
         if is_mock_mode() and not self.strict:
             return json.dumps(self._build_storyboard_for_prompt(prompt))
 
+        parts: list[dict[str, Any]] = [{"text": prompt}]
+        if audio_path:
+            from pathlib import Path
+            ap = Path(audio_path)
+            if ap.is_file() and ap.stat().st_size > 1000:
+                import base64
+                b64_audio = base64.b64encode(ap.read_bytes()).decode("utf-8")
+                mime = "audio/mp3" if ap.suffix.lower() in (".mp3", "") else "audio/wav"
+                parts.append({"inlineData": {"mimeType": mime, "data": b64_audio}})
+
         body = {
-            "contents": [{"parts": [{"text": prompt}]}],
+            "contents": [{"parts": parts}],
             "systemInstruction": {"parts": [{"text": system_prompt}]},
             "generationConfig": {
-                "temperature": 0.7,
+                "temperature": 0.2 if audio_path else 0.7,
                 "responseMimeType": "application/json",
                 "responseSchema": schema,
             },

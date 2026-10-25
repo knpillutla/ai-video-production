@@ -20,9 +20,9 @@
       "resolution": "1080p"
     },
     "lipsync": {
-      "provider": "Fal.ai",
-      "model": "LatentSync",
-      "endpoint": "https://queue.fal.run/fal-ai/latentsync"
+      "provider": "Local",
+      "model": "Wav2Lip ONNX (CPU)",
+      "endpoint": "local://models/wav2lip.onnx"
     },
     "script": {
       "provider": "Google",
@@ -221,7 +221,7 @@
       "script": { "provider": "Google", "model": "gemini-1.5-pro" },
       "image": { "provider": "Fal.ai", "model": "FLUX 1.1 Pro Ultra", "endpoint": "https://queue.fal.run/fal-ai/flux-pro/v1.1-ultra", "cost_usd": 0.06 },
       "video_motion": { "provider": "Fal.ai", "model": "Tencent Hunyuan Video 1080p", "endpoint": "https://queue.fal.run/fal-ai/hunyuan-video-image-to-video", "cost_usd_per_sec": 0.075 },
-      "lipsync": { "provider": "Fal.ai", "model": "LatentSync", "endpoint": "https://queue.fal.run/fal-ai/latentsync" },
+      "lipsync": { "provider": "Fal.ai", "model": "Sync-Lipsync v2", "endpoint": "https://queue.fal.run/fal-ai/sync-lipsync/v2" },
       "tts": { "provider": "Microsoft", "model": "Azure Speech Neural HD" },
       "music": { "provider": "MusicAPI.ai", "model": "Suno v3.5 Pro", "endpoint": "https://api.musicapi.ai/api/v1/sonic/create" },
       "render": { "provider": "FFmpeg", "model": "single-pass-4k-lanczos", "fps": 24, "crf": 18 }

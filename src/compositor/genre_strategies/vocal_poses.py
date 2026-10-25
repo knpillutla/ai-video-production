@@ -14,8 +14,9 @@ def build_environmental_pose_directive(
     gender: str = "duet",
     theme: str = "soulful romantic melody",
     culture: str = "Indian",
-    num_scenes: int = 3,
+    num_scenes: int | str = "AUTONOMOUS",
     is_mass: bool = False,
+    is_dance: bool = False,
 ) -> str:
     """Build authoritative Gemini prompt directive for dynamic, background-specific poses."""
     eff_gender = (gender or "duet").lower()
@@ -42,14 +43,32 @@ def build_environmental_pose_directive(
             "     - Never depict a stiff passport photo standing straight with hands down.\n"
         )
 
-    mass_inserts_text = (
-        "8. AUTONOMOUS CONTEXTUAL CUTAWAYS & DRONE INSERTS (MASS SONGS ONLY):\n"
-        "   - In mass songs, do NOT show the lead character in every single image! Gemini must autonomously decide where to interleave 1 to 2 high-impact CONTEXTUAL INSERT / CUTAWAY scenes (e.g. during percussive bridge rolls, fast drum buildups, or scene transitions):\n"
-        "     * Archetype A (Percussion Close-up): Macro shot of energetic village drummers' hands beating dappu frame drums with wooden karras in swirling dust ('dummu'). (Camera: 'punch' / 'crash-zoom' or 'dollyin').\n"
-        "     * Archetype B (Festival Aerial / Drone Flight): Sweeping panoramic drone flyover across illuminated festival grounds, effigies, lanterns, and cheering crowd under twilight sky. (Camera: 'drift-up-right' / 'pedestal-rise').\n"
-        "     * Archetype C (Troupe Whirl Formation): Dynamic wide shot of coordinated male and female troupe dancers spinning in colorful lehengas/dhotis throwing flower petals into the air. (Camera: 'orbit' / 'dollyout').\n"
-        "   - For these contextual scenes, set 'character_pose': 'Contextual Cutaway: <description>', and omit the lead hero/heroine so the camera can execute breathtaking drone and cinematography movements on the festival environment and troupe!\n"
-    ) if is_mass else ""
+    if is_dance:
+        dance_text = (
+            "8. SEQUENCED DANCE CHOREOGRAPHY & COLOR AMBIENCE CONTINUITY MANDATE (--dance):\n"
+            "   - Lead character MUST be present and actively dancing in EVERY single scene (strictly NO non-character cutaways away from the dancer).\n"
+            "   - Scenes MUST form an unbroken, sequenced choreographic progression matching the song's musical phases:\n"
+            "     * Phase 1 (Intro Groove): Swagger rhythm walk, rhythmic shoulder bounce, hands framing collar or waist, playful eye contact.\n"
+            "     * Phase 2 (Verse Progression): Fluid foot-tapping, hip sway, rhythmic hand snaps/mudras matching lyrics, travelling across plaza with troupe in unison.\n"
+            "     * Phase 3 (Beat Drop Hook): High-energy signature hook step—vigorous synchronized foot-stomping, waist twists, rapid hand choreography on heavy drum downbeats.\n"
+            "     * Phase 4 (Climax Freeze): Explosive synchronized jump or spinning turn with entire troupe framing the lead, striking a triumphant final superstar pose.\n"
+            "   - MASTER COLOR AMBIENCE & LIGHTING CONTINUITY MANDATE:\n"
+            "     * Autonomously derive a unified master color ambience and lighting scheme from the prompt (whether daytime, night, golden sunset, neon club, or dusk).\n"
+            "     * You MUST strictly maintain and lock this exact same color ambience across ALL scenes in that setting: identical time of day, illumination physics, light direction, and color temperature.\n"
+            "     * Strictly PROHIBIT scenes from drifting across times of day or lighting moods (e.g. if daytime, do NOT insert sunset flares or dark moody lighting; if night, keep consistent night lighting). Every scene's 'visual_prompt' MUST repeat the identical ambient lighting description.\n"
+        )
+        mass_inserts_text = dance_text
+    elif is_mass:
+        mass_inserts_text = (
+            "8. AUTONOMOUS CONTEXTUAL CUTAWAYS & DRONE INSERTS (MASS SONGS ONLY):\n"
+            "   - In mass songs, do NOT show the lead character in every single image! Gemini must autonomously decide where to interleave 1 to 2 high-impact CONTEXTUAL INSERT / CUTAWAY scenes (e.g. during percussive bridge rolls, fast drum buildups, or scene transitions):\n"
+            "     * Archetype A (Percussion Close-up): Macro shot of energetic village drummers' hands beating dappu frame drums with wooden karras in swirling dust ('dummu'). (Camera: 'punch' / 'crash-zoom' or 'dollyin').\n"
+            "     * Archetype B (Festival Aerial / Drone Flight): Sweeping panoramic drone flyover across illuminated festival grounds, effigies, lanterns, and cheering crowd under twilight sky. (Camera: 'drift-up-right' / 'pedestal-rise').\n"
+            "     * Archetype C (Troupe Whirl Formation): Dynamic wide shot of coordinated male and female troupe dancers spinning in colorful lehengas/dhotis throwing flower petals into the air. (Camera: 'orbit' / 'dollyout').\n"
+            "   - For these contextual scenes, set 'character_pose': 'Contextual Cutaway: <description>', and omit the lead hero/heroine so the camera can execute breathtaking drone and cinematography movements on the festival environment and troupe!\n"
+        )
+    else:
+        mass_inserts_text = ""
 
     return (
         "AUTONOMOUS CONTEXT-DRIVEN POSE & FRAMING DIRECTIVE (NO HARDCODED POSES):\n"

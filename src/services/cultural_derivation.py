@@ -89,14 +89,15 @@ class DerivedCulturalContext(BaseModel):
 
 def _derive_environment(cues: str) -> dict[str, str]:
     """Derive setting, spatial environment (indoor/outdoor), period, climate, lighting, and props."""
-    setting = "urban_city"
-    if any(k in cues for k in ("alpine", "mountain", "glacier", "everest", "peak", "himalaya")): setting = "alpine_wilderness"
-    elif any(k in cues for k in ("forest", "jungle", "savanna", "safari", "wildlife", "rainforest")): setting = "nature_wilderness"
-    elif any(k in cues for k in ("village", "rural", "paddy", "jathara", "bazaar", "temple", "panche")): setting = "village_rural"
-    elif any(k in cues for k in ("palace", "fort", "kingdom", "dynasty", "monumental", "bahubali")): setting = "historical_palace"
-    elif any(k in cues for k in ("beach", "coast", "ocean", "tropical", "island", "sea")): setting = "tropical_coastal"
+    setting = "concert_stage" if any(k in cues for k in ("concert", "arena", "stadium", "amphitheater", "amphitheatre", "stage", "virtual_artist")) else "urban_city"
+    if setting == "urban_city":
+        if any(k in cues for k in ("alpine", "mountain", "glacier", "everest", "peak", "himalaya")): setting = "alpine_wilderness"
+        elif any(k in cues for k in ("forest", "jungle", "savanna", "safari", "wildlife", "rainforest")): setting = "nature_wilderness"
+        elif any(k in cues for k in ("village", "rural", "paddy", "jathara", "bazaar", "temple", "panche")): setting = "village_rural"
+        elif any(k in cues for k in ("palace", "fort", "kingdom", "dynasty", "monumental", "bahubali")): setting = "historical_palace"
+        elif any(k in cues for k in ("beach", "coast", "ocean", "tropical", "island", "sea")): setting = "tropical_coastal"
 
-    space = "indoor" if any(k in cues for k in ("indoor", "inside", "hotel", "ballroom", "living room", "bedroom", "kitchen", "office", "studio", "cafe", "restaurant", "banquet", "interior", "classroom", "gym", "museum", "mansion", "auditorium")) else (
+    space = "indoor" if any(k in cues for k in ("concert", "arena", "stadium", "amphitheater", "stage", "indoor", "inside", "hotel", "ballroom", "living room", "bedroom", "kitchen", "office", "studio", "cafe", "restaurant", "banquet", "interior", "classroom", "gym", "museum", "mansion", "auditorium")) else (
         "semi_outdoor" if any(k in cues for k in ("balcony", "veranda", "porch", "patio", "terrace", "gazebo", "courtyard", "awning")) else "outdoor"
     )
     period = "ancient_mythological" if any(k in cues for k in ("ancient", "myth", "purana", "dynasty", "kingdom", "vedic", "medieval")) else (
@@ -120,7 +121,7 @@ def _derive_environment(cues: str) -> dict[str, str]:
 
     lighting = "natural_open_daylight_5600k"
     if space == "indoor":
-        if any(k in cues for k in ("stadium", "arena", "floodlight", "sports")): lighting = "bright_indoor_stadium_lighting"
+        if any(k in cues for k in ("concert", "arena", "stadium", "floodlight", "sports")): lighting = "electric_stadium_concert_lighting"
         elif any(k in cues for k in ("hotel", "ballroom", "banquet", "reception", "wedding", "chandelier")): lighting = "warm_indoor_event_lighting"
         elif any(k in cues for k in ("hearth", "fireplace", "cabin", "shelter", "ember")): lighting = "cozy_hearth_fireplace_lighting"
         elif any(k in cues for k in ("neon", "club", "party", "bar", "cyber")): lighting = "moody_neon_ambient_lighting"
@@ -212,8 +213,7 @@ def derive_cultural_context(
     is_indian = "indian" in profile.get("culture", "") or any(k in combined_cues for k in ("telugu", "tamil", "malayalam", "kannada")) or language in ("te", "ta", "kn", "ml", "hi")
 
     is_intl_or_modern = any(re.search(rf"\b{re.escape(k)}\b", combined_cues) for k in (
-        "paris", "london", "france", "uk", "britain", "swiss", "alps", "norway", "fjord",
-        "europe", "villa", "infinity pool", "ocean", "beach", "cafe", "bistro", "winter", "snow", "resort"
+        "paris", "london", "france", "uk", "britain", "swiss", "alps", "norway", "fjord", "europe", "ocean", "beach", "winter", "concert", "arena", "stadium", "virtual_artist"
     ))
     has_explicit_ethnic = any(k in combined_cues for k in ("saree", "pattu", "dhoti", "panche", "veshti", "langa", "mundu", "sherwani", "kurta", "lehenga", "anarkali"))
 
@@ -239,7 +239,7 @@ def derive_cultural_context(
         selected_costume, ethnicity, primary_ethnicity = "american_rock_leather", "american_rocker", "American Rock / Alternative"
     elif "pop" in combined_cues or "edm" in combined_cues:
         selected_costume, ethnicity, primary_ethnicity = "american_pop_glam", "american_popstar", "American Pop Star"
-    elif "rnb" in combined_cues or "soul" in combined_cues:
+    elif "rnb" in combined_cues or re.search(r"\b(neo[-_ ]?soul|r&b)\b", combined_cues):
         selected_costume, ethnicity, primary_ethnicity = "american_rnb_velvet", "african_american", "African American / R&B Artist"
     elif "line_dance" in combined_cues or "western_swing" in combined_cues or ("country" in combined_cues and "music" in combined_cues):
         selected_costume, ethnicity, primary_ethnicity = "american_western_country", "american_country", "American Country Western"

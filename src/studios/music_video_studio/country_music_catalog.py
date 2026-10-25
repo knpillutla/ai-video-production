@@ -113,56 +113,16 @@ COUNTRY_CATALOG: dict[str, CountrySpec] = {
 
 SCENERY_ARCHETYPES: dict[str, dict[str, str]] = {
     # Global Iconic Destination Sceneries
-    "swiss_alps_snow": {
-        "title": "Swiss Alps Snow Peaks & Pines",
-        "prompt": "Majestic snow-covered peaks of the Swiss Alps, snow-laden pine forest, cozy wooden chalet terrace in pristine winter daylight",
-        "vfx": "snow",
-    },
-    "dolomites_meadow": {
-        "title": "Dolomites Wildflower Meadows & Glacial Streams",
-        "prompt": "Dramatic jagged Dolomite granite spires towering over lush alpine wildflower meadow and crystal clear meandering stream",
-        "vfx": "light_bokeh",
-    },
-    "paris_seine_terrace": {
-        "title": "Paris Rooftop & Seine Riverfront",
-        "prompt": "Elegant Parisian zinc rooftop terrace overlooking River Seine and classic Haussmann architecture in golden sunset hour",
-        "vfx": "dust",
-    },
-    "santorini_cliffside": {
-        "title": "Santorini White Cliffside & Aegean Sea",
-        "prompt": "Whitewashed Santorini cliffside terrace, blue-domed churches, overlooking deep cobalt Aegean Sea and golden hour horizon",
-        "vfx": "light_bokeh",
-    },
-    "kyoto_bamboo_temple": {
-        "title": "Kyoto Bamboo Grove & Lantern Shrines",
-        "prompt": "Towering Arashiyama bamboo grove path, soft sunbeams filtering through dense green stalks, wooden stone lantern shrine",
-        "vfx": "dust",
-    },
-    "iceland_waterfall_canyon": {
-        "title": "Icelandic Glacial Canyon & Waterfalls",
-        "prompt": "Monumental Icelandic roaring waterfall plunging into deep canyon basin, basalt column cliffs and emerald mossy slopes",
-        "vfx": "rain",
-    },
-    "newyork_night_skyline": {
-        "title": "Modern Metropolis & Neon Skyline",
-        "prompt": "High-rise luxury penthouse balcony overlooking illuminated metropolis skyline, neon city lights and evening twilight glow",
-        "vfx": "light_bokeh",
-    },
-    "tropical_sunset_beach": {
-        "title": "Tropical White Sand Beach & Palms",
-        "prompt": "Pristine white sand beach, turquoise crystal ocean swells, swaying coconut palms, warm golden sunset horizon",
-        "vfx": "dust",
-    },
-    "desert_sand_dunes": {
-        "title": "Desert Sand Dunes & Starlit Camp",
-        "prompt": "Undulating golden sand dunes under deep violet dusk sky, glowing Bedouin lanterns, open-air campfire hearth on sand",
-        "vfx": "dust",
-    },
-    "biophilic_rain_cabin": {
-        "title": "Biophilic Monsoon Veranda & Glass Cabin",
-        "prompt": "Biophilic forest glass cabin veranda, warm torrential rain streaming from eaves, lush tropical foliage and misty glade",
-        "vfx": "rain",
-    },
+    "swiss_alps_snow": {"title": "Swiss Alps Snow Peaks & Pines", "prompt": "Majestic snow-covered peaks of the Swiss Alps, snow-laden pine forest, cozy wooden chalet terrace in pristine winter daylight", "vfx": "snow"},
+    "dolomites_meadow": {"title": "Dolomites Wildflower Meadows & Glacial Streams", "prompt": "Dramatic jagged Dolomite granite spires towering over lush alpine wildflower meadow and crystal clear meandering stream", "vfx": "light_bokeh"},
+    "paris_seine_terrace": {"title": "Paris Rooftop & Seine Riverfront", "prompt": "Elegant Parisian zinc rooftop terrace overlooking River Seine and classic Haussmann architecture in golden sunset hour", "vfx": "dust"},
+    "santorini_cliffside": {"title": "Santorini White Cliffside & Aegean Sea", "prompt": "Whitewashed Santorini cliffside terrace, blue-domed churches, overlooking deep cobalt Aegean Sea and golden hour horizon", "vfx": "light_bokeh"},
+    "kyoto_bamboo_temple": {"title": "Kyoto Bamboo Grove & Lantern Shrines", "prompt": "Towering Arashiyama bamboo grove path, soft sunbeams filtering through dense green stalks, wooden stone lantern shrine", "vfx": "dust"},
+    "iceland_waterfall_canyon": {"title": "Icelandic Glacial Canyon & Waterfalls", "prompt": "Monumental Icelandic roaring waterfall plunging into deep canyon basin, basalt column cliffs and emerald mossy slopes", "vfx": "rain"},
+    "newyork_night_skyline": {"title": "Modern Metropolis & Neon Skyline", "prompt": "High-rise luxury penthouse balcony overlooking illuminated metropolis skyline, neon city lights and evening twilight glow", "vfx": "light_bokeh"},
+    "tropical_sunset_beach": {"title": "Tropical White Sand Beach & Palms", "prompt": "Pristine white sand beach, turquoise crystal ocean swells, swaying coconut palms, warm golden sunset horizon", "vfx": "dust"},
+    "desert_sand_dunes": {"title": "Desert Sand Dunes & Starlit Camp", "prompt": "Undulating golden sand dunes under deep violet dusk sky, glowing Bedouin lanterns, open-air campfire hearth on sand", "vfx": "dust"},
+    "biophilic_rain_cabin": {"title": "Biophilic Monsoon Veranda & Glass Cabin", "prompt": "Biophilic forest glass cabin veranda, warm torrential rain streaming from eaves, lush tropical foliage and misty glade", "vfx": "rain"},
     # Cultural & Local Presets
     "local_riverside_ghats": {"title": "Scenic Local Riverbank & Ghats", "prompt": "scenic local riverside", "vfx": "dust"},
     "local_heritage_palace": {"title": "Ancient Stone Palace & Courtyard", "prompt": "ancient historic palace courtyard", "vfx": "dust"},
@@ -187,18 +147,12 @@ MUSIC_PERFORMANCE_TYPES = {
 }
 
 SONG_MOODS = {
-    "romantic_melody": "💖 Romantic Melody (Soulful Love & Gentle Acoustic)",
-    "party_upbeat": "🎉 Party & High-Energy Dance (Upbeat Electronic & Drums)",
-    "happy_feelgood": "☀️ Happy & Feel-Good (Uplifting Bright Cadence)",
-    "love_ballad": "🌹 Emotional Love Ballad (Deep Strings & Melancholic Swells)",
-    "festival_celebration": "🪔 Festive & Cultural Celebration (Traditional Folk Percussion)",
-    "spiritual_devotional": "🪷 Spiritual & Devotional (Meditative Sacred Chants & Flute)",
-    "carnatic_raga": "🪕 Classical Carnatic Raga (Pure Nattaikurinji / Kalyani Melody & Sangam Poetry)",
-    "retro_60s_70s": "📻 60s/70s Vintage Golden Melody (Live Orchestra, Harmonium & Tabla)",
-    "retro_80s": "🎸 80s Retro Melody (Bass Guitar, Acoustic Flute, Tape Warmth)",
-    "retro_90s": "🎻 90s Rahman/Mani Ratnam Era (Lush Ambient Strings & Classical Fusion)",
-    "soulful_acoustic": "🎸 Soulful Unplugged & Melancholic",
-    "mass_beats": "🥁 High-Energy Mass Beats (Thumping Dappu, Teenmaar & Whistle Drops)",
+    "romantic_melody": "💖 Romantic Melody (Soulful Love & Gentle Acoustic)", "party_upbeat": "🎉 Party & High-Energy Dance (Upbeat Electronic & Drums)",
+    "happy_feelgood": "☀️ Happy & Feel-Good (Uplifting Bright Cadence)", "love_ballad": "🌹 Emotional Love Ballad (Deep Strings & Melancholic Swells)",
+    "festival_celebration": "🪔 Festive & Cultural Celebration (Traditional Folk Percussion)", "spiritual_devotional": "🪷 Spiritual & Devotional (Meditative Sacred Chants & Flute)",
+    "carnatic_raga": "🪕 Classical Carnatic Raga (Pure Nattaikurinji / Kalyani Melody & Sangam Poetry)", "retro_60s_70s": "📻 60s/70s Vintage Golden Melody (Live Orchestra, Harmonium & Tabla)",
+    "retro_80s": "🎸 80s Retro Melody (Bass Guitar, Acoustic Flute, Tape Warmth)", "retro_90s": "🎻 90s Rahman/Mani Ratnam Era (Lush Ambient Strings & Classical Fusion)",
+    "soulful_acoustic": "🎸 Soulful Unplugged & Melancholic", "mass_beats": "🥁 High-Energy Mass Beats (Thumping Dappu, Teenmaar & Whistle Drops)",
 }
 
 
@@ -223,6 +177,30 @@ def resolve_network_language_and_country(network_slug: str, fallback_country: st
         return "ko", "South Korea", "korean"
     c_spec = COUNTRY_CATALOG.get(fallback_country, COUNTRY_CATALOG["India"])
     return c_spec.default_language, c_spec.name, c_spec.languages[0].culture
+
+
+def resolve_country_and_culture_for_language(language: str | None = None, country: str | None = None) -> tuple[str | None, str | None]:
+    """Resolve (country, culture) if country is explicitly provided, else return None so LLM autonomously derives them."""
+    if country and country in COUNTRY_CATALOG:
+        return country, resolve_culture_for_country_and_language(country, language)
+
+    if country:
+        cleaned_c = country.strip().title()
+        if cleaned_c in ("Usa", "Us", "America", "United States Of America"):
+            return "United States", "western"
+        if cleaned_c in ("Uk", "Gb", "Britain", "Great Britain", "England"):
+            return "United Kingdom", "british"
+        for cat_name, cat_spec in COUNTRY_CATALOG.items():
+            if cat_name.lower() == country.lower() or cat_spec.code.lower() == country.lower():
+                return cat_name, resolve_culture_for_country_and_language(cat_name, language)
+        return country, resolve_culture_for_country_and_language(country, language)
+
+    # For English default to USA country
+    if language and language.lower().strip() == "en":
+        return "USA", "western"
+
+    # For other languages: return None so LLM autonomously derives country
+    return None, None
 
 
 def resolve_culture_for_country_and_language(country: str | None = None, language: str | None = None) -> str:
@@ -288,6 +266,7 @@ __all__ = [
     "MUSIC_PERFORMANCE_TYPES",
     "SONG_MOODS",
     "resolve_network_language_and_country",
+    "resolve_country_and_culture_for_language",
     "resolve_culture_for_country_and_language",
     "build_music_video_prompt_package",
 ]

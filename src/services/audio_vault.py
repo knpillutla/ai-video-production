@@ -128,11 +128,11 @@ class AudioVaultService:
         print(f"[DECISION - AUDIO CACHE MISS] Highest audio vault similarity is {best_score:.2f} (< threshold {min_similarity}). Invoking Suno v3.5 Pro for fresh audio composition.")
         return None
 
-    def record_usage(self, filename: str, episode_id: str) -> None:
+    def record_usage(self, filename: str, episode_id: Any) -> None:
         """Record stem usage in the global production history for cooldown tracking."""
         data = self._load_data()
         history = data.setdefault("production_history", [])
-        history.append({"filename": filename, "episode_id": episode_id, "timestamp": time.time()})
+        history.append({"filename": filename, "episode_id": str(episode_id) if episode_id else "", "timestamp": time.time()})
         if len(history) > 200:
             data["production_history"] = history[-200:]
         self._save_data(data)
@@ -152,6 +152,9 @@ class AudioVaultService:
         src = Path(source_path)
         if not (src.is_file() and src.stat().st_size > 1000):
             return src
+
+        if episode_id is not None:
+            episode_id = str(episode_id)
 
         slug = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in (title or genre).lower().replace(" ", "_"))[:40]
         filename = f"{slug}_{abs(hash(f'{genre}_{theme}_{concept}')) % 100000}{src.suffix}"

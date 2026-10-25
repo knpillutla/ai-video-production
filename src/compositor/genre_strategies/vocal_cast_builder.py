@@ -68,51 +68,92 @@ def build_vocal_suno_tags(
             return f"1980s melodic retro, melodic bass guitar, acoustic western flute, nylon guitar counterpoint, lush strings section, nostalgic analog warmth, {vocal_tag}, 85 bpm, clean broadcast master"
         return f"1990s lush ambient classical fusion, acoustic bansuri flute, lush string orchestra, world percussion, expressive romantic duet, soulful {vocal_tag}, 80 bpm, 48khz broadcast master"
 
+    is_west = any(k in str(culture).lower() for k in ("western", "french", "spanish", "american", "british", "nordic", "global"))
     if any(k in eff_sub for k in ("romantic", "romance", "ballad", "love")):
-        return (
-            f"catchy hummable romantic ballad, heartfelt {culture}, acoustic guitar, bansuri flute, soft strings, "
-            f"lush chords, memorable earworm hook, soulful, {vocal_tag}, {tempo_bpm} bpm, radio broadcast mix"
-        )
+        if is_west:
+            return f"catchy hummable romantic pop ballad, memorable earworm hook, acoustic guitar, grand piano, lush strings, warm analog bass, {vocal_tag}, {tempo_bpm} bpm, radio broadcast mix"
+        return f"catchy hummable romantic ballad, heartfelt {culture}, acoustic guitar, bansuri flute, soft strings, lush chords, memorable earworm hook, soulful, {vocal_tag}, {tempo_bpm} bpm, radio broadcast mix"
 
     if any(k in eff_sub for k in ("soul", "devotion", "spiritual")):
-        return (
-            f"soulful hummable acoustic melody, {culture}, meditative bansuri, resonant acoustic cello, "
-            f"heartfelt devotion, memorable peaceful hook, serene emotional warmth, {vocal_tag}, {tempo_bpm} bpm, broadcast master"
-        )
+        if is_west:
+            return f"soulful acoustic melody, grand piano, warm acoustic cello, memorable peaceful hook, serene emotional warmth, {vocal_tag}, {tempo_bpm} bpm, broadcast master"
+        return f"soulful hummable acoustic melody, {culture}, meditative bansuri, resonant acoustic cello, heartfelt devotion, memorable peaceful hook, serene emotional warmth, {vocal_tag}, {tempo_bpm} bpm, broadcast master"
 
     if any(k in eff_sub for k in ("happy", "celebrat", "joy", "cheerful")):
-        return (
-            f"catchy hummable celebration, {culture}, bright acoustic strumming, joyous rhythm, "
-            f"memorable sing-along hook, cheerful brass flourishes, vibrant {vocal_tag}, {tempo_bpm} bpm, broadcast mix"
-        )
+        return f"catchy hummable celebration, {culture}, bright acoustic strumming, joyous rhythm, memorable sing-along hook, cheerful brass flourishes, vibrant {vocal_tag}, {tempo_bpm} bpm, broadcast mix"
 
     if any(k in eff_sub for k in ("mass", "dappu", "teenmaar")):
         m_tag = "energetic hero male vocals, punchy chest resonance" if gender == "male" else vocal_tag
-        return (
-            f"catchy hummable mass commercial dance, heavy thumping dappu drums, fast teenmaar rhythm, {culture}, "
-            f"energetic brass trumpets, whistle drops, explosive earworm hook couplets, {m_tag}, "
-            f"138 bpm, thumping bass downbeats, clean punchy 48khz broadcast master"
-        )
+        return f"catchy hummable mass commercial dance, heavy thumping dappu drums, fast teenmaar rhythm, {culture}, energetic brass trumpets, whistle drops, explosive earworm hook couplets, {m_tag}, 138 bpm, thumping bass downbeats, clean punchy 48khz broadcast master"
 
     if any(k in eff_sub for k in ("party", "club", "dance", "beat")):
-        return (
-            f"infectious catchy party dance, {culture}, groovy bassline, infectious drum groove, "
-            f"memorable earworm hook, club rhythm, {vocal_tag}, 124 bpm, high energy broadcast master"
-        )
+        return f"infectious catchy party dance, {culture}, groovy bassline, infectious drum groove, memorable earworm hook, club rhythm, {vocal_tag}, 124 bpm, high energy broadcast master"
 
+    cult_str = f"{culture} " if (culture and str(culture).lower() != "none") else ""
+    clean_sub = eff_sub.replace("music/", "").replace("_", " ")
+    return f"catchy hummable {cult_str}{clean_sub}, memorable earworm melody, acoustic instruments, melodic harmonies, {vocal_tag}, {tempo_bpm} bpm, clean 48khz broadcast master"
+
+
+def _build_female_wardrobe_directive(fem: Any, setting: str, costume_hint: str | None = None, is_va: bool = False) -> str:
+    """Generate dynamic, context-driven female wardrobe instructions without hardcoded lehengas."""
+    if is_va:
+        return (
+            "  * VIRTUAL ARTIST DYNAMIC WARDROBE (GEMINI AUTONOMOUS DERIVATION - ZERO HARDCODING):\n"
+            "    - Gemini MUST autonomously derive the entire clothing, outfit, and accessories dynamically based on the exact background context and setting.\n"
+            "    - ZERO HARDCODING: Do not hardcode fixed colors, fixed palettes, or generic garment templates. Visual ambiance dictates the attire.\n"
+            "    - FULLY COVERED & STRICT MODESTY (RULE 12 COMPLIANT ACROSS ALL MODELS): Must be completely covered: high closed boat neckline or mandarin collar, full closed torso and midriff coverage with continuous fabric (zero bare midriff, zero exposed stomach, zero bare belly), and explicit tailored sleeves (fitted 3/4 length sleeves or long tailored sleeves). Strictly zero cleavage, zero plunging necklines, zero crop tops, zero sheer reveals.\n"
+            "    - ELEGANT, COLORFUL & DECORATIVE: Outfits must be breathtakingly beautiful, vibrant, and colorful in rich saturated jewel tones or radiant vivid pastels with intricate embroidery, delicate accents, or tasteful designer detailing that pop against the background.\n"
+            "    - SCRIPT & PROMPT PERSISTENCE: Record this chosen outfit in 'characters[0].outfit_description' AND include it across EVERY scene.\n"
+        )
+    hint_line = f"  * USER COSTUME HINT: '{costume_hint}'. Gemini MUST honor this hint and style it in {fem.palette} with elegant tailoring.\n" if costume_hint else ""
     return (
-        f"catchy hummable {culture} {eff_sub.replace('_', ' ')}, memorable earworm melody, acoustic instruments, "
-        f"melodic harmonies, {vocal_tag}, {tempo_bpm} bpm, clean 48khz broadcast master"
+        f"{hint_line}"
+        f"  * AUTONOMOUS CONTEXT-DRIVEN WARDROBE DERIVATION (GEMINI DECIDES BASED ON STORY CONTEXT & THEME HINTS):\n"
+        f"    - THEME HINTS PRIORITY: If the theme, idea, or setting ('{setting}') contains any specific outfit hints, fabrics, or colors (e.g. saree, gown, anarkali, dress, chiffon, silk), Gemini MUST honor and elaborate on those hints.\n"
+        f"    - STORY-MATCHED SELECTION: If no specific outfit is hinted, Gemini MUST autonomously design an authentic, breathtakingly beautiful, vibrant, and colorful outfit suited specifically to the narrative beats, song mood, climate, and setting.\n"
+        f"    - ELEGANT & ROMANTIC (NEVER CHEAP, SEXY, OR REVEALING): Outfits can be deeply romantic, dreamy, and poetic matching romantic song themes (graceful drape, soft billowing fabric, jewel/pastel tones). STRICT ELEGANCE CONTRACT: Must look cinema-grade, regal, and high-end—NEVER cheap, NEVER sexy, and NEVER revealing. Modest high neckline, full midriff and torso coverage. Strictly zero cleavage, zero plunging necklines, zero bare midriff, zero sheer reveals.\n"
+        f"    - NO GENERIC DEFAULT: NEVER default to a generic lehenga or half-saree. Autonomously choose the most fitting silhouette:\n"
+        f"      * Pastoral Nature / Rain / Soulful Melody: Elegant flowing Handloom Chanderi, Organza, or Chiffon Saree with delicate floral border that billows gracefully in the breeze (or flowing nature dress). Strictly NO lehenga/blouse.\n"
+        f"      * Soulful Romance / Ballad: Floor-length embroidered Anarkali gown, pastel chiffon saree, or elegant evening gown.\n"
+        f"      * Temple / Classical Sabha / Heritage: Regal Kanchipuram or Pochampally silk saree with rich gold zari temple border.\n"
+        f"      * Modern / Pop / Urban / Street / Cafe: Chic contemporary Indo-Western fusion, stylish dress, or smart-casual coordinates.\n"
+        f"      * Festive Village / Jathara: Celebratory vibrant festive attire with colorful dupatta and mirror-work accents.\n"
+        f"    - Colors & Fabric: Rich saturated jewel tones or radiant pastels in {fem.palette} featuring intricate artistic designs (fine gold/silver threadwork, delicate embroidery, floral motifs) that pop against the backdrop.\n"
+        f"    - SCRIPT & PROMPT PERSISTENCE (ZERO OUTFIT DISTORTION): Record this chosen outfit in 'characters[0].outfit_description' AND include it in 'visual_prompt' across EVERY scene for zero outfit distortion.\n"
+    )
+
+
+def _build_male_wardrobe_directive(male: Any, setting: str, costume_hint: str | None = None, is_va: bool = False) -> str:
+    """Generate dynamic, context-driven male wardrobe instructions."""
+    if is_va:
+        return (
+            "  * VIRTUAL ARTIST DYNAMIC MALE WARDROBE (GEMINI AUTONOMOUS DERIVATION - ZERO HARDCODING):\n"
+            "    - Gemini MUST autonomously derive clothing and accessories based on setting: strikingly handsome in context-matched tailored attire (tailored shirt or structured blazer, tailored trousers, leather footwear) with precision chronograph watch strapped securely to left wrist. Modest gentleman styling (zero bare chest, zero nudity).\n"
+        )
+    hint_line = f"  * USER COSTUME HINT: '{costume_hint}'. Gemini MUST honor this hint and style it in {male.palette}.\n" if costume_hint else ""
+    s_low = str(setting or "").lower()
+    is_trad = any(k in s_low for k in ("jathara", "temple", "festiv", "dussehra", "diwali", "sankranti", "classical", "carnatic", "puja", "bonalu"))
+    trad_hint = (
+        f"  * Traditional / Festive Setting: Rich festive silk or fine-cotton kurta in {male.palette} with gold zari brocade embroidery, paired with a traditional cream/gold silk dhoti (panche) with golden zari border or tailored churidar, draped angavastram, and precision chronograph watch strapped securely to left wrist.\n"
+        if is_trad else
+        f"  * Context-Matching & Attractive Tailored Attire: Strikingly handsome, stylish tailored attire in {male.palette} authentically suited to {setting} (tailored linen/cotton shirt, structured layer or blazer, tailored trousers, polished leather footwear), with precision chronograph watch strapped securely to left wrist.\n"
+    )
+    return (
+        f"{hint_line}"
+        f"  * AUTONOMOUS CONTEXT-DRIVEN MALE WARDROBE (GEMINI DECIDES BASED ON STORY CONTEXT & THEME HINTS):\n"
+        f"    - If theme/setting mentions specific attire, Gemini honors it. Otherwise, Gemini autonomously selects the most fitting style:\n"
+        f"{trad_hint}"
     )
 
 
 def build_cast_and_visual_directives(
     slot: int, fem: Any, male: Any, culture: str, setting: str,
     gender: str = "duet", is_kids: bool = False, is_jugalbandi: bool = False,
+    costume_hint: str | None = None, is_va: bool = False,
 ) -> Tuple[str, str]:
     """Generate prompt directives and negative prompt constraints for character staging."""
     eff_gender = (gender or "duet").lower()
-    _BASE_NEG = "nudity, naked, cleavage, sexualized outfit, revealing clothes, low cut, exposed midriff, provocative attire, translucent fabric, watch on shirt, chest badge, misplaced jewelry, plastic doll skin, wax figure, distorted anatomy, disembodied hands, floating hands, phantom limbs, extra limbs, duplicate wrists, duplicate watches, head cropped, cut off head, cut off face, head touching top edge, no headroom, blank expression, deadpan face, emotionless, neutral stare"
+    _BASE_NEG = "nudity, naked, cleavage, sexualized outfit, revealing clothes, low cut, exposed midriff, bare midriff, bare stomach, bare belly, crop top, provocative attire, translucent fabric, cheap clothes, sexy, tacky clothing, skimpy dress, watch on shirt, chest badge, misplaced jewelry, plastic doll skin, wax figure, distorted anatomy, disembodied hands, floating hands, phantom limbs, extra limbs, duplicate wrists, duplicate watches, head cropped, cut off head, cut off face, head touching top edge, no headroom, blank expression, deadpan face, emotionless, neutral stare"
 
     if is_kids:
         # Child safety & platform ethics: 3D Pixar / Disney storybook animation style only
@@ -154,6 +195,12 @@ def build_cast_and_visual_directives(
         "carnatic", "raga", "narumugaye", "sangam", "classical",
     ))
 
+    male_outfit_guide = _build_male_wardrobe_directive(male, setting, costume_hint, is_va=is_va)
+    fem_outfit_guide = _build_female_wardrobe_directive(fem, setting, costume_hint, is_va=is_va)
+
+    is_west_cult = any(k in str(culture).lower() for k in ("western", "french", "spanish", "american", "british", "nordic", "global"))
+    ear_neck_desc = 'Traditional gold temple jhumkas and delicate gold mango necklace / kasu mala' if is_traditional_festive else ('Context-matched sparkling teardrop earrings and delicate pendant' if is_west_cult else 'Context-matched sparkling earrings/jhumkas and delicate pendant chain')
+
     if eff_gender == "male":
         if is_party_or_mass:
             solo_male_staging = (
@@ -169,17 +216,6 @@ def build_cast_and_visual_directives(
                 "STRICTLY FORBIDDEN: NO WOMEN, NO FEMALE CHARACTERS, NO COUPLE, NO DATING PARTNER.\n"
             )
             neg_constraints = "woman, female, girl, women, couple, hand holding, romantic partner, nudity, naked, bare chest, watch on shirt, chest badge, head cropped, cut off head, cut off face, head touching top edge, no headroom, blank expression, deadpan face, emotionless, neutral stare, robotic face, dull expression, glassy eyes"
-
-        if is_traditional_festive:
-            male_outfit_guide = (
-                f"  * Strikingly handsome, authentic traditional festive attire suited to {setting}.\n"
-                f"  * Impeccably styled in rich celebratory ethnic festive wear: luxurious silk or fine-cotton kurta in vibrant auspicious hues ({male.palette}, golden yellow, royal maroon, saffron, or ivory/cream) with intricate gold zari brocade embroidery, paired with a traditional cream/gold silk dhoti (panche) with golden zari border or tailored churidar, a regal festive angavastram/kanduva with golden zari borders draped gracefully over his shoulder, and traditional leather mojari/juttis footwear.\n"
-            )
-        else:
-            male_outfit_guide = (
-                f"  * Strikingly handsome, stylish, and elegant tailored attire suited to {setting}.\n"
-                f"  * Impeccably styled in {male.palette}: tailored linen/fine-cotton shirt, subtle textured layer or stylish jacket, tailored trousers, polished leather footwear.\n"
-            )
 
         cast_dir = (
             f"SOLO MALE LEAD DIRECTIVE (SLOT #{slot} - STRICT MALE ONLY STAGING):\n"
@@ -208,19 +244,6 @@ def build_cast_and_visual_directives(
             )
             neg_constraints = f"man, male, boy, men, couple, hand holding, romantic partner, boyfriend, dating couple, {_BASE_NEG}"
 
-        if is_traditional_festive:
-            fem_outfit_guide = (
-                f"  * Context-Matching Authentic Traditional Festive Attire: Breathtakingly beautiful, colorful traditional festive silk saree (Kanchipuram, Pochampally, or Banarasi silk) or radiant traditional half-saree (langa voni) / royal festive anarkali suited to {setting}.\n"
-                f"  * Palette & Intricate Zari Work: Rich auspicious tones in {fem.palette}, temple red, royal emerald, bright turmeric yellow, or rani pink adorned with elaborate gold zari borders and delicate ethnic motifs.\n"
-                f"  * Dynamic flowing pallu or dupatta that drapes gracefully over her shoulder.\n"
-            )
-        else:
-            fem_outfit_guide = (
-                f"  * Context-Matching & Highly Attractive: Breathtakingly beautiful, colorful, and elegant dress authentically suited to {setting}.\n"
-                f"  * Palette & Designer Patterns: Rich saturated tones or luminous radiant pastels in {fem.palette} featuring intricate artistic designs—delicate floral embroidery, fine gold/silver threadwork borders, tasteful patterns, layered ruffles, or lacework that pop against the scenery.\n"
-                f"  * Dynamic photogenic fabrics (flowing chiffon, georgette, or silk) that billow gracefully in the breeze and during turns/twirls.\n"
-            )
-
         cast_dir = (
             f"SOLO FEMALE LEAD DIRECTIVE (SLOT #{slot} - STRICT FEMALE ONLY STAGING):\n"
             f"- FEMALE LEAD: '{fem.name}', Age {fem.age}, natural fit medium-slender graceful build, {fem.skin} skin, "
@@ -231,23 +254,13 @@ def build_cast_and_visual_directives(
             f"  * CURATED 4-ZONE ACCESSORIES (GEMINI AUTONOMOUS CONTEXTUAL SELECTION - MANDATORY IN SCRIPT & IMAGE PROMPTS):\n"
             f"    Gemini MUST autonomously decide and describe context-matched accessories across all 4 zones based on the background, weather, and culture of {setting}:\n"
             f"    - HAIR (Zone 1): {'Fresh fragrant white jasmine flowers (mallepoolu) braided into hair or subtle maang tikka' if is_traditional_festive else 'Context-matched blossoms or delicate pearl/gold barrette pins'}.\n"
-            f"    - EARS & NECK (Zone 2): {'Traditional gold temple jhumkas and delicate gold mango necklace / kasu mala' if is_traditional_festive else 'Context-matched sparkling earrings/jhumkas and delicate pendant chain'} styled on a modest high neckline.\n"
+            f"    - EARS & NECK (Zone 2): {ear_neck_desc} styled on a modest high neckline.\n"
             f"    - HANDS & WRISTS (Zone 3): {'Traditional glass bangles, delicate gold kada, and dainty rings' if is_traditional_festive else 'Graceful slim dress watch, delicate gold/silver bangles or chain bracelets, and dainty rings'}.\n"
             f"    - LEGS & ANKLES (Zone 4): Context-matched dainty ankle chain (anklet / payal) paired with setting-appropriate footwear (sandals, heels, or embellished juttis).\n"
             f"    - SCRIPT & PROMPT CONTRACT: Gemini MUST record these chosen accessories in 'characters[0].outfit_description' AND explicitly include them in 'visual_prompt' across EVERY scene so each image reflects her cute, charming, and stylish appearance.\n"
             f"{solo_fem_staging}"
         )
     else:
-        male_duet_outfit = (
-            f"  * Traditional Festive Attire: Rich festive silk kurta in {male.palette} with gold zari brocade, traditional cream/gold silk dhoti (panche) with zari border or tailored churidar, draped angavastram, precision chronograph watch strapped securely to left wrist.\n"
-            if is_traditional_festive else
-            f"  * Context-Matching & Attractive: Strikingly handsome, elegant tailored attire in {male.palette} suited to {setting}, tailored trousers, precision chronograph watch strapped securely to left wrist.\n"
-        )
-        fem_duet_outfit = (
-            f"  * Context-Matching Traditional Festive Silk Attire: Breathtakingly beautiful traditional silk saree or half-saree (langa voni) in {fem.palette} with rich gold zari borders, tailored to flatter her graceful slim waist and silhouette (strictly NO boxy, loose, or shapeless tunics).\n"
-            if is_traditional_festive else
-            f"  * Context-Matching & Attractive Designer Dress: Breathtakingly beautiful, colorful, elegant designer gown in {fem.palette} with delicate floral embroidery or fine threadwork designs, tailored to flatter her graceful slim waist and silhouette (strictly NO boxy, loose, or shapeless tunics).\n"
-        )
         staging_title = "VOCAL JUGALBANDI STAGING (SAWAAL-JAWAAB FACE-OFF)" if is_jugalbandi else f"COORDINATED COUPLE DIRECTIVE (SLOT #{slot} - DUET STAGING)"
         jugalbandi_notes = (
             f"- VOCAL JUGALBANDI FACE-OFF DIRECTIVE:\n"
@@ -258,17 +271,17 @@ def build_cast_and_visual_directives(
         cast_dir = (
             f"{staging_title}:\n"
             f"- FEMALE LEAD: '{fem.name}', Age {fem.age}, natural fit medium-slender graceful slim build with defined waist and natural feminine curves (graceful SLIM build), {fem.skin} skin, {fem.face}, {fem.hair}.\n"
-            f"{fem_duet_outfit}"
+            f"{fem_outfit_guide}"
             f"  * STRICT MODESTY (FAMILY-FRIENDLY & ZERO NUDITY): Elegant modest high boat neckline, mandarin collar, or high round neck with full upper chest coverage. Strictly zero cleavage, zero plunging necklines, zero low V-necks, zero bare midriff.\n"
             f"  * CURATED 4-ZONE ACCESSORIES (GEMINI AUTONOMOUS CONTEXTUAL SELECTION - MANDATORY IN SCRIPT & IMAGE PROMPTS):\n"
             f"    Gemini MUST autonomously decide and describe context-matched accessories across all 4 zones based on the background, weather, and culture of {setting}:\n"
             f"    - HAIR (Zone 1): {'Fresh fragrant jasmine flowers (mallepoolu)' if is_traditional_festive else 'Context-matched blossoms or delicate pearl/gold barrette pins'}.\n"
-            f"    - EARS & NECK (Zone 2 - MANDATORY NECK ACCESSORY): {'Traditional gold temple jhumkas AND gold necklace/kasu mala' if is_traditional_festive else 'Context-matched sparkling earrings/jhumkas AND delicate necklace or pendant chain'} styled gracefully around her neck over the high neckline. Females ALWAYS wear neck accessories; NEVER omit the necklace or pendant chain in any scene prompt.\n"
+            f"    - EARS & NECK (Zone 2 - MANDATORY NECK ACCESSORY): {ear_neck_desc} styled gracefully around her neck over the high neckline. Females ALWAYS wear neck accessories; NEVER omit the necklace or pendant chain in any scene prompt.\n"
             f"    - HANDS & WRISTS (Zone 3): {'Traditional glass bangles, delicate gold kada, and dainty rings' if is_traditional_festive else 'Graceful slim dress watch, delicate gold/silver bangles or chain bracelets, and dainty rings'}.\n"
             f"    - LEGS & ANKLES (Zone 4): Context-matched dainty ankle chain (anklet / payal) paired with setting-appropriate footwear (sandals, heels, or boots).\n"
             f"    - SCRIPT & PROMPT CONTRACT: Gemini MUST record these chosen accessories in 'characters[0].outfit_description' AND explicitly include ALL 4 ZONES (including the necklace around her neck) in 'visual_prompt' across EVERY scene so each image reflects her cute, charming, and stylish appearance.\n"
             f"- MALE LEAD: '{male.name}', Age {male.age}, natural fit medium-athletic frame (MEDIUM BUILT), {male.skin} skin, {male.face}, {male.hair}.\n"
-            f"{male_duet_outfit}"
+            f"{male_outfit_guide}"
             f"- DIRECTORIAL FRAMING & ANTI-HALLUCINATION GUARD:\n"
             f"  * Both leads must be framed together naturally or solo. NEVER describe an off-screen partner's hands reaching into the frame.\n"
             f"  * Authentic romantic chemistry engaging with the background, zero stiff separated stances.\n"
@@ -277,6 +290,3 @@ def build_cast_and_visual_directives(
         neg_constraints = f"off-screen reaching, boxy tunic, baggy loungewear, shapeless clothing, low V-neck, plunging neckline, stiff posture, standing separated, tight headroom, top frame cut off, forehead cropped, hair touching top frame, {_BASE_NEG}"
 
     return cast_dir, neg_constraints
-
-
-

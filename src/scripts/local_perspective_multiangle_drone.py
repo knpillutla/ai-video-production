@@ -166,6 +166,8 @@ def render_multiangle_drone_clip_sync(
     if res.returncode != 0:
         raise RuntimeError(f"FFmpeg encode failed for {out.name}: {res.stderr[-300:]}")
 
+    from src.services.video_4k_encoder import ensure_video_4k
+    ensure_video_4k(out)
     return out
 
 

@@ -58,18 +58,8 @@ def resolve_motion_model(model: str, prompt_context: str, total_shots: int = 4) 
     return "wan_4k", "Alibaba Wan 2.1 + AI 4K Super-Resolution"
 
 
-def _is_clip_4k(video_path: Path) -> bool:
-    """Check if video file has 4K UHD dimensions (width >= 3840 and height >= 2160)."""
-    try:
-        import re
-        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-        res = subprocess.run([ffmpeg_bin, "-i", str(video_path)], capture_output=True, text=True, errors="ignore")
-        match = re.search(r"(\d{3,4})x(\d{3,4})", res.stderr)
-        if match:
-            return int(match.group(1)) >= 3840 and int(match.group(2)) >= 2160
-    except Exception:
-        pass
-    return False
+from src.services.video_4k_encoder import is_clip_4k as _is_clip_4k, ensure_video_4k
+
 
 
 class VisualBatchService:
@@ -122,6 +112,7 @@ class VisualBatchService:
                 model_display = "FLUX.1-dev"
 
             log_pipeline_step("checking keyframes", f"Shot {idx} Keyframe", "started", f"keyframe missing, synthesizing via {model_display}", {"file": out_path.name})
+            logger.info(f"generating_keyframe [model={model_display}]: Shot {idx} {out_path.name} prompt={prompt[:70]}...")
             await adapter.generate_to_file(prompt=prompt, output_path=out_path, aspect_ratio=aspect_ratio, force_live=bool(self.fal_key))
             if enable_4k_upscale and out_path.is_file():
                 await FalAuraSRAdapter(api_key=self.fal_key).upscale_image(out_path, out_path, force_live=bool(self.fal_key))
@@ -223,31 +214,10 @@ class VisualBatchService:
                         await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, req_file=task.req_file)
 
                     if raw_diff.is_file() and raw_diff.stat().st_size > 1000:
-                        if _is_clip_4k(raw_diff):
-                            logger.info(f"decision_4k_direct_pass: {task.output_path.name} is native 4K. Skipping re-encoding.")
-                            if task.output_path.exists():
-                                task.output_path.unlink()
-                            raw_diff.rename(task.output_path)
-                            log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip created", {"file": task.output_path.name, "cost": "$0.00"})
-                            return task.output_path
-
-                        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-                        cmd_scale = [
-                            ffmpeg_bin, "-y", "-i", str(raw_diff),
-                            "-vf", "scale=3840:2160:flags=lanczos",
-                            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4",
-                            "-an",
-                            str(task.output_path)
-                        ]
-                        res = subprocess.run(cmd_scale, capture_output=True, text=True)
-                        if res.returncode != 0:
-                            logger.warning(f"ffmpeg_scale_warn: {res.stderr[:200]}. Using direct copy.")
-                            import shutil
-                            shutil.copy(str(raw_diff), str(task.output_path))
-                        try:
-                            raw_diff.unlink(missing_ok=True)
-                        except Exception:
-                            pass
+                        ensure_video_4k(raw_diff)
+                        if task.output_path.exists():
+                            task.output_path.unlink()
+                        raw_diff.rename(task.output_path)
                         logger.info(f"ai_diffusion_motion_rendered: model={chosen_model} {task.output_path.name}")
                         log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip created", {"file": task.output_path.name, "cost": "$0.00"})
                         return task.output_path

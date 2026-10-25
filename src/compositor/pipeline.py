@@ -94,18 +94,36 @@ class ProductionPipelineCoordinator:
         )
         effective_art_style = art_style or (ref_attrs.art_style if yt_url else "")
 
+        ui_path = ep_dir / "user_inputs.json"
+        existing_ui = {}
+        if ui_path.is_file():
+            try: existing_ui = json.loads(ui_path.read_text(encoding="utf-8"))
+            except Exception: existing_ui = {}
+
         user_inputs = {
+            **existing_ui,
             "user_id": str(user_id), "episode_id": str(episode_id), "title": episode.title,
             "duration_seconds": episode.duration_seconds, "format": fmt_str, "theme": eff_theme,
             "idea": eff_idea, "script": eff_script, "youtube_reference_url": yt_url,
             "tier": tier, "language": language, "subtitle_language": subtitle_language,
             "gender": gender, "character_name": character_name, "art_style": effective_art_style or ref_attrs.art_style_display,
             "enable_voice_over": enable_voice_over, "enable_bgm": enable_bgm, "enable_lipsync": enable_lipsync,
-            "reference_attributes": ref_attrs.model_dump(mode="json"),
-            "refine_script": refine_script, "dry_run": dry_run, "created_at": time.time(),
-            "num_images": kwargs.get("num_images", 1), "use_loras": kwargs.get("use_loras", False),
+            "reference_attributes": ref_attrs.model_dump(mode="json"), "refine_script": refine_script, "dry_run": dry_run, "created_at": time.time(),
+            "num_images": kwargs.get("num_images", existing_ui.get("num_images", "auto")), "use_loras": kwargs.get("use_loras", existing_ui.get("use_loras", False)),
+            "dance": kwargs.get("dance", existing_ui.get("dance")), "use_kling": kwargs.get("use_kling", existing_ui.get("use_kling", False)),
+            "virtual_artist": kwargs.get("virtual_artist", existing_ui.get("virtual_artist", False)), "artist_mode": kwargs.get("artist_mode", existing_ui.get("artist_mode", "concert")),
+            "instrument": kwargs.get("instrument", existing_ui.get("instrument")), "orchestra": kwargs.get("orchestra", existing_ui.get("orchestra", False)),
+            "scenic": kwargs.get("scenic", existing_ui.get("scenic")), "landmark": kwargs.get("landmark", existing_ui.get("landmark")),
+            "continuous_motion": kwargs.get("continuous_motion", existing_ui.get("continuous_motion", False)),
+            "model": kwargs.get("model") or existing_ui.get("model", "flux"),
+            "lora_model": kwargs.get("lora_model") or existing_ui.get("lora_model", "flux"),
+            "dataset_model": kwargs.get("dataset_model") or existing_ui.get("dataset_model", "z-image"),
+            "chars": kwargs.get("chars") or kwargs.get("chars_arg") or kwargs.get("character_name") or existing_ui.get("chars"),
+            "network": kwargs.get("network", existing_ui.get("network")), "music_style": kwargs.get("music_style", existing_ui.get("music_style")),
+            "similar_to": kwargs.get("similar_to", existing_ui.get("similar_to")), "country": kwargs.get("country", existing_ui.get("country")),
+            "culture": culture or kwargs.get("culture", existing_ui.get("culture")), "profile": profile or existing_ui.get("profile"),
         }
-        await storage_service.save_json(ep_dir / "user_inputs.json", user_inputs)
+        await storage_service.save_json(ui_path, user_inputs)
         logger.info(f"starting_production_pipeline: ep={episode.title}, user={user_id}, tier={tier}, profile={profile}")
 
         meta_dict = {"genre": show.genre if show else "general", "show_slug": show_slug, "tier": tier, "language": language}
@@ -131,9 +149,10 @@ class ProductionPipelineCoordinator:
                 country=kwargs.get("country"), culture=culture or kwargs.get("culture"),
                 idea=eff_idea, script=eff_script, theme=eff_theme,
                 art_style=effective_art_style, profile=profile,
-                num_images=kwargs.get("num_images") or 1,
+                num_images=kwargs.get("num_images") or "auto",
                 network=kwargs.get("network"),
                 use_loras=kwargs.get("use_loras", False),
+                chars=kwargs.get("chars") or kwargs.get("chars_arg") or kwargs.get("character_name"),
                 auto_confirm=auto_confirm,
                 preview_only=kwargs.get("preview_only", False),
                 full_confirmed=kwargs.get("full_confirmed", False),
@@ -142,6 +161,17 @@ class ProductionPipelineCoordinator:
                 force_movements=kwargs.get("force_movements", False),
                 carnatic_song=kwargs.get("carnatic_song", False),
                 retro_song=kwargs.get("retro_song", False),
+                dance=kwargs.get("dance"),
+                use_kling=kwargs.get("use_kling", False),
+                vfx=kwargs.get("vfx", False),
+                virtual_artist=kwargs.get("virtual_artist", False),
+                artist_mode=kwargs.get("artist_mode"),
+                instrument=kwargs.get("instrument"),
+                has_orchestra=kwargs.get("has_orchestra", False) or kwargs.get("orchestra", False),
+                scenic=kwargs.get("scenic"),
+                landmark=kwargs.get("landmark"),
+                continuous_motion=kwargs.get("continuous_motion", False),
+                model=user_inputs.get("model", "flux"), lora_model=user_inputs.get("lora_model", "flux"), dataset_model=user_inputs.get("dataset_model", "z-image"),
             )
 
         from src.providers.dance.fal_video_factory import resolve_video_motion_adapter

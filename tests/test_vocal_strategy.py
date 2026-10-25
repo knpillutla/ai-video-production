@@ -184,4 +184,109 @@ async def test_synthesize_vocal_scenes_4k_upscale(tmp_path: Path):
     assert img.shape == (2160, 3840, 3), f"Expected 4K (2160, 3840, 3), got {img.shape}"
 
 
+def test_vocal_strategy_context_driven_wardrobe_and_hints():
+    """Verify autonomous context-driven wardrobe derivation and theme/costume hint handling."""
+    strategy = resolve_strategy("vocal")
 
+    # Case 1: Autonomous derivation without hints (never defaults to lehenga)
+    prompt_auto = strategy.build_gemini_prompt(
+        title="Vennela Megham",
+        duration_seconds=90,
+        language="te",
+        theme="rain romantic melody in tea estate",
+        gender="female",
+    )
+    assert "AUTONOMOUS CONTEXT-DRIVEN WARDROBE DERIVATION" in prompt_auto
+    assert "NEVER default to a generic lehenga or half-saree" in prompt_auto
+    assert "THEME HINTS PRIORITY" in prompt_auto
+
+    # Case 2: User provides explicit costume hint via costume_style
+    prompt_costume = strategy.build_gemini_prompt(
+        title="Vennela Megham",
+        duration_seconds=90,
+        language="te",
+        theme="rain romantic melody in tea estate",
+        gender="female",
+        costume_style="emerald green chiffon saree with pearl border",
+    )
+    assert "USER COSTUME HINT: 'emerald green chiffon saree with pearl border'" in prompt_costume
+    assert "Gemini MUST honor this hint" in prompt_costume
+
+
+@pytest.mark.asyncio
+async def test_vocal_dance_motion_idempotency_and_kling_rerender(tmp_path: Path, monkeypatch):
+    """Verify deleted motion rerender with Kling and artifact idempotency."""
+    from unittest.mock import AsyncMock
+    from src.compositor.vocal_motion_service import synthesize_vocal_dance_motion
+
+    scenes_dir = tmp_path / "scenes"
+    scenes_dir.mkdir(parents=True)
+
+    kf = scenes_dir / "scene_02.jpg"
+    kf.write_bytes(b"\xFF\xD8\xFF" + b"\x00" * 2000)
+
+    sb_data = {
+        "scenes": [
+            {"scene_index": 1, "render_mode": "still"},
+            {
+                "scene_index": 2,
+                "render_mode": "motion",
+                "motion_prompts": {
+                    "wan": "Wan prompt with grounded feet",
+                    "kling": "Kling prompt with kinetic energy",
+                },
+            },
+        ]
+    }
+
+    wan_mock = AsyncMock()
+    async def mock_wan_gen(image_url, motion_prompt, output_path, **kwargs):
+        Path(output_path).write_bytes(b"FAKE_WAN_VIDEO_DATA_" + b"0" * 15000)
+    wan_mock.generate_video = mock_wan_gen
+
+    kling_mock = AsyncMock()
+    kling_called = {"count": 0}
+    async def mock_kling_gen(image_url, motion_prompt, output_path, **kwargs):
+        kling_called["count"] += 1
+        Path(output_path).write_bytes(b"FAKE_KLING_VIDEO_DATA_" + b"1" * 15000)
+    kling_mock.generate_video = mock_kling_gen
+
+    monkeypatch.setattr("src.compositor.vocal_motion_service.FalWan21Adapter", lambda *a, **k: wan_mock)
+    monkeypatch.setattr("src.compositor.vocal_motion_service.FalKlingAdapter", lambda *a, **k: kling_mock)
+    monkeypatch.setattr("src.compositor.vocal_motion_service.upload_to_fal", AsyncMock(return_value="https://fal.media/fake.jpg"))
+
+    # 1. First run with default Wan 2.1
+    res1 = await synthesize_vocal_dance_motion(sb_data, scenes_dir, enable_dance=True, use_kling=False)
+    assert 2 in res1
+    motion_file = scenes_dir / "scene_02_motion.mp4"
+    meta_file = scenes_dir / "scene_02_motion.meta.json"
+    assert motion_file.is_file()
+    assert meta_file.is_file()
+    assert json.loads(meta_file.read_text())["model"] == "wan"
+
+    # 2. Idempotent rerun: should NOT call generate_video
+    wan_call_flag = [False]
+    async def fail_if_called(*a, **k): wan_call_flag[0] = True
+    wan_mock.generate_video = fail_if_called
+    res2 = await synthesize_vocal_dance_motion(sb_data, scenes_dir, enable_dance=True, use_kling=False)
+    assert 2 in res2
+    assert wan_call_flag[0] is False
+
+    # 3. User deletes the motion file because default Wan motion had limb issues
+    motion_file.unlink()
+    assert not motion_file.exists()
+
+    # 4. User runs with --id xxx --kling: must rerender deleted motion with Kling
+    res3 = await synthesize_vocal_dance_motion(sb_data, scenes_dir, enable_dance=True, use_kling=True)
+    assert 2 in res3
+    assert motion_file.is_file()
+    assert kling_called["count"] == 1
+    meta_data = json.loads(meta_file.read_text())
+    assert meta_data["model"] == "kling"
+    assert "Kling prompt with kinetic energy" in meta_data["prompt"]
+
+    # 5. Idempotent rerun with --kling: already Kling on disk, zero external calls
+    kling_called_before = kling_called["count"]
+    res4 = await synthesize_vocal_dance_motion(sb_data, scenes_dir, enable_dance=True, use_kling=True)
+    assert 2 in res4
+    assert kling_called["count"] == kling_called_before

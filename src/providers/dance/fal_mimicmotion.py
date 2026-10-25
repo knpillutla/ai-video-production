@@ -7,6 +7,7 @@ from typing import Optional
 from src.core.config import settings
 from src.core.telemetry import logger
 from src.providers.base import HTTPClientPool, is_mock_mode
+from src.services.video_4k_encoder import ensure_video_4k
 
 
 class FalMimicMotionAdapter:
@@ -62,7 +63,8 @@ class FalMimicMotionAdapter:
                     vid_resp = await client.get(video_url, timeout=30.0)
                     if vid_resp.status_code == 200:
                         out.write_bytes(vid_resp.content)
-                        logger.info(f"fal_mimicmotion_success: {out.name}")
+                        ensure_video_4k(out)
+                        logger.info(f"fal_mimicmotion_success: {out.name} (4K)")
                         return out
         except Exception as ex:
             logger.warning(f"fal_mimicmotion_failed: {ex}. Using local dance synthesizer fallback.")
@@ -96,9 +98,9 @@ class FalMimicMotionAdapter:
             cmd.extend(["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"])
 
         pulse_vf = (
-            f"scale=1920:1080,"
+            f"scale=3840:2160:flags=lanczos,"
             f"zoompan=z='1.05+0.05*sin(2*PI*2*on/{fps})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
-            f"d={int(duration_seconds * fps)}:s=1920x1080:fps={fps},"
+            f"d={int(duration_seconds * fps)}:s=3840x2160:fps={fps},"
             f"format=yuv420p"
         )
         cmd.extend([

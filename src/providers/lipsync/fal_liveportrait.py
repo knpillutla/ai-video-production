@@ -5,6 +5,7 @@ from pathlib import Path
 from src.core.config import settings
 from src.core.telemetry import logger
 from src.providers.base import HTTPClientPool, is_mock_mode
+from src.services.video_4k_encoder import ensure_video_4k
 
 
 
@@ -31,7 +32,8 @@ class FalLivePortraitAdapter:
 
         # Artifact Caching Guard: Reuse existing lipsync clip if already generated for this project
         if out.exists() and out.stat().st_size > 10000:
-            logger.info(f"lipsync_avatar_cache_hit: reusing existing avatar clip {out.name} ({out.stat().st_size} bytes)")
+            ensure_video_4k(out)
+            logger.info(f"lipsync_avatar_cache_hit: reusing existing avatar clip {out.name} ({out.stat().st_size} bytes, 4K)")
             return out
 
         if is_mock_mode():
@@ -88,9 +90,10 @@ class FalLivePortraitAdapter:
                             vid_resp = await client.get(video_url, timeout=60.0)
                             if vid_resp.status_code == 200:
                                 out.write_bytes(vid_resp.content)
+                                ensure_video_4k(out)
                                 if job_sidecar.exists():
                                     job_sidecar.unlink(missing_ok=True)
-                                logger.info(f"fal_lipsync_success: {out.name}")
+                                logger.info(f"fal_lipsync_success: {out.name} (4K)")
                                 return out
                     if st.get("status") in ("FAILED", "CANCELLED"):
                         if job_sidecar.exists():
@@ -124,9 +127,9 @@ class FalLivePortraitAdapter:
         else:
             cmd.extend(["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"])
 
-        # Subtle breathing/talking scale effect
+        # Subtle breathing/talking scale effect in 4K
         cmd.extend([
-            "-vf", "scale=1920:1080,format=yuv420p",
+            "-vf", "scale=3840:2160:flags=lanczos,format=yuv420p",
             "-c:v", "libx264", "-preset", "ultrafast",
             "-t", f"{duration_seconds:.2f}",
             str(output_path),
@@ -140,6 +143,7 @@ class FalLivePortraitAdapter:
         await proc.communicate()
         if not output_path.exists():
             output_path.write_bytes(b"\x00\x00\x00\x20ftypisom\x00\x00\x02\x00isomiso2avc1mp41")
+        ensure_video_4k(output_path)
         logger.info(f"local_avatar_clip_rendered: {output_path.name}")
         return output_path
 

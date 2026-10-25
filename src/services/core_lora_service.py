@@ -25,8 +25,8 @@ class CharacterLoraProfile(BaseModel):
     body_composition: str = "graceful medium-thin build with natural feminine curves, defined waistline, neither bony nor chubby"
     lora_url: str
     trigger_word: str
-    scale: float = 1.0
-    base_model: str = "flux"
+    scale: float = 0.82
+    base_model: str = "z-image"
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -90,6 +90,8 @@ class CoreLoraService:
                 "scale": p.scale,
                 "trigger_word": p.trigger_word,
                 "character_name": p.name,
+                "gender": p.gender,
+                "base_model": p.base_model,
                 "body_composition": p.body_composition,
             })
 
@@ -115,9 +117,16 @@ class CoreLoraService:
         name: str,
         gender: str = "female",
         body_composition: str | None = None,
+        base_model: str = "z-image",
     ) -> CharacterLoraProfile:
         """Train a character portrait LoRA and automatically register it under the network."""
-        adapter = FalFluxLoraAdapter()
+        eff_base = (base_model or "z-image").lower().strip()
+        if eff_base in ("z-image", "zimage"):
+            from src.providers.visual.fal_zimage_lora import FalZImageLoraAdapter
+            adapter = FalZImageLoraAdapter()
+        else:
+            adapter = FalFluxLoraAdapter()
+
         lora_dir = core_asset_service.get_asset_dir(
             user_id=user_id, category=self.CATEGORY, scope=AssetScope.NETWORK, network=network
         )
@@ -139,6 +148,7 @@ class CoreLoraService:
             lora_url=lora_url,
             trigger_word=trigger_word,
             body_composition=eff_body,
+            base_model=eff_base,
         )
         self.register_character_lora(user_id=user_id, network=network, character_key=character_key, profile=profile)
         return profile

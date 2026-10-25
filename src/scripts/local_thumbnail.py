@@ -201,9 +201,37 @@ def generate_episodic_thumbnail(
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
+    base = None
     if base_image_path and Path(base_image_path).exists():
-        base = Image.open(base_image_path).resize(target_size, Image.Resampling.LANCZOS)
-    else:
+        p = Path(base_image_path)
+        if p.suffix.lower() in (".mp4", ".mov", ".mkv", ".webm", ".avi"):
+            clean_stem = p.stem.replace("_motion", "").replace("_lipsync", "")
+            for candidate in (p.with_suffix(".jpg"), p.parent / f"{clean_stem}.jpg"):
+                if candidate.is_file() and candidate.stat().st_size > 1000:
+                    try:
+                        base = Image.open(candidate).resize(target_size, Image.Resampling.LANCZOS)
+                        break
+                    except Exception:
+                        pass
+            if base is None:
+                import subprocess
+                import imageio_ffmpeg
+                extracted_jpg = p.parent / f"thumb_extracted_{p.stem}.jpg"
+                try:
+                    subprocess.run(
+                        [imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-ss", "00:00:00.500", "-i", str(p), "-vframes", "1", "-q:v", "2", str(extracted_jpg)],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True
+                    )
+                    base = Image.open(extracted_jpg).resize(target_size, Image.Resampling.LANCZOS)
+                except Exception:
+                    base = None
+        else:
+            try:
+                base = Image.open(p).resize(target_size, Image.Resampling.LANCZOS)
+            except Exception:
+                base = None
+
+    if base is None:
         base = Image.new("RGB", target_size, color=(15, 23, 42))
         draw = ImageDraw.Draw(base)
         for i in range(target_size[1]):

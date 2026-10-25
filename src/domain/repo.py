@@ -76,6 +76,23 @@ class MemoryRepository:
     def get_user_by_email(self, email: str) -> User | None:
         return next((u for u in self.users.values() if u.email.lower() == email.lower()), None)
 
+    def get_default_user(self, email: str = "knpillutla@gmail.com") -> User:
+        user = self.get_user_by_email(email)
+        if not user:
+            from uuid import NAMESPACE_DNS, uuid5
+            from src.core.storage import sanitize_container_name
+            uid = uuid5(NAMESPACE_DNS, email)
+            user = User(
+                id=uid,
+                email=email,
+                display_name=email.split("@")[0],
+                google_sub=f"cli_{str(uid)[:12]}",
+                storage_container_name=sanitize_container_name(email),
+                api_credit_balance_usd=50.00,
+            )
+            self.save_user(user)
+        return user
+
     def save_user(self, user: User) -> User:
         self.users[user.id] = user
         self._save()

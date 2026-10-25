@@ -100,11 +100,12 @@ class SunoMusicAdapter(MusicProviderProtocol):
 
         if lyrics:
             v_g = (vocal_gender or "").lower()
-            v_map = {"male": "smooth tenor male vocals, warm chest voice", "female": "sweet expressive female vocals", "duet": "duet, smooth tenor male and female vocals"}
-            v_tag = f", {v_map.get(v_g, f'{v_g} vocals')}" if v_g else ""
-            tags_str = f"{genre}, {mood}{v_tag}"
+            v_map = {"male": "smooth tenor male vocals", "female": "sweet expressive female vocals", "duet": "duet vocals"}
+            v_prefix = f"{v_map.get(v_g, f'{v_g} vocals')}, " if v_g else ""
+            clean_genre = genre.replace("female vocals", "").replace("male vocals", "").strip(", ")
+            tags_str = f"{v_prefix}{clean_genre}, {mood}".strip(", ")
             body = {
-                "custom_mode": True, "prompt": lyrics, "tags": tags_str[:120],
+                "custom_mode": True, "prompt": lyrics, "tags": tags_str[:180],
                 "title": (title or f"{genre[:50]} track")[:75], "mv": "sonic-v5",
             }
         else:

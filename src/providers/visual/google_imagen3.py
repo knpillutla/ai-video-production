@@ -18,6 +18,7 @@ from src.core.config import settings
 from src.core.telemetry import logger
 from src.providers.base import is_mock_mode
 from src.providers.llm.gemini_adapter import get_live_gemini_api_key
+from src.services.image_4k_encoder import ensure_image_4k
 
 
 _GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image"
@@ -38,6 +39,7 @@ class GoogleImagen3Adapter:
         output_path: Path | str,
         aspect_ratio: str = "16:9",
         force_live: bool = False,
+        upscale_4k: bool = True,
         **kwargs: Any,
     ) -> tuple[str, Path]:
         """Generate a keyframe photo using Google Gemini with strict idempotency."""
@@ -46,16 +48,18 @@ class GoogleImagen3Adapter:
 
         # IDEMPOTENCY GUARD: If artifact exists on disk and is > 1000 bytes, reuse it ($0 spend)
         if out.exists() and out.stat().st_size > 1000:
-            logger.info(f"gemini_image_cache_hit: {out.name} ({out.stat().st_size} B) — reusing artifact ($0.00 spend)")
+            if upscale_4k:
+                await ensure_image_4k(out, aspect_ratio=aspect_ratio, force_live=force_live)
+            logger.info(f"gemini_image_cache_hit [model={_GEMINI_IMAGE_MODEL}]: {out.name} ({out.stat().st_size} B) — reusing artifact ($0.00 spend)")
             return str(out), out
 
         if is_mock_mode() and not force_live:
-            return await self._fallback_local(prompt, out, aspect_ratio)
+            return await self._fallback_local(prompt, out, aspect_ratio, upscale_4k=upscale_4k)
 
         active_key = get_live_gemini_api_key(self.api_key) or ""
         if not active_key:
             if is_mock_mode() or kwargs.get("allow_fallback"):
-                logger.warning("gemini_image: no GEMINI_API_KEY / GOOGLE_API_KEY — using local placeholder")
+                logger.warning(f"gemini_image [model={_GEMINI_IMAGE_MODEL}]: no GEMINI_API_KEY / GOOGLE_API_KEY — using local placeholder")
                 return await self._fallback_local(prompt, out, aspect_ratio)
             raise RuntimeError("Gemini Image Generation Failed: GEMINI_API_KEY is not configured in .env")
 
@@ -83,12 +87,13 @@ class GoogleImagen3Adapter:
         url = f"{_GEMINI_GENERATE_ENDPOINT}?key={active_key}"
         headers = {"Content-Type": "application/json"}
 
+        logger.info(f"generating_image [model={_GEMINI_IMAGE_MODEL}]: {out.name} prompt={prompt[:70]}...")
         async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=15.0)) as client:
             try:
                 resp = await client.post(url, headers=headers, json=payload)
                 if resp.status_code != 200:
                     err_msg = resp.text[:300]
-                    logger.error(f"gemini_image_api_error: HTTP {resp.status_code} - {err_msg}")
+                    logger.error(f"gemini_image_api_error [model={_GEMINI_IMAGE_MODEL}]: HTTP {resp.status_code} - {err_msg}")
                     if is_mock_mode() or kwargs.get("allow_fallback"):
                         return await self._fallback_local(prompt, out, aspect_ratio)
                     raise RuntimeError(f"Gemini Image Generation Failed (HTTP {resp.status_code}): {err_msg}")
@@ -131,17 +136,19 @@ class GoogleImagen3Adapter:
                             left = (w - new_w) // 2
                             pil_img = pil_img.crop((left, 0, left + new_w, h))
                         pil_img.save(out, format="JPEG", quality=95)
-                        logger.info(f"gemini_image_cropped_aspect: {out.name} ({pil_img.size[0]}x{pil_img.size[1]}) target={aspect_ratio}")
+                        logger.info(f"gemini_image_cropped_aspect [model={_GEMINI_IMAGE_MODEL}]: {out.name} ({pil_img.size[0]}x{pil_img.size[1]}) target={aspect_ratio}")
                     else:
                         out.write_bytes(img_bytes)
 
-                logger.info(f"gemini_image_success: {out.name} ({out.stat().st_size} B) created via { _GEMINI_IMAGE_MODEL }")
+                if upscale_4k:
+                    await ensure_image_4k(out, aspect_ratio=aspect_ratio, force_live=force_live)
+                logger.info(f"gemini_image_success [model={_GEMINI_IMAGE_MODEL}]: {out.name} ({out.stat().st_size} B)")
                 return str(out), out
 
             except Exception as ex:
                 logger.error(f"gemini_image_failed: {ex}")
                 if is_mock_mode() or kwargs.get("allow_fallback"):
-                    return await self._fallback_local(prompt, out, aspect_ratio)
+                    return await self._fallback_local(prompt, out, aspect_ratio, upscale_4k=upscale_4k)
                 raise RuntimeError(f"Gemini Image Generation Failed: {ex}") from ex
 
     async def _fallback_local(
@@ -149,6 +156,7 @@ class GoogleImagen3Adapter:
         prompt: str,
         out: Path,
         aspect_ratio: str,
+        upscale_4k: bool = True,
     ) -> tuple[str, Path]:
         from PIL import Image, ImageDraw
         target_size = (1920, 1080) if aspect_ratio == "16:9" else (1080, 1920)
@@ -156,6 +164,8 @@ class GoogleImagen3Adapter:
         draw = ImageDraw.Draw(image)
         draw.text((60, 60), f"Gemini Image [Offline Fallback]\n{prompt[:120]}...", fill=(241, 245, 249))
         image.save(out, format="JPEG", quality=92)
+        if upscale_4k:
+            await ensure_image_4k(out, aspect_ratio=aspect_ratio, force_live=False)
         return str(out), out
 
 

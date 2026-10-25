@@ -81,6 +81,8 @@ class CharacterLoraTrainer:
             except Exception as e:
                 logger.warning(f"kling_3d_fallback: using local procedural rotation: {e}")
                 self._generate_local_procedural_arc(hero_path, rot_video)
+            from src.services.video_4k_encoder import ensure_video_4k
+            await ensure_video_4k(rot_video)
 
         # Stage 3: Extract Multi-Angle Stills
         frames_dir = work_dir / "extracted_stills"
@@ -115,11 +117,11 @@ class CharacterLoraTrainer:
         return result
 
     def _generate_local_procedural_arc(self, hero_path: Path, out_video: Path) -> None:
-        """Create deterministic 5s subtle pan/tilt video using local single-pass FFmpeg."""
+        """Create deterministic 5s subtle pan/tilt video in 4K UHD using local single-pass FFmpeg."""
         ffmpeg_bin = get_ffmpeg_binary()
         cmd = [
             ffmpeg_bin, "-y", "-loop", "1", "-i", str(hero_path),
-            "-vf", "scale=1080:1080,zoompan=z='min(zoom+0.0008,1.06)':d=125:x='iw/2-(iw/zoom/2)+sin(in/10)*8':y='ih/2-(ih/zoom/2)':s=1080x1080:fps=25",
+            "-vf", "scale=3840:3840,zoompan=z='min(zoom+0.0008,1.06)':d=125:x='iw/2-(iw/zoom/2)+sin(in/10)*8':y='ih/2-(ih/zoom/2)':s=3840x3840:fps=25",
             "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-vframes", "125",
             "-movflags", "+faststart", str(out_video),
         ]
@@ -158,6 +160,8 @@ class CharacterLoraTrainer:
             try:
                 with Image.open(still_p) as img:
                     img = img.convert("RGBA")
+                    if img.size != (3840, 3840):
+                        img = img.resize((3840, 3840), Image.Resampling.LANCZOS)
                     w, h = img.size
 
                     # Create center-focused elliptical vignette mask for subject isolation

@@ -36,11 +36,13 @@ _STRATEGIES: dict[str, GenreStrategy] = {
     "movie_cinematic": EpicCinematicStrategy(),
     "epic_cinematic": EpicCinematicStrategy(),
     "mountain_survival": MountainSurvivalStrategy(),
+    "virtual_artist": VocalStrategy(),
+    "artist": VocalStrategy(),
 }
 
 # Fallback keyword detection for when format string doesn't match directly
 _KEYWORD_FALLBACKS: list[tuple[list[str], str]] = [
-    (["vocal", "lyrical", "lyric video", "suno song", "audio song", "vocal song", "mass song", "mass beats"], "vocal"),
+    (["vocal", "lyrical", "lyric video", "suno song", "audio song", "vocal song", "mass song", "mass beats", "virtual artist", "virtual singer", "lara aredo"], "vocal"),
     (["dance", "folk dance", "jathara", "choreography", "song dance", "mass dance"], "dance_video"),
     (["music video", "monsoon song", "love song", "melody song"], "music_video"),
     (["tourist attractions", "top 10 places", "places to see", "city guide", "in 3 days", "in 4 days"], "tourist_guide"),
@@ -68,8 +70,11 @@ def resolve_strategy(
     4. Default comedy/web_series strategy
     """
     fmt = media_format.lower().strip()
+    gen = genre.lower().strip()
     if fmt in _STRATEGIES and fmt not in ("web_series", "comedy", "auto", ""):
         return _STRATEGIES[fmt]
+    if gen in _STRATEGIES and gen not in ("web_series", "comedy", "auto", ""):
+        return _STRATEGIES[gen]
 
     # Keyword check — scan genre + idea for cues
     combined = f"{genre} {idea or ''}".lower()

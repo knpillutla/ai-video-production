@@ -24,6 +24,33 @@ def _fal_api_key() -> str:
     return key
 
 
+def purge_fal_artifact_cache(file_path: Path | str) -> None:
+    """Purge local file and all associated .fal_url, .fal_meta.json, and request sidecars.
+
+    Prevents redownloading or re-referencing defective or hallucinated media upon --id resumption.
+    """
+    p = Path(file_path)
+    clean_stem = p.stem.replace("raw_diff_", "")
+    to_delete = [
+        p,
+        p.with_suffix(p.suffix + ".fal_url"),
+        p.with_suffix(".fal_url"),
+        p.with_suffix(p.suffix + ".fal_job.json"),
+        p.with_suffix(".fal_job.json"),
+        p.with_suffix(p.suffix + ".fal_meta.json"),
+        p.with_suffix(".fal_meta.json"),
+        p.parent / f"{clean_stem}.fal_url",
+        p.parent / f"fal_req_{clean_stem}.json",
+        p.parent / f"fal_diff_req_{clean_stem}.json",
+        p.parent / f"fal_motion_req_{clean_stem}.json",
+    ]
+    for target in to_delete:
+        try:
+            target.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+
 async def upload_to_fal(file_path: Path, api_key: str = "") -> str:
     """Upload a local media file to Fal CDN storage and return the remote URL.
 
@@ -44,7 +71,9 @@ async def upload_to_fal(file_path: Path, api_key: str = "") -> str:
     # Universal Artifact Caching Guard (Directive 3): Check for existing .fal_url sidecar
     url_sidecar = file_path.with_suffix(file_path.suffix + ".fal_url")
     if url_sidecar.exists():
-        if file_path.exists() and file_path.stat().st_mtime > url_sidecar.stat().st_mtime:
+        if not file_path.exists():
+            url_sidecar.unlink(missing_ok=True)
+        elif file_path.stat().st_mtime > url_sidecar.stat().st_mtime:
             logger.info(f"fal_storage_sidecar_stale: {file_path.name} is newer than sidecar, re-uploading")
         else:
             cached_url = url_sidecar.read_text(encoding="utf-8").strip()
@@ -101,4 +130,4 @@ async def upload_to_fal(file_path: Path, api_key: str = "") -> str:
     return file_url
 
 
-__all__ = ["upload_to_fal"]
+__all__ = ["upload_to_fal", "purge_fal_artifact_cache", "_fal_api_key"]

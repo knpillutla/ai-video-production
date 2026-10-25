@@ -57,7 +57,7 @@ class FalSeedanceAdapter:
         out.parent.mkdir(parents=True, exist_ok=True)
 
         if out.exists() and out.stat().st_size > 50_000:
-            logger.info(f"fal_seedance_cache_hit: {out.name} ({out.stat().st_size} B)")
+            logger.info(f"fal_seedance_cache_hit [model=bytedance/seedance-2.5]: {out.name} ({out.stat().st_size} B)")
             return f"file://{out}", out
 
         if is_mock_mode() and not force_live:
@@ -66,7 +66,7 @@ class FalSeedanceAdapter:
         if not self.api_key:
             if force_live:
                 raise ValueError("FAL_KEY is required for LIVE Seedance 2.5 generation")
-            logger.warning("fal_seedance: no FAL_KEY — falling back to local synthesis")
+            logger.warning("fal_seedance [model=bytedance/seedance-2.5]: no FAL_KEY — falling back to local synthesis")
             return await self._fallback_local(image_url, motion_prompt, out, duration)
 
         try:
@@ -96,9 +96,11 @@ class FalSeedanceAdapter:
                     status_url = job_data.get("status_url")
                     response_url = job_data.get("response_url")
                     print(f"    [i] Fal.ai Seedance 2.5: Resuming existing queue job for {out.name}...")
+                    logger.info(f"fal_seedance_resume [model=bytedance/seedance-2.5]: {out.name}")
                 except Exception:
                     status_url, response_url = None, None
 
+            logger.info(f"synthesizing_motion [model=bytedance/seedance-2.5]: {out.name} prompt={motion_prompt[:70]}...")
             async with httpx.AsyncClient(timeout=300.0) as client:
                 if not status_url or not response_url:
                     print(f"    [~] Fal.ai Seedance 2.5: Submitting {out.name} to GPU queue...")
@@ -143,12 +145,12 @@ class FalSeedanceAdapter:
                         if logs and isinstance(logs, list):
                             for lg in logs[-1:]:
                                 msg = lg.get("message") if isinstance(lg, dict) else str(lg)
-                                if msg: logger.info(f"fal_seedance_log: {msg}")
+                                if msg: logger.info(f"fal_seedance_log [model=bytedance/seedance-2.5]: {msg}")
 
                         if status in ("IN_QUEUE", "IN_PROGRESS"):
                             if attempt % 3 == 0:
                                 print(f"    [~] Fal.ai Seedance 2.5: Cloud GPU rendering {out.name} ({status}, {int(attempt * 2.5)}s)...")
-                                logger.info(f"fal_seedance_queue: {out.name} status={status} ({int(attempt * 2.5)}s elapsed)")
+                                logger.info(f"fal_seedance_queue [model=bytedance/seedance-2.5]: {out.name} status={status} ({int(attempt * 2.5)}s elapsed)")
                         elif status == "COMPLETED":
                             if response_url:
                                 resp_res = await client.get(response_url, headers=headers)
@@ -173,10 +175,9 @@ class FalSeedanceAdapter:
                     job_sidecar.unlink(missing_ok=True)
                     print(f"\n🎉 [SUCCESS] Seedance 2.5 finished processing successfully: {out.name}")
                     print(f"🔗 Video Output URL: {video_url}\n")
-                    logger.info(f"fal_seedance_download_complete: {out.name} ({len(dl_res.content)} B)")
+                    logger.info(f"fal_seedance_download_complete [model=bytedance/seedance-2.5]: {out.name} ({len(dl_res.content)} B)")
                     return video_url, out
                 job_sidecar.unlink(missing_ok=True)
-                raise RuntimeError(f"Failed to download video from {video_url}")
                 raise RuntimeError(f"Failed to download video from {video_url}")
 
         except Exception as ex:

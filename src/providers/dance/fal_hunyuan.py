@@ -10,6 +10,7 @@ import httpx
 from src.core.telemetry import logger
 from src.providers.base import is_mock_mode
 from src.providers.fal_storage import _fal_api_key, upload_to_fal
+from src.services.video_4k_encoder import ensure_video_4k
 
 
 _DEFAULT_HUNYUAN_ENDPOINT = "https://queue.fal.run/fal-ai/hunyuan-video-image-to-video"
@@ -72,7 +73,8 @@ class FalHunyuanAdapter:
         out.parent.mkdir(parents=True, exist_ok=True)
 
         if out.exists() and out.stat().st_size > 50_000:
-            logger.info(f"fal_hunyuan_cache_hit: {out.name} ({out.stat().st_size} B)")
+            ensure_video_4k(out)
+            logger.info(f"fal_hunyuan_cache_hit [model=fal-ai/hunyuan-video]: {out.name} ({out.stat().st_size} B, 4K)")
             return f"file://{out}", out
 
         if is_mock_mode() and not force_live:
@@ -81,7 +83,7 @@ class FalHunyuanAdapter:
         if not self.api_key:
             if force_live:
                 raise ValueError("FAL_KEY is required for LIVE Hunyuan Video generation")
-            logger.warning("fal_hunyuan: no FAL_KEY — falling back to local synthesis")
+            logger.warning("fal_hunyuan [model=fal-ai/hunyuan-video]: no FAL_KEY — falling back to local synthesis")
             return await self._fallback_local(image_url, motion_prompt, out, duration)
 
         try:
@@ -119,11 +121,12 @@ class FalHunyuanAdapter:
                         if response_url or status_url:
                             job_sidecar = c
                             print(f"    [i] Fal.ai Hunyuan Video: Resuming existing remote queue job for {out.name} ({req_id or 'url'})...")
-                            logger.info(f"fal_hunyuan_resuming_job: req_id={req_id} file={c.name}")
+                            logger.info(f"fal_hunyuan_resuming_job [model=fal-ai/hunyuan-video]: req_id={req_id} file={c.name}")
                             break
                     except Exception:
                         continue
 
+            logger.info(f"synthesizing_motion [model=fal-ai/hunyuan-video]: {out.name} prompt={motion_prompt[:70]}...")
             async with httpx.AsyncClient(timeout=720.0) as client:
                 if not status_url and not response_url:
                     print(f"    [~] Fal.ai Hunyuan Video: Submitting {out.name} to GPU queue...")
@@ -170,12 +173,12 @@ class FalHunyuanAdapter:
                                 msg = lg.get("message") if isinstance(lg, dict) else str(lg)
                                 if msg:
                                     print(f"    [Fal Queue Log]: {msg}")
-                                    logger.info(f"fal_hunyuan_log: {msg}")
+                                    logger.info(f"fal_hunyuan_log [model=fal-ai/hunyuan-video]: {msg}")
 
                         if status in ("IN_QUEUE", "IN_PROGRESS"):
                             if attempt % 3 == 0:
                                 print(f"    [~] Fal.ai Hunyuan Video: Cloud GPU rendering {out.name} ({status}, {int(attempt * 2.5)}s)...")
-                                logger.info(f"fal_hunyuan_queue: {out.name} status={status} ({int(attempt * 2.5)}s elapsed)")
+                                logger.info(f"fal_hunyuan_queue [model=fal-ai/hunyuan-video]: {out.name} status={status} ({int(attempt * 2.5)}s elapsed)")
                         elif status == "COMPLETED":
                             if response_url:
                                 resp_res = await client.get(response_url, headers=headers)
@@ -197,10 +200,11 @@ class FalHunyuanAdapter:
                 dl_res = await client.get(video_url, timeout=120.0)
                 if dl_res.status_code == 200 and len(dl_res.content) > 1000:
                     out.write_bytes(dl_res.content)
+                    ensure_video_4k(out)
                     job_sidecar.unlink(missing_ok=True)
                     print(f"\n🎉 [SUCCESS] Hunyuan Video finished processing successfully: {out.name}")
                     print(f"🔗 Video Output URL: {video_url}\n")
-                    logger.info(f"fal_hunyuan_download_complete: {out.name} ({len(dl_res.content)} B)")
+                    logger.info(f"fal_hunyuan_download_complete [model=fal-ai/hunyuan-video]: {out.name} ({out.stat().st_size} B, 4K)")
                     return video_url, out
                 job_sidecar.unlink(missing_ok=True)
                 raise RuntimeError(f"Failed to download video from {video_url}")
@@ -218,6 +222,7 @@ class FalHunyuanAdapter:
             img = Image.new("RGB", (1280, 720), color=(30, 45, 60))
             img.save(src_img)
         await render_steadycam_clip(image_path=src_img, output_path=out, duration_seconds=float(duration), fps=30, movement="pan_right", ffmpeg_bin=get_ffmpeg_binary())
+        ensure_video_4k(out)
         return f"file://{out}", out
 
 
