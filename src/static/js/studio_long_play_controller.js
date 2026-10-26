@@ -173,7 +173,13 @@ async function approveAndGenerateLongPlay() {
     const res = await fetch(`/api/production/episodes/${epId}/generate-long-play`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ channel_id: chSlug, hours: hours, user_id: uEmail })
+      body: JSON.stringify({
+        channel_id: chSlug,
+        production_name: vid.production_name || vid.topic || vid.productionName || "",
+        storage_path: vid.storage_path || vid.storagePath || "",
+        hours: hours,
+        user_id: uEmail,
+      })
     });
     const data = await res.json();
     if (data.success) {

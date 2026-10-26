@@ -398,11 +398,12 @@ class StudioProducer:
                     or (getattr(s, "motion_type", "") in ("ken_burns", "static", "local_drone", "locked_tripod"))
                 )
                 is_test_mode = (eff_exec == "test")
-                use_local = is_test_mode or (not is_diffusion_model and (
-                    is_tour_slide
+                use_local = (not is_diffusion_model and not motion_only) and (
+                    is_test_mode
+                    or is_tour_slide
                     or is_local_requested
                     or (is_relax and (motion_model or "").lower() in ("locked_tripod", "local_drone", "local", "ken_burns", None, ""))
-                ))
+                )
 
                 if use_local:
                     raw_cfg = getattr(s, "model_configs", None) or {}

@@ -28,6 +28,8 @@ long_play_jobs: dict[str, dict[str, Any]] = {}
 
 class LongPlayStretchRequest(BaseModel):
     channel_id: Optional[str] = None
+    production_name: Optional[str] = None
+    storage_path: Optional[str] = None
     hours: float = Field(3.0, description="Target duration in hours (1.0, 3.0, or 8.0)")
     fade_to_black_hours: Optional[float] = None
     user_id: Optional[str] = "knpillutla@gmail.com"
@@ -40,9 +42,27 @@ def _to_storage_url(p: Path | str) -> str:
     return f"/storage/{Path(p).name}"
 
 
-def _find_episode_dir(episode_id: str, channel_id: Optional[str], user_id: str) -> Optional[Path]:
-    norm_ep = str(episode_id).lower().strip()
-    clean_ep = re.sub(r"[^a-zA-Z0-9_-]", "_", norm_ep).strip("_")
+def _find_episode_dir(
+    episode_id: str,
+    channel_id: Optional[str] = None,
+    user_id: str = "knpillutla@gmail.com",
+    production_name: Optional[str] = None,
+    storage_path: Optional[str] = None,
+) -> Optional[Path]:
+    if storage_path:
+        sp = Path(storage_path)
+        if sp.is_dir():
+            return sp
+        clean_sp = storage_path.replace("\\", "/").lstrip("/")
+        if (Path("storage") / clean_sp).is_dir():
+            return Path("storage") / clean_sp
+
+    direct = Path(episode_id)
+    if direct.is_dir():
+        return direct
+    if (Path("storage") / episode_id.replace("\\", "/").lstrip("/")).is_dir():
+        return Path("storage") / episode_id.replace("\\", "/").lstrip("/")
+
     user_container = storage_service.get_user_container_path(user_id)
     scan_roots = []
     if channel_id:
@@ -50,7 +70,21 @@ def _find_episode_dir(episode_id: str, channel_id: Optional[str], user_id: str) 
     else:
         scan_roots.extend([user_container / "networks", user_container / "channels", user_container / "productions"])
 
+    norm_ep = str(episode_id).lower().strip()
+    clean_ep = re.sub(r"[^a-zA-Z0-9_-]", "_", norm_ep).strip("_")
     target_names = {norm_ep, clean_ep, episode_id.strip()}
+
+    if production_name:
+        prod_clean = re.sub(r"[^a-zA-Z0-9_-]", "_", production_name.lower().strip()).strip("_")
+        for root in scan_roots:
+            if not root.exists():
+                continue
+            for sub in root.rglob("*"):
+                if sub.is_dir() and prod_clean in sub.name.lower():
+                    for t in target_names:
+                        if (sub / t).is_dir():
+                            return sub / t
+                    return sub
 
     for root in scan_roots:
         if not root.exists():
@@ -71,50 +105,42 @@ def _find_episode_dir(episode_id: str, channel_id: Optional[str], user_id: str) 
 @router.post("/episodes/{episode_id}/generate-long-play")
 async def generate_long_play_for_episode(episode_id: str, req: LongPlayStretchRequest):
     """Trigger background generation of dual long-play broadcasts (Ambient BGM + Pure Nature ASMR)."""
-    target_dir = _find_episode_dir(episode_id, req.channel_id, req.user_id or "knpillutla@gmail.com")
+    target_dir = _find_episode_dir(
+        episode_id,
+        channel_id=req.channel_id,
+        user_id=req.user_id or "knpillutla@gmail.com",
+        production_name=req.production_name,
+        storage_path=req.storage_path,
+    )
     if not target_dir:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Episode {episode_id} directory not found.")
 
     ambient_src = target_dir / "master_4k_ambient.mp4"
     if not ambient_src.is_file():
-        if (target_dir / "master_4k_ambient.mp4").is_file():
-            ambient_src = target_dir / "master_4k_ambient.mp4"
-        elif (target_dir / "master_4k_narration.mp4").is_file():
-            ambient_src = target_dir / "master_4k_narration.mp4"
-        else:
-            masters = [f for f in target_dir.glob("master_4k*.mp4") if "hour" not in f.name and "short" not in f.name]
-            ambient_src = masters[0] if masters else None
+        masters = [f for f in target_dir.glob("master_4k*.mp4") if "hour" not in f.name and "short" not in f.name]
+        ambient_src = masters[0] if masters else None
 
-    if (target_dir / "master_4k_nature.mp4").is_file():
-        nature_src = target_dir / "master_4k_nature.mp4"
-    elif (target_dir / "master_4k_ambient_nature_only.mp4").is_file():
-        nature_src = target_dir / "master_4k_ambient_nature_only.mp4"
-    elif ambient_src and ambient_src.name == "master_4k_narration.mp4" and (target_dir / "master_4k_ambient.mp4").is_file():
-        nature_src = target_dir / "master_4k_ambient.mp4"
-    else:
-        nature_src = None
+    nature_src = target_dir / "master_4k_nature.mp4"
+    if not nature_src.is_file():
+        for cand in [target_dir / "master_4k_ambient_nature_only.mp4", target_dir / "master_4k_ambient.mp4"]:
+            if cand.is_file() and cand != ambient_src:
+                nature_src = cand
+                break
+        else:
+            nature_src = None
     if not ambient_src or not ambient_src.is_file():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No 4K master video found on disk to stretch.")
 
     # Verify format: Long-play multi-hour broadcasts (3h/8h) are strictly for relaxation format productions
-    user_inputs_file = target_dir / "user_inputs.json"
-    manifest_file = target_dir / "episode_manifest.json"
-    ep_genre = ""
-    ep_fmt = ""
-    if user_inputs_file.is_file():
-        try:
-            u_data = json.loads(user_inputs_file.read_text("utf-8"))
-            ep_fmt = str(u_data.get("format", "")).lower()
-            ep_genre = str(u_data.get("genre", "")).lower()
-        except Exception:
-            pass
-    if manifest_file.is_file():
-        try:
-            m_data = json.loads(manifest_file.read_text("utf-8"))
-            ep_fmt = ep_fmt or str(m_data.get("format", "")).lower()
-            ep_genre = ep_genre or str(m_data.get("genre", "")).lower()
-        except Exception:
-            pass
+    ep_genre, ep_fmt = "", ""
+    for meta_p in [target_dir / "user_inputs.json", target_dir / "episode_manifest.json"]:
+        if meta_p.is_file():
+            try:
+                d = json.loads(meta_p.read_text("utf-8"))
+                ep_fmt = ep_fmt or str(d.get("format", "")).lower()
+                ep_genre = ep_genre or str(d.get("genre", "")).lower()
+            except Exception:
+                pass
 
     is_relax = (
         ep_fmt in ("relaxation", "relax")

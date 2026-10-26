@@ -33,14 +33,19 @@ def resolve_scene_motion_model(
     base_model = requested_motion_model or "wan"
     clean_exec = (execution_mode or "test").strip().lower()
 
-    # Rule: In test mode, ALWAYS use local drone mode for all motions ($0.00 compute)
-    if clean_exec == "test":
-        rationale = f"Test execution mode: Local perspective drone mandated for Scene {scene_index + 1} ($0.00 compute)"
-        return "local_zoompan", False, rationale
-
     # 0. User / Directorial Selection of Local Motion Engine
     if base_model in ("local_drone", "locked_tripod", "local_zoompan", "local", "offline"):
         rationale = f"Local motion engine mandated ({base_model}) ($0.00 compute)"
+        return "local_zoompan", False, rationale
+
+    is_diffusion = (base_model or "").lower() in (
+        "kling_v3_4k", "kling_v3", "kling_4k", "kling_pro", "kling_1_6", "kling_v1_6_pro",
+        "wan", "wan_2_1", "wan_4k", "hunyuan",
+    )
+
+    # In test mode, only default to local drone if an explicit AI model was NOT requested
+    if clean_exec == "test" and not (force_ai_motion or is_diffusion):
+        rationale = f"Test execution mode: Local perspective drone mandated for Scene {scene_index + 1} ($0.00 compute)"
         return "local_zoompan", False, rationale
 
     # 1. Flagship Cinematic Tier or Explicit AI Motion Request -> 100% AI Video Diffusion
