@@ -33,6 +33,8 @@ async def generate_travel_screenplay_gemini(
     image_model: str = "flux_1_1_pro_ultra",
     channel_id: Optional[str] = None,
     tier: str = "balanced",
+    weather: Optional[str] = "normal",
+    **kwargs: Any,
 ) -> RelaxScreenplay:
     """Generate structured RelaxScreenplay for Travel Studio using Gemini Flash."""
     eff_arch = primary_archetype or sub_genre or "cities"
@@ -44,8 +46,13 @@ async def generate_travel_screenplay_gemini(
 
     eff_shots = max(2, round((duration_seconds or 60.0) / 12.5))
     logger.info(f"travel_director_cadence: duration={duration_seconds}s -> eff_shots={eff_shots} (ignoring incoming num_shots={num_shots})")
+
+    eff_prompt = custom_prompt or ""
+    if weather and weather != "normal" and not any(k in eff_prompt.lower() for k in [weather, "rain", "snow", "fog", "sunset"]):
+        eff_prompt = f"{eff_prompt} ({weather} atmosphere)"
+
     sys_prompt = build_travel_prompt(
-        custom_prompt=custom_prompt or "",
+        custom_prompt=eff_prompt,
         duration_seconds=duration_seconds,
         num_shots=eff_shots,
         archetype=eff_arch,

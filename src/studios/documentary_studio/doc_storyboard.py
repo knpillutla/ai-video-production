@@ -35,6 +35,8 @@ async def generate_documentary_storyboard_gemini(
     num_shots: int = 1,
     raw_output_path: Optional[Any] = None,
     archetype: Optional[str] = None,
+    weather: Optional[str] = "normal",
+    **kwargs: Any,
 ) -> DocStoryboard:
     """Dynamically generate authoritative BBC/NatGeo documentary or Tour Director script and storyboard via Gemini."""
     from src.studios.documentary_studio.doc_directorial_prompt import (

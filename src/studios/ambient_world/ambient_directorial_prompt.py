@@ -84,6 +84,7 @@ def build_ambient_directorial_prompt(
                 "Autonomously pivot to a fresh, distinct destination, season, or perspective.\n"
             )
 
+    is_balanced = clean_tier in ("balanced", "standard", "default", "normal")
     if is_low_cost:
         motion_contract = (
             "3. TIER-0 / LOW-COST LOCKED TRIPOD KEN BURNS DIRECTORIAL CONTRACT ($0.00 COMPUTE):\n"
@@ -92,6 +93,18 @@ def build_ambient_directorial_prompt(
             f'   - "camera_movement": strictly stationary hold: [{{"stage": 1, "duration": {per_shot_dur}, "movements": ["stay"]}}]. Strictly ZERO panning, tilting, orbiting, or zooming.\n'
             '   - "camera_rig": strictly "locked_tripod_telephoto".\n'
             '   - "motion_rationale": "Fixed locked tripod overlooking natural scenery via local 4K steady hold ($0.00 compute)."'
+        )
+        ex_motion_type = "ken_burns"
+        ex_motion_engine = "local_steady_hold"
+        ex_camera_movement = f'[{{ "stage": 1, "duration": {per_shot_dur}, "movements": ["stay"] }}]'
+    elif is_balanced:
+        motion_contract = (
+            "3. BALANCED TIER DIRECTORIAL CONTRACT (80% LOCAL STEADYCAM / 20% AI DIFFUSION COST SPLIT):\n"
+            "   - MANDATORY 80/20 COST-OPTIMIZATION SPLIT ACROSS SCENES:\n"
+            '     * 80% OF SCENES (e.g. 4 of 5 scenes) MUST USE "motion_type": "ken_burns", "recommended_model": "local_drone".\n'
+            '       CRITICAL ZERO-MOTION IMAGE PROMPT MANDATE (COST $0.00): Visual prompts for these 80% scenes MUST depict STILL, TIMELESS scenery with ZERO moving elements (STRICTLY NO flying birds, NO crashing ocean waves or surf, NO moving vehicles/boats, NO walking people, NO active animals, NO turbulent rushing water). Use glassy mirror-still reflections, towering peaks, ancient architecture, quiet meadows. Camera rig strictly "locked_tripod_telephoto", camera_movement: [{"stage": 1, "duration": ' + str(per_shot_dur) + ', "movements": ["stay"]}]. Local 4K steadycam hold ($0.00 compute)!\n'
+            '     * 20% OF SCENES (e.g. 1 of 5 scenes) MUST USE "motion_type": "ai_diffusion", "recommended_model": "kling_v3_4k" (or "wan_2_1").\n'
+            '       DYNAMIC HERO MOTION: Reserve AI diffusion exclusively for hero scenes with dynamic fluid motion (crashing ocean surf, flying birds soaring overhead, cascading waterfall impact, swirling campfire embers, rustling canopy in storm).'
         )
         ex_motion_type = "ken_burns"
         ex_motion_engine = "local_steady_hold"
@@ -283,4 +296,3 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
 }}
 Do NOT output markdown backticks or preamble. Output raw JSON only.
 """
-

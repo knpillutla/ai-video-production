@@ -1,6 +1,6 @@
 """Directorial Storyboard Generator for 4K Biophilic Nature Retreats & Soundscapes."""
 
-from typing import Any
+from typing import Any, Optional
 
 
 def generate_nature_storyboard(
@@ -119,6 +119,8 @@ async def generate_nature_storyboard_gemini(
     scenes_count: int = 4,
     language: str = "en",
     user_id: str = "user_krishna_01",
+    weather: Optional[str] = "normal",
+    **kwargs: Any,
 ) -> dict[str, Any]:
     """Dynamically generate novel nature storyboard via Gemini with pre-flight topic deduplication."""
     from src.mcp.topic_memory.server import check_topic_duplicate

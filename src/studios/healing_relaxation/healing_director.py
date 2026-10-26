@@ -29,6 +29,7 @@ async def generate_healing_screenplay(
     image_model: str = "flux_1_1_pro_ultra",
     sub_genre: str = "global_healing",
     tier: str = "balanced",
+    weather: Optional[str] = "normal",
     **kwargs: Any,
 ) -> RelaxScreenplay:
     """Synthesize dedicated global healing sanctuary directorial screenplay via Gemini."""
@@ -40,6 +41,9 @@ async def generate_healing_screenplay(
         unseen = [lm for lm in HEALING_LANDMARK_POOL if not any(lm.split(',')[0].lower() in t.lower() for t in recent_topics)]
         chosen = random.choice(unseen if unseen else HEALING_LANDMARK_POOL)
         eff_prompt = f"Sacred healing sanctuary and crystal mineral waters at {chosen}"
+
+    if weather and weather != "normal" and not any(k in eff_prompt.lower() for k in [weather, "rain", "snow", "fog", "sunset"]):
+        eff_prompt = f"{eff_prompt} ({weather} atmosphere)"
 
     num_shots = max(1, int(num_shots))
     prompt = build_healing_prompt(

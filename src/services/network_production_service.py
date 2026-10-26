@@ -911,7 +911,7 @@ async def produce_channel_video(
     if pipeline_state_file:
         try:
             pipeline_state_file.parent.mkdir(parents=True, exist_ok=True)
-            pipeline_state_file.write_text(json.dumps(pipeline_state_payload, indent=2), encoding="utf-8")
+            pipeline_state_file.write_text(json.dumps(pipeline_state_payload, indent=2, ensure_ascii=False), encoding="utf-8")
         except Exception as ex:
             logger.warning(f"failed_to_write_pipeline_state: {ex}")
 

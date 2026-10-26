@@ -20,7 +20,7 @@ def resolve_scene_motion_model(
     total_scenes: int = 1,
     genre: str = "relax/nature",
     force_ai_motion: bool = False,
-    execution_mode: str = "test",
+    execution_mode: str = "prod",
 ) -> Tuple[str, bool, str]:
     """Resolve the effective motion model strictly from the screenplay script."""
     if scene is None:
@@ -43,8 +43,8 @@ def resolve_scene_motion_model(
         "wan", "wan_2_1", "wan_4k", "hunyuan",
     )
 
-    # In test mode, only default to local drone if an explicit AI model was NOT requested
-    if clean_exec == "test" and not (force_ai_motion or is_diffusion):
+    # In test mode, force local drone unless explicitly forcing AI motion
+    if clean_exec == "test" and not force_ai_motion:
         rationale = f"Test execution mode: Local perspective drone mandated for Scene {scene_index + 1} ($0.00 compute)"
         return "local_zoompan", False, rationale
 
@@ -90,7 +90,7 @@ def resolve_scene_motion_model(
         eff_model = rec_model if (rec_model and rec_model not in ("auto", "local_drone")) else base_model
         rationale = (
             f"Prod tier (Gemini Directive): Scene {scene_index + 1} dictates "
-            f"AI video diffusion via model '{eff_model}'"
+            f"live AI video diffusion via model '{eff_model}'"
         )
         return eff_model, False, rationale
 

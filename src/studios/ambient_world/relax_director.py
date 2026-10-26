@@ -32,12 +32,16 @@ async def generate_relax_screenplay_gemini(
     raw_output_path: Optional[os.PathLike | str] = None,
     image_model: str = "flux_1_1_pro_ultra",
     tier: str = "balanced",
+    weather: Optional[str] = "normal",
     **kwargs: Any,
 ) -> RelaxScreenplay:
     """Synthesize fresh relaxation directorial screenplay via Gemini with Relax Genre Directives & Channel Topic Memory."""
     # Retrieve recently generated topics for this user channel to strictly prevent repeats (Rule 10)
     recent_topics = topic_memory.get_recent_topics(user_id=user_id, channel_id=channel_id, limit=20)
     eff_prompt = custom_prompt.strip() if custom_prompt and custom_prompt.strip() else ""
+
+    if weather and weather != "normal" and not any(k in eff_prompt.lower() for k in [weather, "rain", "snow", "fog", "sunset"]):
+        eff_prompt = f"{eff_prompt} ({weather} atmosphere)" if eff_prompt else f"{weather} atmosphere"
 
     from src.core.config import settings
     google_search_enabled = bool(settings.llm.gemini_google_search_enabled and not eff_prompt)

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 import random
-from typing import Optional
+from typing import Any, Optional
 
 from src.services.topic_memory import topic_memory
 from src.studios.ambient_world.relax_models import RelaxScreenplay
@@ -25,6 +25,8 @@ async def generate_alpine_screenplay(
     raw_output_path: Optional[os.PathLike | str] = None,
     image_model: str = "flux_1_1_pro_ultra",
     tier: str = "balanced",
+    weather: Optional[str] = "normal",
+    **kwargs: Any,
 ) -> RelaxScreenplay:
     """Synthesize dedicated alpine nature directorial screenplay via Gemini."""
     recent_topics = topic_memory.get_recent_topics(user_id=user_id, channel_id=channel_id, limit=20)
@@ -35,6 +37,9 @@ async def generate_alpine_screenplay(
         unseen = [lm for lm in ALPINE_LANDMARK_POOL if not any(lm.split(',')[0].lower() in t.lower() for t in recent_topics)]
         chosen = random.choice(unseen if unseen else ALPINE_LANDMARK_POOL)
         eff_prompt = f"Majestic panoramic alpine mountain vista at {chosen}"
+
+    if weather and weather != "normal" and not any(k in eff_prompt.lower() for k in [weather, "rain", "snow", "fog", "sunset"]):
+        eff_prompt = f"{eff_prompt} ({weather} atmosphere)"
 
     sys_prompt = build_alpine_prompt(
         custom_prompt=eff_prompt,

@@ -389,21 +389,31 @@ class StudioProducer:
                     or u_genre.startswith("relax")
                     or "relax" in u_format
                 )
+                clean_tier = (tier or getattr(sb, "tier", None) or "balanced").strip().lower()
+                s_mtype = str(getattr(s, "motion_type", "") or "").lower().strip()
+                s_rec_model = str(getattr(s, "recommended_model", "") or getattr(s, "motion_model", "") or "").lower().strip()
+
                 is_diffusion_model = (motion_model or "").lower() in (
                     "kling_v3_4k", "kling_v3", "kling_4k", "kling_pro", "kling_1_6", "kling_v1_6_pro",
                     "wan", "wan_2_1", "wan_4k", "hunyuan",
                 )
-                is_local_requested = (
-                    (motion_model or "").lower() in ("locked_tripod", "local_drone", "local_zoompan", "local", "offline", "ken_burns")
-                    or (getattr(s, "motion_type", "") in ("ken_burns", "static", "local_drone", "locked_tripod"))
-                )
-                is_test_mode = (eff_exec == "test")
-                use_local = (not is_diffusion_model and not motion_only) and (
-                    is_test_mode
-                    or is_tour_slide
-                    or is_local_requested
-                    or (is_relax and (motion_model or "").lower() in ("locked_tripod", "local_drone", "local", "ken_burns", None, ""))
-                )
+                is_local_engine = (motion_model or "").lower() in ("locked_tripod", "local_drone", "local_zoompan", "local", "offline", "ken_burns")
+                is_scene_local = (s_mtype in ("ken_burns", "static", "local_drone", "locked_tripod", "local_zoompan")) or (s_rec_model == "local_drone")
+
+                if is_tour_slide or is_local_engine:
+                    use_local = True
+                elif clean_tier in ("low_cost", "tier_0", "local"):
+                    use_local = True
+                elif clean_tier in ("cinematic", "movie", "high", "flagship"):
+                    use_local = is_scene_local if is_local_engine else False
+                else:
+                    # Balanced Tier: strictly respect script directives (80% local_drone / 20% ai_diffusion)
+                    if is_scene_local:
+                        use_local = True
+                    elif s_mtype in ("ai_diffusion", "diffusion", "neural", "neural_diffusion"):
+                        use_local = False
+                    else:
+                        use_local = not is_diffusion_model
 
                 if use_local:
                     raw_cfg = getattr(s, "model_configs", None) or {}

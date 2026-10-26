@@ -10,14 +10,6 @@ function renderLongPlayStretchSection(vid) {
   const hoursSelect = document.getElementById("panel-longplay-hours-select");
 
   if (!container || !dualGrid) return;
-  // Long-Play stretch is ONLY available after 4K Master Video (Stage 4) has finished rendering
-  const hasMaster = Boolean(
-    vid &&
-    vid.id !== "NEW" &&
-    vid.status !== "failed" &&
-    vid.status !== "processing" &&
-    (vid.currentStage >= 4 || vid.status === "completed" || vid.videoUrl || vid.video_url || (vid.editions && vid.editions.length > 0))
-  );
 
   const genreSel = document.getElementById("studio-genre-selector")?.value || "";
   const fmtSel = document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "");
@@ -48,8 +40,8 @@ function renderLongPlayStretchSection(vid) {
     vid &&
     vid.id !== "NEW" &&
     vid.status !== "failed" &&
-    vid.status !== "processing" &&
-    (vid.currentStage >= 4 || vid.status === "completed" || vid.videoUrl || vid.video_url || (vid.editions && vid.editions.length > 0))
+    (Boolean(vid.videoUrl || vid.video_url || (vid.editions && vid.editions.length > 0)) ||
+     (vid.status !== "processing" && (vid.currentStage >= 4 || vid.status === "completed")))
   );
 
   const epId = vid?.id || vid?.episode_id || "EP-001";

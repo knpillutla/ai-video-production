@@ -191,6 +191,7 @@ async def generate_music_video_screenplay(
     raw_output_path: Optional[os.PathLike | str] = None,
     tier: str = "balanced",
     vocal_gender: Optional[str] = None,
+    weather: Optional[str] = "normal",
     **kwargs: Any,
 ) -> RelaxScreenplay:
     """Synthesize dedicated music video screenplay matching produce music video output schema."""

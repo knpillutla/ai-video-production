@@ -199,11 +199,11 @@ def export_metadata_packages(sb: AmbientStoryboard, ep_dir: Path, hours: Optiona
     pkg_nature.description = f"100% pure natural ambient soundscape without music.\n\n{pkg_nature.description}"
     for fn, pkg in [("youtube_packaging.json", pkg_music), ("youtube_packaging_nature_only.json", pkg_nature),
                    ("youtube_packaging_30min.json", generate_youtube_ambient_package(sb.primary_archetype, 0.5, sb.secondary_archetype))]:
-        (ep_dir / fn).write_text(json.dumps(pkg.model_dump(), indent=2), encoding="utf-8")
+        (ep_dir / fn).write_text(json.dumps(pkg.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8")
     st = sb.title.split('~')[0].strip()
-    (ep_dir / "youtube_packaging_short.json").write_text(json.dumps({"title": f"Experience {st} in 4K 🌊✨ #shorts", "description": f"Stand directly in front of {st} in 4K.", "tags": [sb.primary_archetype, "shorts", "4k_nature"]}, indent=2), encoding="utf-8")
+    (ep_dir / "youtube_packaging_short.json").write_text(json.dumps({"title": f"Experience {st} in 4K 🌊✨ #shorts", "description": f"Stand directly in front of {st} in 4K.", "tags": [sb.primary_archetype, "shorts", "4k_nature"]}, indent=2, ensure_ascii=False), encoding="utf-8")
     ab = generate_thumbnail_ab_variants(sb.primary_archetype)
-    (ep_dir / "thumbnail_ab_variants.json").write_text(json.dumps(ab.model_dump(), indent=2), encoding="utf-8")
+    (ep_dir / "thumbnail_ab_variants.json").write_text(json.dumps(ab.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8")
     loc = localize_metadata_for_languages(sb.primary_archetype, pkg_music.title, pkg_music.description)
-    (ep_dir / "localized_metadata.json").write_text(json.dumps({k: v.model_dump() for k, v in loc.items()}, indent=2), encoding="utf-8")
+    (ep_dir / "localized_metadata.json").write_text(json.dumps({k: v.model_dump() for k, v in loc.items()}, indent=2, ensure_ascii=False), encoding="utf-8")
     return pkg_music, ab, loc

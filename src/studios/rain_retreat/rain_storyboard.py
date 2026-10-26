@@ -1,7 +1,7 @@
 """Directorial Storyboard Generator for Rain Retreat & River ASMR."""
 
 import json
-from typing import List
+from typing import Any, List, Optional
 from pydantic import BaseModel, Field
 from src.core.telemetry import logger
 
@@ -93,6 +93,8 @@ async def generate_rain_storyboard_gemini(
     theme: str = "Forest River Rain & Water Droplets",
     duration_seconds: float = 60.0,
     user_id: str = "user_krishna_01",
+    weather: Optional[str] = "normal",
+    **kwargs: Any,
 ) -> RainStoryboard:
     """Dynamically generate binaural rain & water droplet storyboard via Gemini LLM."""
     print(f"\n[GEMINI RAIN RETREAT AGENT INVOKED]")

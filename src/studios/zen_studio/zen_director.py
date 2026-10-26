@@ -62,14 +62,19 @@ async def generate_zen_screenplay_gemini(
     image_model: str = "flux_1_1_pro_ultra",
     channel_id: Optional[str] = None,
     tier: str = "balanced",
+    weather: Optional[str] = "normal",
     **kwargs: Any,
 ) -> RelaxScreenplay:
     """Dynamically generate 432Hz healing meditation screenplay via Gemini LLM."""
     logger.info(f"generating_zen_screenplay: prompt='{custom_prompt}' genre='{genre}' shots={num_shots} channel={channel_id}")
     num_shots = max(1, int(num_shots))
 
+    eff_prompt = custom_prompt or ""
+    if weather and weather != "normal" and not any(k in eff_prompt.lower() for k in [weather, "rain", "snow", "fog", "sunset"]):
+        eff_prompt = f"{eff_prompt} ({weather} atmosphere)"
+
     prompt = build_zen_prompt(
-        custom_prompt=custom_prompt,
+        custom_prompt=eff_prompt,
         duration_seconds=duration_seconds,
         num_shots=num_shots,
         camera_motion=camera_motion,

@@ -8,7 +8,7 @@ Prevents prompt cross-contamination between different nature and ambient sub-gen
 from __future__ import annotations
 
 import os
-from typing import Optional
+from typing import Any, Optional
 
 from src.core.telemetry import logger
 from src.studios.ambient_world.relax_models import RelaxAudioMasterSpec, RelaxScene, RelaxScreenplay
@@ -67,8 +67,8 @@ async def dispatch_studio_director(
         camera_motion=camera_motion, user_id=user_id, raw_output_path=raw_output_path,
         image_model=image_model, channel_id=channel_id or "earth_serenade",
         tier=tier, weather=weather, country=country, language=language, culture=culture,
+        **extra_kwargs,
     )
-    base_kwargs = {k: v for k, v in kwargs.items() if k not in ("tier", "weather")}
 
 
     # 0. Dedicated Blue-Chip Documentary & Science Studio Dispatch
@@ -164,7 +164,7 @@ async def dispatch_studio_director(
     if is_rain:
         eff_sub = sub_genre or primary_archetype or "heavy_rain_swiss_alps"
         logger.info(f"dispatcher_route: target='RainRetreatStudio' genre='{genre}' sub_genre='{eff_sub}' archetype='{primary_archetype}' prompt='{custom_prompt}'")
-        return await generate_rain_screenplay(sub_genre=eff_sub, primary_archetype=primary_archetype, **base_kwargs)
+        return await generate_rain_screenplay(sub_genre=eff_sub, primary_archetype=primary_archetype, **kwargs)
 
     # 0.1 Dedicated Ocean Studio Dispatch (All 6 Diurnal Timings under genre 'relax/ocean')
     if genre_lower in {"relax/ocean", "ocean"} or "ocean" in arch_lower or "ocean" in sub_lower or "bioluminescent" in arch_lower or any(w in p_lower for w in ["ocean retreat", "ocean villa", "overwater villa", "turquoise lagoon"]):
@@ -219,12 +219,12 @@ async def dispatch_studio_director(
     # 2. Global Healing Sanctuaries & Solfeggio Dispatch (Himalayas, Bali, Geothermal, Redwoods)
     if genre_lower in {"relax/healing", "healing_relaxation", "healing"} or sub_lower in {"global_healing", "himalayan_valley", "geothermal_springs", "redwood_cathedral", "solfeggio_sanctuary", "crystal_spring"} or arch_lower in {"sacred_sanctuary", "healing_sanctuary", "geothermal_springs"}:
         logger.info(f"dispatcher_route: target='HealingRelaxationStudio' genre='{genre}' sub_genre='{sub_genre}'")
-        return await generate_healing_screenplay(sub_genre=sub_genre or "global_healing", **base_kwargs)
+        return await generate_healing_screenplay(sub_genre=sub_genre or "global_healing", **kwargs)
 
     # 3. Cozy Ambiance & Fireplace Dispatch
     if genre_lower in {"relax/cozy", "cozy_ambiance"} or sub_lower in {"cozy_living", "cozy_shelter", "fireplace"}:
         logger.info(f"dispatcher_route: target='CozyAmbianceStudio' genre='{genre}' sub_genre='{sub_genre}'")
-        return await generate_cozy_screenplay(sub_genre=sub_genre or "cozy_shelter", **base_kwargs)
+        return await generate_cozy_screenplay(sub_genre=sub_genre or "cozy_shelter", **kwargs)
 
     # 4. Waterfall Studio Dispatch
     if (
@@ -234,7 +234,7 @@ async def dispatch_studio_director(
         or (not any(w in p_lower for w in ["alps", "swiss", "mountain", "hearth", "rain", "zen", "bamboo"]) and any(w in p_lower for w in ["waterfall", "niagara", "iguazu", "victoria falls", "cascade", "plunge pool"]))
     ):
         logger.info(f"dispatcher_route: target='WaterfallStudio' prompt='{custom_prompt}'")
-        return await generate_waterfall_screenplay(**base_kwargs)
+        return await generate_waterfall_screenplay(**kwargs)
 
     # 5. Silent Hearth & Beach Campfire Studio Dispatch
     if (
@@ -246,7 +246,7 @@ async def dispatch_studio_director(
         or any(w in p_lower for w in ["campfire", "fire pit", "hearth", "beach fire", "shoreline fire"])
     ):
         logger.info(f"dispatcher_route: target='SilentHearthStudio' prompt='{custom_prompt}'")
-        return await generate_hearth_screenplay(**base_kwargs)
+        return await generate_hearth_screenplay(**kwargs)
 
     # 6. Alpine Nature Studio Dispatch (Swiss Alps, Dolomites, Mountains, Meadows)
     if (

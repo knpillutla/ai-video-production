@@ -36,6 +36,7 @@ async def generate_rain_screenplay(
     sub_genre: str = "rainy_bedroom",
     primary_archetype: Optional[str] = None,
     tier: str = "balanced",
+    weather: Optional[str] = "normal",
     **kwargs: Any,
 ) -> RelaxScreenplay:
     """Synthesize dedicated rain retreat directorial screenplay via Gemini."""

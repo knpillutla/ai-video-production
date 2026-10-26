@@ -50,6 +50,7 @@ async def generate_art_screenplay_gemini(
     image_model: str = "flux_1_1_pro_ultra",
     channel_id: Optional[str] = None,
     tier: str = "balanced",
+    weather: Optional[str] = "normal",
     **kwargs: Any,
 ) -> RelaxScreenplay:
     """Generate structured RelaxScreenplay for Living Art Studio using Gemini Flash."""
@@ -60,8 +61,12 @@ async def generate_art_screenplay_gemini(
     raw_topics = topic_memory.get_recent_topics(user_id=user_id, channel_id=eff_channel, limit=20)
     excluded = [t if isinstance(t, str) else t.get("title", "") for t in raw_topics]
 
+    eff_prompt = custom_prompt or ""
+    if weather and weather != "normal" and not any(k in eff_prompt.lower() for k in [weather, "rain", "snow", "fog", "sunset"]):
+        eff_prompt = f"{eff_prompt} ({weather} atmosphere)"
+
     sys_prompt = build_art_prompt(
-        custom_prompt=custom_prompt or "",
+        custom_prompt=eff_prompt,
         duration_seconds=duration_seconds,
         num_shots=num_shots,
         archetype=eff_arch,

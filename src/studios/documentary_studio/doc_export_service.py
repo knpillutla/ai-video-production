@@ -203,5 +203,5 @@ def export_documentary_metadata_package(
         "ypp_monetization_safety": "100% AdSense Advertiser-Friendly (Green Dollar Guarantee)",
     }
 
-    (ep_dir / "youtube_packaging.json").write_text(json.dumps(pkg, indent=2), encoding="utf-8")
+    (ep_dir / "youtube_packaging.json").write_text(json.dumps(pkg, indent=2, ensure_ascii=False), encoding="utf-8")
     return pkg

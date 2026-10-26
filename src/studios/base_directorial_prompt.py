@@ -49,34 +49,23 @@ def build_base_directorial_prompt(
     if user_chose_fixed_shots:
         eff_shots = num_shots
         per_shot_dur = round(duration_seconds / max(1, eff_shots), 1)
-        cadence_spec = f"- Target Duration: ~{duration_seconds}s (Directorial buffer enabled) | Explicit Shots: {eff_shots} (~{per_shot_dur}s/shot)"
-        schema_mandate = f"\n- Generate exactly {eff_shots} scene(s) matching the requested shot count inside 'scenes' with duration matching narration."
+        cadence_spec = f"- Target Duration: ~{duration_seconds}s | Explicit Shots: {eff_shots} (~{per_shot_dur}s/shot)"
+        schema_mandate = f"\n- Generate exactly {eff_shots} scene(s) matching requested shot count inside 'scenes' with duration matching narration."
     elif is_tour:
         eff_shots = max(5, round(duration_seconds / 9.0))
         per_shot_dur = round(duration_seconds / max(1, eff_shots), 1)
-        cadence_spec = (
-            f"- Target Duration: ~{duration_seconds}s (Directorial buffer enabled) | Autonomous Tour Cadence:\n"
-            f"  * Autonomously determine the exact number of scenes based on the tour duration and planned landmarks.\n"
-            f"  * Mandatory structure: Scene 1: Overview Flowchart Card, followed by each Attraction and its connecting Route Map, ending with the Master Recap Table slide."
-        )
-        schema_mandate = (
-            f"\n- Autonomously generate the complete set of scenes inside 'scenes' matching the tour route and duration. "
-            f"Every planned landmark MUST have its own dedicated physical scene, followed by a connecting route map slide, concluding with the Master Recap Table."
-        )
+        cadence_spec = f"- Target Duration: ~{duration_seconds}s | Tour Cadence: Landmark stops each with connecting route map."
+        schema_mandate = "\n- Autonomously generate complete tour scenes matching the route and duration."
     else:
         eff_shots = max(2, round(duration_seconds / 12.0)) if (is_urban_or_travel or duration_seconds > 18.0) else max(1, round(duration_seconds / 6.0))
         per_shot_dur = round(duration_seconds / max(1, eff_shots), 1)
-        cadence_spec = (
-            f"- Target Duration: ~{duration_seconds}s (Directorial buffer enabled) | Autonomous Cadence:\n"
-            f"  * Curate {eff_shots} scenes (~{per_shot_dur}s each) with durations dynamically matched to narration length."
-        )
+        cadence_spec = f"- Target Duration: ~{duration_seconds}s | Autonomous Cadence: {eff_shots} scenes (~{per_shot_dur}s each)."
         schema_mandate = f"\n- Generate {eff_shots} scenes inside 'scenes' with duration dynamically matched to narration."
 
     target_words = max(25, int(duration_seconds * speech_words_per_sec))
     per_shot_words = max(8, int(per_shot_dur * speech_words_per_sec))
     eff_kelvin, tod_key, tod_desc = detect_lighting_directive(custom_prompt, archetype, color_temp_kelvin or 5500)
     lighting_block = format_universal_lighting_guardrails(tod_key, eff_kelvin, tod_desc)
-
     exclusion_block = ("\nPREVIOUSLY PRODUCED TOPICS (MANDATORY DEDUPLICATION):\n" + "\n".join(f"- {t}" for t in excluded_topics[-15:]) + "\n") if excluded_topics else ""
     landmarks_list = "\n".join(f"      {idx}. {lm}" for idx, lm in enumerate(curation_landmarks or [], 1)) if curation_landmarks else ""
     landmarks_block = f"\nCURATED REGIONAL LANDMARK INSPIRATION:\n{landmarks_list}\n" if landmarks_list else ""
@@ -94,16 +83,18 @@ def build_base_directorial_prompt(
         '   - SEQUENTIAL & PARALLEL MOVEMENTS: Direct timeline arrays (e.g. [{"movement": "dollyin", "duration": 6.0}]) or compound movements.'
     )
 
+    is_low = clean_tier in ("low_cost", "tier_0", "local")
+    is_balanced = clean_tier in ("balanced", "standard", "default", "normal")
+    diff_model = "kling_v3" if "kling" in m_lower else ("wan_4k" if "4k" in m_lower else "wan_2_1")
+
     if is_nature_relax:
         d1 = ("1. PURE PRISTINE LIVING WALLPAPER SCENERY & NATURAL GRANDEUR:\n"
               "   - Every scene MUST showcase exceptionally visually brilliant, pristine, awe-inspiring natural scenery.\n"
               "   - Strictly zero clutter, tourists, power lines, or modern vehicles.\n"
               "   - Contextual Architecture: Authentically incorporate requested architecture (e.g. rustic Swiss chalets, verandas, cabins).\n"
               "   - Living Wallpaper Framing: Compose as a tranquil living wallpaper overlooking the scenic expanse.")
-        is_low = clean_tier in ("low_cost", "tier_0", "local")
         if is_low:
-            ex_motion_type = "ken_burns"
-            ex_rec_model = "local_drone"
+            ex_motion_type, ex_rec_model = "ken_burns", "local_drone"
             ex_rationale = "Fixed locked tripod overlooking natural scenery via local 4K steady hold ($0.00 compute)."
             motion_rule = (
                 "3. TIER-0 / LOW-COST LOCKED TRIPOD KEN BURNS DIRECTORIAL CONTRACT ($0.00 COMPUTE):\n"
@@ -112,9 +103,19 @@ def build_base_directorial_prompt(
                 '   - "camera_movement": strictly ["stay"] or locked stationary hold stage.\n'
                 '   - "motion_rationale": "Fixed locked tripod overlooking natural scenery via local 4K steady hold ($0.00 compute)."'
             )
+        elif is_balanced:
+            ex_motion_type, ex_rec_model = "ken_burns", "local_drone"
+            ex_rationale = "100% local 4K steady hold on still nature scenery with zero moving elements ($0.00 compute)."
+            motion_rule = (
+                "3. BALANCED TIER DIRECTORIAL CONTRACT (80% LOCAL DRONE / 20% AI DIFFUSION COST SPLIT):\n"
+                '   - MANDATORY 80/20 COST-OPTIMIZATION SPLIT ACROSS SCENES:\n'
+                '     * 80% OF SCENES (e.g. 4 of 5 scenes) MUST USE "motion_type": "ken_burns", "recommended_model": "local_drone".\n'
+                '       CRITICAL ZERO-MOTION IMAGE PROMPT MANDATE: Visual prompts for these 80% scenes MUST depict STILL, TIMELESS scenery with ZERO moving elements (STRICTLY NO flying birds, NO crashing waves/surf, NO moving vehicles/boats, NO walking people, NO active animals, NO turbulent rushing water). Use glassy mirror-still reflections, towering peaks, ancient architecture, quiet meadows. Camera movement strictly ["stay"]. Local 4K steadycam hold ($0.00 compute)!\n'
+                f'     * 20% OF SCENES (e.g. 1 of 5 scenes) MUST USE "motion_type": "ai_diffusion", "recommended_model": "{diff_model}".\n'
+                '       DYNAMIC HERO MOTION: Reserve AI diffusion exclusively for hero scenes with dynamic fluid motion (crashing ocean surf, flying birds soaring overhead, cascading waterfall impact, swirling campfire embers, rustling canopy in storm).'
+            )
         else:
-            ex_motion_type = "ai_diffusion"
-            ex_rec_model = "kling_v3" if "kling" in m_lower else ("wan_4k" if "4k" in m_lower else "wan_2_1")
+            ex_motion_type, ex_rec_model = "ai_diffusion", diff_model
             ex_rationale = "Living wallpaper cinemagraph via AI video diffusion animating natural water and foliage kinematics."
             motion_rule = (
                 f"3. HYBRID AI DIFFUSION LIVING WALLPAPER CONTRACT (TIER: {clean_tier.upper()}):\n"
@@ -140,8 +141,24 @@ def build_base_directorial_prompt(
               "   - NO MOVING OBJECTS DIRECTIVE: Still, timeless landscape keyframes with ZERO moving objects.\n"
               "   - Authoritative Measured Narration: Measured, poetic, educational voiceover (~120 WPM).\n"
               "   - 100% Crisp Natural Lighting: Balanced daylight or dramatic authentic golden/blue hour.")
-        ex_motion_type = "ken_burns"
-        ex_rationale = "100% local 4K perspective drone flight via ken_burns compound choreography ($0.00 compute)."
+        diff_doc_model = "kling_v3" if "kling" in m_lower else ("wan_4k" if "4k" in m_lower else "kling_pro")
+        if is_low:
+            ex_motion_type, ex_rec_model = "ken_burns", "local_drone"
+            ex_rationale = "100% local 4K perspective drone flight via ken_burns compound choreography ($0.00 compute)."
+        elif is_balanced:
+            ex_motion_type, ex_rec_model = "ken_burns", "local_drone"
+            ex_rationale = "100% local 4K perspective drone flight over still landscape with zero moving elements ($0.00 compute)."
+            motion_rule = (
+                "3. BALANCED TIER DIRECTORIAL CONTRACT (80% LOCAL DRONE / 20% AI DIFFUSION COST SPLIT):\n"
+                '   - MANDATORY 80/20 COST-OPTIMIZATION SPLIT ACROSS SCENES:\n'
+                '     * 80% OF SCENES (e.g. 4 of 5 scenes) MUST USE "motion_type": "ken_burns", "recommended_model": "local_drone".\n'
+                '       CRITICAL ZERO-MOTION IMAGE PROMPT MANDATE: Visual prompts for these 80% scenes MUST depict STILL, TIMELESS scenery with ZERO moving elements (STRICTLY NO flying birds, NO crashing waves/surf, NO moving vehicles/boats, NO walking people, NO active animals, NO turbulent rushing water). Frame towering mountains, ancient stone architecture, quiet valley meadows. Supported local movements: "dollyin", "pan-right", "pan-left", "tilt-up", "stay" ($0.00 compute)!\n'
+                f'     * 20% OF SCENES (e.g. 1 of 5 scenes) MUST USE "motion_type": "ai_diffusion", "recommended_model": "{diff_doc_model}".\n'
+                '       DYNAMIC HERO MOTION: Reserve AI diffusion exclusively for hero scenes with dynamic fluid motion (crashing ocean surf, flying birds soaring overhead, cascading waterfall impact, moving street vehicles).'
+            )
+        else:
+            ex_motion_type, ex_rec_model = "ai_diffusion", diff_doc_model
+            ex_rationale = "Cinematic drone perspective flight via AI video diffusion."
         rig_palette = '["heavy_lift_cine_drone", "technocrane_jib", "stabilized_steadicam_gimbal", "motorized_cine_slider"]'
         default_rig = "heavy_lift_cine_drone"
         default_cam_move = "stay" if is_nature_relax else "dollyin"
@@ -230,15 +247,8 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
   "story_topic": "Detailed sensory synopsis tailored to the true geography",
   "genre": "{genre}",
   "sub_genre": "{sub_genre}",
-  "primary_archetype": "{archetype}",
-  "secondary_archetype": null,
-  "cluster": "{cluster}",
-  "tier": "{clean_tier}",
-  "primary_language": "en",
-  "target_dubbing_languages": ["en", "de", "fr", "ja", "es"],
-  "recommended_fps": 24,
-  "aspect_ratio": "16:9",
-  "total_duration_seconds": {duration_seconds},
+  "primary_archetype": "{archetype}", "secondary_archetype": null, "cluster": "{cluster}", "tier": "{clean_tier}",
+  "primary_language": "en", "target_dubbing_languages": ["en", "de", "fr", "ja", "es"], "recommended_fps": 24, "aspect_ratio": "16:9", "total_duration_seconds": {duration_seconds},
 {root_ext}  "global_culture": {{ "continent_region": "Autonomously derive true region", "culture_heritage": "Authentic regional natural heritage", "authentic_textiles_and_fabrics": "Weathered stone, moss, river slate, native timber", "cultural_gestures_and_rituals": "Mindful silence" }},
   "travel_tourism": {{ "destination_name": "True Landmark Name", "country": "Authentic Country", "province_state": null, "attraction_type": "Autonomously derive true structure", "best_season_and_lighting": "Optimal season and lighting" }},
   "cast": [],
@@ -252,11 +262,7 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
   }},
   "scenes": [
     {{
-      "scene_index": 1,
-      "location_hub": "Specific Vista 1 Name",
-      "shot_type": "wide_panoramic_picturesque",
-      "camera_rig": "{default_rig}",
-      "color_temp_kelvin": {eff_kelvin},
+      "scene_index": 1, "location_hub": "Specific Vista 1 Name", "shot_type": "wide_panoramic_picturesque", "camera_rig": "{default_rig}", "color_temp_kelvin": {eff_kelvin},
       "visual_prompt": "A photorealistic, symmetrical 16:9 cinematic landscape view of [Landmark Name], shot from {default_rig}. Crisp natural lighting.",
 {scene_ext}      "image_model_configs": {{
         "flux_dev": {{"model": "fal-ai/flux/dev", "prompt": "Photorealistic wide panoramic view, 16:9 cinematic.", "aspect_ratio": "16:9", "guidance_scale": 3.5, "num_inference_steps": 28}},
@@ -271,23 +277,17 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
         "wan_2_1": {{"model": "fal-ai/wan-i2v", "prompts": {{"positive_prompt": "Living wallpaper cinemagraph. Strictly locked stationary camera on a heavy fixed tripod with zero camera movement, zero camera angles, zero panning, zero tilt, zero zoom, zero camera drift. Topography and architecture 100% frozen. Smooth continuous laminar fluid dynamics of gentle water ripples, seamless loop compatible.", "negative_prompt": "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot, flythrough, handheld camera, camera drift, jitter, shaky camera, moving perspective, perspective shift, artifacts"}}, "settings": {{"guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9"}}}},
         "local_drone": {{"model": "local_perspective_drone", "movement": "{'stay' if is_nature_relax else 'dollyin'}", "start_pan": "center", "start_zoom": "normal", "curve": "cosine", "rationale": "{ex_rationale}"}}
       }},
-      "domain": "landscape_solid",
-      "motion_type": "{ex_motion_type}",
-      "recommended_model": "{ex_rec_model}",
-      "camera_movement": "{default_cam_move}",
-      "kinetic_micro_zones": {{ "sprites": [], "tree_sway_zones": [], "water_zones": [] }},
-      "motion_rationale": "{ex_rationale}",
-      "duration_seconds": {per_shot_dur},
+      "domain": "landscape_solid", "motion_type": "{ex_motion_type}", "recommended_model": "{ex_rec_model}", "camera_movement": "{default_cam_move}",
+      "kinetic_micro_zones": {{ "sprites": [], "tree_sway_zones": [], "water_zones": [] }}, "motion_rationale": "{ex_rationale}", "duration_seconds": {per_shot_dur},
       "narration_text": "Evocative, continuous narration for this vista (~{per_shot_words} words) paced smoothly for {per_shot_dur}s."
     }}
   ],
   "publishing": {{
     "ctr_titles": ["3 HOURS of Deep Serenity in [Landmark] ⋄ 432Hz Soundbath - 4K UHD", "Sleep Under [Landmark Sky] ✦ 432Hz Tone - 4K"],
-    "description_with_timestamps": "Immerse yourself in [Landmark Name]. Filmed with broadcast 4K clarity.\\n\\n⏱️ Chapters:\\n0:00 - Vista 1",
+    "description_with_timestamps": "Immerse yourself in [Landmark Name]. Broadcast 4K clarity.\\n\\n⏱️ Chapters:\\n0:00 - Vista 1",
     "seo_tags": ["nature relaxation", "living wallpaper", "4k nature", "ambient nature"],
     "has_synthetic_media": true, "ypp_monetization_safety": "100% AdSense Advertiser-Friendly (Green Dollar Guarantee)",
     "thumbnail_concept_prompts": ["Ultra-crisp 16:9 cinematic shot of [Landmark Name], striking natural lighting."]
   }}
 }}
-Do NOT output markdown backticks or preamble. Output raw JSON only.
-"""
+Do NOT output markdown backticks or preamble. Output raw JSON only."""

@@ -122,6 +122,8 @@ async def generate_zen_storyboard_gemini(
     genre: str = "relax/zen",
     sub_genre: str = "zen_healing",
     primary_archetype: str = "zen_garden",
+    weather: Optional[str] = "normal",
+    **kwargs: Any,
 ) -> ZenStoryboard:
     """Dynamically generate 432Hz healing meditation storyboard via Gemini LLM."""
     print(f"\n[GEMINI HEALING RELAXATION AGENT INVOKED]")
@@ -230,6 +232,7 @@ async def generate_zen_screenplay_gemini(
     image_model: str = "flux_1_1_pro_ultra",
     channel_id: Optional[str] = None,
     tier: str = "balanced",
+    weather: Optional[str] = "normal",
     **kwargs: Any,
 ) -> RelaxScreenplay:
     """Generate a Zen screenplay using the dedicated Healing Relaxation director."""

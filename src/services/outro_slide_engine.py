@@ -165,20 +165,40 @@ def render_4k_outro_video(
     if out.is_file() and out.stat().st_size > 1000:
         return out
 
+    in_img = Path(outro_image_path).resolve()
+    if not in_img.is_file() or in_img.stat().st_size < 100:
+        logger.warning(f"outro_image_missing_or_empty: {in_img}")
+        return out
+
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     fade_start = max(0.5, duration_seconds - fade_duration)
     vf_filter = f"scale=3840:2160,fps={fps},fade=t=out:st={fade_start:.2f}:d={fade_duration:.2f}"
 
     cmd = [
         ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
-        "-loop", "1", "-i", str(outro_image_path),
+        "-loop", "1", "-i", str(in_img),
         "-vf", vf_filter,
         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4",
         "-crf", str(crf), "-t", f"{duration_seconds:.2f}",
         "-movflags", "+faststart", str(out),
     ]
 
-    subprocess.run(cmd, check=True)
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as err:
+        logger.error(f"render_4k_outro_video primary failed: {err.stderr or err.stdout}")
+        try:
+            cmd_fallback = [
+                ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
+                "-loop", "1", "-i", str(in_img),
+                "-t", f"{duration_seconds:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                "-preset", "ultrafast", str(out),
+            ]
+            subprocess.run(cmd_fallback, check=True, capture_output=True, text=True)
+        except Exception as fb_err:
+            logger.error(f"render_4k_outro_video fallback failed: {fb_err}")
+            return out
+
     logger.info(f"outro_video_clip_rendered: {out.name} ({duration_seconds}s)")
     return out
 

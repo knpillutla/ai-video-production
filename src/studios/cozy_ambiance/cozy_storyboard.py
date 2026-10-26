@@ -1,7 +1,7 @@
 """Directorial Storyboard Generator for Cozy Ambiance & Biophilic Living Spaces."""
 
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from src.core.config import settings
@@ -100,6 +100,8 @@ async def generate_cozy_storyboard_gemini(
     theme: str = "Cozy Oceanfront Terrace Fireplace & Ocean Waves",
     duration_seconds: float = 60.0,
     user_id: str = "user_krishna_01",
+    weather: Optional[str] = "normal",
+    **kwargs: Any,
 ) -> CozyStoryboard:
     """Dynamically generate rich 2-perspective cozy ambiance storyboard via Gemini LLM."""
     print(f"\n[GEMINI COZY AMBIANCE AGENT INVOKED]")

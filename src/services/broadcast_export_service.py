@@ -254,7 +254,7 @@ def export_metadata_packages(sb: Any, ep_dir: Path) -> Dict[str, Any]:
     title, desc = str(getattr(sb, "title", "Studio 4K Showcase")), str(getattr(sb, "story_topic", "") or "")
     yt_pkg, loc_pkg, ab_pkg = generate_youtube_ambient_package(arch), localize_metadata_for_languages(arch, title, desc or title), generate_thumbnail_ab_variants(arch)
     loc_dict = {k: (v.model_dump() if hasattr(v, "model_dump") else v) for k, v in loc_pkg.items()}
-    for name, data in [("youtube_packaging.json", yt_pkg.model_dump()), ("youtube_packaging_nature_only.json", yt_pkg.model_dump()), ("localized_metadata.json", loc_dict), ("thumbnail_ab_testing.json", ab_pkg.model_dump())]: (ep_dir / name).write_text(json.dumps(data, indent=2), encoding="utf-8")
+    for name, data in [("youtube_packaging.json", yt_pkg.model_dump()), ("youtube_packaging_nature_only.json", yt_pkg.model_dump()), ("localized_metadata.json", loc_dict), ("thumbnail_ab_testing.json", ab_pkg.model_dump())]: (ep_dir / name).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     return {"youtube": yt_pkg.model_dump(), "youtube_nature_only": yt_pkg.model_dump(), "localized": loc_dict, "thumbnail_ab": ab_pkg.model_dump()}
 
 async def handle_short_export(

@@ -4,7 +4,7 @@ Autonomously derives master duration (60s vs 120s) and shot count (2 vs 3 vs 4 s
 """
 
 import json
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 from pydantic import BaseModel, Field, field_validator
 from src.core.telemetry import logger
 from src.studios.ambient_world.ambient_catalog import ARCHETYPES, AtmosphericArchetype
@@ -172,6 +172,8 @@ async def generate_ambient_storyboard_gemini(
     num_shots: Optional[int] = 1,
     camera_motion: Optional[str] = "locked_tripod",
     user_id: Optional[str] = "user_krishna_01",
+    weather: Optional[str] = "normal",
+    **kwargs: Any,
 ) -> AmbientStoryboard:
     """Dynamically generate rich directorial storyboard via Gemini LLM with camera optics, weather dynamics, and acoustic scoring."""
     arch1 = resolve_archetype(primary)
