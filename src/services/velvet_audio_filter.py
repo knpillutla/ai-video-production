@@ -7,10 +7,13 @@ biophilic warmth equalization, 432Hz harmonic under-beds, and -21 LUFS sleep nor
 import math
 from pathlib import Path
 import subprocess
+import sys
 from typing import Optional
 import imageio_ffmpeg
 
 from src.core.telemetry import logger
+
+_SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 
 def build_velvet_ffmpeg_audio_filter(
@@ -80,7 +83,7 @@ def apply_velvet_acoustic_mastering(
 
     logger.info(f"applying_velvet_audio_filter: {inp.name} -> {out.name} (target={target_lufs} LUFS)")
     try:
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, creationflags=_SUBPROCESS_FLAGS)
     except subprocess.CalledProcessError as err:
         logger.warning(f"velvet_filter_fallback: ffmpeg failed, using direct copy: {err}")
         import shutil

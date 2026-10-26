@@ -7,7 +7,7 @@ ocean havens, and zen relaxation living wallpapers.
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Union
-from pydantic import AliasChoices, BaseModel, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 from src.services.audio_tag_service import normalize_audio_tags
 
 
@@ -88,6 +88,7 @@ class CameraStageSpec(BaseModel):
 
 class RelaxSceneDirective(BaseModel):
     """Single Scene / Shot Directorial Specification for Living Wallpapers."""
+    model_config = ConfigDict(extra="allow")
     scene_index: int = 1
     location_hub: str = "Scenic Vista"
     shot_type: str = "wide_panoramic_picturesque"
@@ -100,6 +101,7 @@ class RelaxSceneDirective(BaseModel):
     image_model_configs: Dict[str, Any] = Field(default_factory=dict)
     domain: str = "landscape_solid"  # landscape_solid, water_fluid
     motion_type: str = "ai_diffusion"  # ai_diffusion, ken_burns, static
+    recommended_model: Optional[str] = None
     camera_movement: Union[List[CameraStageSpec], List[Any], str] = Field(
         default="slow_zoom_in",
         description="Array of movement stages or single movement"

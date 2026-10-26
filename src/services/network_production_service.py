@@ -411,6 +411,13 @@ async def produce_channel_video(
         universal_sp.production_id = episode_id
     if hasattr(universal_sp, "tier"):
         universal_sp.tier = eff_tier
+    if motion_model and motion_model != "auto":
+        for sc in getattr(universal_sp, "scenes", []):
+            try:
+                if not getattr(sc, "recommended_model", None) or sc.recommended_model in ("wan_2_1", "auto"):
+                    setattr(sc, "recommended_model", motion_model)
+            except Exception:
+                pass
     if screenplay_file:
         try:
             screenplay_file.parent.mkdir(parents=True, exist_ok=True)

@@ -6,10 +6,13 @@ positions spatial sound layers (left rain, right hearth, center score) in 48kHz 
 
 from pathlib import Path
 import subprocess
+import sys
 from typing import Optional
 import imageio_ffmpeg
 
 from src.core.telemetry import logger
+
+_SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 
 def build_binaural_delta_filter(
@@ -75,7 +78,7 @@ def apply_binaural_spatial_mastering(
 
     logger.info(f"applying_binaural_spatial_mastering: {inp.name} -> {out.name} (432Hz delta bed)")
     try:
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, creationflags=_SUBPROCESS_FLAGS)
     except subprocess.CalledProcessError as err:
         logger.warning(f"binaural_mastering_fallback: {err}")
         import shutil
@@ -105,7 +108,7 @@ def build_seamless_audio_loop(
 
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     import re
-    res = subprocess.run([ffmpeg_bin, "-i", str(inp)], capture_output=True, text=True, errors="ignore")
+    res = subprocess.run([ffmpeg_bin, "-i", str(inp)], capture_output=True, text=True, errors="ignore", creationflags=_SUBPROCESS_FLAGS)
     m = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.\d+)", res.stderr)
     if not m:
         return inp
@@ -123,12 +126,12 @@ def build_seamless_audio_loop(
         subprocess.run([
             ffmpeg_bin, "-y", "-ss", f"{cut_point:.2f}", "-t", f"{tail_len:.2f}", "-i", str(inp),
             "-c:a", "pcm_s16le", "-ar", "48000", str(temp_tail)
-        ], capture_output=True, check=True)
+        ], capture_output=True, check=True, creationflags=_SUBPROCESS_FLAGS)
 
         subprocess.run([
             ffmpeg_bin, "-y", "-ss", "0", "-t", f"{cut_point:.2f}", "-i", str(inp),
             "-c:a", "pcm_s16le", "-ar", "48000", str(temp_body)
-        ], capture_output=True, check=True)
+        ], capture_output=True, check=True, creationflags=_SUBPROCESS_FLAGS)
 
         cmd = [
             ffmpeg_bin, "-y",
@@ -139,7 +142,7 @@ def build_seamless_audio_loop(
             "-c:a", "libmp3lame", "-b:a", "320k", "-ar", "48000",
             str(out)
         ]
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, creationflags=_SUBPROCESS_FLAGS)
         logger.info(f"seamless_audio_loop_created: {inp.name} -> {out.name}")
         return out
     except Exception as err:

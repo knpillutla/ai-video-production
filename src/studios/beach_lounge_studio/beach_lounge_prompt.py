@@ -31,27 +31,30 @@ BEACH LOUNGE & OCEAN TERRACE DIRECTORIAL RULES & CINEMATOGRAPHY:
    - Purity Guard: Strictly mandate zero crowds, zero tourists, zero plastic beach chairs, zero modern watercraft.
 2. NATURAL BALANCED LIGHTING:
    - Default to crisp 5500K natural daylight, warm 2800K sunset alpenglow, or soft 2400K blue-hour twilight.
-3. CINEMAGRAPH KINETICS (Wan 2.1 & Kling v1.6 Pro):
-   - Terrace, loungers, pool structure, or cabana frame remain 100% rigid, frozen, and temporally stable.
+3. CINEMAGRAPH KINETICS (Wan 2.1 & Kling v1.6 Pro) - FIXED LOCKED TRIPOD MANDATE:
+   - For relaxation format, camera MUST be on a 100% FIXED LOCKED TRIPOD with ZERO camera movement and ZERO camera angles.
+   - Prohibit all panning, tilt, zoom, dolly, and drone movements. The camera never moves.
+   - Terrace, loungers, pool structure, or cabana frame remain 100% rigid, frozen, solid, and temporally stable.
    - Animate ONLY subtle glassy water surface ripples across the pool, gentle palm sway, and rhythmic ocean swells in the background.
    - Domain: "water_fluid".
 4. DYNAMIC SCENE-MATCHED AUDIO & MUSIC SCORING:
+   - Gemini knows it is creating a relaxing beach lounge / ocean terrace production.
+   - Gemini MUST populate BOTH 'audio_master.suno_prompt' AND 'audio_master.suno_musical_tags' with soothing music directions directly suited to the visual image:
+     [Instrumental Ambient Meditation]
+     [Scene Context: <specific visual setting matching the image prompt>]
+     [Tempo: 50-54 BPM - Resting Heartbeat Pulse]
+     [Tuning: 432Hz Solfeggio Velvet Harmony]
+     [Lead Melody: Hypnotic, slow, gentle phrasing on warm Spanish nylon guitar or soft Rhodes electric piano]
+     [Accompaniment: Plucked acoustic harmonies and gentle distant ocean surf foley]
+     [Atmosphere: Warm velvet ambient pads, gentle pool caustics, long smooth reverb decays, zero hiss]
+     [Negative Constraints: Zero vocals, zero drums, zero percussion, zero brass]
+     [Emotion: Deep tranquil calm, anxiety dissolving, peaceful sleep induction]
    - Modern Luxury Villa & Infinity Pool Terraces ('pool_terrace', 'beach_infinity_pool_terrace'):
-     * Set 'suno_musical_tags' to sophisticated modern chillout lounge:
-       "chic modern chillout lounge, deep velvet synth pads, sophisticated acoustic nylon guitar harmonics, warm downtempo bassline, gentle pool water caustics, subtle distant surf foley, 432Hz warmth, -21 LUFS"
-     * 'tempo_bpm': 82 to 92 BPM.
-   - Party / Upbeat / Celebration Atmosphere (when prompt mentions party, vibrant, celebration, summer beats, beach club):
-     * Set 'suno_musical_tags' to energetic tropical lounge / melodic beach house:
-       "energetic tropical beach club, melodic house groove, rhythmic percussion, joyful acoustic guitar plucks, uplifting summer vibes, vibrant ocean ambiance, -18 LUFS"
-     * 'tempo_bpm': 116 to 124 BPM.
+     * Set 'suno_musical_tags': "chic modern chillout lounge, deep velvet synth pads, sophisticated acoustic nylon guitar harmonics, warm downtempo bassline, gentle pool water caustics, subtle distant surf foley, 432Hz warmth, -21 LUFS", tempo: 70-80 BPM.
    - Peaceful Sunset & Twilight Relaxation:
-     * Set 'suno_musical_tags' to warm sunset ambient peace:
-       "sunset chillout lounge, warm Spanish nylon guitar, golden hour ambient synth pads, rolling ocean swell foley, peaceful 432Hz, -21 LUFS"
-     * 'tempo_bpm': 70 to 80 BPM.
+     * Set 'suno_musical_tags': "sunset chillout lounge, warm Spanish nylon guitar, golden hour ambient synth pads, rolling ocean swell foley, peaceful 432Hz, -21 LUFS", tempo: 50-54 BPM.
    - Deep Sleep & Night Sanctuaries (Starlit Hammock / Night Pavilion):
-     * Set 'suno_musical_tags' to ultra-calming deep delta sleep:
-       "deep delta sleep drone, 432Hz velvet ambient sleep pads, slow rhythmic midnight ocean surf, distant sea shell chimes, calming stress relief, zero drums, -21 LUFS"
-     * 'tempo_bpm': 55 to 65 BPM.
+     * Set 'suno_musical_tags': "deep delta sleep drone, 432Hz velvet ambient sleep pads, slow rhythmic midnight ocean surf, distant sea shell chimes, calming stress relief, zero drums, -21 LUFS", tempo: 50-54 BPM.
 """
 
 

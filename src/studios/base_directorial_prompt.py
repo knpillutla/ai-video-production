@@ -23,10 +23,12 @@ def build_base_directorial_prompt(
     extra_root_schema: str = "", extra_scene_schema: str = "",
     speech_cadence_wpm: int = 120, speech_words_per_sec: float = 2.0,
     tts_provider_name: str = "Azure Speech Neural",
+    motion_model: Optional[str] = None,
 ) -> str:
     """Compose the authoritative directorial system prompt for Gemini storyboarding."""
     g_lower, a_lower = (genre or "").lower(), (archetype or "").lower()
     ch_lower, clean_tier = (channel_id or "").lower(), (tier or "balanced").strip().lower()
+    m_lower = (motion_model or "").lower()
 
     is_nature_relax = (
         g_lower.startswith("relax") or "nature" in g_lower
@@ -101,6 +103,7 @@ def build_base_directorial_prompt(
         is_low = clean_tier in ("low_cost", "tier_0", "local")
         if is_low:
             ex_motion_type = "ken_burns"
+            ex_rec_model = "local_drone"
             ex_rationale = "Fixed locked tripod overlooking natural scenery via local 4K steady hold ($0.00 compute)."
             motion_rule = (
                 "3. TIER-0 / LOW-COST LOCKED TRIPOD KEN BURNS DIRECTORIAL CONTRACT ($0.00 COMPUTE):\n"
@@ -111,6 +114,7 @@ def build_base_directorial_prompt(
             )
         else:
             ex_motion_type = "ai_diffusion"
+            ex_rec_model = "kling_v3" if "kling" in m_lower else ("wan_4k" if "4k" in m_lower else "wan_2_1")
             ex_rationale = "Living wallpaper cinemagraph via AI video diffusion animating natural water and foliage kinematics."
             motion_rule = (
                 f"3. HYBRID AI DIFFUSION LIVING WALLPAPER CONTRACT (TIER: {clean_tier.upper()}):\n"
@@ -123,12 +127,12 @@ def build_base_directorial_prompt(
         default_rig = "locked_tripod_telephoto"
         default_cam_move = "locked_stationary_cinemagraph"
         cam_contract = (
-            "4. FIXED LOCKED TRIPOD OVERLOOKING SCENERY (RELAXATION MANDATE):\n"
-            "   - Relaxation format (across all genres, archetypes, and weathers) strictly mandates a FIXED LOCKED TRIPOD overlooking scenery.\n"
-            "   - 'camera_rig': strictly 'locked_tripod_telephoto' overlooking the natural vista.\n"
-            "   - 'camera_movement': strictly 'locked_stationary_cinemagraph' (or ['stay']) with 0 panning, tilting, or zooming.\n"
-            "   - Motion: Direct organic environmental motion (water ripples, swaying leaves, mist/snow, water cascades). For rain/storms, direct VISIBLE torrential falling rain sheets, cascading eaves, and splashing droplets rather than subtle light drizzle.\n"
-            "   - Individual genres/archetypes/weather add their own unique atmospheric & sensory properties on top."
+            "4. FIXED LOCKED TRIPOD (RELAXATION MANDATE - ZERO CAMERA MOVEMENT):\n"
+            "   - For relaxation format productions, Gemini MUST direct all motion models that the camera is a 100% FIXED LOCKED TRIPOD and NOT camera angles or movements.\n"
+            "   - Strictly PROHIBIT all camera pans, tilts, zooms, sweeps, aerial tracking, and angle shifts.\n"
+            "   - 'camera_rig': strictly 'locked_tripod_telephoto'. 'camera_movement': strictly 'locked_stationary_cinemagraph' (or ['stay']).\n"
+            "   - In 'motion_prompt' and all video models ('wan_2_1', 'kling_v3_4k', 'kling_v1_6_pro'), positive prompt MUST state: 'Cinemagraph living wallpaper. Strictly locked stationary camera on a heavy fixed tripod with zero camera movement, zero camera angles, zero pan, zero tilt, zero zoom, zero camera drift. Entire frame, landscape topography, and architecture remain 100% frozen, solid, and motionless. Only subtle organic living motion in the scene: gentle water ripples / waves lapping / breeze swaying distant foliage / embers glowing.'\n"
+            "   - Negative prompt MUST mandate: 'camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot, flythrough, handheld camera, camera drift, jitter, shaky camera, moving perspective, perspective shift, morphing architecture, changing furniture'."
         )
     else:
         d1 = ("1. 4K CINEMATIC BLUE-CHIP DOCUMENTARY & DRONE SHOWCASE:\n"
@@ -199,7 +203,7 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
    - Divide narration smoothly across 'scenes[].narration_text' perfectly matching each shot's 'duration_seconds'.
    - MANDATORY AUDIO-VISUAL GROUNDING (SHOW-AND-TELL RULE): Every scene's 'narration_text' MUST DIRECTLY DESCRIBE AND INTERPRET WHAT IS VISIBLE ON SCREEN in that scene's 'visual_prompt'. Strictly prohibit phantom subjects (e.g., describing rivers when viewing desert reservoirs, or narrating handheld artifacts in wide drone vistas).
     - Continuous Camera Motion: Visual camera motion runs for the FULL duration of the scene, ensuring continuous flight while narration speaks with ZERO frozen frames.
-    - "suno_musical_tags" & "tempo_bpm": For relaxation, Gemini MUST NOT hardcode specific instruments; pick random soothing instruments on each execution (harp, koto, bansuri, cedar flute, pan flute, cello, singing bowls, handpan, felted piano, 432Hz pads) directing Suno to pure soothing sound (50-54 BPM, long decays, zero percussion, zero vocals, -21 LUFS). For docs: grand orchestral score.
+    - "suno_musical_tags" & "suno_prompt": For relaxation, Gemini MUST generate relaxing music directions to Suno that directly suit and complement the exact visual image and scene being created (beach, luxury terrace, desert, Swiss Alps, forest, cozy hearth). Both 'audio_master.suno_prompt' AND 'audio_master.suno_musical_tags' must be populated with scene-matched soothing instruments, 432Hz tuning, resting 48-54 BPM tempo, long decays, zero percussion, zero drums, zero vocals, -21 LUFS. Never leave suno_prompt empty!
 
 {specific_rules}
 {landmarks_block}
@@ -235,25 +239,15 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
   "recommended_fps": 24,
   "aspect_ratio": "16:9",
   "total_duration_seconds": {duration_seconds},
-{root_ext}  "global_culture": {{
-    "continent_region": "Autonomously derive true continent/region",
-    "culture_heritage": "Authentic regional natural and conservation heritage",
-    "authentic_textiles_and_fabrics": "Authentic natural materials (weathered stone, moss, river slate, native timber)",
-    "cultural_gestures_and_rituals": "Mindful contemplation of nature and tranquil silence"
-  }},
-  "travel_tourism": {{
-    "destination_name": "True Geographic Landmark Name",
-    "country": "Authentic Country",
-    "province_state": null,
-    "attraction_type": "Autonomously derive true topographical structure",
-    "best_season_and_lighting": "Autonomously derive optimal season and lighting"
-  }},
+{root_ext}  "global_culture": {{ "continent_region": "Autonomously derive true region", "culture_heritage": "Authentic regional natural heritage", "authentic_textiles_and_fabrics": "Weathered stone, moss, river slate, native timber", "cultural_gestures_and_rituals": "Mindful silence" }},
+  "travel_tourism": {{ "destination_name": "True Landmark Name", "country": "Authentic Country", "province_state": null, "attraction_type": "Autonomously derive true structure", "best_season_and_lighting": "Optimal season and lighting" }},
   "cast": [],
   "audio_master": {{
     "audio_mode": "ambient_nature",
     "spoken_narration_script": "Continuous unbroken master voiceover (~{target_words} words for {duration_seconds}s at 125 WPM), seamlessly narrating the journey without loops.",
     "singing_lyrics_spec": "",
-    "suno_musical_tags": "432Hz Solfeggio, pure instrumental relaxation, <randomly selected soothing instruments>, warm velvet pads, 52 BPM, zero vocals, zero drums, -21 LUFS",
+    "suno_musical_tags": "432Hz Solfeggio, pure instrumental relaxation, <soothing instruments matched to scene>, warm velvet pads, 52 BPM, zero vocals, zero drums, -21 LUFS",
+    "suno_prompt": "[Instrumental Ambient Meditation]\\n[Scene Context: <specific visual setting matching the image prompt>]\\n[Tempo: 50 BPM - Resting Heartbeat Pulse]\\n[Tuning: 432Hz Solfeggio Velvet Harmony]\\n[Lead Melody: Hypnotic, slow, tranquil phrasing on <Soothing Lead Instrument suited to scene>]\\n[Accompaniment: Soft acoustic harmonies on <Second Instrument suited to scene>]\\n[Atmosphere: <Ambient Texture suited to scene>, warm velvet pads, gentle natural foley, long smooth reverb decays]\\n[Acoustic Direction: Studio master recording, zero harsh percussion, zero brass, zero vocals, zero drums]\\n[Emotion: Deep tranquil calm, anxiety reduction, effortless meditation and sleep induction]\\n[Outro: Lingering resonant acoustic dissolve]",
     "vocal_gender": "none", "tempo_bpm": 80, "speech_cadence_wpm": 125, "target_lufs": -14.0, "ducking_db": -18.0
   }},
   "scenes": [
@@ -269,17 +263,17 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
         "flux_pro": {{"model": "fal-ai/flux-pro/v1.1-ultra", "prompt": "Ultra-photorealistic 8K UHD shot, 16:9.", "aspect_ratio": "16:9", "raw": true}},
         "zimage": {{"model": "fal-ai/z-image/turbo", "prompt": "Stunning photorealistic panoramic landscape, 16:9 locked tripod framing, sharp natural lighting.", "aspect_ratio": "16:9", "num_inference_steps": 8}}
       }},
-      "motion_prompt": "Living wallpaper cinemagraph style. Smooth panoramic sweep across natural landscape.",
-      "motion_negative_prompt": "camera shake, jitter, rapid motion, morphing landscape, artifacts",
+      "motion_prompt": "Living wallpaper cinemagraph style. Strictly locked stationary camera on a heavy fixed tripod with zero camera movement, zero camera angles, zero pan, zero tilt, zero zoom, zero camera drift. Entire frame, landscape topography, and architecture remain 100% frozen, solid, and motionless. Subtle organic motion of gentle water ripples, waves lapping, and distant foliage sway in the breeze.",
+      "motion_negative_prompt": "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot, flythrough, handheld camera, camera drift, jitter, shaky camera, moving perspective, perspective shift, morphing architecture, changing furniture, artifacts, humans",
       "model_configs": {{
-        "kling_v3_4k": {{"model": "fal-ai/kling-video/v3/4k/image-to-video", "prompts": {{"positive_prompt": "Cinemagraph style, living wallpaper. Strictly locked stationary camera with zero movement. Topography 100% frozen. Fluid motion, native 4K UHD atmospheric depth, zero humans.", "negative_prompt": "camera shake, jitter, morphing landscape, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}},
-        "kling_v1_6_pro": {{"model": "fal-ai/kling-video/v1.6/pro/image-to-video", "prompts": {{"positive_prompt": "Cinematic visual grandeur, locked camera.", "negative_prompt": "camera shake, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}},
-        "wan_2_1": {{"model": "fal-ai/wan-i2v", "prompts": {{"positive_prompt": "Smooth fluid motion.", "negative_prompt": "camera shake, artifacts"}}, "settings": {{"guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9"}}}},
+        "kling_v3_4k": {{"model": "fal-ai/kling-video/v3/4k/image-to-video", "prompts": {{"positive_prompt": "Cinemagraph style, living wallpaper. Strictly locked stationary camera on a fixed tripod with zero camera movement, zero camera angles. Topography 100% frozen. Fluid motion, native 4K UHD atmospheric depth, zero humans.", "negative_prompt": "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot, flythrough, handheld camera, camera drift, jitter, shaky camera, moving perspective, perspective shift, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}},
+        "kling_v1_6_pro": {{"model": "fal-ai/kling-video/v1.6/pro/image-to-video", "prompts": {{"positive_prompt": "Cinemagraph style, living wallpaper. Strictly locked stationary camera on a fixed tripod with zero camera movement, zero camera angles. Entire frame 100% frozen, subtle natural water movement and breeze, zero humans.", "negative_prompt": "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot, flythrough, handheld camera, camera drift, jitter, shaky camera, moving perspective, perspective shift, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}},
+        "wan_2_1": {{"model": "fal-ai/wan-i2v", "prompts": {{"positive_prompt": "Living wallpaper cinemagraph. Strictly locked stationary camera on a heavy fixed tripod with zero camera movement, zero camera angles, zero panning, zero tilt, zero zoom, zero camera drift. Topography and architecture 100% frozen. Smooth continuous laminar fluid dynamics of gentle water ripples, seamless loop compatible.", "negative_prompt": "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot, flythrough, handheld camera, camera drift, jitter, shaky camera, moving perspective, perspective shift, artifacts"}}, "settings": {{"guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9"}}}},
         "local_drone": {{"model": "local_perspective_drone", "movement": "{'stay' if is_nature_relax else 'dollyin'}", "start_pan": "center", "start_zoom": "normal", "curve": "cosine", "rationale": "{ex_rationale}"}}
       }},
       "domain": "landscape_solid",
       "motion_type": "{ex_motion_type}",
-      "recommended_model": "{'wan_2_1' if is_nature_relax else 'local_drone'}",
+      "recommended_model": "{ex_rec_model}",
       "camera_movement": "{default_cam_move}",
       "kinetic_micro_zones": {{ "sprites": [], "tree_sway_zones": [], "water_zones": [] }},
       "motion_rationale": "{ex_rationale}",

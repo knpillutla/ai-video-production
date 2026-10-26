@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, subprocess, time
+import json, subprocess, sys, time
 from pathlib import Path
 from typing import Dict, Optional, Tuple, TYPE_CHECKING
 import imageio_ffmpeg
@@ -8,25 +8,14 @@ from src.core.telemetry import logger
 from src.services.ambient_metadata_packager import YouTubeAmbientPackage, generate_youtube_ambient_package
 from src.services.ambient_shorts_extractor import generate_ambient_short
 from src.services.ambient_translator import LocalizedMetadata, localize_metadata_for_languages
+from src.services.cineloop_service import build_seamless_forward_cineloop, get_media_duration
 from src.services.long_play_stretcher import export_long_play_broadcast
 from src.services.thumbnail_ab_packager import ThumbnailABPackage, generate_thumbnail_ab_variants
 
+_SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+
 if TYPE_CHECKING:
     from src.studios.ambient_world.ambient_storyboard import AmbientStoryboard
-
-
-def get_media_duration(media_path: Path) -> float:
-    """Probe the exact duration of a media file in seconds."""
-    try:
-        import re
-        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-        res = subprocess.run([ffmpeg_bin, "-i", str(media_path)], capture_output=True, text=True, errors="ignore")
-        m = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.\d+)", res.stderr)
-        if m:
-            return float(m.group(1)) * 3600.0 + float(m.group(2)) * 60.0 + float(m.group(3))
-    except Exception:
-        pass
-    return 5.0
 
 
 def probe_clip_geometry(clip_path: Path) -> Tuple[int, int]:
@@ -34,7 +23,7 @@ def probe_clip_geometry(clip_path: Path) -> Tuple[int, int]:
     try:
         import re
         ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-        res = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], capture_output=True, text=True, errors="ignore")
+        res = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], capture_output=True, text=True, errors="ignore", creationflags=_SUBPROCESS_FLAGS)
         m = re.search(r",\s*(\d{3,4})x(\d{3,4})", res.stderr)
         if m:
             return int(m.group(1)), int(m.group(2))
@@ -55,81 +44,6 @@ def build_adaptive_resolution_filter(clip_path: Path, target_w: int = 3840, targ
     return f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease:flags=lanczos,pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2,setsar=1"
 
 
-def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf: int = 22) -> Path:
-    """Transform short 5s/10s AI diffusion motion clip into an infinitely loopable forward-flowing cineloop (zero reverse flow, zero flicker)."""
-    if clip_path.name.endswith("_fwd_seamless.mp4") and clip_path.is_file():
-        return clip_path
-
-    base_stem = clip_path.stem.replace("_fwd_seamless", "")
-    sp_file = clip_path.parent / "screenplay.json"
-    if "p" in base_stem and sp_file.is_file():
-        try:
-            import json
-            sp = json.loads(sp_file.read_text(encoding="utf-8"))
-            idx = int("".join(filter(str.isdigit, base_stem)) or "1")
-            scs = sp.get("scenes", [])
-            if idx - 1 < len(scs) and scs[idx - 1].get("motion_type") in ("ken_burns", "static", "local_zoompan"):
-                return clip_path
-        except Exception:
-            pass
-
-    out_seamless = clip_path.parent / f"{base_stem}_fwd_seamless.mp4"
-    duration = get_media_duration(clip_path)
-    if duration <= xfade_dur + 0.5 or duration >= 25.0:
-        return clip_path
-
-    ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-    check = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], capture_output=True, text=True, errors="ignore")
-    has_audio = "Audio:" in check.stderr
-
-    if out_seamless.is_file() and out_seamless.stat().st_size > 1000 and out_seamless.stat().st_mtime >= clip_path.stat().st_mtime:
-        if has_audio:
-            check_out = subprocess.run([ffmpeg_bin, "-i", str(out_seamless)], capture_output=True, text=True, errors="ignore")
-            if "Audio:" in check_out.stderr:
-                return out_seamless
-        else:
-            return out_seamless
-
-    split_offset = max(0.1, duration - xfade_dur)
-    if has_audio:
-        filter_graph = (
-            f"[0:v]split=2[h][t];"
-            f"[t]trim=start={split_offset:.2f}:end={duration:.2f},setpts=PTS-STARTPTS,fps=24[t1];"
-            f"[h]trim=start=0:end={split_offset:.2f},setpts=PTS-STARTPTS,fps=24[h1];"
-            f"[t1][h1]xfade=transition=fade:duration={xfade_dur:.2f}:offset=0,fps=24,format=yuv420p[v];"
-            f"[0:a]atrim=0:{split_offset:.2f},asetpts=PTS-STARTPTS[a]"
-        )
-        cmd = [
-            ffmpeg_bin, "-y", "-i", str(clip_path),
-            "-filter_complex", filter_graph,
-            "-map", "[v]", "-map", "[a]",
-            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", str(crf),
-            "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-            str(out_seamless),
-        ]
-    else:
-        filter_graph = (
-            f"[0:v]split=2[h][t];"
-            f"[t]trim=start={split_offset:.2f}:end={duration:.2f},setpts=PTS-STARTPTS,fps=24[t1];"
-            f"[h]trim=start=0:end={split_offset:.2f},setpts=PTS-STARTPTS,fps=24[h1];"
-            f"[t1][h1]xfade=transition=fade:duration={xfade_dur:.2f}:offset=0,fps=24,format=yuv420p[v]"
-        )
-        cmd = [
-            ffmpeg_bin, "-y", "-i", str(clip_path),
-            "-filter_complex", filter_graph,
-            "-map", "[v]",
-            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", str(crf),
-            str(out_seamless),
-        ]
-
-    try:
-        subprocess.run(cmd, capture_output=True, check=True)
-        return out_seamless
-    except Exception as err:
-        logger.warning(f"forward_cineloop_fallback: {err}")
-        return clip_path
-
-
 def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_master: Path, scene_hold_sec: float = 60.0, crf: int = 22, target_duration_sec: Optional[float] = None, is_narration: bool = False, **kwargs) -> Path:
     """Assemble relaxing 4K master with seamless forward cineloops and crossfades in CRF 22 format."""
     from src.services.procedural_foley import synthesize_foley_stem
@@ -138,7 +52,7 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
     n, x_dur = len(seamless_clips), 2.0
     target_audio = audio_path
     if not target_audio or not target_audio.is_file():
-        has_clip_audio = all("Audio:" in subprocess.run([ffmpeg_bin, "-i", str(c)], capture_output=True, text=True, errors="ignore").stderr for c in seamless_clips)
+        has_clip_audio = all("Audio:" in subprocess.run([ffmpeg_bin, "-i", str(c)], capture_output=True, text=True, errors="ignore", creationflags=_SUBPROCESS_FLAGS).stderr for c in seamless_clips)
         if not has_clip_audio:
             foley_wav = out_master.parent / "procedural_nature_foley.wav"
             if not foley_wav.is_file() or foley_wav.stat().st_size < 1000:
@@ -217,7 +131,7 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
 
     t_asm = time.time()
     try:
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
+        subprocess.run(cmd, capture_output=True, text=True, check=True, creationflags=_SUBPROCESS_FLAGS)
         dur_asm = time.time() - t_asm
         logger.info(f"ffmpeg_master_rendered: master='{out_master.name}' duration={dur_asm:.2f}s target={eff_master_dur:.2f}s timestamp={time.time()}")
     except subprocess.CalledProcessError as err:
@@ -248,8 +162,7 @@ def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], e
                 t_r, t_dur = time.time(), float(eff_target_dur or get_media_duration(m_music) or 60.0)
                 fc = f"[0:a]volume=0.22[bgm];[1:a]volume=1.0[vox];[bgm][vox]amix=inputs=2:duration=first:dropout_transition=3,apad,afade=t=out:st={max(0, t_dur - 3.0):.2f}:d=3.0[aout]"
                 cmd_r = [imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error", "-i", str(m_music), "-i", str(narr_audio), "-filter_complex", fc, "-map", "0:v:0", "-map", "[aout]", "-c:v", "copy", "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-t", f"{t_dur:.2f}", "-movflags", "+faststart", str(m_narr)]
-                subprocess.run(cmd_r, check=True)
-                logger.info(f"fast_narration_master_remuxed: duration={time.time() - t_r:.2f}s target={t_dur:.2f}s")
+                subprocess.run(cmd_r, check=True, creationflags=_SUBPROCESS_FLAGS)
             else:
                 assemble_4k_master(seamless_clips, Path(narr_audio), m_narr, scene_hold_sec=scene_hold_sec, crf=crf, target_duration_sec=eff_target_dur, is_narration=True, **kwargs)
     else:

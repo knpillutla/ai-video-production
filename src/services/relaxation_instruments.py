@@ -83,16 +83,60 @@ def get_random_soothing_instrument_set(
     setting_context: str = "",
     tempo_bpm: Optional[int] = None,
 ) -> SoothingInstrumentPalette:
-    """Stochastically select diverse, complementary soothing instruments for pure relaxation."""
-    lead_pools = [GENTLE_WINDS, PLUCKED_STRINGS, KEYS_AND_PADS, BELLS_AND_RESONATORS]
-    chosen_lead_pool = random.choice(lead_pools)
-    lead = random.choice(chosen_lead_pool)
+    """Stochastically select diverse, complementary soothing instruments suited to the visual scene."""
+    ctx_lower = setting_context.lower()
 
-    remaining_pools = [p for p in lead_pools if p is not chosen_lead_pool] + [BOWED_STRINGS]
-    chosen_acc_pool = random.choice(remaining_pools)
-    accompaniment = random.choice(chosen_acc_pool)
+    if any(k in ctx_lower for k in ("beach", "ocean", "surf", "coast", "pool", "terrace", "pergola", "cabana")):
+        lead_candidates = [
+            "classical Spanish nylon guitar", "warm Rhodes electric piano", "Celtic acoustic harp",
+            "resonant handpan in major pentatonic (pantam / hang drum)", "Middle Eastern wooden ney",
+        ]
+        acc_candidates = ["warm acoustic cello", "gentle viola", "soft tuned brass wind chimes", "warm acoustic vibraphone", "upright acoustic bass drone"]
+        ambient_texture = "warm analog velvet synth pads"
+    elif any(k in ctx_lower for k in ("alps", "swiss", "mountain", "valley", "pastoral", "meadow", "dolomite")):
+        lead_candidates = [
+            "breathy alpine wooden flute", "wooden pan flute", "Native American cedar flute",
+            "Celtic acoustic harp", "intimate felted upright piano",
+        ]
+        acc_candidates = ["warm acoustic cello", "gentle viola", "resonant handpan in major pentatonic (pantam / hang drum)", "crystal singing bowls", "acoustic zither"]
+        ambient_texture = "432Hz Solfeggio velvet drone bed"
+    elif any(k in ctx_lower for k in ("desert", "dune", "glamping", "bedouin", "pavilion", "sahara")):
+        lead_candidates = [
+            "Persian santur", "Middle Eastern wooden ney", "Indian bansuri bamboo flute",
+            "classical Spanish nylon guitar", "Indian sarod",
+        ]
+        acc_candidates = ["warm acoustic cello", "esraj", "dilruba", "Tibetan singing bowls", "bronze temple singing bell"]
+        ambient_texture = "warm analog velvet synth pads"
+    elif any(k in ctx_lower for k in ("forest", "woodland", "stream", "moss", "river", "komorebi")):
+        lead_candidates = [
+            "wooden pan flute", "Native American cedar flute", "clay ocarina",
+            "Celtic acoustic harp", "African kalimba (thumb piano)",
+        ]
+        acc_candidates = ["soft wooden marimba", "resonant handpan in major pentatonic (pantam / hang drum)", "warm acoustic cello", "gentle viola"]
+        ambient_texture = "432Hz Solfeggio velvet drone bed"
+    elif any(k in ctx_lower for k in ("hearth", "cabin", "fireplace", "blizzard", "winter", "snow")):
+        lead_candidates = [
+            "intimate felted upright piano", "warm acoustic cello", "classical Spanish nylon guitar",
+            "warm Rhodes electric piano", "Celtic acoustic harp",
+        ]
+        acc_candidates = ["muted string quartet harmonics", "gentle viola", "upright acoustic bass drone", "warm acoustic vibraphone"]
+        ambient_texture = "warm analog velvet synth pads"
+    elif any(k in ctx_lower for k in ("zen", "lotus", "temple", "bamboo", "kyoto")):
+        lead_candidates = [
+            "Japanese shakuhachi bamboo flute", "Japanese koto", "Chinese guzheng",
+            "Tibetan singing bowls", "Indian bansuri bamboo flute",
+        ]
+        acc_candidates = ["bronze temple singing bell", "crystal singing bowls", "warm acoustic cello", "gentle celesta"]
+        ambient_texture = "432Hz Solfeggio velvet drone bed"
+    else:
+        lead_pools = [GENTLE_WINDS, PLUCKED_STRINGS, KEYS_AND_PADS, BELLS_AND_RESONATORS]
+        chosen_lead_pool = random.choice(lead_pools)
+        lead_candidates = chosen_lead_pool
+        acc_candidates = [p for p in PLUCKED_STRINGS + BOWED_STRINGS + BELLS_AND_RESONATORS if p not in lead_candidates]
+        ambient_texture = random.choice(KEYS_AND_PADS)
 
-    ambient_texture = random.choice(KEYS_AND_PADS if chosen_lead_pool != KEYS_AND_PADS else BELLS_AND_RESONATORS)
+    lead = random.choice(lead_candidates)
+    accompaniment = random.choice([a for a in acc_candidates if a != lead])
 
     eff_bpm = tempo_bpm or random.choice([48, 50, 52, 54, 56])
     tuning = random.choice(["432Hz Solfeggio Harmonic Resonance", "528Hz Love & Transformation Frequency", "432Hz Deep Grounding Bed"])
@@ -106,7 +150,7 @@ def get_random_soothing_instrument_set(
         f"{clean_tex.lower()}, peaceful soundscape, zero drums, zero vocals, -21 LUFS"
     )
 
-    ctx_line = f"[Setting: {setting_context}]\n" if setting_context else ""
+    ctx_line = f"[Scene Context: {setting_context}]\n" if setting_context else ""
     suno_prompt = (
         f"[Instrumental Ambient Meditation]\n"
         f"{ctx_line}"
@@ -135,33 +179,35 @@ def get_llm_soothing_music_guidance() -> str:
     """Return authoritative directorial instructions for Gemini to give directions to Suno."""
     return """
 ======================================================================
-LLM DIRECTIVE FOR SOOTHING RELAXATION MUSIC & SUNO V3.5 DIRECTION:
+LLM DIRECTIVE FOR RELAXATION SCENE-TO-MUSIC HARMONY & FIXED TRIPOD:
 ======================================================================
-1. PURE RELAXATION SOUND (ZERO BACKGROUND SONG / ZERO VOCALS):
-   - Relaxation format productions have NO background vocal song or pop track.
-   - It is 100% PURE SOOTHING RELAXATION SOUND: a meditative acoustic soundscape and natural foley.
-   - Set "vocal_gender": "none", "singing_lyrics_spec": "".
-
-2. STOCHASTIC INSTRUMENT DIVERSITY (STRICT BAN ON HARDCODED REPETITION):
-   - DO NOT hardcode or repeat the same instruments across productions.
-   - For every execution, Gemini MUST pick up soothing instruments randomly from diverse organic palettes:
-     * Plucked Strings: Celtic harp, koto, guzheng, nylon guitar, santur, sarod, kalimba, mbira, zither, lute.
-     * Bowed Strings: warm cello harmonics, gentle viola, erhu, dilruba, esraj, upright acoustic bass drone.
-     * Gentle Winds: shakuhachi, bansuri bamboo flute, Native American cedar flute, pan flute, ocarina, wooden ney.
-     * Resonators & Bells: Tibetan singing bowls, crystal singing bowls, tuned handpan (pantam / hang drum), wind chimes, celesta, vibraphone, marimba.
-     * Keys & Beds: felted upright piano, Rhodes electric piano, warm analog velvet pads, 432Hz/528Hz Solfeggio drone.
-
-3. EXPLICIT SOOTHING DIRECTIONS TO SUNO IN "suno_prompt" & "suno_musical_tags":
-   - In "audio_master.suno_prompt", format structured directorial blocks:
+1. SCENE-MATCHED RELAXING MUSIC DIRECTIVES (SUIT THE VISUAL IMAGE):
+   - PURE RELAXATION SOUND: ZERO BACKGROUND SONG, ZERO VOCALS, ZERO DRUMS.
+   - The LLM knows it is directing a relaxing video production.
+   - STOCHASTIC INSTRUMENT DIVERSITY: Gemini must NEVER hardcode the same instruments every time.
+     It must dynamically pick soothing instruments that SUIT AND COMPLEMENT THE EXACT VISUAL IMAGE:
+     * Beach / Luxury Terrace / Pool / Pergola: Warm acoustic Spanish nylon guitar, Rhodes electric piano, gentle ocean swell ambient pads, rolling surf foley, 432Hz warmth, 48-54 BPM, zero drums, zero vocals.
+     * Swiss Alps / Mountain Valleys / Meadows: Breathy alpine wooden flute, warm resonant cello drone, crystal stream chimes, mountain breeze, Celtic harp, 432Hz Solfeggio, resting 48-52 BPM.
+     * Desert Sanctuaries / Dunes / Pavilion: Meditative Persian santur / acoustic oud whispers, ethereal wooden ney flute, warm desert wind drone, starlit serenity, bansuri, 48-50 BPM.
+     * Forest / Streams / Woodlands: Wooden pan flute, Native American cedar flute, acoustic harp, soft marimba, singing bowls, babbling brook foley.
+     * Cozy Cabin / Hearth / Fireplace: felted upright piano, cello harmonics, crackling hearth embers foley, intimate fireside warmth.
+   - Populating "audio_master.suno_prompt" is MANDATORY. Do NOT leave it empty:
      [Instrumental Ambient Meditation]
+     [Scene Context: <specific visual setting matching image prompt>]
      [Tempo: 48-54 BPM - Resting Heartbeat Pulse]
-     [Tuning: 432Hz Solfeggio Harmonic Bed]
-     [Lead Melody: Hypnotic, gentle, spacious melody on <Randomly Chosen Soothing Lead Instrument>]
-     [Accompaniment: Plucked or bowed acoustic harmonies on <Randomly Chosen Second Instrument>]
-     [Atmosphere: <Randomly Chosen Resonator/Pad>, warm velvet pads, long smooth reverb, studio master, zero hiss]
-     [Negative Constraints: Zero vocals, zero drums, zero percussion, zero synth screech, zero brass]
-     [Emotion: Deep tranquil calm, anxiety dissolving, peaceful sleep]
-     [Outro: Soft lingering resonance dissolve]
-   - In "audio_master.suno_musical_tags", output clean tags:
-     "432hz, pure instrumental relaxation, <lead instrument>, <accompaniment>, <texture>, peaceful soundscape, zero drums, zero vocals, studio master, -21 LUFS".
+     [Tuning: 432Hz Solfeggio Velvet Harmony]
+     [Lead Melody: Hypnotic, slow, tranquil phrasing on <Soothing Lead Instrument suited to scene>]
+     [Accompaniment: Soft acoustic harmonies on <Second Instrument suited to scene>]
+     [Atmosphere: <Ambient Texture suited to scene>, warm velvet pads, natural foley, long smooth reverb decays]
+     [Acoustic Direction: Studio master recording, zero harsh percussion, zero brass, zero vocals, zero drums]
+     [Emotion: Deep tranquil calm, anxiety reduction, effortless meditation and sleep induction]
+     [Outro: Lingering resonant acoustic dissolve]
+
+2. STRICT FIXED LOCKED TRIPOD MANDATE FOR RELAXATION MOTION MODELS:
+   - For relaxation format productions, Gemini MUST direct all motion models that the shot is a
+     STRICTLY FIXED LOCKED TRIPOD and NOT camera angles or movements.
+   - Prohibit all pans, tilts, zooms, sweeps, aerial tracking, and angle shifts. The camera never moves.
+   - In "motion_prompt" and all video models ("wan_2_1", "kling_v3_4k", "kling_v1_6_pro", "local_drone"):
+     * POSITIVE PROMPT: "Cinemagraph living wallpaper. Strictly 100% locked stationary camera on a heavy fixed tripod with zero camera movement, zero camera angles, zero pan, zero tilt, zero zoom, zero camera drift. Entire frame, landscape topography, and architecture remain 100% frozen, solid, and motionless. Only subtle organic living motion in the scene: [gentle water ripples / soft waves lapping / breeze swaying distant foliage / embers glowing]."
+     * NEGATIVE PROMPT: "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot, flythrough, handheld camera, camera drift, jitter, shaky camera, moving perspective, perspective shift, morphing architecture, changing furniture".
 """

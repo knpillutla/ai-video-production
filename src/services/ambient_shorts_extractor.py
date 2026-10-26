@@ -2,10 +2,13 @@
 
 from pathlib import Path
 import subprocess
+import sys
 from typing import Optional
 import imageio_ffmpeg
 
 from src.core.telemetry import logger
+
+_SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 
 def generate_ambient_short(
@@ -53,10 +56,11 @@ def generate_ambient_short(
     ]
 
     try:
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, creationflags=_SUBPROCESS_FLAGS)
         logger.info(f"ambient_short_generated: {out.name}")
     except subprocess.CalledProcessError as err:
         logger.error(f"failed_to_generate_short: {err}")
         raise
 
     return out
+

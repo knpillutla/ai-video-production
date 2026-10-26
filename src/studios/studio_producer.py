@@ -283,14 +283,22 @@ class StudioProducer:
                 log_pipeline_step("checking audio", "BGM Soundtrack", "completed", "soundtrack exists, soundtrack not recreated", {"file": bgm_path.name, "cost": "$0.00"})
             else:
                 from src.services.relaxation_instruments import get_random_soothing_instrument_set
-                dyn_palette = get_random_soothing_instrument_set(setting_context=f"{getattr(sb, 'genre', '')} {getattr(sb, 'primary_archetype', '')}")
+                first_scene = sb.scenes[0] if hasattr(sb, "scenes") and sb.scenes else None
+                scene_visual = getattr(first_scene, "visual_prompt", "") or getattr(sb, "story_topic", "") or getattr(sb, "title", "")
+                dyn_palette = get_random_soothing_instrument_set(setting_context=f"{getattr(sb, 'genre', '')} {getattr(sb, 'primary_archetype', '')} {scene_visual[:120]}")
                 eff_tags = getattr(sb, "audio_tags", "") or dyn_palette.suno_tags
-                eff_prompt = getattr(sb, "audio_prompt", "") or (sb.audio_master.suno_prompt if hasattr(sb, "audio_master") and getattr(sb, "audio_master") and hasattr(sb.audio_master, "suno_prompt") else "") or dyn_palette.suno_prompt
+                raw_prompt = getattr(sb, "audio_prompt", "") or (sb.audio_master.suno_prompt if hasattr(sb, "audio_master") and getattr(sb, "audio_master") and hasattr(sb.audio_master, "suno_prompt") else "")
+                if raw_prompt and raw_prompt.strip():
+                    eff_prompt = raw_prompt.strip()
+                    if "Scene Context" not in eff_prompt and scene_visual:
+                        eff_prompt = f"[Scene Context: {scene_visual[:140]}]\n{eff_prompt}"
+                else:
+                    eff_prompt = dyn_palette.suno_prompt
                 bgm_path = await soundtrack_service.synthesize_ambient_soundtrack(
                     title=sb.title, tags=eff_tags,
                     out_path=bgm_path, total_duration=sb.total_duration, genre=f"{getattr(sb, 'genre', 'relax')} {getattr(sb, 'cluster', 'studio')} soundscape",
                     episode_id=ep_dir.name, archetype=getattr(sb, "primary_archetype", ""),
-                    prompt=eff_prompt, force_rerun=force_rerun,
+                    prompt=eff_prompt, visual_prompt=scene_visual, force_rerun=force_rerun,
                 )
                 log_pipeline_step("checking audio", "BGM Soundtrack", "completed", "soundtrack synthesized", {"file": bgm_path.name})
             if bgm_path and bgm_path.is_file():
@@ -500,7 +508,9 @@ class StudioProducer:
                         scene=s, tier=tier, requested_motion_model=motion_model,
                         scene_index=idx - 1, total_scenes=len(valid_keyframes), genre=getattr(sb, "cluster", "relax/nature"),
                         execution_mode=eff_exec,
+                        force_ai_motion=bool(motion_only or force_rerun or is_diffusion_model),
                     )
+                    s.recommended_model = chosen_model
                     motion_tasks.append(
                         MotionClipTask(
                             image_path=kf, motion_prompt=s.motion_prompt, visual_prompt=s.visual_prompt,
@@ -509,7 +519,7 @@ class StudioProducer:
                             allow_fallback=allow_fallback or m_allow_fallback, force_rerun=force_rerun,
                             negative_prompt=_resolve_scene_negative_prompt(s), model_configs=custom_model_cfg,
                             camera_waypoints=getattr(s, "camera_waypoints", None), kinetic_micro_zones=getattr(s, "kinetic_micro_zones", None),
-                            camera_movement=getattr(s, "camera_movement", None),
+                            camera_movement=getattr(s, "camera_movement", None), is_relaxation=is_relax,
                         )
                     )
 

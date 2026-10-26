@@ -6,17 +6,20 @@ with optional Circadian OLED Black Screen dimming for bedroom TV/monitor comfort
 
 from pathlib import Path
 import subprocess
+import sys
 from typing import Optional
 import imageio_ffmpeg
 
 from src.core.telemetry import logger
+
+_SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 
 def _probe_clip_duration(clip_path: Path) -> float:
     try:
         import re
         ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-        res = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], capture_output=True, text=True, errors="ignore")
+        res = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], capture_output=True, text=True, errors="ignore", creationflags=_SUBPROCESS_FLAGS)
         m = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.\d+)", res.stderr)
         if m:
             return float(m.group(1)) * 3600.0 + float(m.group(2)) * 60.0 + float(m.group(3))
@@ -90,7 +93,7 @@ def export_long_play_broadcast(
         ]
 
     try:
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, creationflags=_SUBPROCESS_FLAGS)
         logger.info(f"long_play_export_complete: {out.name} ({round(out.stat().st_size / (1024*1024), 2)} MB)")
     except subprocess.CalledProcessError as err:
         logger.error(f"failed_to_export_long_play: {err}")
@@ -144,7 +147,7 @@ def remux_long_play_audio(
         str(out)
     ]
     try:
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, creationflags=_SUBPROCESS_FLAGS)
         logger.info(f"fast_remux_complete: {out.name} ({round(out.stat().st_size / (1024*1024), 2)} MB)")
     except subprocess.CalledProcessError as err:
         logger.error(f"failed_to_fast_remux_long_play: {err}")

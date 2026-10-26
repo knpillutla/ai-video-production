@@ -43,10 +43,26 @@ def resolve_scene_motion_model(
         rationale = f"Local motion engine mandated ({base_model}) ($0.00 compute)"
         return "local_zoompan", False, rationale
 
-    # 1. Flagship Cinematic Tier -> 100% AI Video Diffusion
+    # 1. Flagship Cinematic Tier or Explicit AI Motion Request -> 100% AI Video Diffusion
     if clean_tier in ("cinematic", "movie", "high", "flagship") or force_ai_motion:
         rec_model = getattr(scene, "recommended_model", None) or getattr(scene, "motion_model", None)
-        eff_model = rec_model if (rec_model and rec_model not in ("auto", "local_drone")) else base_model
+        # Explicit user/pipeline requested model takes top priority over script default
+        if base_model and base_model != "auto":
+            eff_model = base_model
+        elif rec_model and rec_model not in ("auto", "local_drone"):
+            eff_model = rec_model
+        else:
+            eff_model = "wan"
+
+        if eff_model in ("kling_4k", "kling_v3_4k", "kling_v3"):
+            eff_model = "kling_v3"
+        elif eff_model in ("kling_pro", "kling_v1_6_pro", "kling_1_6", "kling"):
+            eff_model = "kling_pro"
+        elif eff_model in ("wan_4k", "wan_super_res"):
+            eff_model = "wan_4k"
+        elif eff_model in ("wan", "wan_2_1", "wan21"):
+            eff_model = "wan"
+
         rationale = f"Cinematic tier: Full neural video diffusion mandated ({eff_model})"
         return eff_model, False, rationale
 

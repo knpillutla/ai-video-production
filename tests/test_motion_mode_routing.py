@@ -146,3 +146,49 @@ def test_water_shimmer_generates_active_plates():
     # Verify difference between opposite phase plates
     diff = np.max(np.abs(eng.plates[6].astype(float) - eng.plates[0].astype(float)))
     assert diff > 20.0, f"Water shimmer diff should be > 20, got {diff}"
+
+
+def test_cinematic_tier_honors_user_requested_kling_over_wan_default():
+    """When user selects Kling 4K in cinematic tier, it must use Kling even if script has wan_2_1 default."""
+    scene_with_wan = RelaxSceneDirective(
+        visual_prompt="Luxury infinity pool terrace overlooking ocean waves",
+        motion_prompt="Glassy water ripples and swaying palms",
+        motion_type="ai_diffusion",
+        recommended_model="wan_2_1",
+    )
+
+    chosen_model, allow_fallback, rationale = resolve_scene_motion_model(
+        scene=scene_with_wan,
+        tier="cinematic",
+        requested_motion_model="kling_v3",
+        scene_index=0,
+        total_scenes=1,
+        execution_mode="prod",
+    )
+
+    assert chosen_model == "kling_v3"
+    assert "kling_v3" in rationale
+
+
+def test_force_ai_motion_honors_user_requested_kling_over_wan_default():
+    """When user clicks Kling 4K in the UI Inspector (force_ai_motion=True), Kling is honored over wan_2_1."""
+    scene_with_wan = RelaxSceneDirective(
+        visual_prompt="Luxury infinity pool terrace overlooking ocean waves",
+        motion_prompt="Glassy water ripples and swaying palms",
+        motion_type="ai_diffusion",
+        recommended_model="wan_2_1",
+    )
+
+    chosen_model, allow_fallback, rationale = resolve_scene_motion_model(
+        scene=scene_with_wan,
+        tier="balanced",
+        requested_motion_model="kling_v3",
+        scene_index=0,
+        total_scenes=1,
+        force_ai_motion=True,
+        execution_mode="prod",
+    )
+
+    assert chosen_model == "kling_v3"
+    assert "kling_v3" in rationale
+

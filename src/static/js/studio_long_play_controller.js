@@ -192,10 +192,13 @@ async function approveAndGenerateLongPlay() {
   }
 }
 
+let isLongPlayPolling = false;
 function startLongPlayStatusPolling(epId, chSlug, uEmail) {
   if (longPlayPollingTimer) clearInterval(longPlayPollingTimer);
 
   longPlayPollingTimer = setInterval(async () => {
+    if (isLongPlayPolling) return;
+    isLongPlayPolling = true;
     try {
       const res = await fetch(`/api/production/episodes/${epId}/long-play-status?channel_id=${chSlug}&user_id=${encodeURIComponent(uEmail)}`);
       if (res.ok) {
@@ -212,6 +215,9 @@ function startLongPlayStatusPolling(epId, chSlug, uEmail) {
           renderLongPlayStretchSection(vid);
         }
       }
-    } catch (e) {}
-  }, 1200);
+    } catch (e) {
+    } finally {
+      isLongPlayPolling = false;
+    }
+  }, 10000);
 }

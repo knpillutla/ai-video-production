@@ -26,9 +26,10 @@ def resolve_cultural_acoustic_profile(
     tags: str = "",
     weather: Optional[str] = "normal",
     randomize: bool = False,
+    visual_prompt: Optional[str] = None,
 ) -> CulturalAcousticProfile:
     """Resolve culturally authentic instruments and hummable melody specifications for any relax scene."""
-    combo = f"{archetype} {sub_genre} {title} {tags}".lower()
+    combo = f"{archetype} {sub_genre} {title} {tags} {visual_prompt or ''}".lower()
 
     eff_w = (weather or "").lower().strip()
     is_rain = eff_w in ("rain", "storm", "downpour") or any(k in combo for k in ["rain", "storm", "downpour", "droplet", "monsoon", "river asmr", "umbrella", "relax/rain"])

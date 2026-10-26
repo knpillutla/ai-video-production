@@ -31,8 +31,16 @@ async function stopStudioProduction(episodeId) {
     studioAbortController.abort();
     studioAbortController = null;
   }
+  if (window._activeStudioPulseTimer) {
+    clearInterval(window._activeStudioPulseTimer);
+    window._activeStudioPulseTimer = null;
+  }
   const ep = typeof findStudioEpisodeById === "function" ? findStudioEpisodeById(episodeId) : null;
   if (ep) {
+    if (ep._pulseTimer) {
+      clearInterval(ep._pulseTimer);
+      ep._pulseTimer = null;
+    }
     ep.status = "paused";
     if (typeof saveVideosState === "function") saveVideosState();
     if (typeof renderInspectorFromVideo === "function") renderInspectorFromVideo(ep);
@@ -153,12 +161,18 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
     || String(vid.genre || document.getElementById("studio-genre-selector")?.value || "").toLowerCase().startsWith("music/")
     || String(vid.genre || document.getElementById("studio-genre-selector")?.value || "").toLowerCase().startsWith("dance/");
 
+  let isPollingArtifacts = false;
   const pollArtifacts = async () => {
+    if (isPollingArtifacts) return;
+    if (vid.status !== "processing") return;
+    isPollingArtifacts = true;
     try {
       const fmtQ = encodeURIComponent(vid.format || vid.format_slug || (isMusicVideo ? "music_video" : ""));
       const prodQ = encodeURIComponent(vid.production_name || "");
       const pollEndpoint = isMusicVideo ? "/api/music-video/poll-artifacts" : "/api/production/poll-artifacts";
-      const res = await fetch(`${pollEndpoint}?channel_id=${chSlug}&episode_id=${epId}&format=${fmtQ}&production_name=${prodQ}&user_id=${encodeURIComponent(uEmail)}`);
+      const res = await fetch(`${pollEndpoint}?channel_id=${chSlug}&episode_id=${epId}&format=${fmtQ}&production_name=${prodQ}&user_id=${encodeURIComponent(uEmail)}`, {
+        signal: studioAbortController?.signal
+      });
       if (res.ok) {
         const data = await res.json();
         let changed = false;
@@ -263,17 +277,36 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           if (typeof filterChannelArchive === "function") filterChannelArchive();
         }
       }
-    } catch (e) {}
+    } catch (e) {
+    } finally {
+      isPollingArtifacts = false;
+    }
   };
+
+  if (vid._pulseTimer) {
+    clearInterval(vid._pulseTimer);
+    vid._pulseTimer = null;
+  }
+  if (window._activeStudioPulseTimer) {
+    clearInterval(window._activeStudioPulseTimer);
+    window._activeStudioPulseTimer = null;
+  }
 
   let pulseVal = vid.progress || 10;
   pollArtifacts();
   const pulseTimer = setInterval(() => {
-    if (vid.status !== "processing") { clearInterval(pulseTimer); return; }
+    if (vid.status !== "processing") {
+      clearInterval(pulseTimer);
+      if (vid._pulseTimer === pulseTimer) vid._pulseTimer = null;
+      if (window._activeStudioPulseTimer === pulseTimer) window._activeStudioPulseTimer = null;
+      return;
+    }
     pulseVal = Math.min(92, pulseVal + 3);
     vid.progress = pulseVal;
     pollArtifacts();
-  }, 2000);
+  }, 10000);
+  vid._pulseTimer = pulseTimer;
+  window._activeStudioPulseTimer = pulseTimer;
 
   try {
     const produceEndpoint = isMusicVideo ? "/api/music-video/produce" : "/api/production/local-produce";
@@ -380,6 +413,8 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
     });
 
     clearInterval(pulseTimer);
+    if (vid._pulseTimer === pulseTimer) vid._pulseTimer = null;
+    if (window._activeStudioPulseTimer === pulseTimer) window._activeStudioPulseTimer = null;
     const resData = await res.json();
 
     if (res.ok && resData.success) {
@@ -529,6 +564,8 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
     }
   } catch (err) {
     clearInterval(pulseTimer);
+    if (vid._pulseTimer === pulseTimer) vid._pulseTimer = null;
+    if (window._activeStudioPulseTimer === pulseTimer) window._activeStudioPulseTimer = null;
     if (err.name === "AbortError") return;
     const errMsg = err.message || String(err);
     const fStage = detectFailedStage(errMsg, vid.currentStage);

@@ -30,6 +30,7 @@ class MotionClipTask:
     negative_prompt: Optional[str] = None; model_configs: Optional[dict[str, Any]] = None
     camera_waypoints: Optional[list] = None; kinetic_micro_zones: Optional[dict] = None
     camera_movement: Optional[Any] = None; interpolation: str = "cubic"
+    is_relaxation: bool = False
 
 
 from src.core.step_logger import log_pipeline_step
@@ -196,6 +197,20 @@ class VisualBatchService:
                     eff_prompt = f"{eff_prompt}, crystal-clear static cloudless azure sky, zero clouds, tranquil motionless atmosphere"
                 cloud_negs = "clouds, cloudy, overcast sky, overcast, cumulus, stratus, cirrus, storm clouds, dark clouds, moving clouds, timelapse clouds, rapid clouds, rolling clouds, cloud morphing, rapid cloud shadows, sky flickering"
                 eff_neg = f"{eff_neg}, {cloud_negs}" if eff_neg else cloud_negs
+
+            # Relaxation Format Strict Locked Tripod Guard (Zero Camera Movements or Angles)
+            is_relax_clip = (
+                getattr(task, "is_relaxation", False)
+                or "/relaxation/" in str(task.output_path).lower()
+                or "\\relaxation\\" in str(task.output_path).lower()
+                or any(k in f"{eff_prompt} {task.motion_prompt}".lower() for k in ("living wallpaper", "cinemagraph", "locked_stationary", "locked_tripod"))
+            )
+            if is_relax_clip:
+                tripod_lead = "Cinemagraph living wallpaper. Strictly locked stationary camera on a heavy fixed tripod with zero camera movement, zero camera angles, zero pan, zero tilt, zero zoom, zero camera drift. The camera never moves. The entire frame, topography, and architecture remain 100% frozen, solid, and motionless. Only subtle organic living motion in the scene: "
+                if "zero camera movement" not in eff_prompt.lower():
+                    eff_prompt = f"{tripod_lead}{eff_prompt}"
+                cam_negs = "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot, flythrough, handheld camera, camera drift, jitter, shaky camera, moving perspective, perspective shift, morphing architecture, changing furniture"
+                eff_neg = f"{eff_neg}, {cam_negs}" if eff_neg else cam_negs
 
             if chosen_model in ("hunyuan", "wan", "wan_4k", "kling", "kling_pro", "kling_v3", "kling_4k") and self.fal_key and task.image_path.is_file() and task.image_path.stat().st_size > 1000:
                 try:

@@ -1,12 +1,35 @@
 """Cineloop Utility for transforming AI diffusion clips into seamless loops."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
+import re
 import subprocess
+import sys
 import imageio_ffmpeg
 
 from src.core.telemetry import logger
-from src.services.ambient_export_service import get_media_duration
+
+_SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+
+
+def get_media_duration(media_path: Path) -> float:
+    """Probe the exact duration of a media file in seconds."""
+    try:
+        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+        res = subprocess.run(
+            [ffmpeg_bin, "-i", str(media_path)],
+            capture_output=True,
+            text=True,
+            errors="ignore",
+            creationflags=_SUBPROCESS_FLAGS,
+        )
+        m = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.\d+)", res.stderr)
+        if m:
+            return float(m.group(1)) * 3600.0 + float(m.group(2)) * 60.0 + float(m.group(3))
+    except Exception:
+        pass
+    return 5.0
 
 
 def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf: int = 22) -> Path:
@@ -15,6 +38,17 @@ def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf
         return clip_path
 
     base_stem = clip_path.stem.replace("_fwd_seamless", "")
+    sp_file = clip_path.parent / "screenplay.json"
+    if "p" in base_stem and sp_file.is_file():
+        try:
+            sp = json.loads(sp_file.read_text(encoding="utf-8"))
+            idx = int("".join(filter(str.isdigit, base_stem)) or "1")
+            scs = sp.get("scenes", [])
+            if idx - 1 < len(scs) and scs[idx - 1].get("motion_type") in ("ken_burns", "static", "local_zoompan"):
+                return clip_path
+        except Exception:
+            pass
+
     out_seamless = clip_path.parent / f"{base_stem}_fwd_seamless.mp4"
     duration = get_media_duration(clip_path)
     if duration <= xfade_dur + 0.5 or duration >= 25.0:
@@ -23,7 +57,14 @@ def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     has_audio = False
     try:
-        check = subprocess.run([ffmpeg_bin, "-i", str(clip_path)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, errors="ignore")
+        check = subprocess.run(
+            [ffmpeg_bin, "-i", str(clip_path)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+            errors="ignore",
+            creationflags=_SUBPROCESS_FLAGS,
+        )
         has_audio = "Audio:" in check.stderr
     except Exception:
         pass
@@ -43,8 +84,9 @@ def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf
         str(out_seamless),
     ]
     try:
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, check=True)
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, check=True, creationflags=_SUBPROCESS_FLAGS)
+        return out_seamless
     except subprocess.CalledProcessError as err:
         logger.warning(f"failed_to_build_seamless_loop: {(err.stderr or str(err)).strip()}")
         return clip_path
-    return out_seamless
+

@@ -10,6 +10,7 @@ import asyncio
 import json
 import os
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -17,6 +18,8 @@ from typing import Any, Dict, Optional
 from src.core.config import settings
 from src.core.telemetry import logger
 from src.providers.base import HTTPClientPool, MusicProviderProtocol, is_mock_mode
+
+_SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 
 class SunoMusicAdapter(MusicProviderProtocol):
@@ -258,13 +261,14 @@ class SunoMusicAdapter(MusicProviderProtocol):
             temp_mp3.write_bytes(resp.content)
 
             from src.compositor.ffmpeg_pipeline import get_ffmpeg_binary
-            cmd = [get_ffmpeg_binary(), "-y", "-i", str(temp_mp3), "-ar", str(sample_rate), "-ac", "2", str(out)]
-            proc = subprocess.run(cmd, capture_output=True)
+            cmd = [get_ffmpeg_binary(), "-y", "-i", str(temp_mp3), "-c:a", "libmp3lame", "-b:a", "320k", "-ar", str(sample_rate), "-ac", "2", str(out)]
+            proc = subprocess.run(cmd, capture_output=True, creationflags=_SUBPROCESS_FLAGS)
             if temp_mp3.exists():
                 temp_mp3.unlink()
 
             if proc.returncode != 0 or not out.exists() or out.stat().st_size < 1000:
-                raise RuntimeError(f"FFmpeg audio transcoding to 48kHz WAV failed: {proc.stderr.decode(errors='ignore')}")
+                logger.warning(f"ffmpeg_audio_transcode_failed: code={proc.returncode}, preserving raw mp3 bytes directly")
+                out.write_bytes(resp.content)
 
             if task_sidecar.exists():
                 task_sidecar.unlink(missing_ok=True)

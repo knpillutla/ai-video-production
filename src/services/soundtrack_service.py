@@ -31,6 +31,7 @@ class SoundtrackService:
         archetype: Optional[str] = None,
         force_rerun: bool = False,
         prompt: Optional[str] = None,
+        visual_prompt: Optional[str] = None,
     ) -> Path:
         """Fetch matching acoustic stem from AudioVault (respecting cultural keys & 10-video cooldown) or synthesize via Suno."""
         out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,10 +46,14 @@ class SoundtrackService:
             title=title,
             tags=tags,
             randomize=True,
+            visual_prompt=visual_prompt,
         )
 
         eff_prompt = prompt.strip() if prompt and prompt.strip() else profile.suno_prompt
         clean_tags = tags.strip() if tags and tags.strip() else profile.suno_tags
+
+        if visual_prompt and "Scene Context" not in eff_prompt and "Setting" not in eff_prompt:
+            eff_prompt = f"[Scene Context: {visual_prompt[:140]}]\n{eff_prompt}"
 
         # Rule 3 Tier 1 & 3: AudioVault Local Stem Cache Check with Cultural Key Isolation ($0.00 spend)
         if not force_rerun:

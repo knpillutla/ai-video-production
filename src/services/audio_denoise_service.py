@@ -6,11 +6,14 @@ Outputs a crystal-clear acoustic soundtrack and an isolated noise residual stem 
 
 from __future__ import annotations
 import subprocess
+import sys
 from pathlib import Path
 from typing import Optional, Tuple
 import imageio_ffmpeg
 
 from src.core.telemetry import logger
+
+_SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 
 def separate_and_denoise_soundtrack(
@@ -75,7 +78,7 @@ def separate_and_denoise_soundtrack(
 
     logger.info(f"denoising_soundtrack: {inp.name} -> {out_clean.name} (noise_stem={bool(out_noise)})")
     try:
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
+        subprocess.run(cmd, capture_output=True, text=True, check=True, creationflags=_SUBPROCESS_FLAGS)
     except subprocess.CalledProcessError as err:
         err_msg = (err.stderr or err.stdout or str(err)).strip()
         logger.warning(f"audio_denoising_failed_fallback: {err_msg}")

@@ -200,12 +200,16 @@ function startPublishStatusPolling(initialState) {
 
   updateUI(initialState);
 
+  let isYtPolling = false;
   ytPollTimer = setInterval(async () => {
+    if (isYtPolling) return;
+    isYtPolling = true;
     try {
       const res = await fetch(`/api/channels/${currentYtChannelSlug}/episodes/${currentYtEpisodeId}/publish-status`);
       const data = await res.json();
       if (data.published) {
         clearInterval(ytPollTimer);
+        ytPollTimer = null;
         renderPublishedResult(data);
         const sb = document.getElementById("top-ep-status-badge");
         if (sb) { sb.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-600 text-white shadow-sm flex items-center gap-1"; sb.innerHTML = '<i class="fa-brands fa-youtube text-[10px]"></i><span>Published</span>'; }
@@ -213,11 +217,16 @@ function startPublishStatusPolling(initialState) {
         updateUI(data.upload_state);
       } else if (data.upload_state?.status === "failed") {
         clearInterval(ytPollTimer);
+        ytPollTimer = null;
         if (resultBox) { resultBox.innerHTML = `<div class="text-red-500 font-bold text-xs"><i class="fa-solid fa-circle-xmark"></i> Upload Failed: ${data.upload_state.error || 'Unknown error'}</div>`; }
         if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = `<i class="fa-brands fa-youtube"></i><span>Retry Upload</span>`; }
       }
-    } catch (e) { console.debug("Publish status poll error:", e); }
-  }, 3000);
+    } catch (e) {
+      console.debug("Publish status poll error:", e);
+    } finally {
+      isYtPolling = false;
+    }
+  }, 10000);
 }
 
 async function executeYouTubePublication() {

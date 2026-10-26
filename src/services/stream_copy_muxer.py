@@ -2,10 +2,13 @@
 
 import logging
 import subprocess
+import sys
 from pathlib import Path
 from typing import Optional
+import imageio_ffmpeg
 
 logger = logging.getLogger("StreamCopyMuxer")
+_SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 
 def mux_stream_copy_audio(
@@ -32,8 +35,9 @@ def mux_stream_copy_audio(
         logger.info(f"mux_stream_copy_cached: Reusing existing {output_video.name}")
         return output_video
 
+    ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     cmd = [
-        "ffmpeg", "-y",
+        ffmpeg_bin, "-y",
         "-i", str(source_video),
         "-i", str(audio_stem),
         "-map", "0:v:0",
@@ -49,7 +53,7 @@ def mux_stream_copy_audio(
 
     try:
         logger.info(f"mux_stream_copy_executing: {source_video.name} + {audio_stem.name} -> {output_video.name}")
-        proc = subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        proc = subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, creationflags=_SUBPROCESS_FLAGS)
         if output_video.is_file() and output_video.stat().st_size > 1000:
             logger.info(f"mux_stream_copy_success: Generated {output_video.name} ({output_video.stat().st_size / (1024*1024):.1f} MB)")
             return output_video
@@ -58,3 +62,4 @@ def mux_stream_copy_audio(
         err_msg = err.stderr.decode("utf-8", errors="replace") if err.stderr else str(err)
         logger.error(f"mux_stream_copy_failed: {err_msg[:400]}")
         return None
+

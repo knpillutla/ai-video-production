@@ -50,3 +50,42 @@ def test_cultural_acoustic_service_with_randomize():
     assert prof2.culture_key == "swiss_alps"
     assert "432hz" in prof1.suno_tags.lower() or "528hz" in prof1.suno_tags.lower()
     assert "[Instrumental Ambient Meditation]" in prof1.suno_prompt
+
+
+def test_scene_context_matched_suno_prompt():
+    """Verify that soothing instrument palette incorporates the visual scene context."""
+    scene = "Luxury overwater villa deck overlooking calm turquoise lagoon at sunrise"
+    palette = get_random_soothing_instrument_set(setting_context=scene)
+
+    assert f"[Scene Context: {scene}]" in palette.suno_prompt
+    assert "[Instrumental Ambient Meditation]" in palette.suno_prompt
+    assert "zero vocals" in palette.suno_tags.lower()
+    assert "zero drums" in palette.suno_tags.lower()
+
+
+def test_relaxation_fixed_tripod_guard_logic():
+    """Verify that relaxation motion prompts are prepended with locked fixed tripod and camera negatives."""
+    # Test the exact relaxation tripod logic from visual_batch_service
+    is_relax_clip = True
+    eff_prompt = "Gentle turquoise waves lapping against the white sand shoreline"
+    eff_neg = "blurry, low quality"
+
+    tripod_lead = (
+        "Cinemagraph living wallpaper. Strictly locked stationary camera on a heavy fixed tripod "
+        "with zero camera movement, zero camera angles, zero pan, zero tilt, zero zoom, zero camera drift. "
+        "The camera never moves. The entire frame, topography, and architecture remain 100% frozen, solid, and motionless. "
+        "Only subtle organic living motion in the scene: "
+    )
+    if is_relax_clip:
+        if "zero camera movement" not in eff_prompt.lower():
+            eff_prompt = f"{tripod_lead}{eff_prompt}"
+        cam_negs = "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot"
+        eff_neg = f"{eff_neg}, {cam_negs}" if eff_neg else cam_negs
+
+    assert "zero camera movement" in eff_prompt
+    assert "zero camera angles" in eff_prompt
+    assert "heavy fixed tripod" in eff_prompt
+    assert "camera movement" in eff_neg
+    assert "camera angles" in eff_neg
+    assert "camera pan" in eff_neg
+

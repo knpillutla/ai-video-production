@@ -1,9 +1,8 @@
-"""Broadcast Packaging and Export Utilities (long-play stretching, shorts, localized metadata)."""
-
 from __future__ import annotations
 import json
 from pathlib import Path
 import subprocess
+import sys
 import time
 from typing import Any, Dict, Optional, TYPE_CHECKING
 import imageio_ffmpeg
@@ -14,15 +13,12 @@ from src.services.ambient_export_service import build_adaptive_resolution_filter
 from src.services.ambient_metadata_packager import generate_youtube_ambient_package
 from src.services.ambient_shorts_extractor import generate_ambient_short
 from src.services.ambient_translator import localize_metadata_for_languages
+from src.services.cineloop_service import build_seamless_forward_cineloop
 from src.services.long_play_stretcher import export_long_play_broadcast
 from src.services.thumbnail_ab_packager import generate_thumbnail_ab_variants
 from src.services.topic_memory import topic_memory
 
-if TYPE_CHECKING:
-    from src.studios.screenplay_models import AmbientStoryboard
-
-
-from src.services.cineloop_service import build_seamless_forward_cineloop
+_SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 
 def assemble_4k_master(
@@ -112,7 +108,7 @@ def assemble_4k_master(
             ]
 
     try:
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
+        subprocess.run(cmd, capture_output=True, text=True, check=True, creationflags=_SUBPROCESS_FLAGS)
     except subprocess.CalledProcessError as err:
         err_msg = (err.stderr or err.stdout or str(err)).strip()
         logger.error(f"failed_to_assemble_4k_master: {err_msg}")
@@ -161,7 +157,7 @@ def assemble_dual_masters(
                 "-map", "[aout]", "-c:a", "libmp3lame", "-b:a", "320k", "-ar", "48000",
                 "-t", f"{t_dur:.2f}", str(mixed_audio),
             ]
-            subprocess.run(cmd_mix, check=True)
+            subprocess.run(cmd_mix, check=True, creationflags=_SUBPROCESS_FLAGS)
 
         c_dur_n = get_media_duration(master_narr) if master_narr.is_file() else None
         n_mis = t_dur and c_dur_n and abs(c_dur_n - float(t_dur)) > 2.0
@@ -183,7 +179,7 @@ def assemble_dual_masters(
                 "-c:v", "copy", "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
                 "-t", f"{t_dur:.2f}", "-movflags", "+faststart", str(master_music),
             ]
-            subprocess.run(cmd_m, check=True)
+            subprocess.run(cmd_m, check=True, creationflags=_SUBPROCESS_FLAGS)
             log_pipeline_step("checking master", "4K Ambient Master", "completed", "remuxed master_4k_ambient.mp4 (music-only edition)", {"file": master_music.name, "cost": "$0.00"})
         else:
             log_pipeline_step("checking master", "4K Ambient Master", "completed", "master_4k_ambient.mp4 exists, render not recreated", {"file": master_music.name, "cost": "$0.00"})
@@ -210,7 +206,7 @@ def assemble_dual_masters(
                         imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error",
                         "-f", "lavfi", "-i", "anoisesrc=color=brown:amplitude=0.06:sample_rate=48000,lowpass=f=450,highpass=f=35,volume=0.9",
                         "-t", f"{f_dur:.2f}", "-c:a", "libmp3lame", "-b:a", "320k", "-ar", "48000", str(foley_audio),
-                    ], check=True)
+                    ], check=True, creationflags=_SUBPROCESS_FLAGS)
                 except Exception:
                     foley_audio = None
 
@@ -223,7 +219,7 @@ def assemble_dual_masters(
                 "-c:v", "copy", "-t", f"{f_dur:.2f}", "-movflags", "+faststart", str(master_nature),
             ]
             try:
-                subprocess.run(cmd_nat, check=True)
+                subprocess.run(cmd_nat, check=True, creationflags=_SUBPROCESS_FLAGS)
                 log_pipeline_step("checking master", "4K Pure Nature Master", "completed", "remuxed master_4k_nature.mp4", {"file": master_nature.name, "cost": "$0.00"})
             except Exception as n_err:
                 logger.warning(f"remux_nature_master_failed: {n_err}")

@@ -92,8 +92,9 @@ function renderInspectorFromVideo(vid) {
     });
   }
 
-  // Fetch disk artifacts if keyframes, motion clips, or audio stems are missing
-  if (epId && epId !== "NEW" && (!vid.keyframes || vid.keyframes.length === 0 || !vid.motion_clips || vid.motion_clips.length === 0 || !vid.audio_stems || vid.audio_stems.length === 0)) {
+  // Fetch disk artifacts if keyframes, motion clips, or audio stems are missing (only when idle/ready and not already checked)
+  if (vid.status !== "processing" && epId && epId !== "NEW" && !vid._artifactsChecked && (!vid.keyframes || vid.keyframes.length === 0 || !vid.motion_clips || vid.motion_clips.length === 0 || !vid.audio_stems || vid.audio_stems.length === 0)) {
+    vid._artifactsChecked = true;
     const chSlug = vid.channelId || vid.channel_id || (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all" ? selectedStudioChannel : "nature_rhythms");
     const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
     const fmtQ = encodeURIComponent(vid.format || vid.format_slug || "");
