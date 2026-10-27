@@ -60,6 +60,7 @@ class BaseChannelPipeline:
         force_rerun: bool = False,
         tts_model: Optional[str] = None,
         execution_mode: str = "test",
+        target_shot_index: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Execute standardized multi-stage pipeline workflow with review gates and --id banners."""
         effective_hours = long_play_hours or self.config.default_hours
@@ -96,6 +97,7 @@ class BaseChannelPipeline:
             force_rerun=force_rerun,
             tts_model=tts_model,
             execution_mode=execution_mode,
+            target_shot_index=target_shot_index,
         )
 
         ep_id = result["episode_id"]

@@ -140,16 +140,18 @@ function populateProductionControlsFromEpisode(rawVid) {
 
   // 9. Duration & Stretch Hours Selectors (Test & Prod)
   let targetStretchVal = "0";
+  const mOptVal = `${Math.round(durSec / 60)}m`;
   if (lpHours >= 1.0) targetStretchVal = String(lpHours);
-  else if (durSec >= 110 && durSec <= 130) targetStretchVal = "0.033"; // 120s / 2m
-  else if (durSec >= 50 && durSec <= 70) targetStretchVal = "0.0167";  // 60s / 1m
-  else if (durSec >= 25 && durSec <= 35) targetStretchVal = "0.0083";  // 30s preview
+  else if (durSec % 60 === 0 && durSec >= 60 && durSec <= 900 && document.querySelector(`#studio-stretch-hours option[value="${mOptVal}"]`)) {
+    targetStretchVal = mOptVal;
+  } else if (durSec >= 110 && durSec <= 130) targetStretchVal = "0.033";
+  else if (durSec >= 50 && durSec <= 70) targetStretchVal = "0.0167";
+  else if (durSec >= 25 && durSec <= 35) targetStretchVal = "0.0083";
   else if (durSec > 0) {
     targetStretchVal = "custom";
     const customInput = document.getElementById("studio-custom-minutes-input");
     if (customInput) customInput.value = String(Math.round((durSec / 60) * 10) / 10);
-    const customContainer = document.getElementById("studio-custom-duration-container");
-    if (customContainer) customContainer.classList.remove("hidden");
+    document.getElementById("studio-custom-duration-container")?.classList.remove("hidden");
   }
 
   const testStretchSel = document.getElementById("studio-test-stretch");
@@ -159,6 +161,9 @@ function populateProductionControlsFromEpisode(rawVid) {
   }
   const prodStretchSel = document.getElementById("studio-stretch-hours");
   if (prodStretchSel) prodStretchSel.value = targetStretchVal;
+
+  vid.imageModel = inputs.image_model || vid.imageModel || "zimage";
+  vid.image_model = vid.imageModel;
 
   // 10. Audio Stems & Modality Toggles
   const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = Boolean(val); };
@@ -195,39 +200,21 @@ function setProductionControlsViewOnly(isViewOnly, episodeId) {
     if (isViewOnly && bannerText) bannerText.textContent = `Episode ${episodeId || ''} Loaded (View-Only Mode)`;
   }
 
-  // Lock or Unlock Primary Run Button
+  // Lock or Unlock Action Buttons
+  [btnProduce, btnReset, btnStop].forEach(btn => {
+    if (btn) {
+      btn.disabled = isViewOnly;
+      btn.classList.toggle("opacity-40", isViewOnly);
+      btn.classList.toggle("cursor-not-allowed", isViewOnly);
+      btn.classList.toggle("pointer-events-none", isViewOnly);
+    }
+  });
   if (btnProduce) {
-    btnProduce.disabled = isViewOnly;
-    btnProduce.classList.toggle("opacity-40", isViewOnly);
-    btnProduce.classList.toggle("cursor-not-allowed", isViewOnly);
-    btnProduce.classList.toggle("pointer-events-none", isViewOnly);
     btnProduce.title = isViewOnly ? "Episode already exists. Use Re-Synthesize to advance or resume." : "Produce / Test Video";
     if (btnProduceText) {
-      btnProduceText.textContent = isViewOnly
-        ? "Locked (Use Re-Synthesize)"
-        : ((typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test")
-          ? `Run Test (${typeof activeShotsCount !== "undefined" ? activeShotsCount : 1} Shots)`
-          : "Produce Master Video");
+      btnProduceText.textContent = isViewOnly ? "Locked (Use Re-Synthesize)" : ((typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test") ? `Run Test (${typeof activeShotsCount !== "undefined" ? activeShotsCount : 1} Shots)` : "Produce Master Video");
     }
   }
-
-  // Lock or Unlock Reset Button
-  if (btnReset) {
-    btnReset.disabled = isViewOnly;
-    btnReset.classList.toggle("opacity-40", isViewOnly);
-    btnReset.classList.toggle("cursor-not-allowed", isViewOnly);
-    btnReset.classList.toggle("pointer-events-none", isViewOnly);
-  }
-
-  // Lock or Unlock Stop Button
-  if (btnStop) {
-    btnStop.disabled = isViewOnly;
-    btnStop.classList.toggle("opacity-40", isViewOnly);
-    btnStop.classList.toggle("cursor-not-allowed", isViewOnly);
-    btnStop.classList.toggle("pointer-events-none", isViewOnly);
-  }
-
-  // Highlight Re-Synthesize when view-only
   if (btnResume) {
     btnResume.classList.toggle("ring-2", isViewOnly);
     btnResume.classList.toggle("ring-emerald-500", isViewOnly);

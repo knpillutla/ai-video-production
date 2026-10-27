@@ -31,6 +31,11 @@ def resolve_cultural_acoustic_profile(
     """Resolve culturally authentic instruments and hummable melody specifications for any relax scene."""
     combo = f"{archetype} {sub_genre} {title} {tags} {visual_prompt or ''}".lower()
 
+    from src.services.national_acoustic_profiles import resolve_national_acoustic_profile
+    national_profile = resolve_national_acoustic_profile(combo)
+    if national_profile:
+        return national_profile
+
     eff_w = (weather or "").lower().strip()
     is_rain = eff_w in ("rain", "storm", "downpour") or any(k in combo for k in ["rain", "storm", "downpour", "droplet", "monsoon", "river asmr", "umbrella", "relax/rain"])
 

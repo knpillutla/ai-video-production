@@ -98,6 +98,10 @@ def validate_tour_screenplay_contract(data: Dict[str, Any]) -> None:
 
         # Coordinate checks
         if is_info_slide:
+            if not sc.get("origin_coords") and first_coords:
+                sc["origin_coords"] = first_coords
+            if not sc.get("destination_coords") and (last_coords or first_coords):
+                sc["destination_coords"] = last_coords or first_coords
             origin_coords = sc.get("origin_coords")
             if not origin_coords or not isinstance(origin_coords, (list, tuple)) or len(origin_coords) < 2:
                 raise ValueError(

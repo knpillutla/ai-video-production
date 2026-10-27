@@ -8,8 +8,6 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Union
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 from src.services.audio_tag_service import normalize_audio_tags
-
-
 class LoopStrategySpec(BaseModel):
     """Loop and crossfade specifications for living wallpapers."""
     target_clip_duration_seconds: float = 30.0
@@ -46,14 +44,12 @@ class RelaxTravelTourismSpec(BaseModel):
     attraction_type: str = "Natural Sanctuary"
     best_season_and_lighting: Optional[str] = None
 
-
 class RelaxGlobalCultureSpec(BaseModel):
     """Architectural materials and cultural atmosphere specification."""
     continent_region: str = "Global Wilderness"
     culture_heritage: str = "Natural Heritage"
     authentic_textiles_and_fabrics: str = "Weathered timber, slate, stone"
     cultural_gestures_and_rituals: str = "Tranquil mindful contemplation"
-
 
 class RelaxAudioMasterSpec(BaseModel):
     """Audio and acoustic foley specification for relaxation."""
@@ -106,6 +102,9 @@ class RelaxSceneDirective(BaseModel):
     destination_coords: Optional[List[float]] = None
     distance_local: Optional[str] = None
     transit_mode: Optional[str] = "walk"
+    chapter_title: Optional[str] = None
+    chapter_subtitle: Optional[str] = None
+    chapter_stats: Optional[str] = None
     camera_waypoints: List[CameraWaypointDirective] = Field(default_factory=list)
     kinetic_micro_zones: Optional[KineticMicroSpec] = None
 
@@ -127,7 +126,6 @@ class CameraWaypointDirective(BaseModel):
     """Single timed camera kinetic waypoint for multi-phase drone choreography."""
     motion: str = "slow_drone_forward"
     duration_seconds: float = 5.0
-
 class RelaxPublishingPackage(BaseModel):
     """YouTube Publishing & SEO Metadata for Relaxation Living Wallpapers."""
     ctr_titles: List[str] = Field(default_factory=list, validation_alias=AliasChoices("ctr_titles", "seo_titles", "titles"))
@@ -282,6 +280,8 @@ def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> BaseStoryboard:
                 origin_name=getattr(s, "origin_name", None), destination_name=getattr(s, "destination_name", None),
                 origin_coords=getattr(s, "origin_coords", None), destination_coords=getattr(s, "destination_coords", None),
                 distance_local=getattr(s, "distance_local", None), transit_mode=getattr(s, "transit_mode", "walk"),
+                chapter_title=getattr(s, "chapter_title", None), chapter_subtitle=getattr(s, "chapter_subtitle", None),
+                chapter_stats=getattr(s, "chapter_stats", None),
             )
         )
     return BaseStoryboard(

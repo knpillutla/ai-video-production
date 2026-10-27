@@ -248,8 +248,13 @@ function quickTestProduceFromPrompt() {
     const optName = selOpt ? (selOpt.getAttribute("data-name") || selOpt.textContent.split("(")[0].trim()) : seriesSelect.value;
     if (optName && optName !== "standalone") selProdName = optName;
   }
+  const isGeoNationsMode = selGenreVal === "doc/nations" || selGenreVal === "nations" || (selSubgenreVal && selSubgenreVal.includes("nations")) || ["cities", "countries", "nations", "city", "nation", "country_dossier", "country_profile", "top_10_cities", "top_places_to_visit", "top_50_places"].includes(selArchVal);
   if (!selProdName || selProdName.toLowerCase() === "standalone") {
-    selProdName = selSubgenreLabel || selGenreLabel || (typeof currentChannel !== "undefined" && currentChannel?.name ? currentChannel.name : "Standalone");
+    if (isGeoNationsMode) {
+      selProdName = null;
+    } else {
+      selProdName = selSubgenreLabel || selGenreLabel || (typeof currentChannel !== "undefined" && currentChannel?.name ? currentChannel.name : "Standalone");
+    }
   }
   const selFormatVal = document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "documentary");
   const selAspect = document.getElementById("studio-selected-format")?.value || "16:9";
@@ -306,8 +311,9 @@ function quickTestProduceFromPrompt() {
     theme: themeVal, idea: ideaVal, script: scriptVal, enableBgm: getChk("studio-toggle-bgm"), enableVoiceOver: getChk("studio-toggle-voice-over"),
     enableTts: document.getElementById("studio-toggle-tts")?.checked || false,
     enableLipsync: document.getElementById("studio-toggle-lipsync")?.checked || false,
+    imageModel: "zimage", image_model: "zimage",
     allowFallback: document.getElementById("studio-toggle-fallback")?.checked || false,
-    motionModel: isTravelOrSkyline ? "ken_burns" : (isTestMode ? "wan" : "auto"), voiceGender: getVal("studio-voice-gender", "female"),
+    motionModel: isTravelOrSkyline ? "ken_burns" : "wan_4k", voiceGender: getVal("studio-voice-gender", "female"),
     pipelineStrategy: typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "manual",
     pipeline_strategy: typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "manual",
     createdAt: Date.now(), startedAt: null, completedAt: null, publishedAt: null

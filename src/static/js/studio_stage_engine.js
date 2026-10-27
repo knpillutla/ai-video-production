@@ -329,8 +329,8 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           if (vid && (vid.tier || vid.tierKey)) return vid.tier || vid.tierKey;
           return "balanced";
         })(),
-        motion_model: vid.motionModel || (durSec <= 10 ? "wan" : "auto"),
-        image_model: vid.imageModel || "google_imagen3",
+        motion_model: vid.motionModel || "wan_4k",
+        image_model: vid.imageModel || "zimage",
         enable_bgm: vid.enableBgm !== false,
         enable_voiceover: Boolean(vid.enableVoiceOver),
         dual_editions: Boolean(vid.dual_editions ?? document.getElementById("studio-toggle-dual-editions")?.checked),
@@ -343,6 +343,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         motion_only: isMotionOnly,
         audio_only: isAudioOnly,
         master_only: isMasterOnly,
+        target_shot_index: vid.target_shot_index || null,
         num_shots: (function() {
           if (typeof isTravelOrSkylineChannel === "function" && isTravelOrSkylineChannel()) return -1;
           const g = ((document.getElementById("studio-genre-selector")?.value) || vid.genre || "").toLowerCase();
@@ -368,7 +369,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           const g = ((document.getElementById("studio-genre-selector")?.value) || vid.genre || "").toLowerCase();
           const a = ((document.getElementById("studio-archetype-selector")?.value) || vid.primary_archetype || "").toLowerCase();
           if (g.includes("travel_walking") || a.includes("walking")) return "walking_tour_60fps";
-          if (g.includes("travel") || a.includes("cit") || a.includes("skylin") || a.includes("wonder") || a.includes("remote") || a.includes("iconic")) return "slow_drone_forward";
+          if (g.includes("travel") || g.includes("doc") || a.includes("countr") || a.includes("nation") || a.includes("cit") || a.includes("skylin") || a.includes("wonder") || a.includes("remote") || a.includes("iconic") || a.includes("aerial")) return "slow_drone_forward";
           return "locked_tripod";
         })(),
         genre: vid.genre || document.getElementById("studio-genre-selector")?.value || "relax/nature",
@@ -404,7 +405,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         sub_region: (vid.sub_region || document.getElementById("studio-subregion-selector")?.value || null),
         language: (vid.language || document.getElementById("studio-region-language-selector")?.value || null),
         culture: (vid.culture || document.getElementById("studio-region-language-selector")?.selectedOptions?.[0]?.getAttribute("data-culture") || null),
-        production_name: (vid.production_name || document.getElementById("studio-production-name")?.value?.trim() || null),
+        production_name: (vid.production_name || vid.script?.destination_entity || document.getElementById("studio-production-name")?.value?.trim() || null),
         format: (vid.format_slug || (vid.format && !["16:9", "9:16"].includes(vid.format) ? vid.format : null) || document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "documentary")),
         format_slug: (vid.format_slug || (vid.format && !["16:9", "9:16"].includes(vid.format) ? vid.format : null) || document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "documentary")),
         aspect_ratio: (vid.aspect_ratio || document.getElementById("studio-selected-format")?.value || "16:9"),
@@ -418,6 +419,12 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
     const resData = await res.json();
 
     if (res.ok && resData.success) {
+      if (resData.production_name) {
+        vid.production_name = resData.production_name;
+      }
+      if (resData.script?.destination_entity && !vid.production_name) {
+        vid.production_name = resData.script.destination_entity;
+      }
       if (resData.script) {
         vid.script = resData.script;
         if (resData.script.title) vid.title = resData.script.title;
@@ -621,7 +628,24 @@ function advanceToKeyframesStage(vid, imageModelOverride, forceRerun = false) {
   if (imageModelOverride) {
     target.imageModel = imageModelOverride;
   } else if (!target.imageModel) {
-    target.imageModel = "flux_dev";
+    target.imageModel = "zimage";
+  }
+  currentActiveInspectorEpisode = target;
+  renderInspectorFromVideo(target);
+  if (typeof filterChannelArchive === "function") filterChannelArchive();
+  startStudioLiveStageProgress(target, "manual", "photos");
+}
+
+function regenerateSingleKeyframe(vid, shotIdx, imageModelOverride) {
+  let target = vid || currentActiveInspectorEpisode;
+  if (!target) return;
+  target.target_shot_index = parseInt(shotIdx, 10);
+  target.currentStage = 2;
+  target.status = "processing";
+  target.progress = 25;
+  target.force_rerun = true;
+  if (imageModelOverride) {
+    target.imageModel = imageModelOverride;
   }
   currentActiveInspectorEpisode = target;
   renderInspectorFromVideo(target);
@@ -650,6 +674,7 @@ function advanceToAudioStage(vid, ttsModelOverride, forceRerun = false) {
 function advanceToMotionStage(vid, motionModelOverride, forceRerun = false) {
   let target = vid || currentActiveInspectorEpisode;
   if (!target) return;
+  target.target_shot_index = null;
   target.currentStage = 4;
   target.status = "processing";
   target.progress = 75;
@@ -660,6 +685,23 @@ function advanceToMotionStage(vid, motionModelOverride, forceRerun = false) {
   const checkedWeather = document.querySelector('input[name="studio_weather"]:checked')?.value;
   if (checkedWeather) {
     target.weather = checkedWeather;
+  }
+  currentActiveInspectorEpisode = target;
+  renderInspectorFromVideo(target);
+  if (typeof filterChannelArchive === "function") filterChannelArchive();
+  startStudioLiveStageProgress(target, "manual", "motion");
+}
+
+function regenerateSingleMotionClip(vid, shotIdx, motionModelOverride) {
+  let target = vid || currentActiveInspectorEpisode;
+  if (!target) return;
+  target.target_shot_index = parseInt(shotIdx, 10);
+  target.currentStage = 4;
+  target.status = "processing";
+  target.progress = 75;
+  target.force_rerun = true;
+  if (motionModelOverride) {
+    target.motionModel = motionModelOverride;
   }
   currentActiveInspectorEpisode = target;
   renderInspectorFromVideo(target);

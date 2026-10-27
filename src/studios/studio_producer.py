@@ -57,7 +57,7 @@ class StudioProducer:
         episode_id: Optional[str] = None,
         tier: str = "balanced",
         motion_model: str = "auto",
-        image_model: str = "flux_dev",
+        image_model: str = "zimage",
         long_play_hours: Optional[float] = None,
         fade_to_black_hours: Optional[float] = None,
         generate_short: bool = False,
@@ -71,6 +71,7 @@ class StudioProducer:
         force_rerun: bool = False,
         tts_model: Optional[str] = None,
         execution_mode: str = "test",
+        target_shot_index: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Execute 4-Stage Progressive Quality Gate with 100% Artifact Idempotency."""
         t_start = time.time()
@@ -80,7 +81,6 @@ class StudioProducer:
         eff_exec = (execution_mode or "").strip().lower()
         if (not eff_exec or eff_exec == "auto") and ep_dir and (ep_dir / "user_inputs.json").is_file():
             try:
-                import json
                 eff_exec = (json.loads((ep_dir / "user_inputs.json").read_text("utf-8")).get("execution_mode") or "test").strip().lower()
             except Exception:
                 eff_exec = "test"
@@ -105,7 +105,7 @@ class StudioProducer:
 
         # Stage 2: Keyframe Image Gate (Concurrent Idempotent Batch via visual_batch_service)
         def _resolve_scene_image_prompt(s: AmbientScenePrompt) -> str:
-            m_target = (image_model or "flux_dev").lower()
+            m_target = (image_model or "zimage").lower()
             cfgs = getattr(s, "image_model_configs", None) or {}
             key_map = {"zimage": ["zimage", "z_image"], "pro": ["flux_pro", "flux_1_1_pro_ultra"], "dev": ["flux_dev", "flux"]}
             match_keys = next((v for k, v in key_map.items() if k in m_target), [m_target])
@@ -222,7 +222,23 @@ class StudioProducer:
                     logger.info(f"downstream_stage_recovered_keyframes: episode='{ep_dir.name}' recovered {len(existing_kfs)} keyframes ($0 spend)")
                     image_results = existing_kfs
             if not ((motion_only or audio_only or master_only) and all_kfs_exist):
-                kf_force_rerun = force_rerun and photos_only
+                from src.services.artifact_backup_service import backup_keyframe
+                if target_shot_index is not None and 1 <= target_shot_index <= len(sb.scenes):
+                    prev_img_model = None
+                    u_path = ep_dir / "user_inputs.json"
+                    if u_path.is_file():
+                        try:
+                            prev_img_model = json.loads(u_path.read_text("utf-8")).get("image_model")
+                        except Exception:
+                            pass
+                    backup_keyframe(ep_dir, target_shot_index, prev_img_model or "zimage")
+                    (ep_dir / f"keyframe_p{target_shot_index}.jpg").unlink(missing_ok=True)
+                    (ep_dir / f"fal_req_p{target_shot_index}.json").unlink(missing_ok=True)
+                    keyframe_tasks = [t for t in keyframe_tasks if t[3] == target_shot_index]
+                    kf_force_rerun = True
+                else:
+                    kf_force_rerun = force_rerun and photos_only
+
                 eff_img_model = "google_imagen3" if (motion_only or audio_only or master_only) and (not image_model or "flux" in image_model) else image_model
                 diff_results = await visual_batch_service.render_keyframes_batch(
                     tasks=keyframe_tasks,
@@ -230,8 +246,7 @@ class StudioProducer:
                     force_rerun=kf_force_rerun,
                     image_model=eff_img_model,
                 ) if keyframe_tasks else []
-                diff_map = {idx: p for (_, p, _, idx) in keyframe_tasks}
-                image_results = [map_rendered_paths.get(idx, diff_map.get(idx, ep_dir / f"keyframe_p{idx}.jpg")) for idx in range(1, len(sb.scenes) + 1)]
+                image_results = [map_rendered_paths.get(idx, ep_dir / f"keyframe_p{idx}.jpg") for idx in range(1, len(sb.scenes) + 1)]
 
         if photos_only:
             return {
@@ -262,6 +277,25 @@ class StudioProducer:
                         sc.duration_seconds = max(float(sc.duration_seconds or 0.0), float(n_dur))
                     tot_d = sum(float(sc.duration_seconds) for sc in sb.scenes)
                     if hasattr(sb, "total_duration"): sb.total_duration = tot_d
+                    sp_file = ep_dir / "screenplay.json"
+                    if sp_file.is_file():
+                        try:
+                            sp_dict = json.loads(sp_file.read_text(encoding="utf-8"))
+                            sp_dict["total_duration_seconds"] = tot_d
+                            for sc_d, new_d in zip(sp_dict.get("scenes", []), narr_res["shot_durations"]):
+                                sc_d["duration_seconds"] = max(float(sc_d.get("duration_seconds") or 0.0), float(new_d))
+                            sp_file.write_text(json.dumps(sp_dict, indent=2, ensure_ascii=False), encoding="utf-8")
+                            logger.info(f"persisted_audio_aligned_screenplay: total_duration={tot_d}s")
+                        except Exception as ex_sp:
+                            logger.warning(f"failed_to_persist_audio_aligned_screenplay: {ex_sp}")
+                    u_file = ep_dir / "user_inputs.json"
+                    if u_file.is_file():
+                        try:
+                            u_dict = json.loads(u_file.read_text(encoding="utf-8"))
+                            u_dict["duration_seconds"] = tot_d
+                            u_file.write_text(json.dumps(u_dict, indent=2, ensure_ascii=False), encoding="utf-8")
+                        except Exception:
+                            pass
                 if not voice_path.is_file() or voice_path.stat().st_size < 1000:
                     raise RuntimeError(f"Narration voiceover master '{voice_path.name}' was not created or is empty.")
                 log_pipeline_step("checking audio", "Spoken Narration Voiceover", "completed", "narration synchronized and shot durations locked", {"file": voice_path.name, "total_duration": getattr(sb, "total_duration", None)})
@@ -368,13 +402,38 @@ class StudioProducer:
             u_subgenre = str(u_inputs.get("sub_genre", "")).lower()
             u_format = str(u_inputs.get("format", "")).lower()
 
+            if target_shot_index is not None and 1 <= target_shot_index <= len(sb.scenes):
+                from src.services.artifact_backup_service import backup_motion_clip
+                prev_mot_model = None
+                if u_path.is_file():
+                    try:
+                        prev_mot_model = json.loads(u_path.read_text("utf-8")).get("motion_model")
+                    except Exception:
+                        pass
+                backup_motion_clip(ep_dir, target_shot_index, prev_mot_model or "local_drone")
+                (ep_dir / f"motion_p{target_shot_index}.mp4").unlink(missing_ok=True)
+                (ep_dir / f"motion_nature_p{target_shot_index}.mp4").unlink(missing_ok=True)
+                (ep_dir / f"fal_motion_req_p{target_shot_index}.json").unlink(missing_ok=True)
+
             local_coros = []
             local_indices = []
             local_weather_info = {}
 
+            is_doc = (
+                "doc" in u_genre
+                or "doc" in u_format
+                or "nations" in u_genre
+                or str(getattr(sb, "genre", "")).lower().startswith("doc")
+                or str(getattr(sb, "cluster", "")).lower() == "documentary"
+            )
+
             for idx, (s, kf) in enumerate(zip(sb.scenes, valid_keyframes), 1):
                 out_clip = ep_dir / f"motion_p{idx}.mp4"
-                if not force_rerun and out_clip.is_file() and out_clip.stat().st_size > 1000:
+                if target_shot_index is not None and idx != target_shot_index:
+                    if out_clip.is_file() and out_clip.stat().st_size > 1000:
+                        video_clips.append(out_clip)
+                        continue
+                elif not force_rerun and out_clip.is_file() and out_clip.stat().st_size > 1000:
                     video_clips.append(out_clip)
                     continue
                 is_tour_slide = (
@@ -389,18 +448,32 @@ class StudioProducer:
                     or u_genre.startswith("relax")
                     or "relax" in u_format
                 )
+                is_doc = (
+                    "doc" in u_genre
+                    or "doc" in u_format
+                    or "nations" in u_genre
+                    or str(getattr(sb, "genre", "")).lower().startswith("doc")
+                    or str(getattr(sb, "cluster", "")).lower() == "documentary"
+                )
                 clean_tier = (tier or getattr(sb, "tier", None) or "balanced").strip().lower()
                 s_mtype = str(getattr(s, "motion_type", "") or "").lower().strip()
                 s_rec_model = str(getattr(s, "recommended_model", "") or getattr(s, "motion_model", "") or "").lower().strip()
 
                 is_diffusion_model = (motion_model or "").lower() in (
                     "kling_v3_4k", "kling_v3", "kling_4k", "kling_pro", "kling_1_6", "kling_v1_6_pro",
-                    "wan", "wan_2_1", "wan_4k", "hunyuan",
+                    "wan", "wan_2_1", "wan_4k", "hunyuan", "h3", "h3_max", "minimax",
                 )
                 is_local_engine = (motion_model or "").lower() in ("locked_tripod", "local_drone", "local_zoompan", "local", "offline", "ken_burns")
                 is_scene_local = (s_mtype in ("ken_burns", "static", "local_drone", "locked_tripod", "local_zoompan")) or (s_rec_model == "local_drone")
 
-                if is_tour_slide or is_local_engine:
+                if target_shot_index is not None:
+                    if is_local_engine:
+                        use_local = True
+                    elif is_diffusion_model:
+                        use_local = False
+                    else:
+                        use_local = is_scene_local
+                elif is_tour_slide or is_local_engine:
                     use_local = True
                 elif clean_tier in ("low_cost", "tier_0", "local"):
                     use_local = True
@@ -447,7 +520,16 @@ class StudioProducer:
                     snow_int = "heavy" if (u_weather == "snow" or any(k in w_combo for k in ("heavy", "high", "blizzard", "storm"))) else "medium"
                     local_weather_info[idx] = {"rain": is_rain_scene, "snow": is_snow_scene}
 
-                    clip_dur = 5.0 if is_relax else (s.duration_seconds or 5.0)
+                    padded_stem = ep_dir / "narration_stems" / f"shot_{idx}_padded.mp3"
+                    stem_dur = None
+                    if padded_stem.is_file() and padded_stem.stat().st_size > 1000:
+                        from src.services.ambient_export_service import get_media_duration
+                        stem_dur = get_media_duration(padded_stem)
+                    if stem_dur and stem_dur > 0:
+                        clip_dur = stem_dur
+                        s.duration_seconds = stem_dur
+                    else:
+                        clip_dur = 5.0 if is_relax else (s.duration_seconds or 5.0)
 
                     is_water_scene = any(k in f"{getattr(s, 'visual_prompt', '')} {getattr(s, 'location_hub', '')}".lower() for k in ("water", "lake", "ocean", "river", "fjord", "sea", "pond", "waterfall", "stream", "bay", "coast"))
                     if eff_choreo == "stay":
@@ -468,7 +550,7 @@ class StudioProducer:
                             snow=is_snow_scene,
                             snow_intensity=snow_int,
                             lower_third_hud=None,
-                            water=is_water_scene,
+                            water=False,
                         )
                     else:
                         attraction_name = getattr(s, "attraction_name", None) or getattr(s, "origin_name", None) or getattr(s, "location_hub", None) or f"Stop {idx}"
@@ -481,13 +563,31 @@ class StudioProducer:
                         dest_n = getattr(s, "destination_name", None)
                         trans_t = f"{trans_dur} to {dest_n}" if (trans_dur and dest_n and dest_n != attraction_name and trans_dur != "concluded") else None
 
-                        hud_data = {
-                            "attraction_name": attraction_name,
-                            "timing_text": f"🕒 {start_t} – {end_t}  ({vis_dur})",
-                            "day_badge": f"DAY {day_n} • STOP {idx}",
-                            "cost_text": cost_t,
-                            "transit_text": trans_t,
-                        } if is_itinerary_tour else None
+                        if is_itinerary_tour:
+                            hud_data = {
+                                "attraction_name": attraction_name, "timing_text": f"🕒 {start_t} – {end_t}  ({vis_dur})",
+                                "day_badge": f"DAY {day_n} • STOP {idx}", "cost_text": cost_t, "transit_text": trans_t,
+                            }
+                        elif is_doc:
+                            sub_loc = getattr(s, "location_hub", None) or getattr(sb, "destination_entity", "") or getattr(sb, "title", "").split(":")[0]
+                            country_ent = getattr(sb, "destination_entity", "") or getattr(sb, "title", "").split(":")[0].strip() or sub_loc
+                            show_map = bool(idx == 2 or (getattr(s, "chapter_title", None) and any(w in s.chapter_title.lower() for w in ("geography", "border", "climate", "area", "coast"))))
+                            hud_data = {
+                                "attraction_name": attraction_name,
+                                "sub_location": sub_loc,
+                                "is_documentary": True,
+                                "display_duration": 5.0,
+                                "chapter_title": getattr(s, "chapter_title", None),
+                                "chapter_subtitle": getattr(s, "chapter_subtitle", None),
+                                "chapter_stats": getattr(s, "chapter_stats", None),
+                                "fact_badge": getattr(s, "fact_badge", None),
+                                "country_entity": country_ent,
+                                "show_map_locator": show_map,
+                                "show_itinerary_qr": bool(idx == len(sb.scenes)),
+                                "qr_url": getattr(sb, "google_maps_route_url", None),
+                            }
+                        else:
+                            hud_data = None
 
                         coro = render_perspective_drone_clip(
                             image_path=kf,
@@ -505,7 +605,7 @@ class StudioProducer:
                             snow=is_snow_scene,
                             snow_intensity=snow_int,
                             lower_third_hud=hud_data,
-                            water=is_water_scene,
+                            water=False,
                         )
                     local_coros.append(coro)
                     local_indices.append(idx)
@@ -515,17 +615,33 @@ class StudioProducer:
                         custom_model_cfg = custom_model_cfg.model_dump()
                     elif not isinstance(custom_model_cfg, dict):
                         custom_model_cfg = None
-                    chosen_model, m_allow_fallback, m_rationale = resolve_scene_motion_model(
-                        scene=s, tier=tier, requested_motion_model=motion_model,
-                        scene_index=idx - 1, total_scenes=len(valid_keyframes), genre=getattr(sb, "cluster", "relax/nature"),
-                        execution_mode=eff_exec,
-                        force_ai_motion=bool(motion_only or force_rerun or is_diffusion_model),
-                    )
+
+                    padded_stem = ep_dir / "narration_stems" / f"shot_{idx}_padded.mp3"
+                    stem_dur = None
+                    if padded_stem.is_file() and padded_stem.stat().st_size > 1000:
+                        from src.services.ambient_export_service import get_media_duration
+                        stem_dur = get_media_duration(padded_stem)
+                    diff_dur = stem_dur if (stem_dur and stem_dur > 0) else s.duration_seconds
+
+                    if is_doc:
+                        chosen_model = "h3_max"
+                        m_allow_fallback = allow_fallback
+                    elif target_shot_index is not None and is_diffusion_model:
+                        chosen_model = "h3_max" if motion_model in ("h3", "h3_max", "minimax") else motion_model
+                        m_allow_fallback = allow_fallback
+                    else:
+                        eff_g = getattr(sb, "genre", None) or getattr(sb, "sub_genre", None) or getattr(sb, "cluster", "doc")
+                        chosen_model, m_allow_fallback, m_rationale = resolve_scene_motion_model(
+                            scene=s, tier=tier, requested_motion_model=motion_model,
+                            scene_index=idx - 1, total_scenes=len(valid_keyframes), genre=eff_g,
+                            execution_mode=eff_exec,
+                            force_ai_motion=bool(motion_only or force_rerun or is_diffusion_model),
+                        )
                     s.recommended_model = chosen_model
                     motion_tasks.append(
                         MotionClipTask(
                             image_path=kf, motion_prompt=s.motion_prompt, visual_prompt=s.visual_prompt,
-                            output_path=out_clip, duration_seconds=s.duration_seconds,
+                            output_path=out_clip, duration_seconds=diff_dur,
                             model=chosen_model, domain=s.domain, req_file=ep_dir / f"fal_motion_req_p{idx}.json",
                             allow_fallback=allow_fallback or m_allow_fallback, force_rerun=force_rerun,
                             negative_prompt=_resolve_scene_negative_prompt(s), model_configs=custom_model_cfg,
@@ -633,38 +749,16 @@ class StudioProducer:
         sb_arch = getattr(sb, "primary_archetype", "") or getattr(sb, "cluster", "") or ""
         is_doc = is_documentary_or_tour(sb_genre, sb_subgenre, sb_arch)
 
+        thumb_pkg = None
         if is_doc:
-            outro_img = ep_dir / "outro_slide.jpg"
-            outro_clip = ep_dir / "motion_outro.mp4"
-            last_kf = image_results[-1] if image_results else None
-            is_tour_mode = any(t in f"{sb_genre} {sb_subgenre} {sb_arch}".lower() for t in ("tour", "travel", "itinerary", "walking"))
-            tour_stops_data = getattr(sb, "itinerary_summary", None)
-
-            if force_rerun or not outro_img.is_file() or outro_img.stat().st_size < 1000:
-                render_4k_outro_slide(
-                    output_image_path=outro_img,
-                    title=sb.title,
-                    channel_name=getattr(sb, "channel_name", "Euro Discovery"),
-                    is_tour=is_tour_mode,
-                    tour_stops=tour_stops_data,
-                    base_keyframe_path=Path(last_kf) if last_kf else None,
-                )
-            if force_rerun or not outro_clip.is_file() or outro_clip.stat().st_size < 1000:
-                render_4k_outro_video(
-                    output_video_path=outro_clip,
-                    outro_image_path=outro_img,
-                    duration_seconds=4.5,
-                    fps=sb.recommended_fps or 24,
-                )
-
-            if outro_clip.is_file() and str(outro_clip) not in [str(c) for c in video_clips]:
-                video_clips.append(outro_clip)
-                if eff_shot_durs:
-                    eff_shot_durs.append(4.5)
-
-            # Natural documentary narrative ends when scenes conclude: do not loop!
-            narrative_dur = sum(eff_shot_durs[:-1]) if (eff_shot_durs and len(eff_shot_durs) > 1) else (sum(eff_shot_durs) if eff_shot_durs else target_dur)
-            target_dur = narrative_dur + 4.5
+            # Natural documentary narrative ends when scenes conclude: do not append synthetic outro card or loop
+            target_dur = sum(eff_shot_durs) if eff_shot_durs else target_dur
+            try:
+                from src.studios.documentary_studio.doc_thumbnail_service import generate_documentary_thumbnail_variants
+                kf_paths = [Path(p) for p in (image_results or [])]
+                thumb_pkg = generate_documentary_thumbnail_variants(sb, ep_dir, kf_paths)
+            except Exception as ex_t:
+                logger.warning(f"failed_to_generate_doc_thumbnails: {ex_t}")
 
         if generate_short:
             return await handle_short_export(
@@ -684,6 +778,8 @@ class StudioProducer:
             no_loop=is_doc,
         )
         metadata_pkgs = export_metadata_packages(sb, ep_dir)
+        if thumb_pkg:
+            metadata_pkgs["thumbnail_packaging"] = thumb_pkg
 
         try:
             await topic_memory.remember_topic(

@@ -58,6 +58,10 @@ class DocScene:
     motion_rationale: Optional[str] = None
     location_hub: Optional[str] = None
     color_temp_kelvin: Optional[int] = 5500
+    chapter_title: Optional[str] = None
+    chapter_subtitle: Optional[str] = None
+    chapter_stats: Optional[str] = None
+    fact_badge: Optional[str] = None
     model_configs: Optional[Dict[str, Any]] = None
     image_model_configs: Optional[Dict[str, Any]] = None
     motion_negative_prompt: Optional[str] = None
@@ -73,6 +77,12 @@ class DocStoryboard:
     language: str = "en"
     audio_tags: str = "cinematic orchestral documentary, sparse ambient foley, 48kHz broadcast master"
     itinerary_summary: Optional[List[Dict[str, Any]]] = None
+    thumbnail_headline: Optional[str] = None
+    thumbnail_hero_scene_index: int = 1
+    thumbnail_curiosity_rationale: Optional[str] = None
+    thumbnail_variants: Optional[List[Dict[str, Any]]] = None
+    pinned_comment: Optional[str] = None
+    community_quiz: Optional[Dict[str, Any]] = None
 
 
 DOC_TEMPLATES: Dict[DocGenre, Dict[str, Any]] = {

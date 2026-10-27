@@ -84,7 +84,7 @@ async def dispatch_studio_director(
             sub_genre=sub_genre,
             custom_prompt=custom_prompt,
             user_id=user_id,
-            channel_id=channel_id or "earth_serenade",
+            channel_id=channel_id or "euro_discovery",
         )
         sb = await generate_documentary_storyboard_gemini(
             genre=eff_doc_genre,
@@ -94,13 +94,23 @@ async def dispatch_studio_director(
             num_shots=num_shots,
             raw_output_path=raw_output_path,
             archetype=eff_archetype_name,
+            channel_id=channel_id or "euro_discovery",
         )
-        # Convert DocStoryboard to RelaxScreenplay container for pipeline compatibility
-        full_narration = " ".join(s.narration_text.strip() for s in sb.scenes if getattr(s, "narration_text", None))
+        # Filter out trailing itinerary summary/recap card so documentary never ends on an infographic slide
+        non_summary_scenes = [
+            s for s in sb.scenes
+            if not (
+                getattr(s, "is_itinerary_summary", False)
+                or "summary" in str(getattr(s, "shot_type", "")).lower()
+                or "summary" in str(getattr(s, "location_hub", "")).lower()
+                or "recap" in str(getattr(s, "location_hub", "")).lower()
+            )
+        ]
+        full_narration = " ".join(s.narration_text.strip() for s in non_summary_scenes if getattr(s, "narration_text", None))
         relax_scenes = [
             RelaxScene(
-                scene_index=s.scene_index,
-                location_hub=getattr(s, "location_hub", None) or getattr(s, "origin_name", None) or f"Scenic Vista {s.scene_index}",
+                scene_index=idx + 1,
+                location_hub=getattr(s, "location_hub", None) or getattr(s, "origin_name", None) or f"Scenic Vista {idx + 1}",
                 shot_type=s.shot_type,
                 camera_rig=getattr(s, "camera_rig", None) or "heavy_lift_cine_drone",
                 color_temp_kelvin=getattr(s, "color_temp_kelvin", 5500),
@@ -111,27 +121,22 @@ async def dispatch_studio_director(
                 image_model_configs=getattr(s, "image_model_configs", None) or {},
                 domain=getattr(s, "motion_domain", "landscape_solid"),
                 motion_type=getattr(s, "motion_type", "ken_burns"),
+                recommended_model="h3_max" if getattr(s, "motion_type", "") in ("ai_diffusion", "diffusion", "neural") else getattr(s, "recommended_model", "local_drone"),
                 camera_movement=getattr(s, "camera_movement", None) or getattr(s, "drone_choreography", None) or "slow_drone_forward",
                 motion_rationale=getattr(s, "motion_rationale", None),
                 duration_seconds=s.duration_seconds,
                 narration_text=getattr(s, "narration_text", "") or "",
                 day_number=getattr(s, "day_number", 1) or 1,
-                start_time=getattr(s, "start_time", None),
-                end_time=getattr(s, "end_time", None),
-                visit_duration=getattr(s, "visit_duration", None),
-                transit_duration=getattr(s, "transit_duration", None),
-                is_map_transition=getattr(s, "is_map_transition", False),
-                is_itinerary_summary=getattr(s, "is_itinerary_summary", False),
+                start_time=getattr(s, "start_time", None), end_time=getattr(s, "end_time", None),
+                visit_duration=getattr(s, "visit_duration", None), transit_duration=getattr(s, "transit_duration", None),
+                is_map_transition=getattr(s, "is_map_transition", False), is_itinerary_summary=False,
                 is_vacation_scope=getattr(s, "is_vacation_scope", False),
                 attraction_name=getattr(s, "attraction_name", None),
-                origin_name=getattr(s, "origin_name", None),
-                destination_name=getattr(s, "destination_name", None),
-                origin_coords=getattr(s, "origin_coords", None),
-                destination_coords=getattr(s, "destination_coords", None),
-                distance_local=getattr(s, "distance_local", None),
-                transit_mode=getattr(s, "transit_mode", "walk") or "walk",
+                origin_name=getattr(s, "origin_name", None), destination_name=getattr(s, "destination_name", None),
+                origin_coords=getattr(s, "origin_coords", None), destination_coords=getattr(s, "destination_coords", None),
+                distance_local=getattr(s, "distance_local", None), transit_mode=getattr(s, "transit_mode", "walk") or "walk",
             )
-            for s in sb.scenes
+            for idx, s in enumerate(non_summary_scenes)
         ]
         return RelaxScreenplay(
             title=sb.title,

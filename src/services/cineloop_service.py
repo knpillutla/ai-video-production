@@ -90,3 +90,35 @@ def build_seamless_forward_cineloop(clip_path: Path, xfade_dur: float = 1.2, crf
         logger.warning(f"failed_to_build_seamless_loop: {(err.stderr or str(err)).strip()}")
         return clip_path
 
+
+def ensure_thumbnail_intro_clip(
+    ep_dir: Optional[Path],
+    duration_sec: float = 2.0,
+    fps: int = 24,
+    crf: int = 22,
+) -> Optional[Path]:
+    """Render a 4K 24fps video intro card from thumbnail.jpg so YouTube's frame 0 is the high-CTR thumbnail."""
+    if not ep_dir:
+        return None
+    ep = Path(ep_dir)
+    thumb_img = next((p for p in [ep / "thumbnail.jpg", ep / "thumbnail_a.jpg", ep / "thumbnail.png"] if p.is_file() and p.stat().st_size > 1000), None)
+    if not thumb_img:
+        return None
+    out_clip = ep / "thumbnail_intro.mp4"
+    if out_clip.is_file() and out_clip.stat().st_size > 1000 and out_clip.stat().st_mtime >= thumb_img.stat().st_mtime:
+        return out_clip
+    cmd = [
+        imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error",
+        "-loop", "1", "-i", str(thumb_img),
+        "-t", f"{duration_sec:.2f}",
+        "-vf", f"scale=3840:2160,setsar=1,fps={fps}",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", str(crf),
+        "-movflags", "+faststart", str(out_clip),
+    ]
+    try:
+        subprocess.run(cmd, check=True, creationflags=_SUBPROCESS_FLAGS)
+        return out_clip if out_clip.is_file() else None
+    except Exception as ex:
+        logger.warning(f"failed_to_build_thumbnail_intro: {ex}")
+        return None
+

@@ -19,6 +19,7 @@ from src.providers.visual.fal_wan21 import FalWan21Adapter
 from src.providers.visual.fal_zimage import FalZImageAdapter
 from src.providers.visual.google_imagen3 import GoogleImagen3Adapter
 from src.providers.visual.fal_aura_sr import FalAuraSRAdapter
+from src.services.image_4k_encoder import is_image_4k
 
 
 @dataclass
@@ -30,7 +31,7 @@ class MotionClipTask:
     negative_prompt: Optional[str] = None; model_configs: Optional[dict[str, Any]] = None
     camera_waypoints: Optional[list] = None; kinetic_micro_zones: Optional[dict] = None
     camera_movement: Optional[Any] = None; interpolation: str = "cubic"
-    is_relaxation: bool = False
+    is_relaxation: bool = False; secondary_image_path: Optional[Path] = None
 
 
 from src.core.step_logger import log_pipeline_step
@@ -39,24 +40,24 @@ from src.core.step_logger import log_pipeline_step
 def resolve_motion_model(model: str, prompt_context: str, total_shots: int = 4) -> tuple[str, str]:
     """Dynamically route to optimal AI video diffusion model with directorial rationale."""
     m_clean = (model or "").lower()
-    if m_clean in ("local_drone", "locked_tripod", "local", "offline", "drone"):
+    if m_clean in ("local_drone", "locked_tripod", "local", "offline", "drone", "ken_burns"):
         return "local_drone", "Local Perspective Drone ($0.00 compute)"
-    if m_clean in ("wan_4k", "wan_super_res", "wan_upscale"):
+    if m_clean in ("h3", "h3_max", "minimax", "hailuo", "minimax_h3", "h3-max-turbo"):
+        return "h3_max", "MiniMax H3 Max Turbo (~$0.015/s subtle atmospheric motion)"
+    if m_clean in ("wan_4k", "wan_super_res", "wan_upscale", "wan-2.1-4k", "wan2.1 4k", "wan2.1-4k"):
         return "wan_4k", "Alibaba Wan 2.1 (1080p) + AI 4K Super-Resolution"
     if m_clean in ("wan", "wan_2_1", "wan21"):
-        return "wan", "Alibaba Wan 2.1 motion diffusion"
+        return "wan_4k", "Alibaba Wan 2.1 4K motion diffusion"
     if m_clean in ("kling_pro", "kling_v1_6_pro", "kling_v1_5_pro", "kling_1_6", "kling_1_5", "kling"):
         return "kling_pro", "Kling 1.6 Pro high-coherence video diffusion"
     if m_clean in ("kling_v3", "kling_4k", "kling_v3_4k"):
         return "kling_v3", "Kling v3 4K Native video diffusion"
     if m_clean in ("hunyuan", "lanczos", "local_zoompan", "ken_burns", "zoompan"):
         return m_clean, f"Configuration override ({model})"
-    if total_shots <= 5:
-        return "kling_v3", f"Kling v3 4K Native default ({total_shots} shots)"
     p = prompt_context.lower()
     if any(k in p for k in ("fire", "flame", "ember", "hearth", "waterfall", "rapids", "cascade", "chimney")):
         return "kling_v3", "Kling v3 4K Native for fluid dynamics"
-    return "wan_4k", "Alibaba Wan 2.1 + AI 4K Super-Resolution"
+    return "h3_max", "MiniMax H3 Max Turbo default motion diffusion"
 
 
 from src.services.video_4k_encoder import is_clip_4k as _is_clip_4k, ensure_video_4k
@@ -82,7 +83,7 @@ class VisualBatchService:
         tasks: List[Tuple[str, Path, Optional[Path], int]],
         aspect_ratio: str = "16:9",
         force_rerun: bool = False,
-        image_model: str = "flux_dev",
+        image_model: str = "zimage",
         enable_4k_upscale: bool = True,
     ) -> List[Path]:
         """Render batch of keyframes concurrently with disk caching and dynamic image model routing."""
@@ -98,7 +99,7 @@ class VisualBatchService:
                 if req_file and req_file.exists():
                     req_file.unlink(missing_ok=True)
 
-            model_str = (image_model or ("flux_dev" if self.fal_key else "gemini")).lower()
+            model_str = (image_model or ("zimage" if self.fal_key else "gemini")).lower()
             if "imagen" in model_str or "gemini" in model_str:
                 adapter = GoogleImagen3Adapter()
                 model_display = "Gemini 2.5 Flash Image"
@@ -113,9 +114,16 @@ class VisualBatchService:
                 model_display = "FLUX.1-dev"
 
             log_pipeline_step("checking keyframes", f"Shot {idx} Keyframe", "started", f"keyframe missing, synthesizing via {model_display}", {"file": out_path.name})
-            logger.info(f"generating_keyframe [model={model_display}]: Shot {idx} {out_path.name} prompt={prompt[:70]}...")
-            await adapter.generate_to_file(prompt=prompt, output_path=out_path, aspect_ratio=aspect_ratio, force_live=bool(self.fal_key))
-            if enable_4k_upscale and out_path.is_file():
+            eff_p = prompt
+            if aspect_ratio == "16:9" and not any(k in prompt.lower() for k in ("card", "infographic", "map", "portrait", "close-up", "singer", "panoramic", "ultra-wide")):
+                eff_p = f"{prompt}, expansive panoramic landscape vista, 18mm ultra-wide lens, generous sky headroom and peripheral breathing room"
+            if not any(k in eff_p.lower() for k in ("hasselblad", "medium format", "card", "map", "infographic")):
+                pl = eff_p.lower()
+                lt = "atmospheric night lighting, deep indigo sky, warm ambient architectural glow" if any(k in pl for k in ("night", "starlit", "midnight", "moon", "aurora", "stars")) else ("luminous golden hour sidelight, rich amber chromatic depth" if any(k in pl for k in ("sunset", "golden hour", "dusk", "sunrise")) else ("deep sapphire blue hour twilight" if any(k in pl for k in ("blue hour", "twilight")) else "rich vibrant natural color palette, crisp balanced daylight"))
+                eff_p = f"{eff_p}, {lt}, Hasselblad H6D-100c medium format optics, zero plastic sheen"
+            logger.info(f"generating_keyframe [model={model_display}]: Shot {idx} {out_path.name} prompt={eff_p[:70]}...")
+            await adapter.generate_to_file(prompt=eff_p, output_path=out_path, aspect_ratio=aspect_ratio, force_live=bool(self.fal_key))
+            if enable_4k_upscale and out_path.is_file() and not is_image_4k(out_path):
                 await FalAuraSRAdapter(api_key=self.fal_key).upscale_image(out_path, out_path, force_live=bool(self.fal_key))
             log_pipeline_step("checking keyframes", f"Shot {idx} Keyframe", "completed", "keyframe created", {"file": out_path.name, "size_bytes": out_path.stat().st_size if out_path.is_file() else 0})
             return out_path
@@ -212,7 +220,7 @@ class VisualBatchService:
                 cam_negs = "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot, flythrough, handheld camera, camera drift, jitter, shaky camera, moving perspective, perspective shift, morphing architecture, changing furniture"
                 eff_neg = f"{eff_neg}, {cam_negs}" if eff_neg else cam_negs
 
-            if chosen_model in ("hunyuan", "wan", "wan_4k", "kling", "kling_pro", "kling_v3", "kling_4k") and self.fal_key and task.image_path.is_file() and task.image_path.stat().st_size > 1000:
+            if chosen_model in ("hunyuan", "wan", "wan_4k", "kling", "kling_pro", "kling_v3", "kling_4k", "h3", "h3_max", "minimax", "hailuo") and self.fal_key and task.image_path.is_file() and task.image_path.stat().st_size > 1000:
                 try:
                     raw_diff = task.output_path.parent / f"raw_diff_{task.output_path.name}"
                     if chosen_model in ("wan", "wan_4k"):
@@ -224,18 +232,25 @@ class VisualBatchService:
                     elif chosen_model in ("kling_pro", "kling"):
                         adapter = FalKlingAdapter(api_key=self.fal_key)
                         await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, negative_prompt=eff_neg, mode="pro", req_file=task.req_file)
+                    elif chosen_model in ("h3", "h3_max", "minimax", "hailuo"):
+                        from src.providers.dance.fal_h3_max_turbo import FalH3MaxTurboAdapter
+                        adapter = FalH3MaxTurboAdapter(api_key=self.fal_key)
+                        await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True)
                     else:
                         adapter = FalHunyuanAdapter(api_key=self.fal_key)
                         await adapter.generate_video(image_url=str(task.image_path), motion_prompt=eff_prompt, output_path=raw_diff, force_live=True, req_file=task.req_file)
 
                     if raw_diff.is_file() and raw_diff.stat().st_size > 1000:
-                        ensure_video_4k(raw_diff)
-                        if task.output_path.exists():
-                            task.output_path.unlink()
-                        raw_diff.rename(task.output_path)
+                        from src.services.motion_hybrid_expander import expand_motion_clip_if_needed
+                        final_clip = await expand_motion_clip_if_needed(
+                            diff_clip=raw_diff, target_duration=task.duration_seconds,
+                            image_path=task.image_path, output_path=task.output_path,
+                            secondary_image_path=getattr(task, "secondary_image_path", None),
+                            motion_prompt=task.motion_prompt, visual_prompt=task.visual_prompt,
+                        )
                         logger.info(f"ai_diffusion_motion_rendered: model={chosen_model} {task.output_path.name}")
                         log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip created", {"file": task.output_path.name, "cost": "$0.00"})
-                        return task.output_path
+                        return final_clip
                 except Exception as e:
                     logger.error(f"ai_diffusion_error: {e}")
                     if not task.allow_fallback:

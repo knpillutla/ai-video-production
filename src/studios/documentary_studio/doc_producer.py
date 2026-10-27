@@ -12,6 +12,8 @@ from src.services.topic_memory import topic_memory
 from src.services.visual_batch_service import MotionClipTask, visual_batch_service
 from src.studios.documentary_studio.doc_audio_mixer import generate_documentary_subtitles, mix_documentary_audio
 from src.studios.documentary_studio.doc_export_service import assemble_documentary_4k_master, export_documentary_metadata_package
+from src.studios.documentary_studio.doc_gpx_service import export_itinerary_gps_package
+from src.studios.documentary_studio.doc_shorts_service import generate_documentary_shorts_teaser
 from src.studios.documentary_studio.doc_storyboard import DocStoryboard
 from src.studios.documentary_studio.doc_voice_service import doc_voice_service
 
@@ -85,42 +87,28 @@ class DocumentaryProducer:
             kf_file = ep_dir / f"keyframe_p{scene.scene_index}.jpg"
             if is_itinerary_tour and getattr(scene, "is_vacation_scope", False):
                 from src.services.map_route_engine import render_4k_leisure_vacation_card
-                render_4k_leisure_vacation_card(
-                    tour_title=sb.title,
-                    output_path=kf_file,
-                    force_rerun=force_rerun,
-                )
+                render_4k_leisure_vacation_card(tour_title=sb.title, output_path=kf_file, force_rerun=force_rerun)
                 map_rendered_paths[scene.scene_index] = kf_file
             elif is_itinerary_tour and (
                 getattr(scene, "is_itinerary_overview", False)
                 or getattr(scene, "is_itinerary_summary", False)
                 or getattr(scene, "shot_type", "") in ("itinerary_overview_card", "itinerary_summary_card")
             ) and (sb.itinerary_summary or tour_stops):
-                # 4K Hierarchical Timeline Flowchart (stop timings, walk/drive dist/time, and Uber cost)
                 from src.services.itinerary_card_engine import render_4k_itinerary_hierarchy_card
                 render_4k_itinerary_hierarchy_card(
-                    tour_title=sb.title,
-                    stops=tour_stops or [s.__dict__ for s in sb.scenes],
-                    output_path=kf_file,
-                    summary=sb.itinerary_summary[0] if sb.itinerary_summary else None,
-                    force_rerun=force_rerun,
+                    tour_title=sb.title, stops=tour_stops or [s.__dict__ for s in sb.scenes],
+                    output_path=kf_file, summary=sb.itinerary_summary[0] if sb.itinerary_summary else None, force_rerun=force_rerun,
                 )
                 map_rendered_paths[scene.scene_index] = kf_file
             elif is_itinerary_tour and getattr(scene, "is_map_transition", False) and scene.origin_coords and scene.destination_coords:
-                # 4K Google Maps route: complete circuit, green up to current stop, blue upcoming
                 prior_attrs = sum(1 for ps in sb.scenes[:scene.scene_index - 1] if not (getattr(ps, "is_map_transition", False) or getattr(ps, "is_itinerary_overview", False) or getattr(ps, "is_itinerary_summary", False) or getattr(ps, "is_vacation_scope", False)))
                 render_4k_route_map(
-                    origin_name=scene.origin_name or "Origin",
-                    dest_name=scene.destination_name or "Destination",
+                    origin_name=scene.origin_name or "Origin", dest_name=scene.destination_name or "Destination",
                     origin_coords=(scene.origin_coords[0], scene.origin_coords[1]),
                     dest_coords=(scene.destination_coords[0], scene.destination_coords[1]),
-                    distance_badge=scene.distance_local or "1.5 km",
-                    transit_mode=scene.transit_mode or "walk",
-                    output_path=kf_file,
-                    all_stops=tour_stops or None,
-                    tour_title=sb.title,
-                    current_stop_index=max(1, prior_attrs),
-                    force_rerun=force_rerun,
+                    distance_badge=scene.distance_local or "1.5 km", transit_mode=scene.transit_mode or "walk",
+                    output_path=kf_file, all_stops=tour_stops or None, tour_title=sb.title,
+                    current_stop_index=max(1, prior_attrs), force_rerun=force_rerun,
                 )
                 map_rendered_paths[scene.scene_index] = kf_file
             else:
@@ -171,8 +159,22 @@ class DocumentaryProducer:
                 await soundtrack_service.synthesize_ambient_soundtrack(sb.title, sb.audio_tags, raw_bgm, sb.total_duration)
             bgm_path = raw_bgm
 
+        # Stage 3C: Tactical Graphic Overlay SFX Generation
+        sfx_path = ep_dir / "overlay_sfx_track.wav"
+        sfx_cues = []
+        c_sec = 0.0
+        for sc in sb.scenes:
+            if getattr(sc, "chapter_title", None): sfx_cues.append((c_sec, "chapter"))
+            if getattr(sc, "fact_badge", None): sfx_cues.append((c_sec + 3.5, "badge"))
+            if sc.scene_index == 2: sfx_cues.append((c_sec + 0.8, "map"))
+            if sc.scene_index == len(sb.scenes): sfx_cues.append((max(0.0, c_sec + sc.duration_seconds - 4.5), "qr"))
+            c_sec += sc.duration_seconds
+
+        from src.studios.documentary_studio.doc_sfx_service import synthesize_overlay_sfx_track
+        synthesize_overlay_sfx_track(total_duration=sb.total_duration, events=sfx_cues, output_wav=sfx_path)
+
         mixed_audio = ep_dir / "master_audio_48k.aac"
-        mix_documentary_audio(voice_path, bgm_path, mixed_audio, target_lufs=-14.0)
+        mix_documentary_audio(voice_path, bgm_path, mixed_audio, target_lufs=-14.0, sfx_path=sfx_path)
 
         # Generate timestamped SRT subtitles
         srt_path = ep_dir / "subtitles.srt"
@@ -199,19 +201,9 @@ class DocumentaryProducer:
             if is_graphic_card:
                 logger.info(f"doc_motion_dispatch: Scene {scene.scene_index} (Map/Card) -> Static Hold Clip ({scene.duration_seconds}s)")
                 return await render_perspective_drone_clip(
-                    image_path=kf_path,
-                    output_path=out_clip,
-                    duration_seconds=scene.duration_seconds,
-                    fps=24,
-                    target_res=(3840, 2160),
-                    choreography="hold",
-                    start_pan="center",
-                    start_zoom="normal",
-                    start_tilt="center",
-                    curve="linear",
-                    rain=False,
-                    snow=False,
-                    lower_third_hud=None,
+                    image_path=kf_path, output_path=out_clip, duration_seconds=scene.duration_seconds,
+                    fps=24, target_res=(3840, 2160), choreography="hold", start_pan="center",
+                    start_zoom="normal", start_tilt="center", curve="linear", rain=False, snow=False, lower_third_hud=None,
                 )
 
             is_test = (execution_mode or "test").strip().lower() == "test"
@@ -231,39 +223,42 @@ class DocumentaryProducer:
                 dest_n = getattr(scene, "destination_name", None)
                 trans_t = f"{trans_dur} to {dest_n}" if (trans_dur and dest_n and dest_n != attraction_name and trans_dur != "concluded") else None
 
-                from src.studios.documentary_studio.doc_directorial_prompt import is_tour_archetype
-                is_tour = is_tour_archetype(
-                    getattr(sb, "primary_archetype", "")
-                    or getattr(sb, "archetype", "")
-                    or getattr(sb, "sub_genre", "")
-                    or getattr(sb, "genre", "")
-                    or ""
-                )
-                hud_data = {
-                    "attraction_name": attraction_name, "timing_text": f"🕒 {start_t} – {end_t}  ({vis_dur})",
-                    "day_badge": f"DAY {day_n} • STOP {scene.scene_index}", "cost_text": cost_t, "transit_text": trans_t,
-                } if is_tour else None
+                is_tour = is_tour_archetype(getattr(sb, "primary_archetype", "") or getattr(sb, "archetype", "") or getattr(sb, "sub_genre", "") or getattr(sb, "genre", "") or "")
+                if is_tour:
+                    hud_data = {
+                        "attraction_name": attraction_name, "timing_text": f"🕒 {start_t} – {end_t}  ({vis_dur})",
+                        "day_badge": f"DAY {day_n} • STOP {scene.scene_index}", "cost_text": cost_t, "transit_text": trans_t,
+                    }
+                else:
+                    sub_loc = getattr(scene, "location_hub", None) or getattr(sb, "destination_entity", "") or getattr(sb, "title", "").split(":")[0]
+                    country_ent = getattr(sb, "destination_entity", "") or getattr(sb, "title", "").split(":")[0].strip() or sub_loc
+                    show_map = bool(scene.scene_index == 2 or (getattr(scene, "chapter_title", None) and any(w in scene.chapter_title.lower() for w in ("geography", "border", "climate", "area", "coast"))))
+                    hud_data = {
+                        "attraction_name": attraction_name, "sub_location": sub_loc, "is_documentary": True, "display_duration": 5.0,
+                        "chapter_title": getattr(scene, "chapter_title", None), "chapter_subtitle": getattr(scene, "chapter_subtitle", None),
+                        "chapter_stats": getattr(scene, "chapter_stats", None), "fact_badge": getattr(scene, "fact_badge", None),
+                        "country_entity": country_ent, "show_map_locator": show_map,
+                        "show_itinerary_qr": bool(scene.scene_index == len(sb.scenes)), "qr_url": getattr(sb, "google_maps_route_url", None),
+                    }
                 choreo = local_cfg.get("movement") or scene.drone_choreography or getattr(scene, "camera_movement", None) or "dollyin"
-                txt = f"{getattr(scene, 'visual_prompt', '')} {getattr(scene, 'location_hub', '')}".lower()
                 return await render_perspective_drone_clip(
                     image_path=kf_path, output_path=out_clip, duration_seconds=scene.duration_seconds,
                     fps=24, target_res=(3840, 2160), choreography=choreo,
                     start_pan=framing.get("pan", "center"), start_zoom=framing.get("zoom", "normal"), start_tilt=framing.get("tilt", "center"),
                     curve=local_cfg.get("curve") or getattr(scene, "motion_curve", "cosine"),
                     rain=(getattr(scene, "weather", "none") == "rain"), snow=(getattr(scene, "weather", "none") == "snow"),
-                    lower_third_hud=hud_data,
-                    water=any(w in txt for w in ("water", "lake", "ocean", "river", "fjord", "sea", "pond", "waterfall")),
-                    clouds=any(w in txt for w in ("cloud", "sky", "aerial", "panorama", "mountain", "valley", "overlook", "vista", "peak")),
-                    kinetic_objects=True,
+                    lower_third_hud=hud_data, water=False, clouds=False, kinetic_objects=False,
                 )
             else:
-                eff_model = scene.recommended_model if (getattr(scene, "recommended_model", None) and scene.recommended_model != "auto") else (motion_model if motion_model != "auto" else "wan_2_1")
+                eff_model = "h3_max"
                 logger.info(f"doc_motion_dispatch: Scene {scene.scene_index} -> AI Video {eff_model} (Gemini Directed)")
+                det_kf = ep_dir / f"keyframe_p{scene.scene_index}_detail.jpg"
+                sec_kf = det_kf if det_kf.is_file() else None
                 task = MotionClipTask(
                     image_path=kf_path, motion_prompt=scene.motion_prompt, visual_prompt=scene.visual_prompt,
                     output_path=out_clip, duration_seconds=scene.duration_seconds, model=eff_model,
                     domain=scene.motion_domain, req_file=ep_dir / f"fal_diff_req_p{scene.scene_index}.json",
-                    allow_fallback=allow_fallback,
+                    allow_fallback=allow_fallback, secondary_image_path=sec_kf,
                 )
                 return await visual_batch_service.render_motion_clip(task)
 
@@ -271,27 +266,27 @@ class DocumentaryProducer:
         motion_coros = [_synthesize_scene_clip(sc, kp) for sc, kp in zip(sb.scenes, keyframe_paths)]
         video_clip_paths = list(await asyncio.gather(*motion_coros))
 
-        # Append 4K Outro Slide (Ends narrative cleanly with fade-to-black instead of looping)
-        from src.services.outro_slide_engine import render_4k_outro_slide, render_4k_outro_video
-        out_img = render_4k_outro_slide(ep_dir / "outro_slide.jpg", sb.title, is_tour=is_tour, tour_stops=tour_stops or None, base_keyframe_path=keyframe_paths[-1] if keyframe_paths else None)
-        out_clip = render_4k_outro_video(ep_dir / "motion_outro.mp4", out_img, duration_seconds=4.5)
-        if out_clip.is_file() and str(out_clip) not in [str(c) for c in video_clip_paths]:
-            video_clip_paths.append(out_clip)
-
-        master_path = ep_dir / "master_4k_documentary.mp4"
-        assemble_documentary_4k_master(video_clip_paths, mixed_audio, master_path, srt_path)
-        yt_pkg = export_documentary_metadata_package(sb, ep_dir)
+        thumb_pkg = {}
         try:
             from src.studios.documentary_studio.doc_thumbnail_service import generate_documentary_thumbnail_variants
             thumb_pkg = generate_documentary_thumbnail_variants(sb, ep_dir, keyframe_paths)
-            if thumb_pkg: yt_pkg["thumbnail_packaging"] = thumb_pkg
         except Exception as ex_t:
             logger.warning(f"failed_to_generate_tour_thumbnails: {ex_t}")
+
+        master_path = ep_dir / "master_4k_documentary.mp4"
+        assemble_documentary_4k_master(video_clip_paths, mixed_audio, master_path, srt_path)
+        shorts_path = generate_documentary_shorts_teaser(master_path, sb, ep_dir)
+        gps_pkg = export_itinerary_gps_package(sb, ep_dir)
+        yt_pkg = export_documentary_metadata_package(sb, ep_dir, shorts_file=shorts_path, gps_routes=gps_pkg)
+        if thumb_pkg: yt_pkg["thumbnail_packaging"] = thumb_pkg
         await topic_memory.remember_topic(topic=sb.title, genre=f"doc_{sb.genre.value}", tags=[sb.genre.value, "documentary", sb.language], story_synopsis=f"4K Documentary on {sb.title} ({len(sb.scenes)} scenes)", episode_id=ep_dir.name)
         render_time = round(time.time() - t_start, 2)
         logger.info(f"documentary_production_ready: {ep_dir.name} in {render_time}s")
         return {
             "episode_id": ep_dir.name, "title": sb.title, "master_video_path": str(master_path),
+            "shorts_teaser_path": str(shorts_path) if shorts_path else None,
+            "gpx_route_path": str(gps_pkg.get("gpx")) if gps_pkg else None,
+            "kml_route_path": str(gps_pkg.get("kml")) if gps_pkg else None,
             "voiceover_path": str(voice_path), "audio_track": str(mixed_audio), "subtitles_path": str(srt_path),
             "keyframes": [str(p) for p in keyframe_paths], "raw_videos": [str(p) for p in video_clip_paths],
             "youtube_package": yt_pkg, "render_time_seconds": render_time, "storage_path": str(ep_dir),

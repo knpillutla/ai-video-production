@@ -32,16 +32,17 @@ def probe_clip_geometry(clip_path: Path) -> Tuple[int, int]:
     return 1920, 1080
 
 
-def build_adaptive_resolution_filter(clip_path: Path, target_w: int = 3840, target_h: int = 2160) -> str:
-    """Build a resolution-aware video filter: no-op for native 4K, direct Lanczos for 16:9, safe pad for non-standard."""
+def build_adaptive_resolution_filter(clip_path: Path, target_w: int = 3840, target_h: int = 2160, target_fps: int = 24) -> str:
+    """Build a resolution- and fps-aware video filter: enforces target_fps, native 4K scaling, and safe aspect ratio."""
     w, h = probe_clip_geometry(clip_path)
+    fps_f = f"fps={target_fps},"
     if w == target_w and h == target_h:
-        return "setsar=1"
+        return f"{fps_f}setsar=1"
     target_aspect = target_w / target_h
     clip_aspect = (w / h) if h > 0 else target_aspect
     if abs(clip_aspect - target_aspect) < 0.01:
-        return f"scale={target_w}:{target_h}:flags=lanczos,setsar=1"
-    return f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease:flags=lanczos,pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2,setsar=1"
+        return f"{fps_f}scale={target_w}:{target_h}:flags=lanczos,setsar=1"
+    return f"{fps_f}scale={target_w}:{target_h}:force_original_aspect_ratio=decrease:flags=lanczos,pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2,setsar=1"
 
 
 def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_master: Path, scene_hold_sec: float = 60.0, crf: int = 22, target_duration_sec: Optional[float] = None, is_narration: bool = False, **kwargs) -> Path:
@@ -115,7 +116,8 @@ def assemble_4k_master(video_clips: list[Path], audio_path: Optional[Path], out_
                 v_loops = max(1, int(shot_hold_list[i] / max(1.0, c_dur)) + 2)
                 inputs.extend(["-stream_loop", str(v_loops), "-i", str(c)])
 
-        filter_parts = [f"[{i}:v]{build_adaptive_resolution_filter(c, 3840, 2160)}[s{i}]" for i, c in enumerate(seamless_clips)]
+        t_fps = int(kwargs.get("target_fps", 24) or 24)
+        filter_parts = [f"[{i}:v]{build_adaptive_resolution_filter(c, 3840, 2160, target_fps=t_fps)}[s{i}]" for i, c in enumerate(seamless_clips)]
         prev_tag, curr_offset = "s0", shot_hold_list[0] - x_dur
         for i in range(1, n):
             out_tag = f"v{i}" if i < n - 1 else "v"

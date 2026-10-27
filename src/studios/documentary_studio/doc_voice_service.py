@@ -145,8 +145,8 @@ class DocumentaryVoiceService:
 
             bytes_per_sec = sample_rate * channels * sampwidth
             stem_dur = len(scene_bytes) / bytes_per_sec
-            # Allocate at least 1.8s tail pause or requested target duration
-            eff_dur = max(float(target_dur), stem_dur + 1.8)
+            # NatGeo 2-Second Rule: Allocate at least 2.2s silence tail for musical breathing space
+            eff_dur = max(float(target_dur), stem_dur + 2.2)
             actual_scene_durations.append(round(eff_dur, 2))
 
             target_bytes = int(eff_dur * bytes_per_sec)
@@ -163,6 +163,30 @@ class DocumentaryVoiceService:
 
         logger.info(f"documentary_voiceover_assembled: {out.name} ({len(actual_scene_durations)} scenes, total: {sum(actual_scene_durations)}s)")
         return out, actual_scene_durations
+
+    async def synthesize_multilingual_tracks(
+        self,
+        scenes_narration: list[str],
+        base_dir: Path,
+        scene_durations: list[float],
+        target_languages: tuple[str, ...] = ("es", "hi", "te"),
+    ) -> list[dict[str, str]]:
+        """Synthesize and package multilingual voice stems for YouTube multi-track audio."""
+        tracks = []
+        for lang in target_languages:
+            voice_id, _ = self.get_voice_details(language=lang)
+            lang_wav = base_dir / f"voice_{lang}.wav"
+            try:
+                out_path, _ = await self.synthesize_full_documentary_voiceover(
+                    scenes_narration=scenes_narration,
+                    output_full_wav=lang_wav,
+                    scene_durations=scene_durations,
+                    language=lang,
+                )
+                tracks.append({"language": lang, "voice_id": voice_id, "file_path": str(out_path)})
+            except Exception as ex:
+                logger.warning(f"multilingual_synthesis_skipped for {lang}: {ex}")
+        return tracks
 
 
 doc_voice_service = DocumentaryVoiceService()

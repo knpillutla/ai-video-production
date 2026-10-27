@@ -56,7 +56,7 @@ class LocalProduceRequest(BaseModel):
     script: Optional[str] = None
     custom_script: Optional[str] = None
     channel_id: Optional[str] = None
-    motion_model: Optional[str] = "wan"
+    motion_model: Optional[str] = "wan_4k"
     allow_fallback: Optional[bool] = False
     num_shots: Optional[int] = 1
     long_play_hours: Optional[float] = None
@@ -67,7 +67,7 @@ class LocalProduceRequest(BaseModel):
     sub_genre_label: Optional[str] = None
     primary_archetype: Optional[str] = None
     primary_archetype_label: Optional[str] = None
-    image_model: Optional[str] = "flux_dev"
+    image_model: Optional[str] = "zimage"
     script_only: Optional[bool] = False
     photos_only: Optional[bool] = False
     motion_only: Optional[bool] = False
@@ -85,6 +85,7 @@ class LocalProduceRequest(BaseModel):
     aspect_ratio: Optional[str] = None
     tts_model: Optional[str] = None
     vocal_gender: Optional[str] = None
+    target_shot_index: Optional[int] = None
 
 
 class LocalProduceResponse(BaseModel):
@@ -127,7 +128,7 @@ def _reserve_next_episode_id(user_id: str, channel_id: str) -> str:
 async def produce_video_locally(req: LocalProduceRequest):
     """Synthesize a complete broadcast-grade MP4 video with scenes and audio stems."""
     title = req.title or (req.prompt[:36] if len(req.prompt) > 36 else req.prompt) or "Gemini-Directed Production"
-    capped_duration = min(120.0, max(4.0, float(req.duration_seconds or 6.0)))
+    capped_duration = min(28800.0, max(4.0, float(req.duration_seconds or 6.0)))
     eff_bgm = req.enable_bgm if req.enable_bgm is not None else (req.bgm if req.bgm is not None else True)
     user_id_val = req.user_id or "user_krishna_01"
     strat = req.pipeline_strategy or "manual"
@@ -242,7 +243,7 @@ async def produce_video_locally(req: LocalProduceRequest):
                 "sub_genre": req.sub_genre_label or "",
                 "primary_archetype": req.primary_archetype_label or "",
             },
-            image_model=req.image_model or "flux_dev",
+            image_model=req.image_model or "zimage",
             dual_editions=bool(req.dual_editions),
             tier=req.tier or "balanced",
             weather=req.weather or "normal",
@@ -250,6 +251,7 @@ async def produce_video_locally(req: LocalProduceRequest):
             format_slug=req.format_slug or (req.format if req.format and req.format not in ("16:9", "9:16") else None),
             tts_model=req.tts_model,
             execution_mode=req.execution_mode or "test",
+            target_shot_index=req.target_shot_index,
         )
         eff_job_id = result.get("job_id") or job_id
         if eff_script_only:

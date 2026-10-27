@@ -1056,21 +1056,74 @@ def render_perspective_drone_clip_sync(
 
     hud_bgr = None
     hud_alpha = None
+    chap_bgr = None
+    chap_alpha = None
+    map_bgr = None
+    map_alpha = None
+    fact_bgr = None
+    fact_alpha = None
+    qr_bgr = None
+    qr_alpha = None
     if lower_third_hud and isinstance(lower_third_hud, dict):
         try:
-            from src.services.map_route_engine import create_lower_third_hud_overlay
-            rgba = create_lower_third_hud_overlay(
-                attraction_name=lower_third_hud.get("attraction_name", "Landmark"),
-                timing_text=lower_third_hud.get("timing_text", "09:00 AM – 11:30 AM"),
-                day_badge=lower_third_hud.get("day_badge", "DAY 1"),
-                target_res=output_size,
-                cost_text=lower_third_hud.get("cost_text"),
-                transit_text=lower_third_hud.get("transit_text"),
-            )
+            if lower_third_hud.get("is_documentary"):
+                from src.studios.documentary_studio.doc_overlay_service import (
+                    create_documentary_lower_third_overlay,
+                    create_documentary_chapter_title_card,
+                    create_documentary_fact_badge_overlay,
+                )
+                rgba = create_documentary_lower_third_overlay(
+                    attraction_name=lower_third_hud.get("attraction_name", "Landmark"),
+                    sub_location=lower_third_hud.get("sub_location") or lower_third_hud.get("timing_text"),
+                    target_res=output_size,
+                )
+                if lower_third_hud.get("chapter_title"):
+                    c_rgba = create_documentary_chapter_title_card(
+                        chapter_title=lower_third_hud.get("chapter_title"),
+                        chapter_subtitle=lower_third_hud.get("chapter_subtitle"),
+                        key_stats=lower_third_hud.get("chapter_stats"),
+                        target_res=output_size,
+                    )
+                    chap_bgr = cv2.cvtColor(c_rgba, cv2.COLOR_RGBA2BGR)
+                    chap_alpha = (c_rgba[:, :, 3] / 255.0).astype(np.float32)
+
+                if lower_third_hud.get("fact_badge"):
+                    f_rgba = create_documentary_fact_badge_overlay(lower_third_hud["fact_badge"], target_res=output_size)
+                    fact_bgr = cv2.cvtColor(f_rgba, cv2.COLOR_RGBA2BGR)
+                    fact_alpha = (f_rgba[:, :, 3] / 255.0).astype(np.float32)
+
+                if lower_third_hud.get("show_map_locator") or any(w in str(lower_third_hud.get("chapter_title", "")).lower() for w in ("geography", "border", "climate", "coast", "area")):
+                    from src.studios.documentary_studio.doc_cartography_service import create_cartographic_locator_overlay
+                    c_query = lower_third_hud.get("country_entity") or lower_third_hud.get("sub_location") or lower_third_hud.get("attraction_name") or "France"
+                    m_rgba = create_cartographic_locator_overlay(c_query, target_res=output_size)
+                    map_bgr = cv2.cvtColor(m_rgba, cv2.COLOR_RGBA2BGR)
+                    map_alpha = (m_rgba[:, :, 3] / 255.0).astype(np.float32)
+
+                if lower_third_hud.get("qr_url") or lower_third_hud.get("show_itinerary_qr"):
+                    from src.studios.documentary_studio.doc_qr_service import create_itinerary_qr_overlay
+                    qr_url = lower_third_hud.get("qr_url") or "https://maps.google.com"
+                    dest_title = lower_third_hud.get("country_entity") or lower_third_hud.get("attraction_name") or "Itinerary Route"
+                    q_rgba = create_itinerary_qr_overlay(route_url=qr_url, destination_name=dest_title, target_res=output_size)
+                    qr_bgr = cv2.cvtColor(q_rgba, cv2.COLOR_RGBA2BGR)
+                    qr_alpha = (q_rgba[:, :, 3] / 255.0).astype(np.float32)
+            else:
+                from src.services.map_route_engine import create_lower_third_hud_overlay
+                rgba = create_lower_third_hud_overlay(
+                    attraction_name=lower_third_hud.get("attraction_name", "Landmark"),
+                    timing_text=lower_third_hud.get("timing_text", "09:00 AM – 11:30 AM"),
+                    day_badge=lower_third_hud.get("day_badge", "DAY 1"),
+                    target_res=output_size,
+                    cost_text=lower_third_hud.get("cost_text"),
+                    transit_text=lower_third_hud.get("transit_text"),
+                )
             hud_bgr = cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGR)
             hud_alpha = (rgba[:, :, 3] / 255.0).astype(np.float32)
         except Exception:
             hud_bgr = None
+            chap_bgr = None
+            map_bgr = None
+            fact_bgr = None
+            qr_bgr = None
 
     try:
         for i in range(total_frames):
@@ -1097,27 +1150,119 @@ def render_perspective_drone_clip_sync(
             elif snow_engine:
                 frame = snow_engine.render(frame, i)
 
-            # Lower-third HUD display: stays solid on screen without flickering
-            # Stays entire duration if duration <= 15s; displays for 12.5s if duration > 15s
-            if hud_bgr is not None and hud_alpha is not None:
-                fade_in_frames = min(12, max(6, int(fps * 0.4)))
-                if duration_seconds <= 15.0:
-                    fade_out_start = total_frames + 999  # Stays solid for entire shot duration
+            # Centered Chapter Title Card: 3.3s smooth sine fade-in/fade-out
+            if chap_bgr is not None and chap_alpha is not None:
+                c_fade_in = max(6, int(fps * 0.5))
+                c_hold_end = int(fps * 2.7)
+                c_fade_out_end = int(fps * 3.3)
+                if i < c_fade_in:
+                    c_fade = 0.5 * (1.0 - np.cos(np.pi * i / float(c_fade_in)))
+                elif i < c_hold_end:
+                    c_fade = 1.0
+                elif i < c_fade_out_end:
+                    c_fade = 0.5 * (1.0 + np.cos(np.pi * (i - c_hold_end) / float(c_fade_out_end - c_hold_end)))
                 else:
-                    fade_out_start = int(12.5 * fps)
+                    c_fade = 0.0
 
-                if i < fade_in_frames:
-                    fade = i / max(1.0, float(fade_in_frames))
-                elif i < fade_out_start:
-                    fade = 1.0
-                elif i < fade_out_start + 20:
-                    fade = max(0.0, 1.0 - (i - fade_out_start) / 20.0)
+                if c_fade > 0.001:
+                    c_eff_alpha = (chap_alpha * c_fade)[:, :, None]
+                    frame = (frame.astype(np.float32) * (1.0 - c_eff_alpha) + chap_bgr.astype(np.float32) * c_eff_alpha).astype(np.uint8)
+
+            # Cartographic Locator Inset: 5.5s smooth sine fade-in/fade-out in upper-right quadrant
+            if map_bgr is not None and map_alpha is not None:
+                m_fade_in = max(6, int(fps * 0.5))
+                m_start = int(fps * 0.8)
+                m_hold_end = int(fps * 4.8)
+                m_fade_out_end = int(fps * 5.6)
+                adj_m = i - m_start
+                if adj_m < 0:
+                    m_fade = 0.0
+                elif adj_m < m_fade_in:
+                    m_fade = 0.5 * (1.0 - np.cos(np.pi * adj_m / float(m_fade_in)))
+                elif adj_m < (m_hold_end - m_start):
+                    m_fade = 1.0
+                elif adj_m < (m_fade_out_end - m_start):
+                    m_fade = 0.5 * (1.0 + np.cos(np.pi * (adj_m - (m_hold_end - m_start)) / float(m_fade_out_end - m_hold_end)))
                 else:
+                    m_fade = 0.0
+
+                if m_fade > 0.001:
+                    m_eff_alpha = (map_alpha * m_fade)[:, :, None]
+                    frame = (frame.astype(np.float32) * (1.0 - m_eff_alpha) + map_bgr.astype(np.float32) * m_eff_alpha).astype(np.uint8)
+
+            # Lower-third HUD display: 5s fade-in/fade-out for documentary, solid for tour itineraries
+            if hud_bgr is not None and hud_alpha is not None:
+                display_dur = float(lower_third_hud.get("display_duration", 5.0 if lower_third_hud.get("is_documentary") else 0.0))
+                # When a chapter card is displayed, start the lower-third as the chapter slate fades out
+                hud_delay = int(fps * 3.0) if (chap_bgr is not None) else 0
+                adj_i = i - hud_delay
+
+                if adj_i < 0:
                     fade = 0.0
+                else:
+                    if display_dur > 0:
+                        fade_in_frames = max(6, int(fps * 0.5))
+                        fade_out_start = int((display_dur - 0.5) * fps)
+                        fade_out_frames = max(6, int(fps * 0.5))
+                    elif duration_seconds <= 15.0:
+                        fade_in_frames = min(12, max(6, int(fps * 0.4)))
+                        fade_out_start = total_frames + 999
+                        fade_out_frames = 20
+                    else:
+                        fade_in_frames = min(12, max(6, int(fps * 0.4)))
+                        fade_out_start = int(12.5 * fps)
+                        fade_out_frames = 20
+
+                    if adj_i < fade_in_frames:
+                        fade = adj_i / max(1.0, float(fade_in_frames))
+                    elif adj_i < fade_out_start:
+                        fade = 1.0
+                    elif adj_i < fade_out_start + fade_out_frames:
+                        fade = max(0.0, 1.0 - (adj_i - fade_out_start) / float(fade_out_frames))
+                    else:
+                        fade = 0.0
 
                 if fade > 0.001:
                     eff_alpha = (hud_alpha * fade)[:, :, None]
                     frame = (frame.astype(np.float32) * (1.0 - eff_alpha) + hud_bgr.astype(np.float32) * eff_alpha).astype(np.uint8)
+
+            # Fact Badge: 4.5s smooth sine fade-in/fade-out in middle-right quadrant
+            if fact_bgr is not None and fact_alpha is not None:
+                f_start = int(fps * 3.5)
+                f_fade_in = max(6, int(fps * 0.5))
+                f_hold_end = int(fps * 7.5)
+                f_fade_out_end = int(fps * 8.2)
+                adj_f = i - f_start
+                if adj_f < 0:
+                    f_fade = 0.0
+                elif adj_f < f_fade_in:
+                    f_fade = 0.5 * (1.0 - np.cos(np.pi * adj_f / float(f_fade_in)))
+                elif adj_f < (f_hold_end - f_start):
+                    f_fade = 1.0
+                elif adj_f < (f_fade_out_end - f_start):
+                    f_fade = 0.5 * (1.0 + np.cos(np.pi * (adj_f - (f_hold_end - f_start)) / float(f_fade_out_end - f_hold_end)))
+                else:
+                    f_fade = 0.0
+
+                if f_fade > 0.001:
+                    f_eff_alpha = (fact_alpha * f_fade)[:, :, None]
+                    frame = (frame.astype(np.float32) * (1.0 - f_eff_alpha) + fact_bgr.astype(np.float32) * f_eff_alpha).astype(np.uint8)
+
+            # Itinerary QR Code: displayed during the last 4.5s of the scene
+            if qr_bgr is not None and qr_alpha is not None:
+                q_start = max(0, total_frames - int(fps * 4.5))
+                q_fade_in = max(6, int(fps * 0.6))
+                adj_q = i - q_start
+                if adj_q < 0:
+                    q_fade = 0.0
+                elif adj_q < q_fade_in:
+                    q_fade = 0.5 * (1.0 - np.cos(np.pi * adj_q / float(q_fade_in)))
+                else:
+                    q_fade = 1.0
+
+                if q_fade > 0.001:
+                    q_eff_alpha = (qr_alpha * q_fade)[:, :, None]
+                    frame = (frame.astype(np.float32) * (1.0 - q_eff_alpha) + qr_bgr.astype(np.float32) * q_eff_alpha).astype(np.uint8)
 
             if ffmpeg_proc:
                 ffmpeg_proc.stdin.write(frame.tobytes())

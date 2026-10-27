@@ -76,6 +76,7 @@ async def generate_documentary_storyboard_gemini(
         llm = GeminiLLMAdapter()
 
         eff_prompt_shots = -1 if (num_shots is None or num_shots == -1) else num_scenes
+        chan_id = kwargs.get("channel_id") or "euro_discovery"
         if tour_mode:
             full_prompt = build_tour_directorial_prompt(
                 archetype=eff_archetype,
@@ -86,6 +87,7 @@ async def generate_documentary_storyboard_gemini(
                 speech_cadence_wpm=eff_wpm,
                 speech_words_per_sec=eff_wps,
                 tts_provider_name=provider_desc,
+                channel_id=chan_id,
             )
         else:
             full_prompt = build_doc_directorial_prompt(
@@ -98,6 +100,7 @@ async def generate_documentary_storyboard_gemini(
                 speech_cadence_wpm=eff_wpm,
                 speech_words_per_sec=eff_wps,
                 tts_provider_name=provider_desc,
+                channel_id=chan_id,
             )
 
         if raw_output_path:
@@ -136,14 +139,37 @@ async def generate_documentary_storyboard_gemini(
             raw_scenes = data["scenes"] if tour_mode else data["scenes"][:num_scenes]
             itinerary_summary = data.get("itinerary_summary")
 
-            # Strict Zero-Fallback Validation & Interleaving for tour archetypes
+            # Strict Zero-Fallback Validation & Interleaving for tour archetypes (omit trailing summary slide)
             if tour_mode:
                 from src.studios.documentary_studio.doc_tour_validator import validate_tour_screenplay_contract
                 from src.studios.documentary_studio.doc_tour_interleaver import interleave_tour_storyboard_scenes
                 validate_tour_screenplay_contract(data)
-                data["scenes"] = interleave_tour_storyboard_scenes(data["scenes"], data.get("itinerary_summary"), duration_seconds)
+                data["scenes"] = interleave_tour_storyboard_scenes(
+                    data["scenes"], data.get("itinerary_summary"), duration_seconds, include_summary_card=False
+                )
                 raw_scenes = data["scenes"]
                 itinerary_summary = data.get("itinerary_summary")
+
+            # Eliminate any trailing infographic summary/recap cards so documentaries conclude naturally
+            raw_scenes = [
+                sc for sc in raw_scenes
+                if not (
+                    sc.get("is_itinerary_summary")
+                    or "summary" in str(sc.get("shot_type", "")).lower()
+                    or "recap" in str(sc.get("location_hub", "")).lower()
+                    or "summary" in str(sc.get("location_hub", "")).lower()
+                )
+            ]
+
+            is_geo_mode = (
+                genre == DocGenre.PLACES
+                or getattr(genre, "value", str(genre)).lower() in ("places", "nations", "cities")
+                or (archetype or "").lower().strip() in ("cities", "countries", "nations", "country", "city", "nation")
+                or (sub_genre and any(k in sub_genre.lower() for k in ("nations", "cities", "europe_nations")))
+            )
+            dest_entity = data.get("destination_entity") or data.get("destination_name")
+            if not dest_entity and title_disp and ":" in title_disp:
+                dest_entity = title_disp.split(":")[0].strip()
 
             doc_scenes = []
             for idx, sc in enumerate(raw_scenes):
@@ -157,23 +183,40 @@ async def generate_documentary_storyboard_gemini(
                 mot_rationale = sc.get("motion_rationale") or f"Tier-0 4K drone cinematography via {cam_move} ($0.00 compute)."
                 n_text = sc.get("narration_text") or sc.get("narration") or sc.get("audio_narration") or sc.get("voiceover") or ""
 
+                if is_geo_mode and idx == 0:
+                    sc_dur = max(10.0, min(12.0, sc_dur if sc_dur >= 9.0 else 11.0))
+                    mot_type = "ken_burns"
+                    sc["recommended_model"] = "local_drone"
+                    if not cam_move or cam_move == "locked_stationary_cinemagraph":
+                        cam_move = "slow_drone_forward"
+                    if dest_entity and not any(k in n_text.lower() for k in ("welcome to", "in the heart", "paradox", "enigma", "lies a sovereign", "across the")):
+                        n_text = f"Welcome to {dest_entity}. {n_text}".strip()
+                elif is_geo_mode and idx == len(raw_scenes) - 1 and len(raw_scenes) >= 2:
+                    sc_dur = max(10.0, min(12.0, sc_dur if sc_dur >= 9.0 else 11.0))
+                    mot_type = "ken_burns"
+                    sc["recommended_model"] = "local_drone"
+                    cam_move = "dollyout"
+                    if not any(k in v_prompt.lower() for k in ("twilight", "sunset", "horizon", "panorama", "pull-back", "skyline")):
+                        v_prompt = f"{v_prompt} Captured at golden twilight sunset in a sweeping panoramic aerial pull-back over {dest_entity or 'the historic destination'}."
+                    if not any(k in n_text.lower() for k in ("legacy", "enduring", "timeless", "spirit", "farewell", "stands as", "testament", "soul", "explore", "journey", "remains")):
+                        n_text = f"From its ancient foundations to its vibrant living spirit, {dest_entity or 'this remarkable destination'} stands as an enduring testament to culture, beauty, and wonder."
+
                 shot_type_val = str(sc.get("shot_type", "")).lower()
                 is_tour_overview = bool(sc.get("is_itinerary_overview", False) or (tour_mode and (idx == 0 and "overview" in shot_type_val)))
-                is_tour_summary = bool(sc.get("is_itinerary_summary", False) or (tour_mode and (idx == len(raw_scenes) - 1 and "summary" in shot_type_val)))
+                is_tour_summary = False
                 is_tour_vacation = bool(sc.get("is_vacation_scope", False) or (tour_mode and "vacation" in shot_type_val))
                 is_map_trans = bool(sc.get("is_map_transition", False) or (tour_mode and any(k in shot_type_val for k in ("map", "transition", "cartographic"))))
 
                 is_info_slide = is_map_trans or is_tour_overview or is_tour_summary or is_tour_vacation
                 if is_info_slide:
-                    cam_rig = "locked_tripod_telephoto"
-                    cam_move = "locked_stationary_cinemagraph"
-                    mot_type = "ken_burns"
-                    m_prompt = "Static locked tripod hold on 4K cartographic/infographic display. Zero camera drift, zero pan, zero zoom."
-                    mot_rationale = "Static infographic slide locked hold ($0.00 compute)."
+                    cam_rig, cam_move, mot_type = "locked_tripod_telephoto", "locked_stationary_cinemagraph", "ken_burns"
+                    m_prompt, mot_rationale = "Static locked tripod hold on 4K display.", "Static infographic hold ($0.00 compute)."
 
                 attr_name = None if is_tour_overview else sc.get("attraction_name")
                 if not attr_name and not is_info_slide:
                     attr_name = sc.get("origin_name")
+                if not is_info_slide and not any(k in v_prompt.lower() for k in ("panoramic", "ultra-wide", "wide vista", "establishing shot")):
+                    v_prompt = f"{v_prompt}, expansive panoramic landscape vista, 18mm ultra-wide architectural lens, generous sky headroom and foreground breathing room"
 
                 ld_cfg = (sc.get("model_configs") or {}).get("local_drone") or {}
                 drone_choreo = ld_cfg.get("movement") or sc.get("camera_movement") or sc.get("drone_choreography")
@@ -186,13 +229,19 @@ async def generate_documentary_storyboard_gemini(
                 if isinstance(drone_choreo, str) and not is_info_slide:
                     cam_move = drone_choreo
 
+                rec_model = (
+                    "local_drone" if (is_geo_mode and idx == 0)
+                    else ("h3_max" if sc.get("motion_type") in ("ai_diffusion", "diffusion", "neural")
+                          else (sc.get("recommended_model") or sc.get("motion_model") or default_model))
+                )
+
                 doc_scenes.append(
                     DocScene(
                         scene_index=idx + 1,
                         duration_seconds=sc_dur,
                         shot_type=sc.get("shot_type", "wide" if idx == 0 else "medium"),
                         motion_domain=sc.get("domain") or domain_tag,
-                        recommended_model=sc.get("recommended_model") or sc.get("motion_model") or default_model,
+                        recommended_model=rec_model,
                         visual_prompt=v_prompt,
                         motion_prompt=m_prompt,
                         narration_text=n_text,
@@ -205,54 +254,45 @@ async def generate_documentary_storyboard_gemini(
                         attraction_name=attr_name,
                         origin_name=sc.get("origin_name") or sc.get("scene_title"),
                         destination_name=sc.get("destination_name"),
-                        origin_coords=sc.get("origin_coords"),
-                        destination_coords=sc.get("destination_coords"),
-                        distance_local=sc.get("distance_local"),
-                        transit_mode=sc.get("transit_mode", "walk"),
+                        origin_coords=sc.get("origin_coords"), destination_coords=sc.get("destination_coords"),
+                        distance_local=sc.get("distance_local"), transit_mode=sc.get("transit_mode", "walk"),
                         day_number=int(sc.get("day_number", 1) or 1),
-                        start_time=sc.get("start_time"),
-                        end_time=sc.get("end_time"),
-                        visit_duration=sc.get("visit_duration"),
-                        transit_duration=sc.get("transit_duration"),
-                        attraction_cost=sc.get("attraction_cost"),
-                        is_itinerary_overview=is_tour_overview,
-                        is_itinerary_summary=is_tour_summary,
-                        is_vacation_scope=is_tour_vacation,
-                        camera_rig=cam_rig,
-                        camera_movement=cam_move,
-                        motion_type=mot_type,
-                        motion_rationale=mot_rationale,
-                        location_hub=loc_hub,
-                        color_temp_kelvin=int(sc.get("color_temp_kelvin") or 5500),
-                        model_configs=sc.get("model_configs"),
-                        image_model_configs=sc.get("image_model_configs"),
-                        motion_negative_prompt=sc.get("motion_negative_prompt") or "camera shake, jitter, rapid motion, artifacts",
+                        start_time=sc.get("start_time"), end_time=sc.get("end_time"),
+                        visit_duration=sc.get("visit_duration"), transit_duration=sc.get("transit_duration"),
+                        attraction_cost=sc.get("attraction_cost"), is_itinerary_overview=is_tour_overview,
+                        is_itinerary_summary=is_tour_summary, is_vacation_scope=is_tour_vacation,
+                        camera_rig=cam_rig, camera_movement=cam_move, motion_type=mot_type, motion_rationale=mot_rationale,
+                        location_hub=loc_hub, color_temp_kelvin=int(sc.get("color_temp_kelvin") or 5500),
+                        chapter_title=sc.get("chapter_title"), chapter_subtitle=sc.get("chapter_subtitle"), chapter_stats=sc.get("chapter_stats"), fact_badge=sc.get("fact_badge"),
+                        model_configs=sc.get("model_configs"), image_model_configs=sc.get("image_model_configs"),
+                        motion_negative_prompt=sc.get("motion_negative_prompt") or "tight crop, cropped building, cut off steeple, claustrophobic framing, camera shake, jitter, artifacts",
                     )
                 )
 
+            th_head = data.get("thumbnail_headline") or data.get("thumbnail_text") or (f"WHAT IS {dest_entity.upper()} BEST KNOWN FOR?" if is_geo_mode and dest_entity else "WHAT ARE THEY HIDING HERE?")
+            th_vars = data.get("thumbnail_variants") or [
+                {"variant": "A", "headline": th_head.strip().upper(), "angle": "sovereign_question"},
+                {"variant": "B", "headline": f"{dest_entity.upper() if dest_entity else 'EUROPE'}'S GREATEST SECRET", "angle": "hidden_anomaly"},
+                {"variant": "C", "headline": f"HOW {dest_entity.upper() if dest_entity else 'THEY'} SURVIVED", "angle": "scale_paradox"},
+            ]
+            pin_comm = data.get("pinned_comment") or f"📍 PINNED COMMUNITY QUIZ: Did you know this about {dest_entity or 'this destination'}? Which landmark or story surprised you most? Drop your perspective below! 👇"
+
             sb = DocStoryboard(
                 title=data.get("title") or (theme_seed.title() if theme_seed else "Documentary"),
-                genre=genre,
-                total_duration=duration_seconds,
-                scenes=doc_scenes,
-                language=language,
+                genre=genre, total_duration=duration_seconds, scenes=doc_scenes, language=language,
                 audio_tags=data.get("audio_tags") or "cinematic orchestral documentary, sparse ambient foley, 48kHz broadcast master",
-                itinerary_summary=itinerary_summary,
+                itinerary_summary=itinerary_summary, thumbnail_headline=th_head.strip().upper(),
+                thumbnail_hero_scene_index=int(data.get("thumbnail_hero_scene_index", 1) or 1),
+                thumbnail_curiosity_rationale=data.get("thumbnail_curiosity_rationale") or f"High-CTR curiosity hook for {dest_entity or 'documentary'}.",
+                thumbnail_variants=th_vars, pinned_comment=pin_comm, community_quiz=data.get("community_quiz"),
             )
-            try:
-                print(f"[GEMINI DOC STORYBOARD SUCCESS] Synthesized '{sb.title}' with {len(sb.scenes)} authoritative documentary scenes.")
-            except UnicodeEncodeError:
-                print(f"[GEMINI DOC STORYBOARD SUCCESS] Synthesized {len(sb.scenes)} authoritative documentary scenes.")
+            logger.info(f"gemini_doc_storyboard_success: title='{sb.title}', scenes={len(sb.scenes)}, thumb='{sb.thumbnail_headline}'")
             return sb
         raise RuntimeError(f"Gemini LLM returned empty or malformed documentary storyboard data: {data}")
     except Exception as ex:
         from src.core.telemetry import logger
         err_detail = str(ex).strip() or repr(ex)
         logger.error(f"gemini_doc_storyboard_fatal_error: {err_detail}")
-        try:
-            print(f"\n[GEMINI FATAL ERROR] Documentary directorial screenplay synthesis failed: {err_detail}\n")
-        except UnicodeEncodeError:
-            print(f"\n[GEMINI FATAL ERROR] Documentary directorial screenplay synthesis failed: {repr(ex)}\n")
         raise RuntimeError(f"Gemini documentary directorial screenplay generation failed: {err_detail}") from ex
 
 

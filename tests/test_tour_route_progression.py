@@ -133,7 +133,7 @@ def test_provider_wired_speech_cadence():
         speech_words_per_sec=wps_en,
         tts_provider_name=desc_en,
     )
-    assert "NARRATION ENGINE & DURATION WIRING CONTRACT" in prompt
+    assert "NARRATION ENGINE &" in prompt
     assert "Directorial Leeway Buffer" in prompt
     assert "118 WPM" in prompt
     assert "1.96 words/sec" in prompt

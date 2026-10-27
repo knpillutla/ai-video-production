@@ -38,6 +38,7 @@ def interleave_tour_storyboard_scenes(
     raw_scenes: List[Dict[str, Any]],
     itinerary_summary: Optional[List[Dict[str, Any]]] = None,
     total_duration_seconds: float = 60.0,
+    include_summary_card: bool = True,
 ) -> List[Dict[str, Any]]:
     """Interleaves physical attractions with overview cards, route maps, and summary cards.
     
@@ -47,7 +48,7 @@ def interleave_tour_storyboard_scenes(
       - Physical Attraction 1
       - Connecting Route Map 1 -> 2 (with transit narration)
       - ...
-      - Summary Card (Final Scene)
+      - Summary Card (Final Scene, if include_summary_card is True)
     """
     if not raw_scenes or not isinstance(raw_scenes, list):
         return raw_scenes
@@ -55,6 +56,8 @@ def interleave_tour_storyboard_scenes(
     # If scenes already contain map transitions, preserve existing structure
     has_map_transitions = any(sc.get("is_map_transition") for sc in raw_scenes if isinstance(sc, dict))
     if has_map_transitions and len(raw_scenes) >= 3:
+        if not include_summary_card:
+            raw_scenes = [sc for sc in raw_scenes if not sc.get("is_itinerary_summary")]
         for idx, sc in enumerate(raw_scenes, 1):
             sc["scene_index"] = idx
         return raw_scenes
@@ -73,7 +76,8 @@ def interleave_tour_storyboard_scenes(
     num_maps = max(0, num_attrs - 1)
     card_dur = 8.0
     map_dur = 9.0
-    fixed_overhead = (2 * card_dur) + (num_maps * map_dur)  # Overview + Summary + Maps
+    card_count = 2 if include_summary_card else 1
+    fixed_overhead = (card_count * card_dur) + (num_maps * map_dur)  # Overview (+ Summary) + Maps
 
     remaining_attr_time = max(9.0 * num_attrs, total_duration_seconds - fixed_overhead)
     per_attr_dur = round(max(9.0, remaining_attr_time / num_attrs), 1)
@@ -184,32 +188,33 @@ def interleave_tour_storyboard_scenes(
             }
             interleaved.append(map_scene)
 
-    # 3. Inject Final Scene: Master Summary Card
-    summary_scene: Dict[str, Any] = {
-        "scene_index": len(interleaved) + 1,
-        "location_hub": "Master Itinerary Recap",
-        "shot_type": "itinerary_summary_card",
-        "camera_rig": "locked_tripod_telephoto",
-        "camera_movement": "stay",
-        "motion_type": "ken_burns",
-        "camera_waypoints": [{"motion": "stay", "duration_seconds": card_dur}],
-        "color_temp_kelvin": 5500,
-        "visual_prompt": (
-            "An elegant, high-contrast infographic summary board presenting the complete schedule table, "
-            "visitation durations, transit times, and budget breakdown in crisp typography."
-        ),
-        "narration_text": "Plan your day with ease using this complete master itinerary summary for an unforgettable journey.",
-        "duration_seconds": card_dur,
-        "is_itinerary_summary": True,
-        "is_map_transition": False,
-        "origin_coords": first_coords,
-        "destination_coords": last_coords,
-        "attraction_name": None,
-        "origin_name": None,
-        "destination_name": None,
-        "motion_rationale": "Locked stationary cinemagraph preserves typographical clarity on itinerary summary table ($0.00 compute).",
-    }
-    interleaved.append(summary_scene)
+    # 3. Inject Final Scene: Master Summary Card (if enabled)
+    if include_summary_card:
+        summary_scene: Dict[str, Any] = {
+            "scene_index": len(interleaved) + 1,
+            "location_hub": "Master Itinerary Recap",
+            "shot_type": "itinerary_summary_card",
+            "camera_rig": "locked_tripod_telephoto",
+            "camera_movement": "stay",
+            "motion_type": "ken_burns",
+            "camera_waypoints": [{"motion": "stay", "duration_seconds": card_dur}],
+            "color_temp_kelvin": 5500,
+            "visual_prompt": (
+                "An elegant, high-contrast infographic summary board presenting the complete schedule table, "
+                "visitation durations, transit times, and budget breakdown in crisp typography."
+            ),
+            "narration_text": "Plan your day with ease using this complete master itinerary summary for an unforgettable journey.",
+            "duration_seconds": card_dur,
+            "is_itinerary_summary": True,
+            "is_map_transition": False,
+            "origin_coords": first_coords,
+            "destination_coords": last_coords,
+            "attraction_name": None,
+            "origin_name": None,
+            "destination_name": None,
+            "motion_rationale": "Locked stationary cinemagraph preserves typographical clarity on itinerary summary table ($0.00 compute).",
+        }
+        interleaved.append(summary_scene)
 
     # Final pass: Normalize scene indices
     for idx, sc in enumerate(interleaved, 1):

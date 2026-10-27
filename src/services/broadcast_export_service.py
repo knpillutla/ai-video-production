@@ -13,7 +13,7 @@ from src.services.ambient_export_service import build_adaptive_resolution_filter
 from src.services.ambient_metadata_packager import generate_youtube_ambient_package
 from src.services.ambient_shorts_extractor import generate_ambient_short
 from src.services.ambient_translator import localize_metadata_for_languages
-from src.services.cineloop_service import build_seamless_forward_cineloop
+from src.services.cineloop_service import build_seamless_forward_cineloop, ensure_thumbnail_intro_clip
 from src.services.long_play_stretcher import export_long_play_broadcast
 from src.services.thumbnail_ab_packager import generate_thumbnail_ab_variants
 from src.services.topic_memory import topic_memory
@@ -133,12 +133,14 @@ def assemble_dual_masters(
     if not ep_dir and video_clips:
         ep_dir = video_clips[0].parent
 
-    no_loop = no_loop or kwargs.get("is_documentary", False)
-    eff_target_dur = target_duration_sec or kwargs.get("target_duration")
-    sd_custom = kwargs.get("shot_durations")
+    no_loop, eff_target_dur = no_loop or kwargs.get("is_documentary", False), target_duration_sec or kwargs.get("target_duration")
+    sd_custom = list(kwargs.get("shot_durations") or [])
     seamless_clips = list(video_clips) if no_loop else [build_seamless_forward_cineloop(c, crf=crf) for c in video_clips]
-    master_narr = ep_dir / "master_4k_narration.mp4"
-    master_music = ep_dir / "master_4k_ambient.mp4"
+    t_intro = ensure_thumbnail_intro_clip(ep_dir, crf=crf)
+    if t_intro and t_intro not in seamless_clips:
+        seamless_clips.insert(0, t_intro)
+        if sd_custom: sd_custom.insert(0, 2.0)
+    master_narr, master_music = ep_dir / "master_4k_narration.mp4", ep_dir / "master_4k_ambient.mp4"
     narr_audio = kwargs.get("narration_audio_path") or (ep_dir / "spoken_narration.mp3")
     has_narration = bool(narr_audio and Path(narr_audio).is_file() and Path(narr_audio).stat().st_size > 1000)
 
@@ -227,13 +229,8 @@ def assemble_dual_masters(
         else:
             log_pipeline_step("checking master", "4K Pure Nature Master", "completed", "master_4k_nature.mp4 exists", {"file": master_nature.name, "cost": "$0.00"})
 
-    primary = master_narr if has_narration else master_music
-    nat_primary = master_music if has_narration else master_nature
-    return {
-        "master_4k": primary, "master_video_path": primary, "music_master": master_music,
-        "narrative_master": master_narr, "narration_master": master_narr,
-        "nature_master": nat_primary, "master_nature": nat_primary, "master_1080p": primary,
-    }
+    primary, nat_primary = (master_narr if has_narration else master_music), (master_music if has_narration else master_nature)
+    return {"master_4k": primary, "master_video_path": primary, "music_master": master_music, "narrative_master": master_narr, "narration_master": master_narr, "nature_master": nat_primary, "master_nature": nat_primary, "master_1080p": primary}
 
 def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], fade_hours: Optional[float], nature_master: Optional[Path] = None) -> Optional[Path]:
     """Export long-play multi-hour stream loop for primary 4K broadcast master and pure nature edition."""
@@ -244,12 +241,17 @@ def handle_long_play_export(master: Path, ep_dir: Path, hours: Optional[float], 
     if nature_master and nature_master.is_file() and nature_master.resolve() != master.resolve():
         nat_sfx = "_music_only" if "ambient" in nature_master.name or "music" in nature_master.name else "_nature_only"
         lp_nat_path = ep_dir / f"master_4k_{hour_label}hour{nat_sfx}{suffix}_broadcast.mp4"
-        if not lp_nat_path.is_file() or lp_nat_path.stat().st_size < 1000:
-            export_long_play_broadcast(nature_master, lp_nat_path, eff_hours * 3600.0, fade_to_black_hours=fade_hours)
+        if not lp_nat_path.is_file() or lp_nat_path.stat().st_size < 1000: export_long_play_broadcast(nature_master, lp_nat_path, eff_hours * 3600.0, fade_to_black_hours=fade_hours)
     return lp_path if lp_path.is_file() else None
 
 def export_metadata_packages(sb: Any, ep_dir: Path) -> Dict[str, Any]:
     """Generate YouTube SEO, Multi-Language, and A/B Thumbnail metadata."""
+    from src.services.outro_slide_engine import is_documentary_or_tour
+    g, sg, a = str(getattr(sb, "genre", "")), str(getattr(sb, "sub_genre", "")), str(getattr(sb, "primary_archetype", "") or "")
+    if getattr(sb, "is_documentary", False) or is_documentary_or_tour(g, sg, a):
+        from src.studios.documentary_studio.doc_export_service import export_documentary_metadata_package
+        doc_yt = export_documentary_metadata_package(sb, ep_dir)
+        return {"youtube": doc_yt, "youtube_nature_only": doc_yt, "localized": {}, "thumbnail_ab": {}}
     arch = str(getattr(sb, "primary_archetype", None) or getattr(sb, "cluster", None) or "cities")
     title, desc = str(getattr(sb, "title", "Studio 4K Showcase")), str(getattr(sb, "story_topic", "") or "")
     yt_pkg, loc_pkg, ab_pkg = generate_youtube_ambient_package(arch), localize_metadata_for_languages(arch, title, desc or title), generate_thumbnail_ab_variants(arch)

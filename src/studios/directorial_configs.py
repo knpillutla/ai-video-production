@@ -77,6 +77,18 @@ def build_default_video_model_configs(fluid_motion: str, static_elements: str = 
                 "aspect_ratio": "16:9",
             },
         },
+        "h3_max": {
+            "model": "fal-ai/minimax/h3-max-turbo/image-to-video",
+            "prompts": {
+                "positive_prompt": f"Subtle atmospheric movement, locked stationary camera. {static_elements} remain 100% structurally frozen and unmoving. {fluid_motion}, gentle atmospheric drift, zero camera movement, realistic natural lighting.",
+                "negative_prompt": "camera movement, camera pan, panning, tilt, zoom, camera shake, jitter, rapid motion, morphing architecture, changing scenery, structural drift, distortion, cartoon, 3d render, plastic skin, artifacts, humans",
+            },
+            "settings": {
+                "mode": "turbo",
+                "duration": "5",
+                "aspect_ratio": "16:9",
+            },
+        },
         "local_drone": {
             "model": "local_perspective_drone",
             "movement": "stay",

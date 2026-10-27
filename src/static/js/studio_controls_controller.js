@@ -45,6 +45,10 @@ function setExecutionMode(mode, skipPersist = false) {
   if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) {
     currentActiveInspectorEpisode.executionMode = mode;
     currentActiveInspectorEpisode.execution_mode = mode;
+    if (!currentActiveInspectorEpisode.imageModel) {
+      currentActiveInspectorEpisode.imageModel = "zimage";
+      currentActiveInspectorEpisode.image_model = "zimage";
+    }
   }
   if (!skipPersist) persistCurrentEpisodeInputs({ execution_mode: mode });
 }

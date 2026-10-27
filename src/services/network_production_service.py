@@ -2,6 +2,8 @@
 
 from datetime import datetime, timezone
 import json
+import re
+import shutil
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -97,6 +99,7 @@ async def produce_channel_video(
     country: Optional[str] = None,
     language: Optional[str] = None,
     culture: Optional[str] = None,
+    target_shot_index: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Execute live channel pipeline script for selected channel inside isolated user channel folder."""
     effective_user = user_id or "user_krishna_01"
@@ -173,6 +176,66 @@ async def produce_channel_video(
 
     # Resolve episode directory under channel audience brand:
     # channels/{channel_slug}/{format_slug}/{production_name}/{episode_id}
+    is_geo_mode = (
+        eff_genre in ("doc/nations", "doc_nations", "nations")
+        or (primary_archetype or "").lower().strip() in ("cities", "countries", "nations", "city", "nation", "country_dossier", "country_profile", "country_information", "top_10_cities", "top_places_to_visit", "top_50_places", "top_cities")
+        or (sub_genre and ("nations" in sub_genre.lower() or "europe_nations" in sub_genre.lower()))
+    )
+    if is_geo_mode:
+        clean_pname = (production_name or "").strip().lower()
+        is_generic_prod_name = (
+            not clean_pname
+            or clean_pname in ("standalone", "none", "documentary", "doc/nations", "nations")
+            or "nations of" in clean_pname
+            or clean_pname.endswith("_nations")
+            or (sub_genre and clean_pname == sub_genre.lower().strip())
+        )
+        if is_generic_prod_name and episode_id:
+            eff_fmt_check = format_slug or ("documentary" if "documentary" in eff_genre.lower() else ("walking_tour" if "walking" in eff_genre.lower() else "relaxation"))
+            existing_ep_match = storage_service.find_episode_path(
+                user_id=effective_user,
+                channel_id=channel_id,
+                episode_id=episode_id,
+                format_slug=eff_fmt_check,
+            )
+            if existing_ep_match and existing_ep_match.is_dir():
+                saved_p = None
+                if (existing_ep_match / "user_inputs.json").is_file():
+                    try:
+                        u_dat = json.loads((existing_ep_match / "user_inputs.json").read_text("utf-8"))
+                        saved_p = u_dat.get("production_name")
+                    except Exception:
+                        pass
+                if not saved_p and (existing_ep_match / "screenplay.json").is_file():
+                    try:
+                        s_dat = json.loads((existing_ep_match / "screenplay.json").read_text("utf-8"))
+                        saved_p = s_dat.get("destination_entity") or (s_dat.get("title", "").split(":")[0].strip() if ":" in s_dat.get("title", "") else None)
+                    except Exception:
+                        pass
+                if not saved_p and existing_ep_match.parent and existing_ep_match.parent.name not in ("documentary", "relaxation", "walking_tour", channel_id):
+                    saved_p = existing_ep_match.parent.name
+                if saved_p:
+                    production_name = saved_p
+                    clean_pname = production_name.strip().lower()
+                    is_generic_prod_name = False
+                    logger.info(f"geo_production_name_locked_from_existing_episode: episode_id='{episode_id}' production_name='{production_name}'")
+
+        if is_generic_prod_name:
+            try:
+                from src.studios.documentary_studio.doc_geo_rotation import resolve_autonomous_geo_entity
+                resolved_entity = resolve_autonomous_geo_entity(
+                    sub_genre=sub_genre or "europe_nations",
+                    archetype=primary_archetype or "cities",
+                    user_id=effective_user,
+                    channel_id=channel_id,
+                    custom_prompt=prompt,
+                )
+                if resolved_entity:
+                    production_name = resolved_entity
+                    logger.info(f"geo_production_name_resolved_to_destination: entity='{resolved_entity}'")
+            except Exception as geo_err:
+                logger.warning(f"failed_to_resolve_geo_production_name: {geo_err}")
+
     if episode_id:
         eff_fmt = format_slug or ("documentary" if "documentary" in eff_genre.lower() else ("walking_tour" if "walking" in eff_genre.lower() else "relaxation"))
         eff_prod = production_name or "standalone"
@@ -320,7 +383,7 @@ async def produce_channel_video(
         "duration_seconds": float(eff_dur),
         "long_play_hours": long_play_hours,
         "num_shots": -1 if (is_travel_genre or num_shots == -1) else effective_shots,
-        "image_model": image_model,
+        "image_model": image_model or "zimage",
         "motion_model": motion_model,
         "camera_motion": camera_motion,
         "pipeline_strategy": pipeline_strategy,
@@ -369,7 +432,9 @@ async def produce_channel_video(
             {"tier": eff_tier, "duration": duration_seconds, "gemini_key": masked_llm_key},
         )
         logger.info(f"pipeline_stage_1_formulation: key='{masked_llm_key}' genre='{eff_genre}' duration={duration_seconds}s")
-        eff_custom_prompt = (prompt or "").strip() or (production_name or "").strip()
+        eff_custom_prompt = (prompt or "").strip()
+        if not eff_custom_prompt or (is_geo_mode and any(g in eff_custom_prompt.lower() for g in ("nations of", "_nations", "doc/nations"))):
+            eff_custom_prompt = (production_name or "").strip()
         try:
             universal_sp = await dispatch_studio_director(
                 genre=eff_genre,
@@ -407,17 +472,52 @@ async def produce_channel_video(
             logger.error(f"stage_failed: stage='Stage 1: Screenplay' episode_id='{episode_id}' duration={dur_stage1:.2f}s error='{ex}' timestamp={time.time()}")
             raise
 
+    dest_name = (getattr(universal_sp, "destination_entity", None) or "").strip()
+    if not dest_name and is_geo_mode and universal_sp.title:
+        if ":" in universal_sp.title:
+            dest_cand = universal_sp.title.split(":")[0].strip()
+            if len(dest_cand) < 32 and not any(k in dest_cand.lower() for k in ("nations of", "documentary", "wonders of")):
+                dest_name = dest_cand
+    if dest_name:
+        production_name = dest_name
+        if ep_dir:
+            current_prod_folder = ep_dir.parent.name.lower()
+            clean_dest = re.sub(r"[^a-zA-Z0-9_-]", "_", str(dest_name).lower()).strip("_")
+            if current_prod_folder != clean_dest and ("nation" in current_prod_folder or current_prod_folder == "standalone"):
+                target_dest_dir = ep_dir.parent.parent / clean_dest / ep_dir.name
+                try:
+                    if not target_dest_dir.exists():
+                        target_dest_dir.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.move(str(ep_dir), str(target_dest_dir))
+                        ep_dir = target_dest_dir
+                        screenplay_file = ep_dir / "screenplay.json"
+                        pipeline_state_file = ep_dir / "pipeline_state.json"
+                        manifest_file = ep_dir / "episode_manifest.json"
+                        user_inputs_file = ep_dir / "user_inputs.json"
+                        logger.info(f"migrated_generic_geo_ep_dir_to_destination: from='{current_prod_folder}' to='{clean_dest}'")
+                except Exception as mig_ex:
+                    logger.warning(f"failed_to_migrate_ep_dir_to_dest: {mig_ex}")
+
     if episode_id:
         universal_sp.production_id = episode_id
     if hasattr(universal_sp, "tier"):
         universal_sp.tier = eff_tier
-    if motion_model and motion_model != "auto":
-        for sc in getattr(universal_sp, "scenes", []):
-            try:
+    is_doc_pipeline = (
+        is_geo_mode
+        or "doc" in str(eff_genre).lower()
+        or "documentary" in str(eff_fmt if 'eff_fmt' in locals() else "").lower()
+        or getattr(universal_sp, "cluster", "") == "documentary"
+    )
+    for sc in getattr(universal_sp, "scenes", []):
+        try:
+            m_type = str(getattr(sc, "motion_type", "") or "").lower()
+            if is_doc_pipeline and m_type in ("ai_diffusion", "diffusion", "neural", "neural_diffusion"):
+                setattr(sc, "recommended_model", "h3_max")
+            elif motion_model and motion_model != "auto":
                 if not getattr(sc, "recommended_model", None) or sc.recommended_model in ("wan_2_1", "auto"):
                     setattr(sc, "recommended_model", motion_model)
-            except Exception:
-                pass
+        except Exception:
+            pass
     if screenplay_file:
         try:
             screenplay_file.parent.mkdir(parents=True, exist_ok=True)
@@ -476,6 +576,7 @@ async def produce_channel_video(
     manifest_payload = {
         "episode_id": episode_id,
         "title": universal_sp.title,
+        "production_name": production_name,
         "tier": eff_tier,
         "prompt": prompt,
         "genre": eff_genre,
@@ -551,7 +652,7 @@ async def produce_channel_video(
         episode_id=episode_id,
         tier=eff_tier,
         motion_model=eff_motion,
-        image_model=image_model or "flux_dev",
+        image_model=image_model or "zimage",
         photos_only=photos_only,
         motion_only=motion_only,
         audio_only=audio_only,
@@ -564,6 +665,7 @@ async def produce_channel_video(
         force_rerun=force_rerun,
         tts_model=tts_model,
         execution_mode=eff_exec_mode,
+        target_shot_index=target_shot_index,
     )
 
     ep_id = result.get("episode_id") or episode_id or "EP-001"
@@ -836,7 +938,7 @@ async def produce_channel_video(
             "artifact_id": f"{ep_id}_keyframe_p{idx}",
             "category": "image",
             "scene_index": idx,
-            "model": image_model or "flux_dev",
+            "model": image_model or "zimage",
             "owner": effective_user,
             "status": "synthesized" if sz > 1000 else "pending",
             "local_path": fn,
@@ -937,6 +1039,7 @@ async def produce_channel_video(
         "job_id": f"job_{ep_id.lower()}",
         "episode_id": ep_id,
         "title": universal_sp.title,
+        "production_name": production_name,
         "channel_id": channel_id,
         "script": universal_sp.model_dump(),
         "pipeline_state": pipeline_state_payload,

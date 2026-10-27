@@ -317,12 +317,12 @@ function selectStudioFormat(fmtKey, preserveGenre = null) {
     }
   }
 
-  // Show/Hide Country & Region/Language Shelf for Music Video format
+  // Show/Hide Country & Region/Language Shelf for Music Video and Documentary formats
   const countryShelf = document.getElementById("studio-country-language-shelf");
   if (countryShelf) {
-    const isMusic = (fmtKey === "music_video");
-    countryShelf.classList.toggle("hidden", !isMusic);
-    if (isMusic) {
+    const showCountry = (fmtKey === "music_video" || fmtKey === "documentary");
+    countryShelf.classList.toggle("hidden", !showCountry);
+    if (showCountry) {
       initMusicCountryAndLanguageFromNetwork(chSlug);
     }
   }
@@ -394,7 +394,7 @@ function syncGenreDropdownOnly(channelSlug, preserveGenre = null) {
 function syncGenreDropdownForChannel(channelSlug) {
   renderFormatChipsForActiveNetwork(channelSlug);
   syncGenreDropdownOnly(channelSlug);
-  if (activeStudioFormat === "music_video") {
+  if (activeStudioFormat === "music_video" || activeStudioFormat === "documentary") {
     initMusicCountryAndLanguageFromNetwork(channelSlug);
   }
 }
@@ -682,7 +682,7 @@ function updateArchetypeOptions(genreVal, subGenreVal, preserveArch = null) {
       list = archMap["documentary"] || [];
     }
   } else if (genreVal === "doc/nations" || genreVal === "nations") {
-    list = archMap["doc/nations"] || [];
+    list = archMap["doc/nations:" + subGenreVal] || archMap["doc/nations"] || [];
   } else if (genreVal === "science") {
     list = archMap["science:" + subGenreVal] || archMap["science"] || [];
   } else if (archMap[genreVal + ":" + subGenreVal]) {

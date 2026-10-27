@@ -40,6 +40,11 @@ def assemble_documentary_4k_master(
     if out.is_file() and out.stat().st_size > 1000:
         return out
 
+    from src.services.cineloop_service import ensure_thumbnail_intro_clip
+    t_intro = ensure_thumbnail_intro_clip(out.parent, crf=crf)
+    if t_intro and t_intro not in video_clips:
+        video_clips = [t_intro] + list(video_clips)
+
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     n = len(video_clips)
     durations = [_probe_clip_duration(c) for c in video_clips]
@@ -133,17 +138,38 @@ def _build_google_maps_route_url(scenes: List[Any]) -> Optional[str]:
 def export_documentary_metadata_package(
     sb: DocStoryboard,
     ep_dir: Path,
+    audio_tracks: Optional[List[Dict[str, Any]]] = None,
+    shorts_file: Optional[Path] = None,
+    gps_routes: Optional[Dict[str, Path]] = None,
 ) -> Dict[str, Any]:
     """Generate high-CTR YouTube metadata, chapter timestamps, and tags for documentary release."""
-    chapters = ["00:00 🎬 Introduction & Historical Context"]
+    chapters = []
     curr_time = 0.0
     for idx, scene in enumerate(sb.scenes):
-        if idx > 0:
-            m = int(curr_time // 60)
-            s = int(curr_time % 60)
-            loc_label = getattr(scene, "destination_name", None) or getattr(scene, "location_hub", None) or scene.shot_type.title()
-            chapters.append(f"{m:02d}:{s:02d} 🌿 Chapter {idx+1}: {loc_label}")
-        curr_time += scene.duration_seconds
+        m = int(curr_time // 60)
+        s = int(curr_time % 60)
+        h = int(m // 60)
+        time_tag = f"{h:02d}:{m%60:02d}:{s:02d}" if h > 0 else f"{m:02d}:{s:02d}"
+
+        ch_title = getattr(scene, "chapter_title", None)
+        dest = getattr(scene, "destination_name", None)
+        hub = getattr(scene, "location_hub", None)
+        shot = getattr(scene, "shot_type", "scene").replace("_", " ").title()
+
+        if ch_title:
+            label = ch_title
+        elif dest:
+            label = f"Chapter {idx+1}: {dest}"
+        elif hub and hub not in ("Scenic Vista", "Aerial Vista"):
+            label = f"Chapter {idx+1}: {hub}"
+        else:
+            label = f"Chapter {idx+1}: {shot}"
+
+        if idx == 0 and not ch_title:
+            label = "Introduction & Historical Context"
+
+        chapters.append(f"{time_tag} - {label}")
+        curr_time += float(getattr(scene, "duration_seconds", 15.0))
 
     # Build Google Maps itinerary link
     gmaps_url = _build_google_maps_route_url(sb.scenes)
@@ -172,32 +198,68 @@ def export_documentary_metadata_package(
             + "\n\n"
         )
 
+    gps_section = ""
+    if gps_routes:
+        gpx_n = getattr(gps_routes.get("gpx"), "name", "route_itinerary.gpx")
+        kml_n = getattr(gps_routes.get("kml"), "name", "route_itinerary.kml")
+        gps_section = (
+            "🧭 DOWNLOAD GPS ROUTE & OFFLINE MAPS:\n"
+            f"• GPX Route (Garmin / Apple Maps): {gpx_n}\n"
+            f"• KML Tour (Google Earth / My Maps): {kml_n}\n\n"
+        )
+
     description = (
         f"An in-depth 4K cinematic documentary exploring {sb.title}.\n\n"
         f"{map_section}"
+        f"{gps_section}"
         f"{stops_section}"
         f"🎙️ Narration: Authoritative Natural History Voiceover\n"
         f"🎞️ Mastered in 4K UHD (24 fps cinematic cadence) with spatial acoustics.\n\n"
-        f"⏰ Documentary Chapters:\n" + "\n".join(chapters) + "\n\n"
+        f"⏰ CHAPTERS & TIMESTAMPS:\n" + "\n".join(chapters) + "\n\n"
         f"⚠️ TRAVEL ADVISORY & SAFETY DISCLAIMER:\n"
         f"This itinerary, transit fare estimates, and local venue suggestions are provided for informational and editorial entertainment purposes only. Operating hours, admission fees, route conditions, transit rates, and venue safety guidelines are subject to change. Travelers and families should exercise personal discretion and verify current local official advisories before visiting.\n\n"
         f"🌿 100% Commercial Master Rights | CineAI Documentary Studio"
     )
 
+    genre_val = getattr(sb.genre, "value", str(sb.genre))
     tags = [
-        sb.genre.value, "documentary", "4k_documentary", "nature_documentary",
+        genre_val, "documentary", "4k_documentary", "nature_documentary",
         "bbc_earth_style", "cinematic", "educational", "history", "science", "4k_uhd",
         "travel_itinerary", "walking_tour", "travel_guide"
     ]
+
+    tracks_spec = audio_tracks or [
+        {"language": "en", "label": "English (Original)", "voice": "en-GB-RyanNeural", "is_default": True},
+        {"language": "es", "label": "Spanish (Español)", "voice": "es-ES-AlvaroNeural", "is_default": False},
+        {"language": "hi", "label": "Hindi (हिन्दी)", "voice": "hi-IN-MadhurNeural", "is_default": False},
+        {"language": "te", "label": "Telugu (తెలుగు)", "voice": "te-IN-MohanNeural", "is_default": False},
+    ]
+
+    th_variants = getattr(sb, "thumbnail_variants", None) or [
+        {"variant": "A", "headline": getattr(sb, "thumbnail_headline", "WHAT IS THIS PLACE BEST KNOWN FOR?"), "angle": "sovereign_question"},
+        {"variant": "B", "headline": "EUROPE'S GREATEST SECRET", "angle": "hidden_anomaly"},
+        {"variant": "C", "headline": "HOW THEY SURVIVED", "angle": "scale_paradox"},
+    ]
+    pin_comm = getattr(sb, "pinned_comment", None) or (
+        f"📍 PINNED COMMUNITY QUIZ: What surprised you most about {sb.title.split(':')[0]}? Which landmark or story would you explore first? Drop your perspective below! 👇"
+    )
 
     pkg = {
         "title": f"{sb.title} [4K UHD Cinematic Documentary]",
         "description": description,
         "tags": tags,
-        "genre": sb.genre.value,
+        "seo_tags": tags,
+        "genre": genre_val,
         "chapters": chapters,
-        "language": sb.language,
+        "chapter_markers": chapters,
+        "language": getattr(sb, "language", "en-US"),
+        "audio_tracks": tracks_spec,
+        "thumbnail_variants": th_variants,
+        "pinned_comment": pin_comm,
+        "community_quiz": getattr(sb, "community_quiz", None),
         "google_maps_route_url": gmaps_url,
+        "shorts_teaser_file": getattr(shorts_file, "name", None) if shorts_file else None,
+        "gps_route_files": {k: getattr(v, "name", str(v)) for k, v in gps_routes.items()} if gps_routes else None,
         "has_synthetic_media": True,
         "contains_synthetic_media": True,
         "ypp_monetization_safety": "100% AdSense Advertiser-Friendly (Green Dollar Guarantee)",

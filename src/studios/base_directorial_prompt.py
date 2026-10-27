@@ -30,20 +30,16 @@ def build_base_directorial_prompt(
     ch_lower, clean_tier = (channel_id or "").lower(), (tier or "balanced").strip().lower()
     m_lower = (motion_model or "").lower()
 
-    is_nature_relax = (
-        g_lower.startswith("relax") or "nature" in g_lower
-        or a_lower in ("zen", "mountain", "forest", "ocean", "valley", "waterfall", "healing", "rain", "cozy", "blizzard", "hearth", "beach_lounge", "desert")
+    is_nature_relax = g_lower.startswith("relax") or "nature" in g_lower or a_lower in (
+        "zen", "mountain", "forest", "ocean", "valley", "waterfall", "healing", "rain", "cozy", "blizzard", "hearth", "beach_lounge", "desert"
     )
     is_urban_or_travel = (
-        g_lower.startswith("travel") or "travel" in g_lower
-        or a_lower in ("cities", "tourist_places", "iconic_places", "spiritual_places", "natural_wonders", "remote_places")
-        or ch_lower == "skylinediariesindia4k" or (ch_lower == "earth_serenade" and not is_nature_relax) or num_shots == -1
+        g_lower.startswith("travel") or "travel" in g_lower or a_lower in (
+            "cities", "tourist_places", "iconic_places", "spiritual_places", "natural_wonders", "remote_places"
+        ) or ch_lower == "skylinediariesindia4k" or (ch_lower == "earth_serenade" and not is_nature_relax) or num_shots == -1
     )
     is_documentary = "doc" in g_lower or "documentary" in ch_lower or "doc" in (sub_genre or "").lower() or "documentary" in a_lower
-
-    tour_archetypes = {
-        "itinerary_map_tour", "travel_itinerary_tour", "grand_tour", "top_attractions_tour", "local_neighborhood_tour", "culinary_food_tour", "architecture_design_tour",
-    }
+    tour_archetypes = {"itinerary_map_tour", "travel_itinerary_tour", "grand_tour", "top_attractions_tour", "local_neighborhood_tour", "culinary_food_tour", "architecture_design_tour"}
     is_tour = (a_lower in tour_archetypes) or ((sub_genre or "").lower().strip() in tour_archetypes)
     user_chose_fixed_shots = (num_shots is not None and num_shots > 0 and num_shots != -1)
     if user_chose_fixed_shots:
@@ -67,19 +63,19 @@ def build_base_directorial_prompt(
     eff_kelvin, tod_key, tod_desc = detect_lighting_directive(custom_prompt, archetype, color_temp_kelvin or 5500)
     lighting_block = format_universal_lighting_guardrails(tod_key, eff_kelvin, tod_desc)
     exclusion_block = ("\nPREVIOUSLY PRODUCED TOPICS (MANDATORY DEDUPLICATION):\n" + "\n".join(f"- {t}" for t in excluded_topics[-15:]) + "\n") if excluded_topics else ""
-    landmarks_list = "\n".join(f"      {idx}. {lm}" for idx, lm in enumerate(curation_landmarks or [], 1)) if curation_landmarks else ""
-    landmarks_block = f"\nCURATED REGIONAL LANDMARK INSPIRATION:\n{landmarks_list}\n" if landmarks_list else ""
+    landmarks_block = ("\nCURATED REGIONAL LANDMARK INSPIRATION:\n" + "\n".join(f"      {i}. {l}" for i, l in enumerate(curation_landmarks or [], 1)) + "\n") if curation_landmarks else ""
     channel_block = f"\n{profile.format_directorial_guardrails_block()}\n" if channel_id and (profile := get_channel_profile(channel_id)) else ""
 
     motion_rule = (
         f"3. HYBRID MOTION DIRECTORIAL CONTRACT (TIER: {clean_tier.upper()}):\n"
         '   - Gemini DECIDES "motion_type" ("ken_burns" | "ai_diffusion"), "recommended_model", and "motion_rationale" for every scene.\n'
         '   - Default for stable landscapes & geometry: "ken_burns" ($0.00 compute local 4K perspective engine).\n'
-        '   - When "motion_type" is "ai_diffusion", Gemini MUST specify "recommended_model" to avoid hallucinations:\n'
-        '     * "wan_2_1": Best for smooth laminar fluids, glassy rivers, gentle rain, lake reflections, drifting mist/smoke, subtle tree sway (zero melting foam).\n'
-        '     * "kling_v3": Best for violent water impact, plunging waterfalls, roaring cataracts, crashing ocean surf, fire/embers.\n'
-        '     * "kling_pro": Best for complex human/animal movement, street vehicles, and cinemagraph living wallpapers.\n'
-        '     * "local_drone": Best for static topography, architectural monuments, and mountain flights ($0.00 compute).\n'
+        '   - When "motion_type" is "ai_diffusion", Gemini MUST specify "recommended_model":\n'
+        '     * "h3_max": MiniMax H3 Max Turbo (~$0.015/sec) for subtle atmospheric micro-motion (moving clouds, smoke plumes, light water surface ripples, gentle foliage rustle; topography 100% structurally frozen).\n'
+        '     * "wan_2_1" / "wan_4k": Smooth laminar fluids, glassy rivers, gentle rain, lake reflections, drifting mist/smoke.\n'
+        '     * "kling_v3" / "kling_v3_4k": Violent water impact, plunging waterfalls, roaring cataracts, crashing ocean surf, fire/embers.\n'
+        '     * "kling_pro": Complex human/animal movement, street vehicles, and cinemagraph living wallpapers.\n'
+        '     * "local_drone": Static topography, architectural monuments, and mountain flights ($0.00 compute).\n'
         '   - SEQUENTIAL & PARALLEL MOVEMENTS: Direct timeline arrays (e.g. [{"movement": "dollyin", "duration": 6.0}]) or compound movements.'
     )
 
@@ -141,7 +137,8 @@ def build_base_directorial_prompt(
               "   - NO MOVING OBJECTS DIRECTIVE: Still, timeless landscape keyframes with ZERO moving objects.\n"
               "   - Authoritative Measured Narration: Measured, poetic, educational voiceover (~120 WPM).\n"
               "   - 100% Crisp Natural Lighting: Balanced daylight or dramatic authentic golden/blue hour.")
-        diff_doc_model = "kling_v3" if "kling" in m_lower else ("wan_4k" if "4k" in m_lower else "kling_pro")
+        is_doc_format = cluster == "documentary" or genre == "documentary" or is_tour or "doc" in str(genre).lower() or "nations" in str(genre).lower()
+        diff_doc_model = "h3_max" if is_doc_format else ("kling_v3" if "kling" in m_lower else ("wan_4k" if "4k" in m_lower else "kling_pro"))
         if is_low:
             ex_motion_type, ex_rec_model = "ken_burns", "local_drone"
             ex_rationale = "100% local 4K perspective drone flight via ken_burns compound choreography ($0.00 compute)."
@@ -165,9 +162,17 @@ def build_base_directorial_prompt(
         cam_contract = (
             "4. CAMERA RIG & MOTION DIRECTORIAL CONTRACT:\n"
             "   - For AI diffusion models (kling, wan), camera motion is directed in natural language in their prompts.\n"
-            "   - For local drone ('model_configs.local_drone'), motion MUST use supported engine movements: 'stay', 'dollyin', 'dollyout', 'pan-left', 'pan-right', 'tilt-up', 'tilt-down', 'drift-up-right', 'drift-up-left', 'drift-down-right', 'drift-down-left', 'orbit-left', 'orbit-right', or stage arrays.\n"
+            "   - For local drone ('model_configs.local_drone'), motion MUST use supported engine movements: 'stay', 'dollyin', 'dollyout', 'pan-left', 'pan-right', 'tilt-up', 'tilt-down', 'orbit-left', 'orbit-right', or stage arrays.\n"
             "   - Root 'camera_movement' MUST mirror the primary movement string ('stay', 'dollyin', 'pan-right', etc.)."
         )
+
+    is_flight = is_doc_format or is_urban_or_travel or is_tour
+    ex_zimg = "Stunning photorealistic panoramic aerial drone vista, 16:9 bird's-eye perspective from 250m altitude, sharp 5500K lighting." if is_flight else "Stunning photorealistic panoramic landscape, 16:9 locked tripod framing, sharp natural lighting."
+    ex_mot = "Cinematic 4K drone flight. Sweeping slow forward glide and gentle 3D orbital banking arc around the landmark with majestic parallax." if is_flight else "Living wallpaper cinemagraph style. Strictly locked stationary camera on a heavy fixed tripod with zero camera movement, zero pan, zero tilt, zero zoom. Entire frame 100% frozen."
+    ex_mot_neg = "camera shake, jitter, rapid jerky movements, erratic flight, morphing architecture, flickering, distortion, artifacts, humans" if is_flight else "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, camera zoom, rotation, dolly, drone, tracking shot, flythrough, jitter, artifacts, humans"
+    ex_kl_pos = "Cinematic 4K heavy-lift drone flight, smooth forward glide with subtle 3D orbital parallax. Monumental scale, deep atmospheric clarity, zero humans." if is_flight else "Cinemagraph style, living wallpaper. Strictly locked stationary camera on a fixed tripod with zero camera movement, zero camera angles. Topography 100% frozen, zero humans."
+    ex_kl_neg = "camera shake, jitter, jerky motion, rapid speed changes, erratic maneuvers, morphing structures, artifacts" if is_flight else "camera movement, camera motion, camera angles, camera pan, camera tilt, camera zoom, rotation, dolly, drone, tracking shot, flythrough, jitter, artifacts"
+    ex_wan_pos = "Cinematic slow aerial glide, smooth forward camera movement with natural atmospheric depth. Fluid environmental motion, seamless flight." if is_flight else "Living wallpaper cinemagraph. Strictly locked stationary camera on a heavy fixed tripod with zero camera movement. Topography 100% frozen. Smooth laminar fluid dynamics."
 
     root_ext = f"{extra_root_schema.strip()}\n" if extra_root_schema and extra_root_schema.strip() else ""
     scene_ext = f"{extra_scene_schema.strip()}\n" if extra_scene_schema and extra_scene_schema.strip() else ""
@@ -205,7 +210,8 @@ UNIVERSAL CINEMATIC DIRECTIVES (MANDATORY FOR ALL SCENES):
      * "flux_pro": Ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c, 16:9, raw: true.
      * "zimage": Sub-second high-detail photorealism via fal-ai/z-image/turbo, sharp natural lighting, 8 steps.
    - For every scene, populate ALL target video models in "model_configs":
-     * "kling_v3_4k": Native 4K UHD video diffusion (fal-ai/kling-video/v3/4k/image-to-video). High-density optical kinetics (for rain: blinding torrential rainstorm, thick solid white sheets of heavy downpour, intense splashing water exploding off eaves), strictly locked camera, mode: "pro", duration: "5", aspect_ratio: "16:9". NEVER use "living wallpaper" in Kling positive prompts!
+     * "h3_max": MiniMax H3 Max Turbo (fal-ai/minimax/h3-max-turbo/image-to-video) ~$0.015/sec. Subtle atmospheric movement. Low-intensity micro-motion: moving clouds, smoke plumes, light water ripples, gentle foliage breeze. Architecture & topography 100% frozen, mode: "turbo", duration: "5", aspect_ratio: "16:9".
+     * "kling_v3_4k": Native 4K UHD video diffusion (fal-ai/kling-video/v3/4k/image-to-video), mode: "pro", duration: "5", aspect_ratio: "16:9".
      * "kling_v1_6_pro": Cinemagraph living wallpaper (fal-ai/kling-video/v1.6/pro/image-to-video), mode: "pro", duration: "5", aspect_ratio: "16:9".
      * "wan_2_1": Continuous laminar fluid dynamics (fal-ai/wan-i2v), guide_scale 5.0, 30 steps.
      * "local_drone": Camera flight capabilities ("movement": "dollyin"|"pan-right"|"orbit-left", "stay" for relax).
@@ -237,7 +243,7 @@ PRODUCTION SPECIFICATIONS:
 {cadence_spec}
 - Camera Rig Palette: {rig_palette}
 - Target Image Models: ["flux_dev", "flux_pro", "zimage"] (ALL MANDATORY, ZERO FALLBACKS)
-- Target Video Models: ["kling_v3_4k", "kling_v1_6_pro", "wan_2_1", "local_drone"] (ALL MANDATORY, ZERO FALLBACKS)
+- Target Video Models: ["kling_v3_4k", "kling_v1_6_pro", "wan_2_1", "h3_max", "local_drone"] (ALL MANDATORY, ZERO FALLBACKS)
 
 CRITICAL SCHEMA ENFORCEMENT:
 Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
@@ -256,8 +262,8 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
     "audio_mode": "ambient_nature",
     "spoken_narration_script": "Continuous unbroken master voiceover (~{target_words} words for {duration_seconds}s at 125 WPM), seamlessly narrating the journey without loops.",
     "singing_lyrics_spec": "",
-    "suno_musical_tags": "432Hz Solfeggio, pure instrumental relaxation, <soothing instruments matched to scene>, warm velvet pads, 52 BPM, zero vocals, zero drums, -21 LUFS",
-    "suno_prompt": "[Instrumental Ambient Meditation]\\n[Scene Context: <specific visual setting matching the image prompt>]\\n[Tempo: 50 BPM - Resting Heartbeat Pulse]\\n[Tuning: 432Hz Solfeggio Velvet Harmony]\\n[Lead Melody: Hypnotic, slow, tranquil phrasing on <Soothing Lead Instrument suited to scene>]\\n[Accompaniment: Soft acoustic harmonies on <Second Instrument suited to scene>]\\n[Atmosphere: <Ambient Texture suited to scene>, warm velvet pads, gentle natural foley, long smooth reverb decays]\\n[Acoustic Direction: Studio master recording, zero harsh percussion, zero brass, zero vocals, zero drums]\\n[Emotion: Deep tranquil calm, anxiety reduction, effortless meditation and sleep induction]\\n[Outro: Lingering resonant acoustic dissolve]",
+    "suno_musical_tags": "432Hz Solfeggio, pure instrumental relaxation, warm velvet pads, 52 BPM, zero vocals, zero drums, -21 LUFS",
+    "suno_prompt": "[Instrumental Ambient Meditation]\\n[Tempo: 50 BPM]\\n[Tuning: 432Hz]\\n[Emotion: Deep tranquil calm]",
     "vocal_gender": "none", "tempo_bpm": 80, "speech_cadence_wpm": 125, "target_lufs": -14.0, "ducking_db": -18.0
   }},
   "scenes": [
@@ -267,14 +273,15 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
 {scene_ext}      "image_model_configs": {{
         "flux_dev": {{"model": "fal-ai/flux/dev", "prompt": "Photorealistic wide panoramic view, 16:9 cinematic.", "aspect_ratio": "16:9", "guidance_scale": 3.5, "num_inference_steps": 28}},
         "flux_pro": {{"model": "fal-ai/flux-pro/v1.1-ultra", "prompt": "Ultra-photorealistic 8K UHD shot, 16:9.", "aspect_ratio": "16:9", "raw": true}},
-        "zimage": {{"model": "fal-ai/z-image/turbo", "prompt": "Stunning photorealistic panoramic landscape, 16:9 locked tripod framing, sharp natural lighting.", "aspect_ratio": "16:9", "num_inference_steps": 8}}
+        "zimage": {{"model": "fal-ai/z-image/turbo", "prompt": "{ex_zimg}", "aspect_ratio": "16:9", "num_inference_steps": 8}}
       }},
-      "motion_prompt": "Living wallpaper cinemagraph style. Strictly locked stationary camera on a heavy fixed tripod with zero camera movement, zero camera angles, zero pan, zero tilt, zero zoom, zero camera drift. Entire frame, landscape topography, and architecture remain 100% frozen, solid, and motionless. Subtle organic motion of gentle water ripples, waves lapping, and distant foliage sway in the breeze.",
-      "motion_negative_prompt": "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot, flythrough, handheld camera, camera drift, jitter, shaky camera, moving perspective, perspective shift, morphing architecture, changing furniture, artifacts, humans",
+      "motion_prompt": "{ex_mot}",
+      "motion_negative_prompt": "{ex_mot_neg}",
       "model_configs": {{
-        "kling_v3_4k": {{"model": "fal-ai/kling-video/v3/4k/image-to-video", "prompts": {{"positive_prompt": "Cinemagraph style, living wallpaper. Strictly locked stationary camera on a fixed tripod with zero camera movement, zero camera angles. Topography 100% frozen. Fluid motion, native 4K UHD atmospheric depth, zero humans.", "negative_prompt": "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot, flythrough, handheld camera, camera drift, jitter, shaky camera, moving perspective, perspective shift, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}},
-        "kling_v1_6_pro": {{"model": "fal-ai/kling-video/v1.6/pro/image-to-video", "prompts": {{"positive_prompt": "Cinemagraph style, living wallpaper. Strictly locked stationary camera on a fixed tripod with zero camera movement, zero camera angles. Entire frame 100% frozen, subtle natural water movement and breeze, zero humans.", "negative_prompt": "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot, flythrough, handheld camera, camera drift, jitter, shaky camera, moving perspective, perspective shift, artifacts"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}},
-        "wan_2_1": {{"model": "fal-ai/wan-i2v", "prompts": {{"positive_prompt": "Living wallpaper cinemagraph. Strictly locked stationary camera on a heavy fixed tripod with zero camera movement, zero camera angles, zero panning, zero tilt, zero zoom, zero camera drift. Topography and architecture 100% frozen. Smooth continuous laminar fluid dynamics of gentle water ripples, seamless loop compatible.", "negative_prompt": "camera movement, camera motion, camera angles, camera pan, panning, camera tilt, tilting, camera zoom, zooming, camera rotation, dolly, drone, tracking shot, flythrough, handheld camera, camera drift, jitter, shaky camera, moving perspective, perspective shift, artifacts"}}, "settings": {{"guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9"}}}},
+        "h3_max": {{"model": "fal-ai/minimax/h3-max-turbo/image-to-video", "prompts": {{"positive_prompt": "Subtle atmospheric movement, locked stationary camera on heavy fixed tripod. Landscape and architecture 100% structurally frozen. Subtle organic drifting clouds and water ripples.", "negative_prompt": "camera movement, camera pan, tilt, zoom, camera shake, jitter, rapid motion, morphing architecture, changing scenery, distortion, artifacts"}}, "settings": {{"mode": "turbo", "duration": "5", "aspect_ratio": "16:9"}}}},
+        "kling_v3_4k": {{"model": "fal-ai/kling-video/v3/4k/image-to-video", "prompts": {{"positive_prompt": "{ex_kl_pos}", "negative_prompt": "{ex_kl_neg}"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}},
+        "kling_v1_6_pro": {{"model": "fal-ai/kling-video/v1.6/pro/image-to-video", "prompts": {{"positive_prompt": "{ex_kl_pos}", "negative_prompt": "{ex_kl_neg}"}}, "settings": {{"mode": "pro", "duration": "5", "aspect_ratio": "16:9"}}}},
+        "wan_2_1": {{"model": "fal-ai/wan-i2v", "prompts": {{"positive_prompt": "{ex_wan_pos}", "negative_prompt": "{ex_kl_neg}"}}, "settings": {{"guide_scale": 5.0, "num_inference_steps": 30, "aspect_ratio": "16:9"}}}},
         "local_drone": {{"model": "local_perspective_drone", "movement": "{'stay' if is_nature_relax else 'dollyin'}", "start_pan": "center", "start_zoom": "normal", "curve": "cosine", "rationale": "{ex_rationale}"}}
       }},
       "domain": "landscape_solid", "motion_type": "{ex_motion_type}", "recommended_model": "{ex_rec_model}", "camera_movement": "{default_cam_move}",
@@ -286,8 +293,7 @@ Return ONLY a valid JSON object matching RelaxScreenplay:{schema_mandate}
     "ctr_titles": ["3 HOURS of Deep Serenity in [Landmark] ⋄ 432Hz Soundbath - 4K UHD", "Sleep Under [Landmark Sky] ✦ 432Hz Tone - 4K"],
     "description_with_timestamps": "Immerse yourself in [Landmark Name]. Broadcast 4K clarity.\\n\\n⏱️ Chapters:\\n0:00 - Vista 1",
     "seo_tags": ["nature relaxation", "living wallpaper", "4k nature", "ambient nature"],
-    "has_synthetic_media": true, "ypp_monetization_safety": "100% AdSense Advertiser-Friendly (Green Dollar Guarantee)",
-    "thumbnail_concept_prompts": ["Ultra-crisp 16:9 cinematic shot of [Landmark Name], striking natural lighting."]
+    "has_synthetic_media": true, "ypp_monetization_safety": "100% Green Dollar Guarantee", "thumbnail_concept_prompts": ["Ultra-crisp 16:9 cinematic shot of [Landmark Name], striking natural lighting."]
   }}
 }}
 Do NOT output markdown backticks or preamble. Output raw JSON only."""

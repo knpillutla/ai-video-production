@@ -15,7 +15,7 @@ from src.core.telemetry import logger
 def resolve_scene_motion_model(
     scene: Any,
     tier: str = "balanced",
-    requested_motion_model: str = "wan",
+    requested_motion_model: str = "h3_max",
     scene_index: int = 0,
     total_scenes: int = 1,
     genre: str = "relax/nature",
@@ -30,7 +30,9 @@ def resolve_scene_motion_model(
         )
 
     clean_tier = (tier or "balanced").strip().lower()
-    base_model = requested_motion_model or "wan"
+    base_model = requested_motion_model or "h3_max"
+    if base_model == "auto":
+        base_model = "h3_max"
     clean_exec = (execution_mode or "test").strip().lower()
 
     # 0. User / Directorial Selection of Local Motion Engine
@@ -40,7 +42,7 @@ def resolve_scene_motion_model(
 
     is_diffusion = (base_model or "").lower() in (
         "kling_v3_4k", "kling_v3", "kling_4k", "kling_pro", "kling_1_6", "kling_v1_6_pro",
-        "wan", "wan_2_1", "wan_4k", "hunyuan",
+        "wan", "wan_2_1", "wan_4k", "h3", "h3_max", "minimax", "hailuo", "hunyuan",
     )
 
     # In test mode, force local drone unless explicitly forcing AI motion
@@ -48,25 +50,32 @@ def resolve_scene_motion_model(
         rationale = f"Test execution mode: Local perspective drone mandated for Scene {scene_index + 1} ($0.00 compute)"
         return "local_zoompan", False, rationale
 
+    is_doc = any(k in str(genre).lower() for k in ("doc", "nations", "documentary", "tour", "euro_discovery"))
+
     # 1. Flagship Cinematic Tier or Explicit AI Motion Request -> 100% AI Video Diffusion
     if clean_tier in ("cinematic", "movie", "high", "flagship") or force_ai_motion:
-        rec_model = getattr(scene, "recommended_model", None) or getattr(scene, "motion_model", None)
-        # Explicit user/pipeline requested model takes top priority over script default
-        if base_model and base_model != "auto":
-            eff_model = base_model
-        elif rec_model and rec_model not in ("auto", "local_drone"):
-            eff_model = rec_model
+        if is_doc:
+            eff_model = "h3_max"
         else:
-            eff_model = "wan"
+            rec_model = getattr(scene, "recommended_model", None) or getattr(scene, "motion_model", None)
+            # Explicit user/pipeline requested model takes top priority over script default
+            if base_model and base_model != "auto":
+                eff_model = base_model
+            elif rec_model and rec_model not in ("auto", "local_drone"):
+                eff_model = rec_model
+            else:
+                eff_model = "h3_max"
 
         if eff_model in ("kling_4k", "kling_v3_4k", "kling_v3"):
             eff_model = "kling_v3"
         elif eff_model in ("kling_pro", "kling_v1_6_pro", "kling_1_6", "kling"):
             eff_model = "kling_pro"
-        elif eff_model in ("wan_4k", "wan_super_res"):
+        elif eff_model in ("h3", "h3_max", "minimax", "hailuo"):
+            eff_model = "h3_max"
+        elif eff_model in ("wan_4k", "wan_super_res", "wan-2.1-4k", "wan2.1 4k"):
             eff_model = "wan_4k"
         elif eff_model in ("wan", "wan_2_1", "wan21"):
-            eff_model = "wan"
+            eff_model = "wan_4k"
 
         rationale = f"Cinematic tier: Full neural video diffusion mandated ({eff_model})"
         return eff_model, False, rationale
@@ -85,9 +94,22 @@ def resolve_scene_motion_model(
             "The screenplay script is the foundation for all production. Fallback is prohibited; stopping."
         )
 
+    is_doc = any(k in str(genre).lower() for k in ("doc", "nations", "documentary", "tour"))
+
     if raw_motion_type in ("ai_diffusion", "diffusion", "neural", "neural_diffusion"):
+        # Documentary format mandate: always use h3_max ($0.015/s) to save cost instead of script recommended_model
+        if is_doc:
+            eff_model = "h3_max"
+            rationale = (
+                f"Documentary format mandate: Scene {scene_index + 1} strictly uses "
+                f"cost-optimized h3_max ($0.015/s) for all ai_diffusion motion instead of script recommended model"
+            )
+            return eff_model, False, rationale
+
         rec_model = getattr(scene, "recommended_model", None) or getattr(scene, "motion_model", None)
         eff_model = rec_model if (rec_model and rec_model not in ("auto", "local_drone")) else base_model
+        if eff_model in ("h3", "h3_max", "minimax", "hailuo"):
+            eff_model = "h3_max"
         rationale = (
             f"Prod tier (Gemini Directive): Scene {scene_index + 1} dictates "
             f"live AI video diffusion via model '{eff_model}'"

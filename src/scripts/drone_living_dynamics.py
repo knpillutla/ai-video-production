@@ -52,7 +52,7 @@ class SpecularWaterShimmerEngine:
         c_dark_ocean = (hsv[:, :, 0] >= 80) & (hsv[:, :, 0] <= 145) & (hsv[:, :, 1] >= 10) & (hsv[:, :, 2] >= 12) & (hsv[:, :, 2] <= 110)
         c_specular = (hsv[:, :, 0] >= 65) & (hsv[:, :, 0] <= 145) & (hsv[:, :, 1] <= 45) & (hsv[:, :, 2] >= 150)
         water_cand = (c_classic | c_turquoise | c_dark_ocean | c_specular)
-        water_cand[:int(height * 0.20), :] = False
+        water_cand[:int(height * 0.45), :] = False
         water_cand[hard_terrain > 0] = False
 
         k_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
@@ -87,14 +87,7 @@ class SpecularWaterShimmerEngine:
                     dx = (3.5 * self.scale * np.sin(gx * 0.008 + t) + 1.8 * self.scale * np.sin(gx * 0.020 - 1.3 * t)).astype(np.float32)
                     dy = (2.5 * self.scale * np.cos(gy * 0.010 - t) + 1.2 * self.scale * np.cos(gy * 0.025 + 1.1 * t)).astype(np.float32)
                     wave_roi = cv2.remap(roi_in, gx + dx, gy + dy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-
-                    sh1 = np.sin(gx * 0.035 + 2.0 * t) * np.cos(gy * 0.035 - 1.8 * t)
-                    sh2 = np.cos(gx * 0.070 - 1.4 * t + 0.7) * np.sin(gy * 0.065 + 2.0 * t)
-                    caustic_raw = np.clip(sh1 + sh2 - 0.15, 0.0, 1.8) ** 1.8
-                    glint_bgr = (caustic_raw[:, :, None] * water_weight_roi[:, :, None] * np.array([45, 65, 80], dtype=np.float32)).astype(np.uint8)
-                    wave_glint = cv2.add(wave_roi, glint_bgr)
-
-                    blended = cv2.blendLinear(roi_in, wave_glint, inv_water_weight_roi, water_weight_roi)
+                    blended = cv2.blendLinear(roi_in, wave_roi, inv_water_weight_roi, water_weight_roi)
                     self.plates.append(blended)
                 self.has_water = True
 
@@ -231,7 +224,7 @@ class MicroKineticObjectEngine:
 class DroneLivingWorld:
     """Unified Orchestrator: Water shimmer, cloud drift, and micro-kinetic objects precomputed into cyclic plates."""
 
-    def __init__(self, img: np.ndarray, width: int, height: int, enable_water: bool = True, enable_clouds: bool = True, enable_objects: bool = True, num_frames: int = 36):
+    def __init__(self, img: np.ndarray, width: int, height: int, enable_water: bool = False, enable_clouds: bool = False, enable_objects: bool = False, num_frames: int = 36):
         self.num_frames = num_frames
         self.cycle_plates: List[np.ndarray] = []
 
