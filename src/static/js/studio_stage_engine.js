@@ -152,7 +152,7 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
   renderInspectorFromVideo(vid);
   if (typeof filterChannelArchive === "function") filterChannelArchive();
 
-  const chSlug = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : (vid.channelId || vid.channel_id || "earth_serenade");
+  const chSlug = (vid.channelId || vid.channel_id) || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel && selectedStudioChannel !== "all") ? selectedStudioChannel : "earth_serenade");
   const epId = vid.id || vid.episode_id || "EP-001";
   const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
   const durSec = vid.durationSeconds || (vid.duration ? parseInt(vid.duration, 10) : ((typeof getEffectiveProductionDuration === "function") ? getEffectiveProductionDuration().durSec : 120));
@@ -618,17 +618,56 @@ function retryEpisodeWithFallback(epId) {
   startStudioLiveStageProgress(ep, ep.pipelineStrategy);
 }
 
+function resolveActiveStudioEpisode(explicitVid) {
+  if (explicitVid && (explicitVid.id || explicitVid.episode_id)) return explicitVid;
+  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id || currentActiveInspectorEpisode.episode_id)) {
+    return currentActiveInspectorEpisode;
+  }
+  const epCode = document.getElementById("studio-episode-code")?.value?.trim();
+  const pInput = document.getElementById("studio-production-name")?.value?.trim().toLowerCase().replace(/\s+/g, "_");
+  const chSlug = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel && selectedStudioChannel !== "all") ? selectedStudioChannel : null;
+
+  const candidateLists = [
+    (typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) ? channelArchiveEpisodes : [],
+    (typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) ? studioVideos : []
+  ];
+
+  for (const list of candidateLists) {
+    if (!list.length) continue;
+    if (epCode || pInput) {
+      const match = list.find(x => {
+        if (!x) return false;
+        const xId = String(x.id || x.episode_id || "").trim().toUpperCase();
+        if (epCode && xId !== epCode.toUpperCase()) return false;
+        if (pInput) {
+          const xProd = String(x.production_name || "").trim().toLowerCase().replace(/\s+/g, "_");
+          if (xProd && xProd !== pInput) return false;
+        }
+        if (chSlug && String(x.channelId || x.channel_id || "").toLowerCase() !== chSlug.toLowerCase()) return false;
+        return true;
+      });
+      if (match) return match;
+    }
+  }
+  return explicitVid || currentActiveInspectorEpisode || null;
+}
+
 function advanceToKeyframesStage(vid, imageModelOverride, forceRerun = false) {
-  let target = vid || currentActiveInspectorEpisode;
-  if (!target) return;
+  let target = resolveActiveStudioEpisode(vid);
+  if (!target) {
+    console.warn("advanceToKeyframesStage: No active episode found to generate keyframes.");
+    return;
+  }
   target.currentStage = 2;
   target.status = "processing";
   target.progress = 25;
   target.force_rerun = Boolean(forceRerun);
   if (imageModelOverride) {
     target.imageModel = imageModelOverride;
+    target.image_model = imageModelOverride;
   } else if (!target.imageModel) {
     target.imageModel = "zimage";
+    target.image_model = "zimage";
   }
   currentActiveInspectorEpisode = target;
   renderInspectorFromVideo(target);
@@ -637,7 +676,7 @@ function advanceToKeyframesStage(vid, imageModelOverride, forceRerun = false) {
 }
 
 function regenerateSingleKeyframe(vid, shotIdx, imageModelOverride) {
-  let target = vid || currentActiveInspectorEpisode;
+  let target = resolveActiveStudioEpisode(vid);
   if (!target) return;
   target.target_shot_index = parseInt(shotIdx, 10);
   target.currentStage = 2;
@@ -646,6 +685,7 @@ function regenerateSingleKeyframe(vid, shotIdx, imageModelOverride) {
   target.force_rerun = true;
   if (imageModelOverride) {
     target.imageModel = imageModelOverride;
+    target.image_model = imageModelOverride;
   }
   currentActiveInspectorEpisode = target;
   renderInspectorFromVideo(target);
@@ -654,7 +694,7 @@ function regenerateSingleKeyframe(vid, shotIdx, imageModelOverride) {
 }
 
 function advanceToAudioStage(vid, ttsModelOverride, forceRerun = false) {
-  let target = vid || currentActiveInspectorEpisode;
+  let target = resolveActiveStudioEpisode(vid);
   if (!target) return;
   target.currentStage = 3;
   target.status = "processing";
@@ -672,7 +712,7 @@ function advanceToAudioStage(vid, ttsModelOverride, forceRerun = false) {
 }
 
 function advanceToMotionStage(vid, motionModelOverride, forceRerun = false) {
-  let target = vid || currentActiveInspectorEpisode;
+  let target = resolveActiveStudioEpisode(vid);
   if (!target) return;
   target.target_shot_index = null;
   target.currentStage = 4;
@@ -693,7 +733,7 @@ function advanceToMotionStage(vid, motionModelOverride, forceRerun = false) {
 }
 
 function regenerateSingleMotionClip(vid, shotIdx, motionModelOverride) {
-  let target = vid || currentActiveInspectorEpisode;
+  let target = resolveActiveStudioEpisode(vid);
   if (!target) return;
   target.target_shot_index = parseInt(shotIdx, 10);
   target.currentStage = 4;
@@ -710,7 +750,7 @@ function regenerateSingleMotionClip(vid, shotIdx, motionModelOverride) {
 }
 
 function advanceToMasterStage(vid, forceRerun = false) {
-  let target = vid || currentActiveInspectorEpisode;
+  let target = resolveActiveStudioEpisode(vid);
   if (!target) return;
   target.currentStage = 5;
   target.status = "processing";

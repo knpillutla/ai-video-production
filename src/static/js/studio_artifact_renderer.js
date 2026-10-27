@@ -347,6 +347,7 @@ function renderScriptSection(vid) {
 }
 
 function renderKeyframesList(vid) {
+  if (vid) currentActiveInspectorEpisode = vid;
   const c = document.getElementById("panel-section-images"), countEl = document.getElementById("panel-images-count");
   if (!c) return;
   const isProc = vid.status === "processing", isFailed = vid.status === "failed", stage = vid.currentStage || 1;

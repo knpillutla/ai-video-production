@@ -8,6 +8,7 @@ FOOD_ALIASES: Dict[str, str] = {
     "food_culture_rituals": "food_culture_rituals", "food_culture": "food_culture_rituals", "dining_etiquette": "food_culture_rituals", "culinary_rituals": "food_culture_rituals", "eating_customs": "food_culture_rituals", "food_traditions": "food_culture_rituals", "kitchen_rules": "food_culture_rituals",
     "culinary_gastronomic_heritage": "culinary_gastronomic_heritage", "gastronomic_heritage": "culinary_gastronomic_heritage", "culinary_heritage": "culinary_gastronomic_heritage", "street_food": "culinary_gastronomic_heritage", "national_dishes": "culinary_gastronomic_heritage",
     "agriculture_farming_harvests": "agriculture_farming_harvests", "agriculture": "agriculture_farming_harvests", "farming": "agriculture_farming_harvests", "harvests": "agriculture_farming_harvests", "agrarian_heartland": "agriculture_farming_harvests", "crop_harvests": "agriculture_farming_harvests", "vineyards_orchards": "agriculture_farming_harvests", "farms": "agriculture_farming_harvests",
+    "supermarkets_and_grocery_culture": "supermarkets_and_grocery_culture", "supermarkets": "supermarkets_and_grocery_culture", "supermarket": "supermarkets_and_grocery_culture", "grocery_stores": "supermarkets_and_grocery_culture", "grocery_store": "supermarkets_and_grocery_culture", "supermarket_culture": "supermarkets_and_grocery_culture", "grocery_culture": "supermarkets_and_grocery_culture", "hypermarkets": "supermarkets_and_grocery_culture", "convenience_stores": "supermarkets_and_grocery_culture", "food_halls": "supermarkets_and_grocery_culture", "grocery_shopping": "supermarkets_and_grocery_culture",
 }
 
 FOOD_DIRECTIVES: Dict[str, str] = {
@@ -51,6 +52,14 @@ Celebrate the nation's fertile lands, master farmers, ancient irrigation systems
 * Earthy Human Resonance: The deep bond between farmers and soil, generational agricultural wisdom, harvest festival pageantry, and farm-to-table pride.
 * Visual Aesthetics: Slow low-altitude drone glides across undulating crop terraces in dawn mist, golden hour wheat swaying in gentle breezes, combine harvesters creating dust spirals, and macro dew on ripe grapes.
 * Overlay Specs: "chapter_title": "AGRARIAN HARVEST", "fact_badge": "🚜 Agricultural wealth (e.g. '🌾 14M Hectares Arable Land', '🍇 2,000-Year Vineyard Terroir')".
+""",
+    "supermarkets_and_grocery_culture": """
+--- SPECIALIZED MANDATE: SUPERMARKETS & GROCERY CULTURE ---
+Explore the nation's unique supermarkets, hypermarkets, gourmet food halls, and daily grocery rituals:
+* Subject Focus: Iconic domestic grocery chains and formats (hypermarkets, discounters, gourmet food halls, neighborhood convenience stores / konbini / bodegas), packaging aesthetics, specialty snack and beverage aisles, and the sheer abundance of local staples.
+* Cultural Consumer Habits: Daily fresh market vs weekly bulk buying habits, fresh bakery counters (baguettes, pastries, warm bread), artisanal cheese and charcuterie stations, prepared bento/ready-meals, zero-waste initiatives, and bottle deposit return machines.
+* Visual Aesthetics: Smooth eye-level steadycam glides through brightly lit, colorfully stacked grocery aisles; mouthwatering macro focus on fresh deli/bakery counters; vibrant produce misting systems; and bustling checkouts.
+* Overlay Specs: "chapter_title": "GROCERY CULTURE", "fact_badge": "🛒 Supermarket quirk (e.g. '🥖 30M Daily Fresh Baguettes', '🍱 50,000 Konbini Nationwide', '🧀 1,200 AOC Cheeses on Shelf')".
 """,
 }
 

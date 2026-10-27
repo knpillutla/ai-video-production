@@ -23,6 +23,11 @@ FOOD_TEMPLATES: dict[str, list[str]] = {
         "{entity}'s Agricultural Powerhouse: Vast Farmlands, Golden Harvests & Precision Agritech",
         "The Agrarian Heart of {entity}: Terraced Fields, Heritage Vineyards & Farming Mastery",
     ],
+    "supermarkets_and_grocery_culture": [
+        "Inside {entity}'s Supermarkets: Unique Aisles, Weird Snacks & Daily Grocery Culture",
+        "Why Supermarkets in {entity} Are in a League of Their Own: Aisles, Prices & Hidden Gems",
+        "What Shopping in {entity}'s Supermarkets Reveals About How Locals Actually Live",
+    ],
 }
 
 FOOD_ALIASES: dict[str, str] = {
@@ -31,6 +36,7 @@ FOOD_ALIASES: dict[str, str] = {
     "food_culture": "food_culture_rituals", "dining_etiquette": "food_culture_rituals", "culinary_rituals": "food_culture_rituals", "eating_customs": "food_culture_rituals", "food_traditions": "food_culture_rituals", "kitchen_rules": "food_culture_rituals",
     "gastronomic_heritage": "culinary_gastronomic_heritage", "culinary_heritage": "culinary_gastronomic_heritage", "street_food": "culinary_gastronomic_heritage", "national_dishes": "culinary_gastronomic_heritage",
     "agriculture": "agriculture_farming_harvests", "farming": "agriculture_farming_harvests", "harvests": "agriculture_farming_harvests", "agrarian_heartland": "agriculture_farming_harvests", "crop_harvests": "agriculture_farming_harvests", "vineyards_orchards": "agriculture_farming_harvests", "farms": "agriculture_farming_harvests",
+    "supermarkets": "supermarkets_and_grocery_culture", "supermarket": "supermarkets_and_grocery_culture", "grocery_stores": "supermarkets_and_grocery_culture", "grocery_store": "supermarkets_and_grocery_culture", "supermarket_culture": "supermarkets_and_grocery_culture", "grocery_culture": "supermarkets_and_grocery_culture", "hypermarkets": "supermarkets_and_grocery_culture", "convenience_stores": "supermarkets_and_grocery_culture", "food_halls": "supermarkets_and_grocery_culture", "grocery_shopping": "supermarkets_and_grocery_culture",
 }
 
 FOOD_GENRE_MAP: dict[str, DocGenre] = {
@@ -39,5 +45,6 @@ FOOD_GENRE_MAP: dict[str, DocGenre] = {
     "food_culture_rituals": DocGenre.PLACES,
     "culinary_gastronomic_heritage": DocGenre.PLACES,
     "agriculture_farming_harvests": DocGenre.PLACES,
+    "supermarkets_and_grocery_culture": DocGenre.PLACES,
 }
 

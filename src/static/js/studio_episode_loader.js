@@ -270,9 +270,16 @@ function setProductionControlsViewOnly(isViewOnly, episodeId) {
 }
 
 function unlockForNewProduction() {
+  currentActiveInspectorEpisode = null;
   setProductionControlsViewOnly(false, null);
-  if (typeof currentActiveInspectorEpisode !== "undefined") currentActiveInspectorEpisode = null;
-  if (typeof switchCreationTab === "function") switchCreationTab("new");
+  const pInput = document.getElementById("studio-production-name");
+  if (pInput) pInput.value = "";
+  const epCode = document.getElementById("studio-episode-code");
+  if (epCode) epCode.value = "EP-001";
+  if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
+  if (typeof switchCreationTab === "function" && typeof activeCreationTab !== "undefined" && activeCreationTab !== "new") {
+    switchCreationTab("new");
+  }
   if (typeof clearStudioInputs === "function") clearStudioInputs();
 }
 

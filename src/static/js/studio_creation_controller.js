@@ -414,6 +414,7 @@ function onStudioContinentChange(continentVal, preserveCountry = null, preserveS
     </option>
   `).join("");
   cSelector.value = targetCountry;
+  attachFirstLetterKeyboardNav(cSelector);
 
   onStudioCountryChange(targetCountry, preserveSubRegion, preserveLang);
 }
@@ -591,6 +592,7 @@ function onGenreChange(genreVal, preserveSubGenre = null, preserveArch = null) {
 
   subSelector.innerHTML = list.map(item => `<option value="${item.val}" ${item.val === targetSub ? 'selected' : ''}>${item.label}</option>`).join("");
   subSelector.value = targetSub;
+  attachFirstLetterKeyboardNav(subSelector);
   
   updateArchetypeOptions(genreVal, targetSub, preserveArch);
   onSubGenreChange(targetSub);
@@ -705,20 +707,113 @@ function updateArchetypeOptions(genreVal, subGenreVal, preserveArch = null) {
     }
   }
 
-  const currentArch = preserveArch || archSelector.value;
-  const targetArch = (currentArch && list.some(x => x.val === currentArch))
-    ? currentArch
-    : (smartDefault && list.some(x => x.val === smartDefault)
-      ? smartDefault
-      : (genreVal === "documentary" && subGenreVal === "doc_architecture" && list.some(x => x.val === "ancient_civilizations_history")
-        ? "ancient_civilizations_history"
-        : (genreVal === "documentary" && subGenreVal === "travel_itinerary_tour" && list.some(x => x.val === "itinerary_map_tour")
-          ? "itinerary_map_tour"
-          : (subGenreVal && (subGenreVal.includes("bedroom") || subGenreVal.includes("cabin")) && list.find(x => x.val.includes("bedroom") || x.val.includes("cabin"))?.val) || list[0]?.val || "")));
+  // Deduplicate and Sort all archetype options alphabetically in ASCENDING order (A-Z) by their clean text
+  const seenVals = new Set();
+  const uniqueList = list.filter(item => {
+    if (!item || !item.val || seenVals.has(item.val)) return false;
+    seenVals.add(item.val);
+    return true;
+  });
 
-  archSelector.innerHTML = list.map(item => `<option value="${item.val}" ${item.val === targetArch ? 'selected' : ''}>${item.label}</option>`).join("");
+  const sortedList = uniqueList.sort((a, b) => {
+    const textA = String(a.label || "").replace(/^[^a-zA-Z0-9]+/, "").trim().toLowerCase();
+    const textB = String(b.label || "").replace(/^[^a-zA-Z0-9]+/, "").trim().toLowerCase();
+    return textA.localeCompare(textB);
+  });
+
+  const currentArch = preserveArch || archSelector.value;
+  const targetArch = (currentArch && sortedList.some(x => x.val === currentArch))
+    ? currentArch
+    : (smartDefault && sortedList.some(x => x.val === smartDefault)
+      ? smartDefault
+      : (genreVal === "documentary" && subGenreVal === "doc_architecture" && sortedList.some(x => x.val === "ancient_civilizations_history")
+        ? "ancient_civilizations_history"
+        : (genreVal === "documentary" && subGenreVal === "travel_itinerary_tour" && sortedList.some(x => x.val === "itinerary_map_tour")
+          ? "itinerary_map_tour"
+          : (subGenreVal && (subGenreVal.includes("bedroom") || subGenreVal.includes("cabin")) && sortedList.find(x => x.val.includes("bedroom") || x.val.includes("cabin"))?.val) || sortedList[0]?.val || "")));
+
+  archSelector.innerHTML = sortedList.map(item => `<option value="${item.val}" ${item.val === targetArch ? 'selected' : ''}>${item.label}</option>`).join("");
   archSelector.value = targetArch;
   onArchetypeChange(archSelector.value);
+
+  attachFirstLetterKeyboardNav(archSelector);
+}
+
+function attachFirstLetterKeyboardNav(selectEl) {
+  if (!selectEl || selectEl.dataset.keyboardNavAttached === "true") return;
+  selectEl.dataset.keyboardNavAttached = "true";
+
+  let typeBuffer = "";
+  let lastKeyTime = 0;
+
+  selectEl.addEventListener("keydown", (e) => {
+    // Only capture alphanumeric characters without modifier keys (ignore space, enter, tab, arrows)
+    if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && /[a-zA-Z0-9]/.test(e.key)) {
+      const key = e.key.toLowerCase();
+      const options = Array.from(selectEl.options);
+      if (!options.length) return;
+
+      const now = Date.now();
+      const timeDiff = now - lastKeyTime;
+      const currentIdx = selectEl.selectedIndex;
+      const currentClean = currentIdx >= 0 ? options[currentIdx].text.replace(/^[^a-zA-Z0-9]+/, "").trim().toLowerCase() : "";
+
+      let targetIdx = -1;
+
+      // Rapid repeat of the same letter when already on an option starting with that letter -> cycle
+      if (key === typeBuffer && timeDiff < 800 && currentClean.startsWith(key)) {
+        for (let i = 1; i <= options.length; i++) {
+          const idx = (currentIdx + i) % options.length;
+          const clean = options[idx].text.replace(/^[^a-zA-Z0-9]+/, "").trim().toLowerCase();
+          if (clean.startsWith(key)) {
+            targetIdx = idx;
+            break;
+          }
+        }
+      } else {
+        // Multi-char typing if quick and different key (e.g. typing "s" then "u" for "supermarkets")
+        if (timeDiff < 800 && typeBuffer.length > 0 && key !== typeBuffer) {
+          typeBuffer += key;
+        } else {
+          typeBuffer = key;
+        }
+
+        // Search from beginning (index 0) to navigate to the FIRST value starting with the typed query
+        for (let i = 0; i < options.length; i++) {
+          const clean = options[i].text.replace(/^[^a-zA-Z0-9]+/, "").trim().toLowerCase();
+          if (clean.startsWith(typeBuffer)) {
+            targetIdx = i;
+            break;
+          }
+        }
+
+        // If multi-char buffer didn't match, fall back to searching for single key from index 0
+        if (targetIdx === -1 && typeBuffer.length > 1) {
+          typeBuffer = key;
+          for (let i = 0; i < options.length; i++) {
+            const clean = options[i].text.replace(/^[^a-zA-Z0-9]+/, "").trim().toLowerCase();
+            if (clean.startsWith(typeBuffer)) {
+              targetIdx = i;
+              break;
+            }
+          }
+        }
+      }
+
+      lastKeyTime = now;
+
+      if (targetIdx >= 0) {
+        e.preventDefault();
+        selectEl.selectedIndex = targetIdx;
+        selectEl.dispatchEvent(new Event("change"));
+      }
+    }
+  });
+
+  selectEl.addEventListener("blur", () => {
+    typeBuffer = "";
+    lastKeyTime = 0;
+  });
 }
 
 function onSubGenreChange(val) {

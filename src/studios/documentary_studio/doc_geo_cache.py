@@ -82,7 +82,24 @@ def get_visited_entities(
     cat_key = "visited_cities" if "cit" in category.lower() else "visited_countries"
     sub_map = cache.get(cat_key, {})
     visited_list = sub_map.get(sub_genre.lower().strip(), [])
-    return {str(item).lower().strip() for item in visited_list}
+    visited = {str(item).lower().strip() for item in visited_list}
+
+    # Also automatically discover visited entities from disk directories under the channel:
+    if user_id and channel_id:
+        try:
+            net_path = storage_service.get_network_path(user_id, channel_id)
+            for search_dir in (net_path / "documentary", net_path):
+                if search_dir.is_dir():
+                    for sub in search_dir.iterdir():
+                        if sub.is_dir() and sub.name.lower() not in (
+                            "documentary", "relaxation", "walking_tour", "music_video", "short", "standalone"
+                        ):
+                            name_clean = sub.name.lower().replace("_", " ").strip()
+                            visited.add(name_clean)
+                            visited.add(sub.name.lower().strip())
+        except Exception as ex:
+            logger.warning(f"disk_geo_visited_scan_warning: {ex}")
+    return visited
 
 
 def record_visited_entity(

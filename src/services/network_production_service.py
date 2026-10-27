@@ -178,9 +178,12 @@ async def produce_channel_video(
     # channels/{channel_slug}/{format_slug}/{production_name}/{episode_id}
     is_geo_mode = (
         eff_genre in ("doc/nations", "doc_nations", "nations")
-        or (primary_archetype or "").lower().strip() in ("cities", "countries", "nations", "city", "nation", "country_dossier", "country_profile", "country_information", "top_10_cities", "top_places_to_visit", "top_50_places", "top_cities")
+        or (primary_archetype or "").lower().strip() in ("cities", "countries", "nations", "city", "nation", "country_dossier", "country_profile", "country_information", "top_10_cities", "top_places_to_visit", "top_50_places", "top_cities", "supermarkets_and_grocery_culture", "supermarkets")
         or (sub_genre and ("nations" in sub_genre.lower() or "europe_nations" in sub_genre.lower()))
     )
+    is_downstream_stage = bool(photos_only or motion_only or audio_only or master_only)
+    is_resume_flow = not (script_only or force_rerun)
+
     if is_geo_mode:
         clean_pname = (production_name or "").strip().lower()
         is_generic_prod_name = (
@@ -190,7 +193,9 @@ async def produce_channel_video(
             or clean_pname.endswith("_nations")
             or (sub_genre and clean_pname == sub_genre.lower().strip())
         )
-        if is_generic_prod_name and episode_id:
+        # ONLY lock production_name from an existing episode if this is an explicit downstream resumption
+        # (e.g. photos_only, motion_only, audio_only, master_only) and NOT a new script formulation.
+        if is_generic_prod_name and episode_id and is_downstream_stage:
             eff_fmt_check = format_slug or ("documentary" if "documentary" in eff_genre.lower() else ("walking_tour" if "walking" in eff_genre.lower() else "relaxation"))
             existing_ep_match = storage_service.find_episode_path(
                 user_id=effective_user,
@@ -225,7 +230,7 @@ async def produce_channel_video(
                 from src.studios.documentary_studio.doc_geo_rotation import resolve_autonomous_geo_entity
                 resolved_entity = resolve_autonomous_geo_entity(
                     sub_genre=sub_genre or "europe_nations",
-                    archetype=primary_archetype or "cities",
+                    archetype=primary_archetype or "country_profile",
                     user_id=effective_user,
                     channel_id=channel_id,
                     custom_prompt=prompt,
@@ -283,9 +288,6 @@ async def produce_channel_video(
         except Exception:
             pass
 
-
-    is_downstream_stage = bool(photos_only or motion_only or audio_only or master_only)
-    is_resume_flow = not (script_only or force_rerun)
 
     existing_sp = None
     if screenplay_file and screenplay_file.is_file() and screenplay_file.stat().st_size > 50:

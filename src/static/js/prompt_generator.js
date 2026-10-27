@@ -151,6 +151,11 @@ function clearStudioInputs() {
   const pInput = document.getElementById("youtube-prompt-input"), uInput = document.getElementById("youtube-url-input");
   if (pInput) { pInput.value = ""; pInput.focus(); flashPromptInput(pInput); }
   if (uInput) uInput.value = "";
+  const prodInput = document.getElementById("studio-production-name");
+  if (prodInput) prodInput.value = "";
+  const epCode = document.getElementById("studio-episode-code");
+  if (epCode) epCode.value = "EP-001";
+  if (typeof currentActiveInspectorEpisode !== "undefined") currentActiveInspectorEpisode = null;
   document.querySelectorAll("input[name='niche_theme_radio']").forEach(r => r.checked = false);
   const setV = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
   const setC = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
@@ -159,6 +164,7 @@ function clearStudioInputs() {
   setV("studio-voice-gender", "female"); setV("studio-language", "en");
   clearTemplateCardHighlights(); selectProductionTier("low_cost");
   if (typeof setProductionControlsViewOnly === "function") setProductionControlsViewOnly(false, null);
+  if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
 }
 
 function deriveTitleFromInput(text, mode) {
@@ -248,7 +254,7 @@ function quickTestProduceFromPrompt() {
     const optName = selOpt ? (selOpt.getAttribute("data-name") || selOpt.textContent.split("(")[0].trim()) : seriesSelect.value;
     if (optName && optName !== "standalone") selProdName = optName;
   }
-  const isGeoNationsMode = selGenreVal === "doc/nations" || selGenreVal === "nations" || (selSubgenreVal && selSubgenreVal.includes("nations")) || ["cities", "countries", "nations", "city", "nation", "country_dossier", "country_profile", "top_10_cities", "top_places_to_visit", "top_50_places"].includes(selArchVal);
+  const isGeoNationsMode = selGenreVal === "doc/nations" || selGenreVal === "nations" || (selSubgenreVal && selSubgenreVal.includes("nations")) || ["cities", "countries", "nations", "city", "nation", "country_dossier", "country_profile", "top_10_cities", "top_places_to_visit", "top_50_places", "supermarkets_and_grocery_culture", "supermarkets"].includes(selArchVal);
   if (!selProdName || selProdName.toLowerCase() === "standalone") {
     if (isGeoNationsMode) {
       selProdName = null;

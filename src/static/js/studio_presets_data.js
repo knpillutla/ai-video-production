@@ -836,7 +836,7 @@ const STUDIO_ARCHETYPES_MAP = {
   "relax/zen": [{ val: "karesansui_temple", label: "🪷 Kyoto Raked Stone Garden" }, { val: "sagano_bamboo_basin", label: "🎋 Bamboo Grove & Basin" }, { val: "sacred_lotus_pond", label: "🪷 Sacred Lotus Pond & Koi" }],
   "relax/ambient": [{ val: "nordic_aurora_fjord", label: "🌌 Nordic Aurora Borealis" }, { val: "twilight_alpine_valley", label: "✨ Velvet Twilight Cabin" }, { val: "desert_oasis_starlight", label: "🏜️ Desert Oasis & Milky Way" }, { val: "biophilic_greenhouse", label: "🌿 Greenhouse & Velvet Rain" }],
   "documentary": [
-    { val: "countries", label: "🌍 360° Sovereign Country Dossier & Almanac" },
+    { val: "countries", label: "🌍 Country Dossier & Almanac (360° Sovereign Profile)" },
     { val: "cities", label: "🏙️ Deep-Dive Single City Exploration & Living Spirit" },
     { val: "top_10_cities", label: "🏆 Top 10 Cities & Attractions Countdown" },
     { val: "top_places_to_visit", label: "✨ Top Places to Visit (National Bucket List)" },
@@ -872,6 +872,7 @@ const STUDIO_ARCHETYPES_MAP = {
     { val: "food_production_consumption", label: "🌾 Food Production vs Consumption (What They Grow vs What They Eat)" },
     { val: "regional_cuisines", label: "🍲 Regional Cuisines (What They Eat in North, South & Coastal Provinces)" },
     { val: "food_culture_rituals", label: "🍷 Food Culture & Dining Rituals (Unwritten Kitchen Rules & Feasts)" },
+    { val: "supermarkets_and_grocery_culture", label: "🛒 Supermarkets & Grocery Culture (Unique Aisles, Snacks & Retail)" },
     { val: "most_dangerous", label: "⚠️ Most Dangerous Places & Extreme Frontiers (Treacherous Passes & Survival)" },
     { val: "women_of_nation", label: "👩 Women of the Nation (Daily Lives, Traditions, Matriarchs & Roles)" },
     { val: "men_of_nation", label: "👨 Men of the Nation (Craft, Brotherhood, Endurance & Work Culture)" },
@@ -902,7 +903,7 @@ const STUDIO_ARCHETYPES_MAP = {
     { val: "tour_itinerary", label: "🗺️ Travel Itinerary Tour (Ordered Route & Day Plan)" },
     { val: "top_places_to_visit", label: "✨ Top Places to Visit (National Bucket List)" },
     { val: "top_10_cities", label: "🏆 Top 10 Cities & Attractions Countdown" },
-    { val: "countries", label: "🌍 360° Sovereign Country Dossier & Almanac" },
+    { val: "countries", label: "🌍 Country Dossier & Almanac (360° Sovereign Profile)" },
     { val: "cities", label: "🏙️ Deep-Dive Single City Exploration & Living Spirit" }
   ],
   "doc/nations": [
@@ -937,6 +938,7 @@ const STUDIO_ARCHETYPES_MAP = {
     { val: "food_production_consumption", label: "🌾 Food Production vs Consumption (What They Grow vs What They Eat)" },
     { val: "regional_cuisines", label: "🍲 Regional Cuisines (What They Eat in North, South & Coastal Provinces)" },
     { val: "food_culture_rituals", label: "🍷 Food Culture & Dining Rituals (Unwritten Kitchen Rules & Feasts)" },
+    { val: "supermarkets_and_grocery_culture", label: "🛒 Supermarkets & Grocery Culture (Unique Aisles, Snacks & Retail)" },
     { val: "most_dangerous", label: "⚠️ Most Dangerous Places & Extreme Frontiers (Treacherous Passes & Survival)" },
     { val: "women_of_nation", label: "👩 Women of the Nation (Daily Lives, Traditions, Matriarchs & Roles)" },
     { val: "men_of_nation", label: "👨 Men of the Nation (Craft, Brotherhood, Endurance & Work Culture)" },
@@ -1237,6 +1239,7 @@ const STUDIO_ARCHETYPE_HINTS = {
   coastal_islands_maritime: "e.g. Maritime Wonders of Norway: Lofoten Islands fishing rorbuer, sheer fjord cliff walls, and Arctic cod drying racks...",
   historic_trade_routes_journeys: "e.g. The Great Silk Road of Uzbekistan: Samarkand turquoise tile domes, Bukhara trading caravanserais, and Kyzylkum desert trails...",
   geographic_regions_zones: "e.g. Regions of the United States: Pacific Northwest, American Southwest, New England, and Deep South...",
-  cultural_mosaic_traditions: "e.g. Cultural Mosaic of India: Kashmiri, Punjabi, Bengali, Rajasthani, and Tamil living customs & heritage..."
+  cultural_mosaic_traditions: "e.g. Cultural Mosaic of India: Kashmiri, Punjabi, Bengali, Rajasthani, and Tamil living customs & heritage...",
+  supermarkets_and_grocery_culture: "e.g. Inside Japanese convenience stores & depachika, French hypermarkets & cheese aisles, or German supermarket culture..."
 };
 
