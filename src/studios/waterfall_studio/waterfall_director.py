@@ -22,6 +22,7 @@ from src.studios.ambient_world.relax_models import (
     RelaxScreenplay,
 )
 from src.studios.waterfall_studio.waterfall_prompt import WATERFALL_LANDMARK_POOL, build_waterfall_prompt
+from src.studios.directorial_configs import build_default_image_model_configs
 
 
 async def generate_waterfall_screenplay(
@@ -106,18 +107,10 @@ def _build_deterministic_waterfall_screenplay(prompt: str, duration_seconds: flo
                     "across the screen into a churning turquoise basin with soft rising mist under moody diffused overcast skies. "
                     "Pristine natural wilderness, strictly zero buildings, zero boats, zero tourists, zero structures."
                 ),
-                image_model_configs={
-                    "flux_1_1_pro_ultra": {
-                        "model": "fal-ai/flux-pro/v1.1-ultra",
-                        "prompt": (
-                            f"A photorealistic, eye-level frontal view directly confronting the monumental roaring waterfall wall at {prompt}. "
-                            "Symmetrical 16:9 cinematic framing, shot on a locked tripod. The powerful cascading cataract spans wall-to-wall "
-                            "across the screen into a churning turquoise basin with soft rising mist. Pristine natural wilderness, strictly zero buildings, zero tourists."
-                        ),
-                        "aspect_ratio": "16:9",
-                        "raw": True,
-                    }
-                },
+                image_model_configs=build_default_image_model_configs(
+                    prompt=f"Monumental cascading waterfall wall at {prompt}, churning turquoise basin, sun-drenched golden amber sidelight, vibrant emerald moss on dark rock cliffs, crystalline rising mist, razor-sharp textures.",
+                    landmark_name=prompt,
+                ),
                 motion_prompt=(
                     "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement. "
                     "Rock cliffs and horizon remain 100% frozen and static. Only the water moves: continuous downward flowing cataract curtains "

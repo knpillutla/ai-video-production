@@ -1,0 +1,70 @@
+<!-- ARTIFACT PANEL: MUSIC VIDEO FORMAT (5 Stages: Lyrics -> Photos -> Song -> Motion -> Master) -->
+<div id="artifact-panel-music_video" class="format-artifact-panel space-y-2 hidden">
+  <!-- STAGE 1: LYRICS & SCREENPLAY -->
+  <div id="panel-stage-row-mv-lyrics" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <div class="flex items-center gap-2">
+        <span class="stage-header-title"><span class="stage-number-badge">1</span> <span>Rhyming Lyrics &amp; Screenplay</span></span>
+        <span id="panel-mv-lyrics-status" class="text-[var(--text-muted)] font-mono text-xs">Ready</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button type="button" onclick="openScriptDrawer('visual')" class="btn-runway-secondary py-0.5 px-2 text-[10px] font-bold flex items-center gap-1" title="View Lyrical Verse & Shots">
+          <i class="fa-solid fa-scroll text-[9px]"></i>
+          <span>View Lyrics</span>
+        </button>
+      </div>
+    </div>
+    <div id="panel-section-mv-lyrics" class="w-full min-h-[38px] pb-0.5">
+      <!-- Rendered by music_video_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 2: KEYFRAME PHOTOS -->
+  <div id="panel-stage-row-mv-images" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <span class="stage-header-title"><span class="stage-number-badge">2</span> <span>Keyframe Photos</span></span>
+      <span id="panel-mv-images-count" class="px-2 py-0.5 rounded-full bg-[var(--card-subtle)] text-[var(--text)] font-mono text-xs font-bold border border-[var(--border)]">0 Shots</span>
+    </div>
+    <div id="panel-section-mv-images" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 w-full items-start pb-1">
+      <!-- Rendered by music_video_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 3: SUNO V3.5 VOCAL SONG MASTER -->
+  <div id="panel-stage-row-mv-audio" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <span class="stage-header-title"><span class="stage-number-badge">3</span> <span>Suno v3.5 Vocal Song Master</span></span>
+      <div class="flex items-center gap-1">
+        <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, null, true)" class="btn-runway-primary py-0.5 px-2 text-[10px] font-bold shadow-sm flex items-center gap-1" title="Synthesize Song">
+          <i class="fa-solid fa-music text-[9px]"></i>
+          <span>Suno Song</span>
+        </button>
+      </div>
+    </div>
+    <div id="panel-section-mv-audio" class="grid grid-cols-2 gap-1.5 w-full min-h-[52px] pb-0.5">
+      <!-- Rendered by music_video_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 4: LIP-SYNC & CHOREOGRAPHY MOTION -->
+  <div id="panel-stage-row-mv-motion" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <span class="stage-header-title"><span class="stage-number-badge">4</span> <span>Lip-Sync &amp; Dance Video Motion</span></span>
+      <span id="panel-mv-raw-videos-count" class="px-2 py-0.5 rounded-full bg-[var(--card-subtle)] text-[var(--text)] font-mono text-xs font-bold border border-[var(--border)]">0 Clips</span>
+    </div>
+    <div id="panel-section-mv-raw-videos" class="grid grid-cols-3 gap-1.5 w-full min-h-[50px] pb-0.5">
+      <!-- Rendered by music_video_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 5: 4K MASTER VIDEO -->
+  <div id="panel-stage-row-mv-master" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <span class="stage-header-title"><span class="stage-number-badge">5</span> <span>4K Music Master Video</span></span>
+      <span class="text-xs font-mono text-[var(--text-muted)]">Single-Pass Master</span>
+    </div>
+    <div id="panel-section-mv-master-videos" class="grid grid-cols-2 gap-1.5 w-full min-h-[48px] pt-0.5 pb-0.5">
+      <!-- Rendered by music_video_artifacts_renderer.js -->
+    </div>
+  </div>
+</div>

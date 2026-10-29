@@ -41,6 +41,51 @@ function openActiveMasterVideoInPopup() {
   if (typeof openVideoPopup === "function" && targetUrl) openVideoPopup(targetUrl, title, meta);
 }
 
+async function refreshArtifactsPanel() {
+  const icon = document.getElementById("icon-refresh-artifacts");
+  if (icon) icon.classList.add("fa-spin");
+  try {
+    const vid = currentActiveInspectorEpisode;
+    if (!vid) return;
+    const epId = vid.id || vid.episode_id || "EP-001";
+    if (epId === "NEW") return;
+    const vFmt = String(vid.format || vid.format_slug || "").toLowerCase().trim();
+    const isDoc = vFmt.includes("documentary") || String(vid.genre || "").toLowerCase().startsWith("doc");
+    const isMv = vFmt.includes("music_video") || String(vid.genre || "").toLowerCase().startsWith("music/") || String(vid.genre || "").toLowerCase().startsWith("dance/");
+    const chSlug = vid.channelId || vid.channel_id || (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all" ? selectedStudioChannel : (isDoc ? "euro_discovery" : "nature_rhythms"));
+    const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
+    const fmtQ = encodeURIComponent(vid.format || vid.format_slug || "");
+    const prodQ = encodeURIComponent(vid.production_name || vid.country || vid.location_hub || "");
+
+    const pollEndpoint = isMv ? "/api/music-video/poll-artifacts" : (isDoc ? "/api/documentary/poll-artifacts" : "/api/production/poll-artifacts");
+    const res = await fetch(`${pollEndpoint}?channel_id=${chSlug}&episode_id=${epId}&format=${fmtQ}&production_name=${prodQ}&user_id=${encodeURIComponent(uEmail)}&_t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data) {
+        if (Array.isArray(data.keyframes)) vid.keyframes = data.keyframes;
+        if (Array.isArray(data.motion_clips)) vid.motion_clips = data.motion_clips;
+        if (Array.isArray(data.audio_stems)) vid.audio_stems = data.audio_stems;
+        if (data.story) vid.story = data.story;
+        if (data.video_url) { vid.video_url = data.video_url; vid.videoUrl = data.video_url; }
+        if (data.nature_video_url) vid.nature_video_url = data.nature_video_url;
+        if (Array.isArray(data.editions) && data.editions.length) vid.editions = data.editions;
+        if (data.screenplay) vid.screenplay = data.screenplay;
+        if (data.pipeline_state) vid.pipeline_state = data.pipeline_state;
+        if (data.status) vid.status = data.status;
+        if (data.currentStage) vid.currentStage = data.currentStage;
+        if (data.stage) vid.stage = data.stage;
+        vid._artifactsChecked = true;
+      }
+    }
+    renderInspectorFromVideo(vid);
+    if (typeof filterChannelArchive === "function") filterChannelArchive();
+  } catch (err) {
+    console.warn("refreshArtifactsPanel error:", err);
+  } finally {
+    if (icon) icon.classList.remove("fa-spin");
+  }
+}
+
 function renderInspectorFromVideo(vid) {
   if (!vid) return;
   currentActiveInspectorEpisode = vid;
@@ -92,62 +137,92 @@ function renderInspectorFromVideo(vid) {
     });
   }
 
-  // Fetch disk artifacts if keyframes, motion clips, or audio stems are missing (only when idle/ready and not already checked)
-  if (vid.status !== "processing" && epId && epId !== "NEW" && !vid._artifactsChecked && (!vid.keyframes || vid.keyframes.length === 0 || !vid.motion_clips || vid.motion_clips.length === 0 || !vid.audio_stems || vid.audio_stems.length === 0)) {
-    vid._artifactsChecked = true;
-    const chSlug = vid.channelId || vid.channel_id || (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all" ? selectedStudioChannel : "nature_rhythms");
+  // Fetch fresh disk artifacts from server to ensure accurate, up-to-date representation (debounced with lock)
+  if (epId && epId !== "NEW" && !vid._isInspectorPolling) {
+    vid._isInspectorPolling = true;
+    const isDoc = vFmt.includes("documentary") || String(vid.genre || "").toLowerCase().startsWith("doc");
+    const isMv = vFmt.includes("music_video") || String(vid.genre || "").toLowerCase().startsWith("music/") || String(vid.genre || "").toLowerCase().startsWith("dance/");
+    const chSlug = vid.channelId || vid.channel_id || (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all" ? selectedStudioChannel : (isDoc ? "euro_discovery" : "nature_rhythms"));
     const uEmail = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
     const fmtQ = encodeURIComponent(vid.format || vid.format_slug || "");
-    const prodQ = encodeURIComponent(vid.production_name || "");
-    fetch(`/api/production/poll-artifacts?channel_id=${chSlug}&episode_id=${epId}&format=${fmtQ}&production_name=${prodQ}&user_id=${encodeURIComponent(uEmail)}`)
+    const prodQ = encodeURIComponent(vid.production_name || vid.country || vid.location_hub || "");
+    const pollEndpoint = isMv ? "/api/music-video/poll-artifacts" : (isDoc ? "/api/documentary/poll-artifacts" : "/api/production/poll-artifacts");
+
+    fetch(`${pollEndpoint}?channel_id=${chSlug}&episode_id=${epId}&format=${fmtQ}&production_name=${prodQ}&user_id=${encodeURIComponent(uEmail)}&_t=${Date.now()}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (data && currentActiveInspectorEpisode && (currentActiveInspectorEpisode.id === epId || currentActiveInspectorEpisode.episode_id === epId)) {
-          let updated = false;
-          if (data.keyframes && data.keyframes.length > 0 && (!currentActiveInspectorEpisode.keyframes || currentActiveInspectorEpisode.keyframes.length === 0)) {
-            currentActiveInspectorEpisode.keyframes = data.keyframes;
-            updated = true;
+        if (!data || !currentActiveInspectorEpisode) return;
+        const curEpId = String(currentActiveInspectorEpisode.id || currentActiveInspectorEpisode.episode_id || "").toUpperCase();
+        const curProd = String(currentActiveInspectorEpisode.production_name || "standalone").toLowerCase().replace(/[^a-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "");
+        const polledEpId = String(epId).toUpperCase();
+        const polledProd = String(vid.production_name || "standalone").toLowerCase().replace(/[^a-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "");
+
+        if (curEpId === polledEpId && curProd === polledProd) {
+          let hasChanged = false;
+          const newKfs = data.keyframes || [];
+          if (JSON.stringify(currentActiveInspectorEpisode.keyframes || []) !== JSON.stringify(newKfs)) {
+            currentActiveInspectorEpisode.keyframes = newKfs;
+            hasChanged = true;
           }
-          if (data.motion_clips && data.motion_clips.length > 0 && (!currentActiveInspectorEpisode.motion_clips || currentActiveInspectorEpisode.motion_clips.length === 0)) {
-            currentActiveInspectorEpisode.motion_clips = data.motion_clips;
-            updated = true;
+          const newMcs = data.motion_clips || [];
+          if (JSON.stringify(currentActiveInspectorEpisode.motion_clips || []) !== JSON.stringify(newMcs)) {
+            currentActiveInspectorEpisode.motion_clips = newMcs;
+            hasChanged = true;
           }
-          if (data.audio_stems && data.audio_stems.length > 0 && (!currentActiveInspectorEpisode.audio_stems || currentActiveInspectorEpisode.audio_stems.length === 0)) {
-            currentActiveInspectorEpisode.audio_stems = data.audio_stems;
-            updated = true;
+          const newStems = data.audio_stems || [];
+          if (JSON.stringify(currentActiveInspectorEpisode.audio_stems || []) !== JSON.stringify(newStems)) {
+            currentActiveInspectorEpisode.audio_stems = newStems;
+            hasChanged = true;
           }
-          if (data.video_url && !currentActiveInspectorEpisode.video_url) {
+          if (data.story && JSON.stringify(currentActiveInspectorEpisode.story || {}) !== JSON.stringify(data.story)) {
+            currentActiveInspectorEpisode.story = data.story;
+            hasChanged = true;
+          }
+          if (data.screenplay && JSON.stringify(currentActiveInspectorEpisode.screenplay || {}) !== JSON.stringify(data.screenplay)) {
+            currentActiveInspectorEpisode.screenplay = data.screenplay;
+            hasChanged = true;
+          }
+          if (data.script && JSON.stringify(currentActiveInspectorEpisode.script || {}) !== JSON.stringify(data.script)) {
+            currentActiveInspectorEpisode.script = data.script;
+            hasChanged = true;
+          }
+          if (data.video_url && currentActiveInspectorEpisode.video_url !== data.video_url) {
             currentActiveInspectorEpisode.video_url = data.video_url;
             currentActiveInspectorEpisode.videoUrl = data.video_url;
-            updated = true;
+            hasChanged = true;
           }
-          if (data.editions && data.editions.length > 0) {
-            currentActiveInspectorEpisode.editions = data.editions;
-            updated = true;
+          if (data.status && currentActiveInspectorEpisode.status !== data.status) {
+            if (currentActiveInspectorEpisode.status === "processing" && (data.status === "ready" || data.status === "idle")) {
+              // Preserve active processing state during live synthesis
+            } else {
+              currentActiveInspectorEpisode.status = data.status;
+              hasChanged = true;
+            }
           }
-          if (data.long_play_editions && data.long_play_editions.length > 0) {
-            currentActiveInspectorEpisode.long_play_editions = data.long_play_editions;
-            updated = true;
-          }
-          if (data.stage && (!currentActiveInspectorEpisode.currentStage || currentActiveInspectorEpisode.currentStage < data.stage)) {
-            currentActiveInspectorEpisode.currentStage = data.stage;
-            updated = true;
-          }
-          if (data.screenplay && !currentActiveInspectorEpisode.screenplay) {
-            currentActiveInspectorEpisode.screenplay = data.screenplay;
-            updated = true;
-          }
-          if (updated) {
-            if (typeof renderKeyframesList === "function") renderKeyframesList(currentActiveInspectorEpisode);
-            if (typeof renderAudioStemsList === "function") renderAudioStemsList(currentActiveInspectorEpisode);
-            if (typeof renderMotionClipsList === "function") renderMotionClipsList(currentActiveInspectorEpisode);
-            if (typeof renderMasterVideosList === "function") renderMasterVideosList(currentActiveInspectorEpisode);
-            if (typeof renderLongPlayStretchSection === "function") renderLongPlayStretchSection(currentActiveInspectorEpisode);
+
+          if (hasChanged) {
+            if (window.StudioFormatDispatcher?.dispatch) {
+              window.StudioFormatDispatcher.dispatch(currentActiveInspectorEpisode);
+            } else {
+              if (typeof updateFormatStageLayout === "function") updateFormatStageLayout(currentActiveInspectorEpisode);
+              if (typeof updateStagePillsForFormat === "function") updateStagePillsForFormat(currentActiveInspectorEpisode);
+              if (typeof renderStorySection === "function") renderStorySection(currentActiveInspectorEpisode);
+              if (typeof renderNarrationSection === "function") renderNarrationSection(currentActiveInspectorEpisode);
+              if (typeof renderScriptSection === "function") renderScriptSection(currentActiveInspectorEpisode);
+              if (typeof renderKeyframesList === "function") renderKeyframesList(currentActiveInspectorEpisode);
+              if (typeof renderAudioStemsList === "function") renderAudioStemsList(currentActiveInspectorEpisode);
+              if (typeof renderMotionClipsList === "function") renderMotionClipsList(currentActiveInspectorEpisode);
+              if (typeof renderMasterVideosList === "function") renderMasterVideosList(currentActiveInspectorEpisode);
+              if (typeof renderLongPlayStretchSection === "function") renderLongPlayStretchSection(currentActiveInspectorEpisode);
+            }
             if (typeof updateStageGateDock === "function") updateStageGateDock(currentActiveInspectorEpisode);
           }
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        vid._isInspectorPolling = false;
+      });
   }
 
   if (vid.genre) {
@@ -200,53 +275,121 @@ function renderInspectorFromVideo(vid) {
 
   const video = document.getElementById("studio-panel-video"), overlay = document.getElementById("studio-panel-processing-overlay");
   const playerBadge = document.getElementById("panel-player-status-badge");
+  const heroResult = document.getElementById("panel-hero-result-section");
+  const headerProgWrap = document.getElementById("panel-header-progress-wrap");
+  const headerProgStage = document.getElementById("panel-header-progress-stage");
+  const headerProgSub = document.getElementById("panel-header-progress-sub");
+  const headerProgPct = document.getElementById("panel-header-progress-pct");
+  const headerProgBar = document.getElementById("panel-header-progress-bar");
   document.getElementById("studio-panel-empty-overlay")?.classList.add("hidden");
-  
-  if (video) {
-    const cleanMaster = (vid.videoUrl && !vid.videoUrl.includes("preview_master")) ? vid.videoUrl : (vid.video_url && !vid.video_url.includes("preview_master") ? vid.video_url : null);
-    if (vid.status === "completed" && vid.currentStage >= 5 && cleanMaster) {
-      overlay?.classList.add("hidden");
-      if (playerBadge) {
-        playerBadge.textContent = "Ready";
-        playerBadge.className = "px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30";
-      }
-      if (!video.src.endsWith(cleanMaster)) video.src = cleanMaster;
-    } else {
-      overlay?.classList.remove("hidden");
-      if (playerBadge) {
-        playerBadge.textContent = "Processing";
-        playerBadge.className = "px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/30 animate-pulse";
-      }
-      const titleEl = document.getElementById("studio-panel-processing-title");
-      const subTitle = document.getElementById("studio-panel-processing-subtitle");
-      const barEl = document.getElementById("studio-panel-progress-bar");
-      const stepEl = document.getElementById("studio-panel-stage-step");
-      const pctEl = document.getElementById("studio-panel-stage-pct");
-      
-      const stage = vid.currentStage || 1;
-      const stageData = {
-        1: { title: "Generating Screenplay & Storyboard", subtitle: "Gemini 2.5 Flash • Context & beat formulation", pct: "20%", step: "Stage 1 of 5" },
-        2: { title: "Synthesizing 4K Keyframe Photos", subtitle: "FLUX 1.1 Pro Ultra • Hasselblad 8K cinematography", pct: "40%", step: "Stage 2 of 5" },
-        3: { title: "Mastering Voiceover & Audio Stems", subtitle: "Azure TTS & Velvet DSP • 48kHz -14 LUFS soundscape", pct: "65%", step: "Stage 3 of 5" },
-        4: { title: "Rendering Diffusion Video Motion", subtitle: "Wan 2.1 / Kling v3 • Living wallpaper cinemagraph", pct: "85%", step: "Stage 4 of 5" },
-        5: { title: "Assembling 4K Master Deliverables", subtitle: "Single-pass FFmpeg • Dual-aspect broadcast stretch", pct: "95%", step: "Stage 5 of 5" }
-      };
 
-      const cur = stageData[stage] || stageData[1];
-      if (titleEl) titleEl.textContent = cur.title;
-      if (subTitle) subTitle.textContent = cur.subtitle;
-      if (barEl) barEl.style.width = cur.pct;
-      if (stepEl) stepEl.textContent = cur.step;
-      if (pctEl) pctEl.textContent = cur.pct;
+  const cleanMaster = (vid.videoUrl && !vid.videoUrl.includes("preview_master")) ? vid.videoUrl : (vid.video_url && !vid.video_url.includes("preview_master") ? vid.video_url : null);
+  const isDoc = vFmt.includes("documentary") || String(vid.genre || "").toLowerCase().startsWith("doc");
+  const stage = vid.currentStage || 1;
+  const stageData = isDoc ? {
+    1: { title: "Formulating Raw Story & Chapters", subtitle: "Gemini 2.5 Flash • 21-Chapter sovereign dossier", pct: "15%", step: "Stage 1 of 7" },
+    2: { title: "Synthesizing Spoken Narration", subtitle: "Azure Speech / Edge HD • 48kHz broadcast audio clock", pct: "30%", step: "Stage 2 of 7" },
+    3: { title: "Formulating Directorial Screenplay", subtitle: "Gemini 2.5 Flash • Multi-angle cinematic shots", pct: "45%", step: "Stage 3 of 7" },
+    4: { title: "Synthesizing 4K Keyframe Photos", subtitle: "FLUX 1.1 Pro Ultra / Z-Image • Hasselblad 8K cinematography", pct: "60%", step: "Stage 4 of 7" },
+    5: { title: "Mastering Soundtrack & Spatial BGM", subtitle: "Suno v3.5 & 432Hz Velvet DSP • -14 LUFS stereo master", pct: "75%", step: "Stage 5 of 7" },
+    6: { title: "Rendering 4K Video Motion", subtitle: "Wan 2.1 / Kling v3 / Perspective Drone", pct: "85%", step: "Stage 6 of 7" },
+    7: { title: "Assembling 4K Broadcast Master", subtitle: "Single-pass FFmpeg • 4K 24fps master & 9:16 Short", pct: "95%", step: "Stage 7 of 7" }
+  } : {
+    1: { title: "Generating Screenplay & Storyboard", subtitle: "Gemini 2.5 Flash • Context & beat formulation", pct: "20%", step: "Stage 1 of 5" },
+    2: { title: "Synthesizing 4K Keyframe Photos", subtitle: "FLUX 1.1 Pro Ultra • Hasselblad 8K cinematography", pct: "40%", step: "Stage 2 of 5" },
+    3: { title: "Mastering Voiceover & Audio Stems", subtitle: "Azure TTS & Velvet DSP • 48kHz -14 LUFS soundscape", pct: "65%", step: "Stage 3 of 5" },
+    4: { title: "Rendering Diffusion Video Motion", subtitle: "Wan 2.1 / Kling v3 • Living wallpaper cinemagraph", pct: "85%", step: "Stage 4 of 5" },
+    5: { title: "Assembling 4K Master Deliverables", subtitle: "Single-pass FFmpeg • Dual-aspect broadcast stretch", pct: "95%", step: "Stage 5 of 5" }
+  };
+  const cur = stageData[stage] || stageData[1];
+
+  if (vid.status === "processing") {
+    // Show compact horizontal progress bar directly below title in header section
+    if (headerProgWrap) {
+      headerProgWrap.classList.remove("hidden");
+      if (headerProgStage) headerProgStage.textContent = `${cur.step}: ${cur.title}`;
+      if (headerProgSub) headerProgSub.textContent = cur.subtitle;
+      if (headerProgPct) headerProgPct.textContent = cur.pct;
+      if (headerProgBar) headerProgBar.style.width = cur.pct;
+    }
+    if (typeof updateStagePillsForFormat === "function") updateStagePillsForFormat(vid);
+    // Update the 5 horizontal stage pills
+    const sNames = ['Script', 'Photos', 'Audio', 'Motion', 'Master'];
+    for (let sNum = 1; sNum <= 5; sNum++) {
+      const pill = document.getElementById(`stage-pill-${sNum}`);
+      if (pill) {
+        if (sNum < stage) {
+          pill.className = "stage-pill cursor-pointer px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 whitespace-nowrap shrink-0 transition font-bold";
+          pill.innerHTML = `✓ ${sNum}. ${sNames[sNum - 1]}`;
+        } else if (sNum === stage) {
+          pill.className = "stage-pill cursor-pointer px-2 py-0.5 rounded-full border border-purple-500/40 bg-purple-500/20 text-purple-700 dark:text-purple-300 whitespace-nowrap shrink-0 transition font-bold shadow-sm animate-pulse";
+          pill.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-[8px] mr-1"></i>${sNum}. ${sNames[sNum - 1]} (${cur.pct})`;
+        } else {
+          pill.className = "stage-pill cursor-pointer px-2 py-0.5 rounded-full border border-[var(--border)] bg-[var(--card)] text-[var(--text-muted)] whitespace-nowrap shrink-0 transition opacity-70";
+          pill.innerHTML = `${sNum}. ${sNames[sNum - 1]}`;
+        }
+      }
+    }
+    // Collapse giant 220px video container while processing without master video
+    if (heroResult) {
+      if (cleanMaster) {
+        heroResult.classList.remove("hidden");
+        overlay?.classList.add("hidden");
+      } else {
+        heroResult.classList.add("hidden");
+      }
+    }
+    if (playerBadge) {
+      playerBadge.textContent = "Processing";
+      playerBadge.className = "px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/30 animate-pulse";
+    }
+  } else if (vid.status === "completed" && cleanMaster) {
+    if (headerProgWrap) headerProgWrap.classList.add("hidden");
+    if (heroResult) heroResult.classList.remove("hidden");
+    overlay?.classList.add("hidden");
+    if (playerBadge) {
+      playerBadge.textContent = "Ready";
+      playerBadge.className = "px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30";
+    }
+    if (video && !video.src.endsWith(cleanMaster)) video.src = cleanMaster;
+  } else {
+    // Idle or failed
+    if (headerProgWrap) headerProgWrap.classList.add("hidden");
+    if (cleanMaster && heroResult) {
+      heroResult.classList.remove("hidden");
+      overlay?.classList.add("hidden");
+      if (video && !video.src.endsWith(cleanMaster)) video.src = cleanMaster;
+    } else if (heroResult) {
+      heroResult.classList.add("hidden");
     }
   }
 
-  if (typeof renderScriptSection === "function") renderScriptSection(vid);
-  if (typeof renderMasterVideosList === "function") renderMasterVideosList(vid);
-  if (typeof renderLongPlayStretchSection === "function") renderLongPlayStretchSection(vid);
-  if (typeof renderKeyframesList === "function") renderKeyframesList(vid);
-  if (typeof renderAudioStemsList === "function") renderAudioStemsList(vid);
-  if (typeof renderMotionClipsList === "function") renderMotionClipsList(vid);
+  // Also update legacy overlay elements if present
+  const titleEl = document.getElementById("studio-panel-processing-title");
+  const subTitle = document.getElementById("studio-panel-processing-subtitle");
+  const barEl = document.getElementById("studio-panel-progress-bar");
+  const stepEl = document.getElementById("studio-panel-stage-step");
+  const pctEl = document.getElementById("studio-panel-stage-pct");
+  if (titleEl) titleEl.textContent = cur.title;
+  if (subTitle) subTitle.textContent = cur.subtitle;
+  if (barEl) barEl.style.width = cur.pct;
+  if (stepEl) stepEl.textContent = cur.step;
+  if (pctEl) pctEl.textContent = cur.pct;
+
+  if (window.StudioFormatDispatcher?.dispatch) {
+    window.StudioFormatDispatcher.dispatch(vid);
+  } else {
+    if (typeof updateFormatStageLayout === "function") updateFormatStageLayout(vid);
+    if (typeof updateStagePillsForFormat === "function") updateStagePillsForFormat(vid);
+    if (typeof renderStorySection === "function") renderStorySection(vid);
+    if (typeof renderNarrationSection === "function") renderNarrationSection(vid);
+    if (typeof renderScriptSection === "function") renderScriptSection(vid);
+    if (typeof renderMasterVideosList === "function") renderMasterVideosList(vid);
+    if (typeof renderLongPlayStretchSection === "function") renderLongPlayStretchSection(vid);
+    if (typeof renderKeyframesList === "function") renderKeyframesList(vid);
+    if (typeof renderAudioStemsList === "function") renderAudioStemsList(vid);
+    if (typeof renderMotionClipsList === "function") renderMotionClipsList(vid);
+  }
   updateStageGateDock(vid);
 
   if (typeof renderDistributionPackaging === "function") renderDistributionPackaging(vid);
@@ -306,6 +449,8 @@ function renderEmptyInspectorState() {
   if (video) { video.src = ""; video.pause(); }
   document.getElementById("studio-panel-empty-overlay")?.classList.remove("hidden");
   document.getElementById("studio-panel-processing-overlay")?.classList.add("hidden");
+  document.getElementById("panel-header-progress-wrap")?.classList.add("hidden");
+  document.getElementById("panel-hero-result-section")?.classList.add("hidden");
   document.getElementById("studio-approval-container")?.classList.add("hidden");
 
   const iC = document.getElementById("panel-section-images"), mC = document.getElementById("panel-section-raw-videos"), aC = document.getElementById("panel-section-audio");
@@ -315,8 +460,15 @@ function renderEmptyInspectorState() {
   if (typeof renderScriptSection === "function") renderScriptSection(null);
   if (typeof renderMasterVideosList === "function") renderMasterVideosList(null);
   if (typeof renderLongPlayStretchSection === "function") renderLongPlayStretchSection({ id: "NEW" });
+  if (window.DocumentaryArtifactsRenderer?.renderEmpty) window.DocumentaryArtifactsRenderer.renderEmpty();
   document.getElementById("studio-stage-controls-dock")?.classList.add("hidden");
 }
+
+function scrollToStage(sectionId) {
+  const el = document.getElementById(sectionId);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+window.scrollToStage = scrollToStage;
 
 // Note: Script drawer & screenplay JSON actions are managed in studio_script_drawer.js
 
@@ -346,21 +498,61 @@ function updateStageGateDock(vid) {
   dock.classList.remove("hidden");
   const title = document.getElementById("dock-stage-title"), counter = document.getElementById("dock-stage-counter");
   const rerollBtn = document.getElementById("btn-dock-reroll-text"), advBtn = document.getElementById("btn-dock-advance-text");
+  const isDoc = !isRelax;
+  if (isDoc) {
+    if (vid.currentStage === 1) {
+      if (title) title.innerHTML = `<i class="fa-solid fa-scroll text-amber-500"></i><span>Stage 1: Raw Story Dossier</span>`;
+      if (counter) counter.textContent = `${vid.story?.chapters?.length || 21} Chapters Ready`;
+      if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Story";
+      if (advBtn) advBtn.textContent = `➡️ Next Stage: Generate Narration ➔`;
+    } else if (vid.currentStage === 2) {
+      if (title) title.innerHTML = `<i class="fa-solid fa-microphone-lines text-emerald-500"></i><span>Stage 2: Spoken Narration Review</span>`;
+      if (counter) counter.textContent = `Narration Ready`;
+      if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Narration";
+      if (advBtn) advBtn.textContent = `➡️ Next Stage: Formulate Screenplay ➔`;
+    } else if (vid.currentStage === 3) {
+      const shCount = vid.screenplay?.total_shots || (vid.screenplay?.chapters ? vid.screenplay.chapters.reduce((a, c) => a + (c.shots?.length || 0), 0) : 0);
+      if (title) title.innerHTML = `<i class="fa-solid fa-clapperboard text-indigo-500"></i><span>Stage 3: 3-Shot Screenplay Review</span>`;
+      if (counter) counter.textContent = `${shCount || 63} Shots Ready`;
+      if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Screenplay";
+      if (advBtn) advBtn.textContent = `➡️ Next Stage: Generate Keyframes ➔`;
+    } else if (vid.currentStage === 4) {
+      if (title) title.innerHTML = '<i class="fa-solid fa-images text-blue-500"></i><span>Stage 4: Keyframe Photo Review</span>';
+      const selCount = (vid.selectedKeyframeIds || []).length || (vid.keyframes || []).length;
+      if (counter) counter.textContent = `${selCount}/${(vid.keyframes || []).length} Photos Ready`;
+      if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Photos";
+      if (advBtn) advBtn.textContent = `➡️ Next Stage: Synthesize BGM ➔`;
+    } else if (vid.currentStage === 5) {
+      if (title) title.innerHTML = '<i class="fa-solid fa-music text-cyan-500"></i><span>Stage 5: BGM Soundtrack Review</span>';
+      if (counter) counter.textContent = `BGM Ready`;
+      if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll BGM";
+      if (advBtn) advBtn.textContent = `➡️ Next Stage: Generate Video Motion ➔`;
+    } else if (vid.currentStage === 6) {
+      if (title) title.innerHTML = '<i class="fa-solid fa-film text-purple-500"></i><span>Stage 6: Video Motion Curation</span>';
+      if (counter) counter.textContent = `${(vid.selectedMotionClipIds || []).length || (vid.motion_clips || []).length} Clips Ready`;
+      if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Motion";
+      if (advBtn) advBtn.textContent = `➡️ Next Stage: Render Final 4K Master ➔`;
+    } else {
+      dock.classList.add("hidden");
+    }
+    return;
+  }
   if (vid.currentStage === 1) {
-    if (title) title.innerHTML = '<i class="fa-solid fa-scroll text-amber-500"></i><span>Stage 1: Script &amp; Storyboard Review</span>';
+    if (title) title.innerHTML = `<i class="fa-solid fa-scroll text-amber-500"></i><span>Stage 1: Script &amp; Storyboard Review</span>`;
     if (counter) counter.textContent = `Script Ready`;
     if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Script";
-    if (advBtn) advBtn.textContent = `➡️ Next Stage: Generate Keyframe Photos ➔`;
+    if (advBtn) advBtn.textContent = `➡️ Next Stage: Generate Keyframes ➔`;
   } else if (vid.currentStage === 2) {
     if (title) title.innerHTML = '<i class="fa-solid fa-images text-blue-500"></i><span>Stage 2: Keyframe Photo Review</span>';
     const selCount = (vid.selectedKeyframeIds || []).length || (vid.keyframes || []).length;
     if (counter) counter.textContent = `${selCount}/${(vid.keyframes || []).length} Photos Ready`;
     if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Photos";
-    if (advBtn) advBtn.textContent = `➡️ Next Stage: Compose Audio & Vocals ➔`;
+    if (advBtn) advBtn.textContent = `➡️ Next Stage: Synthesize Audio & BGM ➔`;
   } else if (vid.currentStage === 3) {
-    if (title) title.innerHTML = '<i class="fa-solid fa-wave-square text-cyan-500"></i><span>Stage 3: Audio &amp; Vocals Review</span>';
-    if (counter) counter.textContent = `Stems Ready`;
-    if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Audio";
+    if (title) title.innerHTML = '<i class="fa-solid fa-wave-square text-cyan-500"></i><span>Stage 3: Audio &amp; BGM Stems Review</span>';
+    const sCount = (vid.audio_stems || []).length;
+    if (counter) counter.textContent = sCount > 0 ? `${sCount} Stems Ready` : `Stems Ready`;
+    if (rerollBtn) rerollBtn.textContent = "🔄 Re-roll Audio & BGM";
     if (advBtn) advBtn.textContent = `➡️ Next Stage: Generate Video Motion ➔`;
   } else if (vid.currentStage === 4) {
     if (title) title.innerHTML = '<i class="fa-solid fa-film text-purple-500"></i><span>Stage 4: Video Motion Curation</span>';

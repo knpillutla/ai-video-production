@@ -58,6 +58,8 @@ class DocScene:
     motion_rationale: Optional[str] = None
     location_hub: Optional[str] = None
     color_temp_kelvin: Optional[int] = 5500
+    chapter_index: Optional[int] = None
+    is_chapter_head: bool = True
     chapter_title: Optional[str] = None
     chapter_subtitle: Optional[str] = None
     chapter_stats: Optional[str] = None
@@ -76,6 +78,7 @@ class DocStoryboard:
     scenes: List[DocScene] = field(default_factory=list)
     language: str = "en"
     audio_tags: str = "cinematic orchestral documentary, sparse ambient foley, 48kHz broadcast master"
+    suno_prompt: Optional[str] = None
     itinerary_summary: Optional[List[Dict[str, Any]]] = None
     thumbnail_headline: Optional[str] = None
     thumbnail_hero_scene_index: int = 1

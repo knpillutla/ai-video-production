@@ -1,0 +1,144 @@
+{
+  "version": "1.1",
+  "description": "Extensible mapping of format, genre, subgenre, and archetype to story and screenplay prompt blueprint files.",
+  "routes": [
+    {
+      "format": "documentary",
+      "genre": "doc/nations",
+      "subgenre": "*",
+      "archetype": "country_overview",
+      "story_prompt": "prompts/documentary/nations/country_overview.prompt.md",
+      "screenplay_prompt": "prompts/documentary/nations/country_overview.screenplay.prompt.md",
+      "prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
+      "aliases": ["country_dossier", "countries", "nation_overview"]
+    },
+    {
+      "format": "documentary",
+      "genre": "doc/nations",
+      "subgenre": "*",
+      "archetype": "country_encyclopedia",
+      "story_prompt": "prompts/documentary/nations/country_encyclopedia.prompt.md",
+      "screenplay_prompt": "prompts/documentary/nations/country_encyclopedia.screenplay.prompt.md",
+      "prompt_file": "prompts/documentary/nations/country_encyclopedia.prompt.md",
+      "aliases": ["country_almanac", "national_encyclopedia"]
+    },
+    {
+      "format": "documentary",
+      "genre": "doc/nations",
+      "subgenre": "*",
+      "archetype": "top_places_to_visit",
+      "story_prompt": "prompts/documentary/nations/top_places_to_visit.prompt.md",
+      "screenplay_prompt": "prompts/documentary/nations/top_places_to_visit.prompt.md",
+      "prompt_file": "prompts/documentary/nations/top_places_to_visit.prompt.md",
+      "aliases": ["top_places", "bucket_list"]
+    },
+    {
+      "format": "documentary",
+      "genre": "doc/nations",
+      "subgenre": "*",
+      "archetype": "top_10_cities",
+      "story_prompt": "prompts/documentary/nations/top_10_cities.prompt.md",
+      "screenplay_prompt": "prompts/documentary/nations/top_10_cities.prompt.md",
+      "prompt_file": "prompts/documentary/nations/top_10_cities.prompt.md",
+      "aliases": ["top_cities_countdown", "top_cities"]
+    },
+    {
+      "format": "documentary",
+      "genre": "doc/nations",
+      "subgenre": "*",
+      "archetype": "tour_itinerary",
+      "story_prompt": "prompts/documentary/nations/tour_itinerary.prompt.md",
+      "screenplay_prompt": "prompts/documentary/nations/tour_itinerary.prompt.md",
+      "prompt_file": "prompts/documentary/nations/tour_itinerary.prompt.md",
+      "aliases": ["itinerary_map_tour", "travel_itinerary"]
+    },
+    {
+      "format": "documentary",
+      "genre": "doc/civilizations",
+      "subgenre": "*",
+      "archetype": "civilizational_origins",
+      "story_prompt": "prompts/documentary/civilizations/civilizational_origins.prompt.md",
+      "screenplay_prompt": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md",
+      "prompt_file": "prompts/documentary/civilizations/civilizational_origins.prompt.md",
+      "aliases": ["ancient_civilizations_history", "origins"]
+    },
+    {
+      "format": "documentary",
+      "genre": "doc/civilizations",
+      "subgenre": "indus_vedic",
+      "archetype": "civilizational_origins",
+      "story_prompt": "prompts/documentary/civilizations/civilizational_origins.prompt.md",
+      "screenplay_prompt": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md",
+      "prompt_file": "prompts/documentary/civilizations/civilizational_origins.prompt.md",
+      "aliases": ["indus_origins", "vedic_origins"]
+    },
+    {
+      "format": "documentary",
+      "genre": "doc/civilizations",
+      "subgenre": "*",
+      "archetype": "archaeological_ruins_lost_empires",
+      "story_prompt": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+      "screenplay_prompt": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+      "prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+      "aliases": ["archaeological_ruins", "lost_empires"]
+    },
+    {
+      "format": "relaxation",
+      "genre": "relax/nature",
+      "subgenre": "*",
+      "archetype": "alpine_peaks_meadow",
+      "story_prompt": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+      "screenplay_prompt": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+      "prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+      "aliases": ["alpine_nature", "mountain_vista"]
+    },
+    {
+      "format": "relaxation",
+      "genre": "relax/rain",
+      "subgenre": "*",
+      "archetype": "swiss_chalet_balcony",
+      "story_prompt": "prompts/relaxation/rain/swiss_chalet_balcony.prompt.md",
+      "screenplay_prompt": "prompts/relaxation/rain/swiss_chalet_balcony.prompt.md",
+      "prompt_file": "prompts/relaxation/rain/swiss_chalet_balcony.prompt.md",
+      "aliases": ["rain_balcony", "chalet_rain"]
+    },
+    {
+      "format": "walking_tour",
+      "genre": "travel_walking",
+      "subgenre": "*",
+      "archetype": "rain_city_walk",
+      "story_prompt": "prompts/walking_tour/rain_city_walk.prompt.md",
+      "screenplay_prompt": "prompts/walking_tour/rain_city_walk.prompt.md",
+      "prompt_file": "prompts/walking_tour/rain_city_walk.prompt.md",
+      "aliases": ["city_walk", "rain_walk"]
+    },
+    {
+      "format": "music_video",
+      "genre": "dance/folk",
+      "subgenre": "*",
+      "archetype": "village_jathara_square",
+      "story_prompt": "prompts/music_video/village_jathara_square.prompt.md",
+      "screenplay_prompt": "prompts/music_video/village_jathara_square.prompt.md",
+      "prompt_file": "prompts/music_video/village_jathara_square.prompt.md",
+      "aliases": ["jathara_dance", "mass_dance"]
+    }
+  ],
+  "default_fallbacks": {
+    "documentary": {
+      "story": "prompts/documentary/nations/country_overview.prompt.md",
+      "screenplay": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
+    },
+    "relaxation": {
+      "story": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+      "screenplay": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md"
+    },
+    "walking_tour": {
+      "story": "prompts/walking_tour/rain_city_walk.prompt.md",
+      "screenplay": "prompts/walking_tour/rain_city_walk.prompt.md"
+    },
+    "music_video": {
+      "story": "prompts/music_video/village_jathara_square.prompt.md",
+      "screenplay": "prompts/music_video/village_jathara_square.prompt.md"
+    }
+  }
+}

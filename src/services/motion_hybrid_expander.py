@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
+import subprocess
 from typing import Optional
 
 import imageio_ffmpeg
@@ -43,12 +44,28 @@ async def expand_motion_clip_if_needed(
 
     # If duration matches or exceeds target within margin, no expansion required
     if not target_duration or (target_duration - actual_dur) < 1.2:
-        if output_path.exists():
-            output_path.unlink()
-        diff_clip.rename(output_path)
+        import shutil
+        shutil.copy2(diff_clip, output_path)
+        ensure_video_4k(output_path)
         logger.info(f"motion_hybrid_expander: No expansion required ({actual_dur:.2f}s vs target {target_duration}s)")
         return output_path
 
+    # Determine secondary angle asset and camera choreography
+    has_secondary = (
+        secondary_image_path is not None
+        and secondary_image_path.is_file()
+        and secondary_image_path.stat().st_size > 1000
+    )
+    if not has_secondary:
+        # Never loop or freeze the last frame of a 5s AI diffusion clip (which would freeze moving water/people/cars).
+        # Instead, keep the AI diffusion clip at its native 5.0s living duration and let complementary local_drone shots cover the chapter.
+        logger.info(f"motion_hybrid_expander: Retaining native {actual_dur:.2f}s AI diffusion clip without looping or freezing ({output_path.name})")
+        import shutil
+        shutil.copy2(diff_clip, output_path)
+        ensure_video_4k(output_path)
+        return output_path
+
+    sec_img = secondary_image_path
     shortfall = float(target_duration) - actual_dur
     rem_dur = round(shortfall + xfade_duration, 2)
     xfade_offset = max(0.5, round(actual_dur - xfade_duration, 2))
@@ -57,14 +74,7 @@ async def expand_motion_clip_if_needed(
         f"(rem_dur: {rem_dur:.2f}s, xfade_offset: {xfade_offset:.2f}s) for {output_path.name}"
     )
 
-    # Determine secondary angle asset and camera choreography
-    has_secondary = (
-        secondary_image_path is not None
-        and secondary_image_path.is_file()
-        and secondary_image_path.stat().st_size > 1000
-    )
-    sec_img = secondary_image_path if has_secondary else image_path
-    start_zoom = "normal" if has_secondary else "medium"
+    start_zoom = "normal"
 
     # Select complementary secondary movement
     p_text = f"{visual_prompt} {motion_prompt}".lower()
@@ -105,39 +115,42 @@ async def expand_motion_clip_if_needed(
             "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
             str(output_path),
         ]
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        _, stderr = await proc.communicate()
-        if proc.returncode != 0 or not output_path.is_file() or output_path.stat().st_size < 1000:
-            logger.warning(f"motion_hybrid_expander: FFmpeg xfade failed ({stderr.decode()[:200]}), falling back to raw diffusion")
-            if output_path.exists():
-                output_path.unlink()
-            diff_clip.rename(output_path)
+        def _run_xfade():
+            return subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+        res = await asyncio.to_thread(_run_xfade)
+        if res.returncode != 0 or not output_path.is_file() or output_path.stat().st_size < 1000:
+            err_msg = res.stderr.decode(errors="ignore")[:200]
+            logger.warning(f"motion_hybrid_expander: FFmpeg xfade failed ({err_msg}), retaining raw diffusion 4K")
+            import shutil
+            shutil.copy2(diff_clip, output_path)
+            ensure_video_4k(output_path)
             return output_path
 
-        # Cleanup temporary scratch clips
-        for tmp_p in (diff_clip, rem_clip):
-            try:
-                if tmp_p.exists():
-                    tmp_p.unlink()
-            except Exception:
-                pass
+        # Cleanup scratch secondary drone clip only (NEVER delete raw diff_clip)
+        try:
+            if rem_clip.exists():
+                rem_clip.unlink()
+        except Exception:
+            pass
 
         logger.info(
             f"motion_hybrid_expander: Successfully created {target_duration:.2f}s master clip "
-            f"({output_path.name}) via living plate + local drone secondary angle."
+            f"({output_path.name}) via living plate + secondary sequential angle."
         )
         return output_path
 
     except Exception as e:
-        logger.error(f"motion_hybrid_expander_error: {e}. Falling back to diffusion clip.")
+        logger.error(f"motion_hybrid_expander_error: {type(e).__name__}: {e}. Retaining raw diffusion 4K.")
         if diff_clip.is_file():
-            if output_path.exists():
-                output_path.unlink()
-            diff_clip.rename(output_path)
+            import shutil
+            shutil.copy2(diff_clip, output_path)
+            ensure_video_4k(output_path)
         return output_path
 
 

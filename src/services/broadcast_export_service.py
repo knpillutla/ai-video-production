@@ -26,7 +26,7 @@ def assemble_4k_master(
     audio_path: Optional[Path],
     out_master: Path,
     scene_hold_sec: float = 60.0,
-    x_dur: float = 1.0,
+    x_dur: float = 2.0,  # Standard 2.0s breathing crossfade between scenes
     crf: int = 22,
     target_duration_sec: Optional[float] = None,
     shot_durations: Optional[list[float]] = None,
@@ -68,44 +68,29 @@ def assemble_4k_master(
                 "-movflags", "+faststart", str(out_master)
             ]
     else:
-        hold_list = [get_media_duration(c) or 5.0 for c in seamless_clips] if no_loop else ([float(d) for d in shot_durations] if (shot_durations and len(shot_durations) == n) else [max(6.0, (target_dur + ((n - 1) * x_dur)) / n)] * n)
-        inputs = []
-        for i, c in enumerate(seamless_clips):
-            c_dur = get_media_duration(c) or 5.0
-            c_hold = hold_list[i] if i < len(hold_list) else c_dur
-            if not no_loop and c_dur < c_hold - 0.5:
-                v_loops = max(1, int(c_hold / max(1.0, c_dur)) + 2)
-                inputs.extend(["-stream_loop", str(v_loops)])
-            inputs.extend(["-i", str(c)])
-
-        filter_parts = [f"[{i}:v]{build_adaptive_resolution_filter(c, 3840, 2160)},fps=24[s{i}]" for i, c in enumerate(seamless_clips)]
-        prev_tag, curr_offset = "s0", max(0.1, hold_list[0] - x_dur)
-        for i in range(1, n):
-            out_tag = f"v{i}" if i < n - 1 else "v"
-            filter_parts.append(f"[{prev_tag}][s{i}]xfade=transition=fade:duration={x_dur:.2f}:offset={max(0.1, curr_offset):.2f}[{out_tag}]")
-            prev_tag = out_tag
-            curr_offset += max(0.1, (hold_list[i] - x_dur) if i < n - 1 else hold_list[i])
-        target_dur = round(curr_offset, 2)
+        if shot_durations and len(shot_durations) == n:
+            hold_list = [float(d) + (x_dur if i < n - 1 else 0.0) for i, d in enumerate(shot_durations)]
+        elif no_loop:
+            hold_list = [float(get_media_duration(c) or 5.0) + (x_dur if i < n - 1 else 0.0) for i, c in enumerate(seamless_clips)]
+        else:
+            hold_list = [max(6.0, (target_dur + ((n - 1) * x_dur)) / n)] * n
+        from src.services.broadcast_filtergraph_builder import build_broadcast_filtergraph
+        inputs, filter_str, v_tag, a_tag, calc_dur = build_broadcast_filtergraph(
+            seamless_clips=seamless_clips, hold_list=hold_list, x_dur=x_dur,
+            audio_path=audio_path, no_loop=no_loop, ep_dir=out_master.parent,
+        )
+        target_dur = round(calc_dur, 2)
         fade_dur = min(3.0, target_dur)
         afade_filter = f"afade=t=out:st={max(0.0, target_dur - fade_dur):.2f}:d={fade_dur:.2f}"
 
-        if audio_path and audio_path.is_file():
-            inputs.extend(["-i", str(audio_path)])
-            cmd = [
-                ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
-                *inputs, "-filter_complex", ";".join(filter_parts),
-                "-map", "[v]", "-map", f"{n}:a", "-af", afade_filter, "-t", f"{target_dur:.2f}",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
-                "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_master)
-            ]
-        else:
-            cmd = [
-                ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
-                *inputs, "-filter_complex", ";".join(filter_parts),
-                "-map", "[v]", "-t", f"{target_dur:.2f}",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
-                "-movflags", "+faststart", str(out_master)
-            ]
+        audio_args = ["-map", a_tag, "-af", afade_filter, "-c:a", "aac", "-b:a", "320k", "-ar", "48000"] if a_tag else []
+        cmd = [
+            ffmpeg_bin, "-y", "-nostats", "-loglevel", "error",
+            *inputs, "-filter_complex", filter_str,
+            "-map", f"[{v_tag}]", *audio_args, "-t", f"{target_dur:.2f}",
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
+            "-movflags", "+faststart", str(out_master),
+        ]
 
     try:
         subprocess.run(cmd, capture_output=True, text=True, check=True, creationflags=_SUBPROCESS_FLAGS)
@@ -147,23 +132,35 @@ def assemble_dual_masters(
     if has_narration:
         n_dur = get_media_duration(narr_audio) if (narr_audio and Path(narr_audio).is_file()) else None
         natural_v_dur = sum(get_media_duration(c) or 10.0 for c in seamless_clips) - max(0.0, (len(seamless_clips) - 1) * 1.0)
-        t_dur = float(eff_target_dur or (natural_v_dur if no_loop else n_dur) or 60.0)
+        t_dur = float(eff_target_dur or (max(natural_v_dur, n_dur) if (no_loop and n_dur) else (natural_v_dur if no_loop else n_dur)) or 60.0)
+        from src.services.broadcast_filtergraph_builder import ensure_dossier_overlay_cards
+        ensure_dossier_overlay_cards(ep_dir)
         mixed_audio = ep_dir / "master_audio_narrated_ducked.mp3"
         raw_bed = ep_dir / "raw_soundtrack.mp3"
         bed_input = raw_bed if (raw_bed.is_file() and raw_bed.stat().st_size > 1000) else eff_audio
-        if bed_input and Path(bed_input).resolve() != mixed_audio.resolve() and (force_rerun or not mixed_audio.is_file() or mixed_audio.stat().st_size < 1000):
+        m_mix_d = get_media_duration(mixed_audio) if mixed_audio.is_file() else None
+        m_stale = bool(narr_audio and Path(narr_audio).is_file() and mixed_audio.is_file() and Path(narr_audio).stat().st_mtime > mixed_audio.stat().st_mtime)
+        m_mis = bool(m_mix_d and t_dur and abs(m_mix_d - float(t_dur)) > 2.0)
+        needs_mix = force_rerun or not mixed_audio.is_file() or mixed_audio.stat().st_size < 1000 or m_stale or m_mis
+        if bed_input and Path(bed_input).resolve() != mixed_audio.resolve() and needs_mix:
+            fc_duck = (
+                f"[0:a]aloop=loop=-1:size=2e+09,volume=0.12,atrim=0:{t_dur:.2f},asetpts=PTS-STARTPTS[bgm_raw];"
+                f"[1:a]volume=1.2,atrim=0:{t_dur:.2f},asetpts=PTS-STARTPTS[vox];"
+                f"[bgm_raw][vox]sidechaincompress=threshold=0.015:ratio=14:attack=150:release=800:makeup=1.0[bgm];"
+                f"[bgm][vox]amix=inputs=2:duration=first:dropout_transition=0,atrim=0:{t_dur:.2f},asetpts=PTS-STARTPTS,afade=t=out:st={max(0.0, t_dur - 3.0):.2f}:d=3.0[aout]"
+            )
             cmd_mix = [
                 imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error",
                 "-i", str(bed_input), "-i", str(narr_audio),
-                "-filter_complex", f"[0:a]aloop=loop=-1:size=2e+09,volume=0.22,atrim=0:{t_dur:.2f}[bgm];[1:a]volume=1.0,apad,atrim=0:{t_dur:.2f}[vox];[bgm][vox]amix=inputs=2:duration=longest:dropout_transition=0,afade=t=out:st={max(0.0, t_dur - 3.0):.2f}:d=3.0[aout]",
+                "-filter_complex", fc_duck,
                 "-map", "[aout]", "-c:a", "libmp3lame", "-b:a", "320k", "-ar", "48000",
-                "-t", f"{t_dur:.2f}", str(mixed_audio),
+                str(mixed_audio),
             ]
             subprocess.run(cmd_mix, check=True, creationflags=_SUBPROCESS_FLAGS)
 
         c_dur_n = get_media_duration(master_narr) if master_narr.is_file() else None
         n_mis = t_dur and c_dur_n and abs(c_dur_n - float(t_dur)) > 2.0
-        needs_n = force_rerun or not master_narr.is_file() or master_narr.stat().st_size < 1000 or n_mis or any(sc.stat().st_mtime > master_narr.stat().st_mtime for sc in seamless_clips)
+        needs_n = force_rerun or not master_narr.is_file() or master_narr.stat().st_size < 1000 or n_mis or any(sc.stat().st_mtime > master_narr.stat().st_mtime for sc in seamless_clips) or (mixed_audio.is_file() and mixed_audio.stat().st_mtime > master_narr.stat().st_mtime)
         log_pipeline_step("checking master", "4K Narration Master", "started", metadata={"file": master_narr.name, "target_duration": t_dur})
         if needs_n:
             assemble_4k_master(seamless_clips, mixed_audio, master_narr, crf=crf, target_duration_sec=t_dur, shot_durations=sd_custom, no_loop=no_loop)

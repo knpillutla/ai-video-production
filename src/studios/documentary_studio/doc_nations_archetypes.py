@@ -12,6 +12,7 @@ from src.studios.documentary_studio.doc_archetypes_civics import CIVICS_ALIASES,
 from src.studios.documentary_studio.doc_archetypes_curiosity import CURIOSITY_ALIASES, CURIOSITY_DIRECTIVES
 from src.studios.documentary_studio.doc_archetypes_travel import TRAVEL_ALIASES, TRAVEL_DIRECTIVES
 from src.studios.documentary_studio.doc_archetypes_food import FOOD_ALIASES, FOOD_DIRECTIVES
+from src.studios.documentary_studio.doc_country_syllabus import build_country_syllabus_directive
 
 # Combined canonical aliases mapping
 NATIONS_ARCHETYPE_ALIASES: Dict[str, str] = {}
@@ -28,7 +29,11 @@ ARCHETYPE_DIRECTIVES.update(TRAVEL_DIRECTIVES)
 ARCHETYPE_DIRECTIVES.update(FOOD_DIRECTIVES)
 
 
-def get_nations_archetype_directive(archetype: str) -> str:
+def get_nations_archetype_directive(
+    archetype: str,
+    duration_seconds: float = 60.0,
+    custom_prompt: Optional[str] = None,
+) -> str:
     """Return the targeted directorial prompt snippet for a nations/countries archetype."""
     clean = (archetype or "").lower().strip()
     canonical = NATIONS_ARCHETYPE_ALIASES.get(clean)
@@ -37,6 +42,10 @@ def get_nations_archetype_directive(archetype: str) -> str:
             if alias in clean or clean in alias:
                 canonical = target
                 break
+
+    if canonical in ("country_dossier", "country_profile", "country", "countries", "nation", "nations"):
+        return build_country_syllabus_directive(duration_seconds=duration_seconds, custom_prompt=custom_prompt)
+
     return ARCHETYPE_DIRECTIVES.get(canonical, "")
 
 

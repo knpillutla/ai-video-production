@@ -168,13 +168,15 @@ function renderMasterVideosList(vid) {
 
   const isProc = vid?.status === "processing";
   const stage = vid?.currentStage || 1;
-  const isMasterGenerating = Boolean(isProc && stage >= 5);
+  const isDocFmt = String(vid?.format || vid?.format_slug || "").toLowerCase().includes("documentary") || String(vid?.genre || "").toLowerCase().startsWith("doc");
+  const masterStage = isDocFmt ? 7 : 5;
+  const isMasterGenerating = Boolean(isProc && stage >= masterStage);
 
   const isMasterReady = Boolean(
     vid &&
     !isMasterGenerating &&
     vid.status !== "failed" &&
-    (vid.currentStage >= 5 || (vid.status === "completed" && (masterUrl || eds.length > 0))) &&
+    (vid.currentStage >= masterStage || (vid.status === "completed" && (masterUrl || eds.length > 0))) &&
     (masterUrl || eds.length > 0)
   );
 
@@ -279,6 +281,24 @@ function renderScriptSection(vid) {
   if (btnView) btnView.classList.add("hidden");
   if (btnJson) btnJson.classList.add("hidden");
 
+  const isDoc = !Boolean(String(vid?.genre || "").toLowerCase().startsWith("relax"));
+  const headerActions = document.getElementById("panel-script-header-actions");
+  if (headerActions) {
+    if (hasScript) {
+      headerActions.innerHTML = `
+        <button type="button" onclick="advanceToKeyframesStage(currentActiveInspectorEpisode)" class="btn-runway-primary py-0.5 px-2 text-[10px] font-bold shadow-sm flex items-center gap-1" title="Advance to Stage 2: Keyframe Photos">
+          <span>Next: Photos</span>
+          <i class="fa-solid fa-arrow-right text-[8px]"></i>
+        </button>`;
+    } else {
+      headerActions.innerHTML = `
+        <button type="button" id="btn-generate-screenplay-header" onclick="advanceToScriptStage(currentActiveInspectorEpisode)" class="btn-runway-primary py-0.5 px-2 text-[10px] font-bold shadow-sm flex items-center gap-1" title="Generate Gemini Screenplay">
+          <i class="fa-solid fa-sparkles text-[9px]"></i>
+          <span>Generate Script</span>
+        </button>`;
+    }
+  }
+
   // CASE 1: Actively Synthesizing Script -> Glowing Progress Bar (Only during Stage 1)
   if (isSynthesizingScript) {
     if (statusEl) {
@@ -290,7 +310,7 @@ function renderScriptSection(vid) {
     <div class="h-9 bg-amber-50/70 dark:bg-amber-950/30 border-2 border-amber-500/80 rounded-xl flex items-center justify-between px-3 shadow-sm gap-2">
       <div class="flex items-center gap-2 min-w-0">
         <div class="w-3.5 h-3.5 rounded-full border-2 border-amber-500 border-t-transparent animate-spin shrink-0"></div>
-        <span class="text-[9px] font-bold text-amber-700 dark:text-amber-400 truncate">Synthesizing Gemini 2.5 Director Storyboard...</span>
+        <span class="text-[9px] font-bold text-amber-700 dark:text-amber-400 truncate">${isDoc ? 'Synthesizing Raw Gemini Screenplay...' : 'Synthesizing Gemini Director Storyboard...'}</span>
       </div>
       <div class="w-24 bg-amber-200/60 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden shrink-0">
         <div class="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full animate-pulse" style="width: ${pVal}%"></div>
@@ -305,7 +325,7 @@ function renderScriptSection(vid) {
       statusEl.textContent = "Ready";
       statusEl.className = "text-emerald-600 dark:text-emerald-400 font-mono text-[9px] font-bold";
     }
-    const title = scriptObj.title || vid?.title || "Director Storyboard";
+    const title = (scriptObj && scriptObj.title) || vid?.title || (isDoc ? "Raw Gemini Screenplay" : "Director Storyboard");
 
     c.innerHTML = `
     <div class="h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between px-2.5 shadow-sm gap-2">
@@ -314,10 +334,14 @@ function renderScriptSection(vid) {
         <span class="text-[9px] font-bold text-slate-900 dark:text-gray-200 truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition">${title}</span>
       </div>
       <div class="flex items-center gap-1 shrink-0">
+        <button type="button" onclick="advanceToKeyframesStage(currentActiveInspectorEpisode)" class="px-2 py-0.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[9px] flex items-center gap-1 transition shadow-sm active:scale-95" title="Approve Screenplay and advance to Keyframe Photos">
+          <span>Photos</span>
+          <i class="fa-solid fa-arrow-right text-[8px]"></i>
+        </button>
         <button type="button" onclick="openScriptDrawer('visual')" class="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700/60 flex items-center justify-center transition shadow-sm active:scale-95" title="View Visual Storyboard & Scene Prompts">
           <i class="fa-solid fa-note-sticky text-indigo-500 text-[10px]"></i>
         </button>
-        <button type="button" onclick="openScriptDrawer('screenplay_json')" class="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/80 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 flex items-center justify-center transition shadow-sm active:scale-95" title="View screenplay.json (Gemini Director Lore)">
+        <button type="button" onclick="openScriptDrawer('screenplay_json')" class="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/80 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 flex items-center justify-center transition shadow-sm active:scale-95" title="View raw_gemini_screenplay.json">
           <i class="fa-solid fa-file-code text-amber-500 text-[10px]"></i>
         </button>
         <button type="button" onclick="openScriptDrawer('pipeline_json')" class="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-950/60 hover:bg-purple-100 dark:hover:bg-purple-900/80 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-700/60 flex items-center justify-center transition shadow-sm active:scale-95" title="View pipeline_state.json">
@@ -337,13 +361,36 @@ function renderScriptSection(vid) {
     statusEl.className = "text-slate-400 font-mono text-[9px]";
   }
   c.innerHTML = `
-  <div class="h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between px-3 text-slate-500 dark:text-slate-400 shadow-sm">
+  <div class="h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between px-2.5 text-slate-500 dark:text-slate-400 shadow-sm">
     <div class="flex items-center gap-1.5 min-w-0">
-      <i class="fa-solid fa-file-lines text-slate-400 text-xs shrink-0"></i>
-      <span class="text-[9px] font-medium text-slate-500 dark:text-gray-400 truncate">No Storyboard Synthesized Yet</span>
+      <i class="fa-solid fa-scroll text-slate-400 text-xs shrink-0"></i>
+      <span class="text-[9px] font-medium text-slate-500 dark:text-gray-400 truncate">${isDoc ? 'No Raw Screenplay Synthesized Yet' : 'No Storyboard Synthesized Yet'}</span>
     </div>
-    <span class="text-[8px] font-mono text-slate-400 shrink-0">(Gemini 2.5)</span>
+    <button type="button" onclick="advanceToScriptStage(currentActiveInspectorEpisode)" class="btn-runway-primary py-0.5 px-2 text-[10px] font-bold shrink-0 flex items-center gap-1" title="Generate Gemini Screenplay">
+      <i class="fa-solid fa-sparkles text-[9px]"></i> Generate Script
+    </button>
   </div>`;
+}
+
+function _countBudgetedScreenplayShots(vid) {
+  if (!vid) return 0;
+  if (vid.screenplay?.scenes?.length) return vid.screenplay.scenes.length;
+  if (vid.screenplay?.chapters?.length) {
+    const rawLimit = vid.user_inputs?.duration_seconds ?? vid.user_inputs?.requested_duration_seconds ?? vid.user_inputs?.duration_secs ?? vid.duration_seconds ?? vid.durationSeconds;
+    const maxDur = parseFloat(rawLimit || 0);
+    let count = 0;
+    let elapsed = 0;
+    for (const ch of vid.screenplay.chapters) {
+      for (const s of (ch.shots || [])) {
+        const d = parseFloat(s.duration_seconds || 6.0);
+        if (maxDur > 0 && count > 0 && (elapsed + d) > maxDur) return count;
+        count++;
+        elapsed += d;
+      }
+    }
+    return count;
+  }
+  return vid.script?.scenes?.length || vid.scenes?.length || 0;
 }
 
 function renderKeyframesList(vid) {
@@ -352,7 +399,7 @@ function renderKeyframesList(vid) {
   if (!c) return;
   const isProc = vid.status === "processing", isFailed = vid.status === "failed", stage = vid.currentStage || 1;
   const rawKfs = (vid.keyframes && vid.keyframes.length > 0) ? vid.keyframes : (vid.artifacts?.keyframes || []);
-  const screenplaySceneCount = vid.screenplay?.scenes?.length || vid.script?.scenes?.length || vid.scenes?.length || 0;
+  const screenplaySceneCount = _countBudgetedScreenplayShots(vid);
   const requestedShotCount = parseInt(vid.numShots || vid.num_shots || 1, 10) || 1;
   const numShots = Math.max(screenplaySceneCount || requestedShotCount, rawKfs.length);
   const completedKfs = rawKfs.filter(kf => {
@@ -372,8 +419,10 @@ function renderKeyframesList(vid) {
     return;
   }
 
+  const isDocFmt = String(vid?.format || vid?.format_slug || "").toLowerCase().includes("documentary") || String(vid?.genre || "").toLowerCase().startsWith("doc");
+  const photoStage = isDocFmt ? 4 : 2;
   const isGeneratingPhotos = Boolean(
-    isProc && (stage === 2 || (vid.pipelineStrategy === "autonomous" && stage >= 2 && completedKfs.length < numShots))
+    isProc && (stage === photoStage || (vid.pipelineStrategy === "autonomous" && stage >= photoStage && completedKfs.length < numShots))
   );
 
   if (countEl) {
@@ -381,24 +430,26 @@ function renderKeyframesList(vid) {
       countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-200 font-bold font-mono text-[10px] border border-blue-300 dark:border-blue-700 animate-pulse inline-flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[8px]"></i>Generating ${completedKfs.length + 1}/${numShots}...</span>`;
     } else if (completedKfs.length > 0) {
       countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 font-bold font-mono text-[10px] border border-emerald-300 dark:border-emerald-700 inline-flex items-center gap-1"><i class="fa-solid fa-check text-[8px]"></i>${completedKfs.length}/${numShots} Ready</span>`;
-    } else if (isProc && stage === 1) {
+    } else if (isProc && stage < photoStage) {
       countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 font-bold font-mono text-[10px] border border-amber-300 dark:border-amber-700">Queued</span>`;
     } else {
       countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold font-mono text-[10px] border border-slate-300 dark:border-slate-700">${numShots} Shot${numShots > 1 ? 's' : ''}</span>`;
     }
   }
 
-  // If Stage 1 is actively processing, photos are queued waiting for script approval
-  if (isProc && stage === 1 && completedKfs.length === 0 && rawKfs.length === 0) {
-    c.innerHTML = `<div class="col-span-4 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-amber-500 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 2 Photos</span><span class="text-[7px] text-slate-400 font-mono">(Starts after Script approved)</span></div>`;
+  // If earlier stage is actively processing, photos are queued waiting for prior stage completion
+  if (isProc && stage < photoStage && completedKfs.length === 0 && rawKfs.length === 0) {
+    c.innerHTML = `<div class="col-span-4 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-amber-500 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage ${photoStage} Photos</span><span class="text-[7px] text-slate-400 font-mono">(Starts after Screenplay approved)</span></div>`;
     return;
   }
 
   if (!isProc && completedKfs.length === 0 && rawKfs.length === 0) {
+    const rawStems = (vid.audio_stems && vid.audio_stems.length > 0) ? vid.audio_stems : (vid.artifacts?.audio_stems || []);
+    const hasAudio = Boolean(rawStems.length > 0);
     const hasScript = Boolean(vid.script || vid.story_topic || vid.title || vid.screenplay);
-    if (hasScript) {
+    if (hasAudio || hasScript) {
       c.innerHTML = `<div class="col-span-4 p-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-300 dark:border-blue-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
-        <div class="flex items-center gap-1.5"><i class="fa-solid fa-images text-blue-600 dark:text-blue-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-blue-950 dark:text-white">Stage 1 Script Ready</span><span class="text-[7px] text-blue-700 dark:text-blue-300">Choose image engine:</span></div></div>
+        <div class="flex items-center gap-1.5"><i class="fa-solid fa-images text-blue-600 dark:text-blue-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-blue-950 dark:text-white">${hasAudio ? 'Stage 2 Audio Ready' : 'Stage 1 Script Ready'}</span><span class="text-[7px] text-blue-700 dark:text-blue-300">Choose image engine:</span></div></div>
         <div class="flex items-center gap-1">
           <button type="button" onclick="advanceToKeyframesStage(currentActiveInspectorEpisode, 'gemini', true)" class="px-1.5 py-1 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow-sm active:scale-95" title="Generate with Google Imagen 3 (Gemini)"><i class="fa-solid fa-sparkles text-[7px]"></i><span>Gemini (Imagen 3)</span></button>
           <button type="button" onclick="advanceToKeyframesStage(currentActiveInspectorEpisode, 'flux_dev', true)" class="px-1.5 py-1 bg-white dark:bg-slate-900 hover:bg-slate-100 text-slate-800 dark:text-gray-200 rounded-lg text-[8px] font-bold border border-slate-300 dark:border-slate-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Generate with FLUX.1-dev (Test Mode)"><i class="fa-solid fa-vial text-blue-500 text-[7px]"></i><span>Test (FLUX Dev)</span></button>
@@ -419,14 +470,25 @@ function renderKeyframesList(vid) {
   const pVal = Math.min(95, vid.progress ? (vid.progress + 15) : 45);
 
   c.innerHTML = Array.from({ length: numShots }, (_, i) => {
-    const existing = rawKfs[i];
+    const targetShotNum = i + 1;
+    const existing = rawKfs.find(k => {
+      if (!k) return false;
+      const str = (typeof k === "object" ? (k.name || k.url || k.filename || "") : String(k)).toLowerCase();
+      const match = str.match(/(?:keyframe_p|kf_p|shot\s*|keyframe\s*|scene\s*)(\d+)/i);
+      if (match && parseInt(match[1], 10) === targetShotNum) return true;
+      if (typeof k === "object" && (k.scene_index === targetShotNum || k.shot_index === targetShotNum)) return true;
+      return false;
+    }) || (rawKfs.length === numShots ? rawKfs[i] : null);
+
     let url = existing ? ((typeof existing === "object") ? existing.url : existing) : null;
     const hasImage = url && (url.startsWith("http") || url.startsWith("/static/") || url.startsWith("/storage/")) && !url.includes("placeholder_");
-    const name = (existing && typeof existing === "object" && existing.name) ? existing.name : (names[i] || `Shot ${i + 1}`);
+    const name = (existing && typeof existing === "object" && existing.name) ? existing.name : (names[i] || `Shot ${targetShotNum}`);
     const isSel = vid.selectedKeyframeIds.includes(i);
 
     const isThisKeyframeGenerating = Boolean(
-      isGeneratingPhotos && !hasImage && (i === activeGenIdx || (numShots === 1 && isProc && stage === 2))
+      isGeneratingPhotos && !hasImage && (
+        vid.target_shot_index ? (targetShotNum === vid.target_shot_index) : (i === activeGenIdx || (numShots === 1 && isProc && stage === photoStage))
+      )
     );
 
     const activeImgLabel = (vid.imageModel && (vid.imageModel.includes("imagen") || vid.imageModel.includes("gemini"))) ? "Gemini Imagen 3" : ((vid.imageModel && (vid.imageModel.includes("pro") || vid.imageModel.includes("ultra"))) ? "FLUX Pro" : ((vid.imageModel && vid.imageModel.includes("zimage")) ? "Z-Image" : "FLUX Dev"));
@@ -450,15 +512,18 @@ function renderMotionClipsList(vid) {
   const c = document.getElementById("panel-section-raw-videos"), countEl = document.getElementById("panel-raw-videos-count");
   if (!c) return;
   const isProc = vid.status === "processing", isFailed = vid.status === "failed", stage = vid.currentStage || 1;
-  const numClips = parseInt(vid.numShots || vid.num_shots || 1, 10);
+  const isDocFmt = String(vid?.format || vid?.format_slug || "").toLowerCase().includes("documentary") || String(vid?.genre || "").toLowerCase().startsWith("doc");
+  const motionStage = isDocFmt ? 6 : 4;
   const rawClips = (vid.motion_clips && vid.motion_clips.length > 0) ? vid.motion_clips : (vid.artifacts?.motion_clips || []);
+  const screenplayClipsCount = _countBudgetedScreenplayShots(vid);
+  const numClips = Math.max(screenplayClipsCount || parseInt(vid.numShots || vid.num_shots || 1, 10), rawClips.length);
   const defModel = (vid.motionModel === "wan" || vid.executionMode === "test" || vid.durationSeconds <= 10 || !vid.durationSeconds) ? "Wan 2.1" : "Kling v3";
   const completedClips = rawClips.filter(m => {
     const url = (typeof m === "object") ? m.url : m;
     return url && (url.startsWith("http") || url.startsWith("/static/") || url.startsWith("/storage/")) && !url.includes("placeholder_");
   });
 
-  if (isFailed && (vid.failedStage === 4 || (!rawClips.length && vid.failedStage !== 1 && vid.failedStage !== 2 && vid.failedStage !== 3))) {
+  if (isFailed && (vid.failedStage === motionStage || (!rawClips.length && vid.failedStage !== 1 && vid.failedStage !== 2 && vid.failedStage !== 3))) {
     if (countEl) countEl.textContent = "Error";
     c.innerHTML = `<div class="col-span-3 p-3 bg-white dark:bg-slate-950 border-2 border-red-500 rounded-xl flex flex-col gap-2 shadow-md">
       <div class="flex items-center justify-between flex-wrap gap-1">
@@ -474,7 +539,7 @@ function renderMotionClipsList(vid) {
   }
 
   const isGeneratingMotion = Boolean(
-    isProc && (stage === 4 || (vid.pipelineStrategy === "autonomous" && stage >= 4 && (completedClips.length < numClips || vid.force_rerun)))
+    isProc && (stage === motionStage || (vid.pipelineStrategy === "autonomous" && stage >= motionStage && (completedClips.length < numClips || vid.force_rerun)))
   );
 
   if (countEl) {
@@ -482,7 +547,7 @@ function renderMotionClipsList(vid) {
       countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-purple-200 font-bold font-mono text-[10px] border border-purple-300 dark:border-purple-700 animate-pulse inline-flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[8px]"></i>Rendering ${completedClips.length + 1}/${numClips}...</span>`;
     } else if (completedClips.length > 0) {
       countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 font-bold font-mono text-[10px] border border-emerald-300 dark:border-emerald-700 inline-flex items-center gap-1"><i class="fa-solid fa-check text-[8px]"></i>${completedClips.length}/${numClips} Ready</span>`;
-    } else if (isProc && stage < 4) {
+    } else if (isProc && stage < motionStage) {
       countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold font-mono text-[10px] border border-slate-300 dark:border-slate-700">Queued</span>`;
     } else {
       countEl.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold font-mono text-[10px] border border-slate-300 dark:border-slate-700">${numClips} Clip${numClips > 1 ? 's' : ''}</span>`;
@@ -494,15 +559,15 @@ function renderMotionClipsList(vid) {
     const hasAudio = Boolean(rawStems.length > 0);
     const hasKfs = Boolean((vid.keyframes && vid.keyframes.length > 0) || (vid.artifacts?.keyframes && vid.artifacts.keyframes.length > 0));
 
-    if (hasAudio) {
-      const scenes = vid.screenplay?.scenes || vid.script?.scenes || vid.scenes || [];
+    if (hasAudio && hasKfs) {
+      const scenes = vid.screenplay?.scenes || (vid.screenplay?.chapters ? vid.screenplay.chapters.flatMap(c => c.shots || [c]) : null) || vid.script?.scenes || vid.scenes || [];
       const shot1 = scenes[0] || {};
       const mType = (shot1.motion_type || shot1.motion || "").toLowerCase();
       const isLocalDroneShot = mType.includes("ken_burns") || mType.includes("local") || mType.includes("drone") || mType.includes("zoompan");
 
       const localBtn = `<button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'ken_burns', true)" class="px-1.5 py-1 ${isLocalDroneShot ? 'bg-emerald-600 text-white font-black shadow-md ring-2 ring-emerald-400/50' : 'bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700'} rounded-lg text-[8px] font-bold transition flex items-center gap-1 active:scale-95" title="Render with Local 4K Perspective Drone & Micro-Kinetics ($0.00)"><i class="fa-solid fa-plane-up ${isLocalDroneShot ? 'text-white' : 'text-emerald-600'} text-[7px]"></i><span>Local Drone ($0)</span></button>`;
 
-      const minimaxBtn = `<button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'h3_max', true)" class="px-1.5 py-1 bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 text-teal-900 dark:text-teal-200 rounded-lg text-[8px] font-bold border border-teal-300 dark:border-teal-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Render with MiniMax H3 Max Turbo (~$0.015/sec, Subtle Atmospheric)"><i class="fa-solid fa-wind text-teal-600 text-[7px]"></i><span>MiniMax H3</span></button>`;
+      const minimaxBtn = `<button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'h3_max', true)" class="px-1.5 py-1 bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 text-teal-900 dark:text-teal-200 rounded-lg text-[8px] font-bold border border-teal-300 dark:border-teal-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Render with MiniMax H3 Max ($0.26/clip, ~9s GPU turnaround)"><i class="fa-solid fa-wind text-teal-600 text-[7px]"></i><span>MiniMax H3 ($0.26)</span></button>`;
 
       const wanBtn = `<button type="button" onclick="advanceToMotionStage(currentActiveInspectorEpisode, 'wan', true)" class="px-1.5 py-1 bg-white dark:bg-slate-900 hover:bg-slate-100 text-slate-800 dark:text-gray-200 rounded-lg text-[8px] font-bold border border-slate-300 dark:border-slate-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Test with Wan 2.1 1080p ($0.40)"><i class="fa-solid fa-vial text-amber-500 text-[7px]"></i><span>Wan 2.1</span></button>`;
 
@@ -531,8 +596,8 @@ function renderMotionClipsList(vid) {
     return;
   }
 
-  if (isProc && stage < 4 && !isGeneratingMotion) {
-    c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-amber-500 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 4 Motion</span><span class="text-[7px] text-slate-400 font-mono">(Starts after Stage 3 Audio approved)</span></div>`;
+  if (isProc && stage < motionStage && !isGeneratingMotion) {
+    c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-amber-500 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage ${motionStage} Motion</span><span class="text-[7px] text-slate-400 font-mono">(Starts after Keyframes &amp; BGM approved)</span></div>`;
     return;
   }
 
@@ -541,13 +606,22 @@ function renderMotionClipsList(vid) {
   const activeGenIdx = isGeneratingMotion ? (vid.force_rerun ? 0 : completedClips.length) : -1;
   const pVal = Math.min(95, vid.progress || 50);
 
-  const scenes = vid.screenplay?.scenes || vid.script?.scenes || vid.scenes || [];
+  const scenes = vid.screenplay?.scenes || (vid.screenplay?.chapters ? vid.screenplay.chapters.flatMap(c => c.shots || [c]) : null) || vid.script?.scenes || vid.scenes || [];
 
   c.innerHTML = Array.from({ length: numClips }, (_, i) => {
-    const existing = rawClips[i];
+    const targetShotNum = i + 1;
+    const existing = rawClips.find(m => {
+      if (!m) return false;
+      const str = (typeof m === "object" ? (m.name || m.url || m.filename || "") : String(m)).toLowerCase();
+      const match = str.match(/(?:motion_p|p|shot\s*|motion\s*|scene\s*)(\d+)/i);
+      if (match && parseInt(match[1], 10) === targetShotNum) return true;
+      if (typeof m === "object" && (m.scene_index === targetShotNum || m.shot_index === targetShotNum)) return true;
+      return false;
+    }) || (rawClips.length === numClips ? rawClips[i] : null);
+
     const url = existing ? ((typeof existing === "object") ? existing.url : existing) : null;
     const hasVid = url && (url.startsWith("http") || url.startsWith("/static/") || url.startsWith("/storage/")) && !url.includes("placeholder_");
-    const name = (existing && typeof existing === "object" && existing.name) ? existing.name : `Motion ${i + 1}`;
+    const name = (existing && typeof existing === "object" && existing.name) ? existing.name : `Motion ${targetShotNum}`;
     let model = (existing && typeof existing === "object" && existing.model) ? existing.model : defModel;
     if (vid.motionModel) {
       if (vid.motionModel === "ken_burns" || vid.motionModel === "local_drone") model = "Local Drone";
@@ -563,7 +637,9 @@ function renderMotionClipsList(vid) {
     const isShotLocalDrone = shotMotionType.includes("ken_burns") || shotMotionType.includes("local") || shotMotionType.includes("drone") || shotMotionType.includes("zoompan");
 
     const isThisClipGenerating = Boolean(
-      isGeneratingMotion && (!hasVid || vid.force_rerun) && (i === activeGenIdx || (numClips === 1 && isProc && stage === 4))
+      isGeneratingMotion && (!hasVid || vid.force_rerun) && (
+        vid.target_shot_index ? (targetShotNum === vid.target_shot_index) : (i === activeGenIdx || (numClips === 1 && isProc && stage === motionStage))
+      )
     );
 
     if (isThisClipGenerating) {
@@ -631,41 +707,46 @@ function renderAudioStemsList(vid) {
     return;
   }
 
-  // If Stage < 3 and not processing Stage 3
-  if (isProc && stage < 3 && rawStems.length === 0) {
-    c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-slate-400 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 3 Audio</span><span class="text-[7px] text-slate-400 font-mono">(Starts after Keyframe Photos approved)</span></div>`;
+  // If Stage < 2 and not processing Stage 2
+  if (isProc && stage < 2 && rawStems.length === 0) {
+    c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-slate-400 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">Queued for Stage 2 Audio</span><span class="text-[7px] text-slate-400 font-mono">(Starts after Storyboard formulation)</span></div>`;
     return;
   }
 
-  // If not processing and no stems yet
-  if (!isProc && rawStems.length === 0) {
-    const rawKfs = (vid.keyframes && vid.keyframes.length > 0) ? vid.keyframes : (vid.artifacts?.keyframes || []);
-    const completedKfs = rawKfs.filter(kf => {
-      const url = (typeof kf === "object") ? kf.url : kf;
-      return url && (url.startsWith("http") || url.startsWith("/static/") || url.startsWith("/storage/")) && !url.includes("placeholder_");
-    });
-    const hasKfs = Boolean(completedKfs.length > 0 || rawKfs.length > 0);
-    if (hasKfs) {
-      c.innerHTML = `<div class="col-span-3 p-1.5 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/40 dark:to-blue-950/40 border border-cyan-300 dark:border-cyan-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
-        <div class="flex items-center gap-1.5"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-cyan-950 dark:text-white">Stage 2 Photos Ready</span><span class="text-[7px] text-cyan-700 dark:text-cyan-300">Choose voiceover engine:</span></div></div>
-        <div class="flex items-center gap-1 flex-wrap">
-          <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, 'azure_speech')" class="px-2 py-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Approve with Azure Speech / Edge Neural TTS">🎙️ Azure/Edge (Def)</button>
-          <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, 'gemini')" class="px-2 py-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Approve with Gemini 2.5 Flash Audio">✨ Gemini Audio</button>
-          <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, 'kokoro')" class="px-2 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Approve with Kokoro Local ($0.00)">⚡ Kokoro ($0)</button>
-        </div>
-      </div>`;
-    } else {
-      c.innerHTML = `<div class="col-span-3 h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-2 shadow-sm"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><span class="text-[9px] font-bold text-slate-900 dark:text-white">No Audio Stems Yet</span><span class="text-[7px] text-slate-500 font-mono">(Azure TTS, Gemini Audio, Kokoro, Suno &amp; 3D Velvet DSP)</span></div>`;
-    }
-    return;
-  }
+  const isDoc = String(vid?.format || vid?.format_slug || "").toLowerCase().includes("documentary") || !Boolean(String(vid?.genre || "").toLowerCase().startsWith("relax"));
 
   // Find Suno stem, Velvet stem, and Spoken Narration stem
   const sunoStem = rawStems.find(s => (s.filename && s.filename.includes("raw_soundtrack")) || (s.name && (s.name.toLowerCase().includes("suno") || s.name.toLowerCase().includes("soundtrack"))));
   const velvetStem = rawStems.find(s => (s.filename && s.filename.includes("velvet")) || (s.name && (s.name.toLowerCase().includes("velvet") || s.name.toLowerCase().includes("binaural") || s.name.toLowerCase().includes("432hz"))));
   const narrStem = rawStems.find(s => (s.filename && (s.filename.includes("spoken_narration") || s.filename.includes("narration"))) || (s.name && (s.name.toLowerCase().includes("narration") || s.name.toLowerCase().includes("voiceover"))));
 
-  const isAudioActive = Boolean(isProc && stage === 3);
+  // If not processing and no target stems yet (for Doc: no BGM stem yet; for Relax: no stems at all)
+  const missingTargetStems = isDoc ? (!sunoStem && !velvetStem) : (rawStems.length === 0);
+  if (!isProc && missingTargetStems) {
+    const hasScript = Boolean(vid.script || vid.story_topic || vid.title || vid.screenplay);
+    if (hasScript) {
+      if (isDoc) {
+        c.innerHTML = `<div class="col-span-2 p-1.5 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/40 dark:to-blue-950/40 border border-cyan-300 dark:border-cyan-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
+          <div class="flex items-center gap-1.5"><i class="fa-solid fa-music text-cyan-600 dark:text-cyan-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-cyan-950 dark:text-white">Stage 5 BGM Soundtrack</span><span class="text-[7px] text-cyan-700 dark:text-cyan-300">Synthesize BGM soundtrack:</span></div></div>
+          <button type="button" onclick="advanceToBgmStage(currentActiveInspectorEpisode, true)" class="px-2 py-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Synthesize BGM via Suno v3.5"><i class="fa-solid fa-music text-[7px]"></i><span>Generate Suno BGM ➔</span></button>
+        </div>`;
+      } else {
+        c.innerHTML = `<div class="col-span-2 p-1.5 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/40 dark:to-blue-950/40 border border-cyan-300 dark:border-cyan-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
+          <div class="flex items-center gap-1.5"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-cyan-950 dark:text-white">Stage 1 Storyboard Ready</span><span class="text-[7px] text-cyan-700 dark:text-cyan-300">Choose voiceover engine:</span></div></div>
+          <div class="flex items-center gap-1 flex-wrap">
+            <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, 'azure_speech')" class="px-2 py-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Approve with Azure Speech / Edge Neural TTS">🎙️ Azure/Edge (Def)</button>
+            <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, 'gemini')" class="px-2 py-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Approve with Gemini 2.5 Flash Audio">✨ Gemini Audio</button>
+            <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, 'kokoro')" class="px-2 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Approve with Kokoro Local ($0.00)">⚡ Kokoro ($0)</button>
+          </div>
+        </div>`;
+      }
+    } else {
+      c.innerHTML = `<div class="col-span-2 h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-2 shadow-sm"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><span class="text-[9px] font-bold text-slate-900 dark:text-white">No Audio Stems Yet</span><span class="text-[7px] text-slate-500 font-mono">(Azure TTS, Gemini Audio, Kokoro, Suno &amp; 3D Velvet DSP)</span></div>`;
+    }
+    return;
+  }
+
+  const isAudioActive = Boolean(isProc && stage === (isDoc ? 5 : 3));
   const items = [
     {
       name: "Suno Soundtrack",
@@ -680,15 +761,17 @@ function renderAudioStemsList(vid) {
       color: "emerald",
       model: "Spatial DSP",
       isGenerating: Boolean(isAudioActive && sunoStem && !velvetStem),
-    },
-    {
+    }
+  ];
+  if (!isDoc) {
+    items.push({
       name: "Spoken Narration",
       stem: narrStem,
       color: "indigo",
       model: "TTS Voice",
       isGenerating: Boolean(isAudioActive && (vid.enableVoiceOver || vid.enable_voiceover) && !narrStem),
-    }
-  ];
+    });
+  }
 
   c.innerHTML = items.map((item, i) => {
     if (item.stem && item.stem.url) {

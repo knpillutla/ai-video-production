@@ -1,0 +1,860 @@
+{
+  "documentary": {
+    "format_id": "documentary",
+    "name": "Documentary",
+    "icon": "fa-film",
+    "description": "Educational, historical, nature, cultural & scientific documentary films.",
+    "genres": [
+      {
+        "id": "doc/nations",
+        "name": "🌍 Sovereign Nations & Countries",
+        "description": "Educational deep-dives into modern sovereign states, governance, geography, economy, culture, and living heritage.",
+        "subgenres": [
+          {
+            "id": "europe_nations",
+            "name": "European Nations (Ireland, Norway, Switzerland, Italy, Germany...)",
+            "description": "Sovereign European democracies, alpine republics, and maritime nations.",
+            "archetypes": [
+              {
+                "id": "country_overview",
+                "name": "🌍 Country Overview (21 Chapters)",
+                "description": "Educational 21-chapter survey: governance, geography, society, universities, economy, culture, landmarks & future.",
+                "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
+              },
+              {
+                "id": "country_encyclopedia",
+                "name": "📚 Country Encyclopedia (35 Chapters)",
+                "description": "Exhaustive 35-chapter national almanac across 5 Acts: prehistory, waterways, science, health, rail, diaspora & sports.",
+                "story_prompt_file": "prompts/documentary/nations/country_encyclopedia.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_encyclopedia.screenplay.prompt.md"
+              },
+              {
+                "id": "top_places_to_visit",
+                "name": "✨ Top Places to Visit (National Highlights)",
+                "description": "Curated national bucket list of UNESCO citadels, fairy-tale villages, and natural marvels.",
+                "story_prompt_file": "prompts/documentary/nations/top_places_to_visit.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/top_places_to_visit.prompt.md"
+              },
+              {
+                "id": "top_10_cities",
+                "name": "🏙️ Top 10 Cities Countdown",
+                "description": "Ranked countdown of premier metropolises and provincial capitals.",
+                "story_prompt_file": "prompts/documentary/nations/top_10_cities.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/top_10_cities.prompt.md"
+              },
+              {
+                "id": "tour_itinerary",
+                "name": "🗺️ Travel Itinerary Tour",
+                "description": "Ordered travel route with landmark stops, day plans, and connecting transit bridges.",
+                "story_prompt_file": "prompts/documentary/nations/tour_itinerary.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/tour_itinerary.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "asia_nations",
+            "name": "Asian Nations (India, Japan, South Korea, China, Vietnam, Thailand...)",
+            "description": "Ancient and modern Asian powers, island nations, and high-tech economies.",
+            "archetypes": [
+              {
+                "id": "country_overview",
+                "name": "🌍 Country Overview (21 Chapters)",
+                "description": "Educational 21-chapter sovereign survey: governance, geography, universities, economy & living culture.",
+                "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
+              },
+              {
+                "id": "country_encyclopedia",
+                "name": "📚 Country Encyclopedia (35 Chapters)",
+                "description": "Exhaustive 35-chapter national almanac across 5 Acts: prehistory, waterways, science, health & diaspora.",
+                "story_prompt_file": "prompts/documentary/nations/country_encyclopedia.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_encyclopedia.screenplay.prompt.md"
+              },
+              {
+                "id": "top_places_to_visit",
+                "name": "✨ Top Places to Visit (National Highlights)",
+                "description": "Curated national bucket list of sacred temples, royal palaces, and natural wonders.",
+                "story_prompt_file": "prompts/documentary/nations/top_places_to_visit.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/top_places_to_visit.prompt.md"
+              },
+              {
+                "id": "top_10_cities",
+                "name": "🏙️ Top 10 Cities Countdown",
+                "description": "Ranked countdown of premier metropolises and regional cultural centers.",
+                "story_prompt_file": "prompts/documentary/nations/top_10_cities.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/top_10_cities.prompt.md"
+              },
+              {
+                "id": "tour_itinerary",
+                "name": "🗺️ Travel Itinerary Tour",
+                "description": "Ordered travel route with landmark stops, day plans, and connecting transit bridges.",
+                "story_prompt_file": "prompts/documentary/nations/tour_itinerary.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/tour_itinerary.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "americas_nations",
+            "name": "Americas Nations (United States, Canada, Brazil, Mexico, Peru...)",
+            "description": "Vast continental republics, indigenous heritage, and mega-economies.",
+            "archetypes": [
+              {
+                "id": "country_overview",
+                "name": "🌍 Country Overview (21 Chapters)",
+                "description": "Educational 21-chapter sovereign survey.",
+                "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
+              },
+              {
+                "id": "country_encyclopedia",
+                "name": "📚 Country Encyclopedia (35 Chapters)",
+                "description": "Exhaustive 35-chapter national almanac across 5 Acts.",
+                "story_prompt_file": "prompts/documentary/nations/country_encyclopedia.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_encyclopedia.screenplay.prompt.md"
+              },
+              {
+                "id": "top_places_to_visit",
+                "name": "✨ Top Places to Visit",
+                "description": "National bucket list of wonders.",
+                "story_prompt_file": "prompts/documentary/nations/top_places_to_visit.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/top_places_to_visit.prompt.md"
+              },
+              {
+                "id": "top_10_cities",
+                "name": "🏙️ Top 10 Cities Countdown",
+                "description": "Ranked countdown of major cities.",
+                "story_prompt_file": "prompts/documentary/nations/top_10_cities.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/top_10_cities.prompt.md"
+              },
+              {
+                "id": "tour_itinerary",
+                "name": "🗺️ Travel Itinerary Tour",
+                "description": "Ordered travel route and day plan.",
+                "story_prompt_file": "prompts/documentary/nations/tour_itinerary.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/tour_itinerary.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "africa_mideast_nations",
+            "name": "Africa & Middle East (Egypt, South Africa, Morocco, UAE, Kenya...)",
+            "description": "Cradles of ancient civilization, savannah nations, and modern emirates.",
+            "archetypes": [
+              {
+                "id": "country_overview",
+                "name": "🌍 Country Overview (21 Chapters)",
+                "description": "Educational 21-chapter sovereign survey.",
+                "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
+              },
+              {
+                "id": "country_encyclopedia",
+                "name": "📚 Country Encyclopedia (35 Chapters)",
+                "description": "Exhaustive 35-chapter national almanac across 5 Acts.",
+                "story_prompt_file": "prompts/documentary/nations/country_encyclopedia.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_encyclopedia.screenplay.prompt.md"
+              },
+              {
+                "id": "top_places_to_visit",
+                "name": "✨ Top Places to Visit",
+                "description": "National bucket list of wonders.",
+                "story_prompt_file": "prompts/documentary/nations/top_places_to_visit.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/top_places_to_visit.prompt.md"
+              },
+              {
+                "id": "top_10_cities",
+                "name": "🏙️ Top 10 Cities Countdown",
+                "description": "Ranked countdown of major cities.",
+                "story_prompt_file": "prompts/documentary/nations/top_10_cities.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/top_10_cities.prompt.md"
+              },
+              {
+                "id": "tour_itinerary",
+                "name": "🗺️ Travel Itinerary Tour",
+                "description": "Ordered travel route and day plan.",
+                "story_prompt_file": "prompts/documentary/nations/tour_itinerary.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/tour_itinerary.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "oceania_polar_nations",
+            "name": "Oceania & Polar (Australia, New Zealand, Iceland, Greenland...)",
+            "description": "Pristine island nations, polar territories, and isolated ecosystems.",
+            "archetypes": [
+              {
+                "id": "country_overview",
+                "name": "🌍 Country Overview (21 Chapters)",
+                "description": "Educational 21-chapter sovereign survey.",
+                "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
+              },
+              {
+                "id": "country_encyclopedia",
+                "name": "📚 Country Encyclopedia (35 Chapters)",
+                "description": "Exhaustive 35-chapter national almanac across 5 Acts.",
+                "story_prompt_file": "prompts/documentary/nations/country_encyclopedia.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_encyclopedia.screenplay.prompt.md"
+              },
+              {
+                "id": "top_places_to_visit",
+                "name": "✨ Top Places to Visit",
+                "description": "National bucket list of wonders.",
+                "story_prompt_file": "prompts/documentary/nations/top_places_to_visit.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/top_places_to_visit.prompt.md"
+              },
+              {
+                "id": "top_10_cities",
+                "name": "🏙️ Top 10 Cities Countdown",
+                "description": "Ranked countdown of major cities.",
+                "story_prompt_file": "prompts/documentary/nations/top_10_cities.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/top_10_cities.prompt.md"
+              },
+              {
+                "id": "tour_itinerary",
+                "name": "🗺️ Travel Itinerary Tour",
+                "description": "Ordered travel route and day plan.",
+                "story_prompt_file": "prompts/documentary/nations/tour_itinerary.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/tour_itinerary.prompt.md"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "doc/civilizations",
+        "name": "🏺 Ancient Civilizations & Historical Spheres",
+        "description": "Trans-national ancient realms, lost empires, historical trade routes, and founding epochs that span across multiple modern countries.",
+        "subgenres": [
+          {
+            "id": "indus_vedic",
+            "name": "Indus Valley & Vedic Civilizations (Harappa, Mohenjo-daro, Saraswati, Lothal)",
+            "description": "Bronze Age urban planning, sanitation engineering, terracotta seals, and early Sanskrit lore.",
+            "archetypes": [
+              {
+                "id": "civilizational_origins",
+                "name": "🏺 Civilizational Origins & City Planning",
+                "description": "Pre-planned grid cities, advanced drainage, granaries, and bronze age commerce.",
+                "story_prompt_file": "prompts/documentary/civilizations/civilizational_origins.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "archaeological_ruins_lost_empires",
+                "name": "🏛️ Archaeological Ruins & Sacred Seals",
+                "description": "Excavation sites, the unicorn seal, priest-king, terracotta figures, and lost scripts.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "monumental_architecture_empires",
+                "name": "🧱 Monumental Architecture & Great Baths",
+                "description": "Fired-brick masonry, dockyards of Lothal, citadel mounds, and water engineering.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "trade_routes_silk_road",
+                "name": "🧭 Maritime Trade & Ancient Sea Routes",
+                "description": "Persian Gulf trade networks connecting Indus with ancient Mesopotamia and Elam.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "celtic_world",
+            "name": "Celtic & Gaelic Realms (Ireland, Scotland, Wales, Cornwall, Brittany)",
+            "description": "Megalithic passage tombs, stone circles, Ogham inscriptions, and Druidic folklore.",
+            "archetypes": [
+              {
+                "id": "civilizational_origins",
+                "name": "🏺 Civilizational Origins & Tribal Epochs",
+                "description": "Ogham stones, Celtic mythology, hill forts, and Druidic stone circles.",
+                "story_prompt_file": "prompts/documentary/civilizations/civilizational_origins.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "sacred_rituals_faiths",
+                "name": "🪔 Sacred Springs, Cairns & Megaliths",
+                "description": "Newgrange passage tombs, dolmens, and seasonal equinox sanctuaries.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "monumental_architecture_empires",
+                "name": "🏰 Stone Ringforts & Round Towers",
+                "description": "Dun Aengus cliffside forts, monastic spires, and Gaelic medieval strongholds.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "viking_norse",
+            "name": "Viking & Norse World (Scandinavia, Iceland, Greenland, Danelaw)",
+            "description": "Maritime longships, Thing democratic assemblies, Elder Futhark runes, and stave churches.",
+            "archetypes": [
+              {
+                "id": "maritime_expansion_voyages",
+                "name": "🧭 Maritime Longships & Seafaring Expeditions",
+                "description": "Dragon ships, North Sea navigation, solar sunstones, and exploration.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "civilizational_origins",
+                "name": "🏺 Norse Sagas, Runes & Thing Assemblies",
+                "description": "Althing parliament, Eddas, Elder Futhark rune stones, and mythological cosmos.",
+                "story_prompt_file": "prompts/documentary/civilizations/civilizational_origins.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "monumental_architecture_empires",
+                "name": "🪵 Stave Churches & Viking Ring Fortresses",
+                "description": "Trelleborg circular fortresses, timber stave architecture, and coastal settlements.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "greco_roman",
+            "name": "Greco-Roman Classical Antiquity (Greece, Rome, Magna Graecia, Hellenistic)",
+            "description": "Classical democracy, Roman law, monumental marble architecture, and philosophy.",
+            "archetypes": [
+              {
+                "id": "monumental_architecture_empires",
+                "name": "🏛️ Monumental Architecture, Temples & Forums",
+                "description": "Parthenon marble columns, Roman Colosseum, aqueducts, and the Roman Forum.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "golden_ages_renaissance",
+                "name": "📜 Classical Philosophy, Democracy & Law",
+                "description": "Athenian democracy, Roman jurisprudence, Stoic philosophy, and libraries.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "civilizational_origins",
+                "name": "🏺 Founding Epochs & Mediterranean Empires",
+                "description": "Mycenaean citadels, Spartan resilience, and the rise of the Roman Republic.",
+                "story_prompt_file": "prompts/documentary/civilizations/civilizational_origins.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "silk_road",
+            "name": "Silk Road & Central Asian Caravan Kingdoms (Samarkand, Bukhara, Dunhuang)",
+            "description": "Trans-continental camel caravans, oasis cities, turquoise domes, and trade crossroads.",
+            "archetypes": [
+              {
+                "id": "trade_routes_silk_road",
+                "name": "🐫 Desert Caravans, Bazaars & Silk Caravanserais",
+                "description": "Oasis waystations, camel caravans, lapis lazuli trade, and cultural crossroads.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "monumental_architecture_empires",
+                "name": "🕌 Turquoise Domes, Minarets & Madrasas",
+                "description": "Registan square, blue mosaic tilework, and desert fortress citadels.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "islamic_golden_age",
+            "name": "Islamic Golden Age & Al-Andalus (Baghdad, Cordoba, Cairo, Samarra)",
+            "description": "The House of Wisdom, astronomy, optics, algebra, and Moorish palace architecture.",
+            "archetypes": [
+              {
+                "id": "golden_ages_renaissance",
+                "name": "📜 House of Wisdom, Optics, Medicine & Algebra",
+                "description": "Translators of antiquity, astronomical observatories, and medical treatises.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "monumental_architecture_empires",
+                "name": "🕌 Moorish Palaces & Sacred Geometry",
+                "description": "Alhambra courtyards, Great Mosque of Cordoba arches, and water gardens.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "mesoamerican_andean",
+            "name": "Mesoamerican & Andean Empires (Maya, Aztec, Inca, Tiwanaku)",
+            "description": "Highland agricultural terraces, cyclopean stone architecture, and solar calendars.",
+            "archetypes": [
+              {
+                "id": "monumental_architecture_empires",
+                "name": "🏛️ Step Pyramids, Sun Citadels & Machu Picchu",
+                "description": "Chichen Itza astronomical pyramids, Incan stone masonry, and jungle temples.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "civilizational_origins",
+                "name": "🏺 Solar Calendars, Glyph Codices & Terraced Agriculture",
+                "description": "Highland agricultural terraces, Andean quipus, and sacred cosmologies.",
+                "story_prompt_file": "prompts/documentary/civilizations/civilizational_origins.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "east_asian_dynasties",
+            "name": "East Asian Dynasties (Tang, Song, Ming, Han, Joseon, Edo Japan)",
+            "description": "Imperial palaces, the Great Wall, woodblock printing, silk scrolls, and Zen arts.",
+            "archetypes": [
+              {
+                "id": "monumental_architecture_empires",
+                "name": "🏯 Forbidden Palaces, Great Wall & Pagodas",
+                "description": "Timber bracket architecture, imperial throne halls, and stone fortifications.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "golden_ages_renaissance",
+                "name": "📜 Four Great Inventions, Porcelain & Calligraphy",
+                "description": "Woodblock printing, gunpowder, maritime compass, paper, and literati arts.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "mesopotamian_persian",
+            "name": "Mesopotamian & Persian Empires (Sumer, Babylon, Assyria, Achaemenid)",
+            "description": "The cradle of civilization, mudbrick ziggurats, cuneiform law, and Persepolis.",
+            "archetypes": [
+              {
+                "id": "civilizational_origins",
+                "name": "🏺 Cradle of Civilization, Cuneiform & Law Codes",
+                "description": "Hammurabi law stele, clay cuneiform tablets, and early city-states.",
+                "story_prompt_file": "prompts/documentary/civilizations/civilizational_origins.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "monumental_architecture_empires",
+                "name": "🏛️ Mudbrick Ziggurats, Ishtar Gate & Persepolis",
+                "description": "Glazed brick Ishtar Gate, colossal winged bulls, and Persian royal palace columns.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "byzantine_empire",
+            "name": "Byzantine Eastern Roman Empire (Constantinople, Ravenna, Mount Athos)",
+            "description": "Theodosian walls, floating domes of Hagia Sophia, and gold leaf mosaics.",
+            "archetypes": [
+              {
+                "id": "monumental_architecture_empires",
+                "name": "⛪ Hagia Sophia, Gold Mosaics & Basilicas",
+                "description": "Floating dome architecture, glowing gold leaf mosaics, and imperial basilicas.",
+                "story_prompt_file": "prompts/documentary/civilizations/archaeological_ruins_lost_empires.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              },
+              {
+                "id": "civilizational_origins",
+                "name": "📜 The Theodosian Walls, Justinian Code & Imperial Legacy",
+                "description": "Triple defensive walls, Roman-Hellenic synthesis, and thousand-year continuity.",
+                "story_prompt_file": "prompts/documentary/civilizations/civilizational_origins.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/civilizations/civilizational_origins.screenplay.prompt.md"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "science",
+        "name": "🔬 Science, Megastructures & Natural Wonders",
+        "description": "Deep space discoveries, quantum physics, trans-continental megaprojects, and oceanic trenches.",
+        "subgenres": [
+          {
+            "id": "astronomy_space",
+            "name": "Deep Space & Astrophysics (James Webb, Black Holes, Mars)",
+            "description": "Cosmic dawn, nebulae, black hole horizons, and interstellar exploration.",
+            "archetypes": [
+              {
+                "id": "deep_space_webb",
+                "name": "🪐 James Webb Deep Field & Cosmic Dawn",
+                "description": "Infrared cosmic dawn, primordial galaxies, and nebula nurseries.",
+                "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
+              },
+              {
+                "id": "quantum_superposition",
+                "name": "⚛️ Quantum Physics & Particle Accelerators",
+                "description": "CERN Large Hadron Collider, quantum entanglement, and subatomic forces.",
+                "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "engineering_megaprojects",
+            "name": "Megastructures & Civil Engineering Feats",
+            "description": "Mega-bridges, deep undersea tunnels, massive dams, and orbital space stations.",
+            "archetypes": [
+              {
+                "id": "major_projects",
+                "name": "🏗️ Megastructures, Dams & Bridges",
+                "description": "Trans-continental suspension bridges, deep rail tunnels, and green energy grids.",
+                "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "earth_oceans",
+            "name": "Extreme Earth & Ocean Abyss",
+            "description": "Mariana trench, abyssal hydrothermal vents, and extreme geothermal frontiers.",
+            "archetypes": [
+              {
+                "id": "deep_ocean_abyss",
+                "name": "🌊 Mariana Trench & Abyssal Hydrothermal Vents",
+                "description": "Extreme pressure bioluminescence, submarine canyons, and tectonic vents.",
+                "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
+                "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "relaxation": {
+    "format_id": "relaxation",
+    "name": "Relaxation & ASMR",
+    "icon": "fa-spa",
+    "description": "Calming 4K nature retreats, ambient soundscapes, hearths, rain, and biophilic living spaces.",
+    "genres": [
+      {
+        "id": "relax/nature",
+        "name": "🏔️ Nature & Alpine Sanctuaries",
+        "description": "Pristine mountain peaks, glacial streams, and wildflower valleys.",
+        "subgenres": [
+          {
+            "id": "alpine_nature",
+            "name": "Swiss Alps & High Mountain Valleys",
+            "description": "Towering peaks, glacial lakes, and tranquil alpine meadows.",
+            "archetypes": [
+              {
+                "id": "alpine_peaks_meadow",
+                "name": "🏔️ Swiss Alps Peaks & Wildflower Meadow",
+                "description": "Granite peaks, rolling alpine meadows, and cowbell echoes.",
+                "story_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md"
+              },
+              {
+                "id": "glacial_mirror_lake",
+                "name": "🛶 Glacial Mirror Lake & Reflections",
+                "description": "Crystal turquoise water mirroring towering snow-capped peaks.",
+                "story_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "ambient_soundscape",
+            "name": "Temperate Ancient Forest & Glades",
+            "description": "Old-growth mossy pines, mountain brooks, and soft forest breeze.",
+            "archetypes": [
+              {
+                "id": "temperate_mossy_forest",
+                "name": "🌲 Mossy Rainforest & Glacial Stream",
+                "description": "Lush old-growth pines, dew-drenched ferns, and soft forest breeze.",
+                "story_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md"
+              },
+              {
+                "id": "dolomites_panoramic",
+                "name": "⛰️ Dolomite Granite Spires & Alpenglow",
+                "description": "Towering vertical rock needles bathed in sunset alpenglow.",
+                "story_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "relax/rain",
+        "name": "🌧️ Rain, Chalet Balconies & Verandas",
+        "description": "Torrential raindrops on panoramic windows, sheltered balconies, and eaves.",
+        "subgenres": [
+          {
+            "id": "biophilic_retreat",
+            "name": "Covered Verandas & Chalet Balconies",
+            "description": "Cozy covered outdoor spaces with steady rainfall and misty views.",
+            "archetypes": [
+              {
+                "id": "swiss_chalet_balcony",
+                "name": "🏡 Swiss Chalet Balcony & Village Rain",
+                "description": "Wooden railing, geranium flowerboxes, and steady rainfall over the valley.",
+                "story_prompt_file": "prompts/relaxation/rain/swiss_chalet_balcony.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/rain/swiss_chalet_balcony.prompt.md"
+              },
+              {
+                "id": "rainy_cabin_bedroom",
+                "name": "🛏️ Glass Cabin Bedroom & Eaves Rain",
+                "description": "Warm bed, panoramic floor-to-ceiling glass, and rhythmic rain tapping.",
+                "story_prompt_file": "prompts/relaxation/rain/swiss_chalet_balcony.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/rain/swiss_chalet_balcony.prompt.md"
+              },
+              {
+                "id": "biophilic_veranda",
+                "name": "🌿 Biophilic Covered Veranda & Lush Garden",
+                "description": "Teak furniture, cascading tropical rain, and vibrant wet foliage.",
+                "story_prompt_file": "prompts/relaxation/rain/swiss_chalet_balcony.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/rain/swiss_chalet_balcony.prompt.md"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "relax/hearth",
+        "name": "🔥 Open-Air Campfires & Stone Hearths",
+        "description": "ASMR crackling pine logs, glowing embers, and ocean shoreline fires.",
+        "subgenres": [
+          {
+            "id": "cozy_hearth",
+            "name": "Shoreline Hearths & Coastal Beach Fires",
+            "description": "Fires by the sea, glowing logs, and crashing ocean waves.",
+            "archetypes": [
+              {
+                "id": "pebble_beach_shore",
+                "name": "🏖️ Pebble Shore Fire Ring & Rolling Waves",
+                "description": "Smooth granite stones, glowing driftwood fire, and gentle surf.",
+                "story_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md"
+              },
+              {
+                "id": "cliffside_stone_hearth",
+                "name": "🌊 Cliffside Stone Hearth & Sunset Horizon",
+                "description": "Elevated ocean terrace hearth, warm embers, and dramatic twilight sky.",
+                "story_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "relax/waterfall",
+        "name": "🌊 Monumental Cascades & Waterfalls",
+        "description": "Roaring plunge cataracts and multi-tiered mossy water drops.",
+        "subgenres": [
+          {
+            "id": "waterfall_gorge",
+            "name": "Monumental Cataracts & Glacial Cascades",
+            "description": "Towering waterfalls with roaring cascades and rainbows.",
+            "archetypes": [
+              {
+                "id": "monumental_plunge",
+                "name": "🌊 Roaring Cataract Plunge & Mist Rainbow",
+                "description": "Wall-to-wall cascade, thunderous soothing rumble, and rising mist.",
+                "story_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md"
+              },
+              {
+                "id": "tiered_mossy_cascade",
+                "name": "🏞️ Multi-Tiered Cascades & Emerald Pools",
+                "description": "Gentle cascading steps over mossy stones into crystalline pools.",
+                "story_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "relax/zen",
+        "name": "🪷 Kyoto Zen Gardens & Sacred Lotus Ponds",
+        "description": "Raked rock gardens, bamboo water fountains, and koi ponds.",
+        "subgenres": [
+          {
+            "id": "zen_garden",
+            "name": "Kyoto Raked Stone & Bamboo Pavilions",
+            "description": "Peaceful rock gardens and bamboo groves.",
+            "archetypes": [
+              {
+                "id": "karesansui_temple",
+                "name": "🪷 Kyoto Raked Stone Garden & Maple Leaves",
+                "description": "Carefully raked white gravel waves, moss islands, and temple veranda.",
+                "story_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md"
+              },
+              {
+                "id": "sagano_bamboo_basin",
+                "name": "🎋 Bamboo Grove & Water Dripping Basin (Shishi-odoshi)",
+                "description": "Hollow bamboo rocker clacking softly on stone amidst towering bamboo.",
+                "story_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "relax/ambient",
+        "name": "🌌 Velvet Ambient Worlds & Aurora Skies",
+        "description": "14 velvet ambient archetypes, aurora borealis, and twilight sanctuaries.",
+        "subgenres": [
+          {
+            "id": "global_healing",
+            "name": "Nordic Fjords, Aurora & Velvet Cabins",
+            "description": "Starlit skies, auroras, and quiet midnight landscapes.",
+            "archetypes": [
+              {
+                "id": "nordic_aurora_fjord",
+                "name": "🌌 Nordic Aurora Borealis & Mirror Fjord",
+                "description": "Emerald curtains of polar light reflecting on glassy still fjord waters.",
+                "story_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md"
+              },
+              {
+                "id": "twilight_alpine_valley",
+                "name": "✨ Velvet Twilight Cabin & Mountain Mist",
+                "description": "Warm yellow window glow against deep twilight blue alpine spires.",
+                "story_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md",
+                "screenplay_prompt_file": "prompts/relaxation/nature/alpine_peaks_meadow.prompt.md"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "walking_tour": {
+    "format_id": "walking_tour",
+    "name": "Walking Tour",
+    "icon": "fa-person-walking",
+    "description": "4K ultra-slow leisure human cadence first-person walking tours.",
+    "genres": [
+      {
+        "id": "travel_walking",
+        "name": "🚶 4K POV Walking Tours",
+        "description": "Immersive 60fps steadycam walks through historic cities, rain streets, and trails.",
+        "subgenres": [
+          {
+            "id": "city_walk",
+            "name": "Historic Old Towns & Rain Walking",
+            "description": "Cobblestone alleys, wet reflections, and quaint cafe streets.",
+            "archetypes": [
+              {
+                "id": "rain_city_walk",
+                "name": "🌧️ 4K Rain Walking Tour & Neon Reflections",
+                "description": "Glistening wet cobblestones, umbrella canopy, and distant cafe warmth.",
+                "story_prompt_file": "prompts/walking_tour/rain_city_walk.prompt.md",
+                "screenplay_prompt_file": "prompts/walking_tour/rain_city_walk.prompt.md"
+              },
+              {
+                "id": "historic_old_town",
+                "name": "🏙️ Historic Old Town Street & Medieval Alleys",
+                "description": "Cobbled lanes, timber-framed facades, and bell tower ambiance.",
+                "story_prompt_file": "prompts/walking_tour/rain_city_walk.prompt.md",
+                "screenplay_prompt_file": "prompts/walking_tour/rain_city_walk.prompt.md"
+              }
+            ]
+          },
+          {
+            "id": "nature_walk",
+            "name": "Alpine Countryside & Coastal Trails",
+            "description": "Mountain village walks and scenic coastline trails.",
+            "archetypes": [
+              {
+                "id": "swiss_village_walk",
+                "name": "🏡 Swiss Alpine Village Lane & Mountain Vistas",
+                "description": "Pristine chalets, mountain stream bridges, and towering peak vistas.",
+                "story_prompt_file": "prompts/walking_tour/rain_city_walk.prompt.md",
+                "screenplay_prompt_file": "prompts/walking_tour/rain_city_walk.prompt.md"
+              },
+              {
+                "id": "coastal_bluff_trail",
+                "name": "🏖️ Coastline Cliffside Trail & Ocean Panorama",
+                "description": "Gentle ocean breeze, cliffside path, and panoramic sea views.",
+                "story_prompt_file": "prompts/walking_tour/rain_city_walk.prompt.md",
+                "screenplay_prompt_file": "prompts/walking_tour/rain_city_walk.prompt.md"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "music_video": {
+    "format_id": "music_video",
+    "name": "Music Video",
+    "icon": "fa-music",
+    "description": "Beat-driven choreography, authentic vocal lip-sync, and cinematic stages.",
+    "genres": [
+      {
+        "id": "music/static_vocal",
+        "name": "🎙️ Solo Vocalist & Acoustic Performance",
+        "description": "Focused vocal performance with intimate camera framing and lipsync.",
+        "subgenres": [
+          {
+            "id": "acoustic_vocal",
+            "name": "Intimate Studio & Sunset Beach Stage",
+            "description": "Warm spotlight and acoustic resonance.",
+            "archetypes": [
+              {
+                "id": "concert_hall_stage",
+                "name": "🏛️ Grand Concert Hall Stage & Warm Spotlights",
+                "description": "Mahogany stage, warm overhead lighting, and deep acoustic ambiance.",
+                "story_prompt_file": "prompts/music_video/village_jathara_square.prompt.md",
+                "screenplay_prompt_file": "prompts/music_video/village_jathara_square.prompt.md"
+              },
+              {
+                "id": "sunset_beach_terrace",
+                "name": "🌅 Sunset Beach Terrace & Ocean Horizon",
+                "description": "Golden horizon, soft sea breeze, and elegant open-air staging.",
+                "story_prompt_file": "prompts/music_video/village_jathara_square.prompt.md",
+                "screenplay_prompt_file": "prompts/music_video/village_jathara_square.prompt.md"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dance/folk",
+        "name": "💃 High-Energy Folk & Mass Dance",
+        "description": "Festive troupe choreography, synchronized hook steps, and vibrant costumes.",
+        "subgenres": [
+          {
+            "id": "mass_beats",
+            "name": "Village Jathara & Festive Fairground",
+            "description": "Festive village festival dance with energetic rhythm.",
+            "archetypes": [
+              {
+                "id": "village_jathara_square",
+                "name": "🎪 Village Fairground Stage & Festive Banners",
+                "description": "Festive flags, dusty dance circle, cheering crowd, and energetic percussion.",
+                "story_prompt_file": "prompts/music_video/village_jathara_square.prompt.md",
+                "screenplay_prompt_file": "prompts/music_video/village_jathara_square.prompt.md"
+              },
+              {
+                "id": "lush_paddy_fields",
+                "name": "🌾 Verdant Paddy Fields & Coconut Palms",
+                "description": "Vibrant emerald fields, rustic irrigation canals, and open blue sky.",
+                "story_prompt_file": "prompts/music_video/village_jathara_square.prompt.md",
+                "screenplay_prompt_file": "prompts/music_video/village_jathara_square.prompt.md"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

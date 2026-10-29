@@ -35,7 +35,6 @@ def generate_documentary_subtitles(
 
     for idx, (text, dur) in enumerate(zip(scenes_narration, scene_durations), 1):
         start_sec = curr_time
-        # Duration of speech estimated or capped to scene duration - 0.5s
         speech_dur = min(dur - 0.8, max(2.5, len(text.split()) * 0.45))
         end_sec = start_sec + speech_dur
 
@@ -50,6 +49,54 @@ def generate_documentary_subtitles(
     return out
 
 
+def build_active_chapters_voice_track(ep_dir: Path, chapter_indices: List[int], chapter_target_durations: Optional[dict[int, float]] = None) -> Path:
+    """Build exact chapter-aligned voice track from chapter_<idx>_raw.mp3 padded to each chapter's visual duration."""
+    fallback = ep_dir / "spoken_narration.mp3"
+    stems_dir = ep_dir / "narration_stems"
+    if not stems_dir.is_dir() or not chapter_indices:
+        return fallback
+    ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+    stems: List[Path] = []
+    seen = set()
+    for c_idx in chapter_indices:
+        if c_idx in seen:
+            continue
+        seen.add(c_idx)
+        raw_p = stems_dir / f"chapter_{c_idx}_raw.mp3"
+        pad_p = stems_dir / f"chapter_{c_idx}_padded.mp3"
+        tgt_dur = (chapter_target_durations or {}).get(c_idx)
+        if raw_p.is_file() and raw_p.stat().st_size > 500 and tgt_dur and tgt_dur > 2.0:
+            aligned_p = stems_dir / f"chapter_{c_idx}_aligned.mp3"
+            cmd_pad = [
+                ffmpeg_bin, "-y", "-i", str(raw_p),
+                "-af", f"adelay=800|800,apad=whole_dur={tgt_dur:.2f}",
+                "-t", f"{tgt_dur:.2f}", "-c:a", "libmp3lame", "-b:a", "192k", "-ar", "48000", str(aligned_p),
+            ]
+            try:
+                subprocess.run(cmd_pad, capture_output=True, check=True)
+                stems.append(aligned_p)
+                continue
+            except Exception:
+                pass
+        cand = pad_p if pad_p.is_file() else raw_p
+        if cand.is_file() and cand.stat().st_size > 500:
+            stems.append(cand)
+    if not stems:
+        return fallback
+    out_voice = ep_dir / "active_spoken_narration.mp3"
+    inputs: List[str] = []
+    for s in stems:
+        inputs.extend(["-i", str(s)])
+    n = len(stems)
+    filter_str = "".join(f"[{i}:a]" for i in range(n)) + f"concat=n={n}:v=0:a=1[aout]"
+    cmd = [ffmpeg_bin, "-y", *inputs, "-filter_complex", filter_str, "-map", "[aout]", "-c:a", "libmp3lame", "-b:a", "192k", str(out_voice)]
+    try:
+        subprocess.run(cmd, capture_output=True, check=True)
+        return out_voice if out_voice.is_file() and out_voice.stat().st_size > 1000 else fallback
+    except Exception:
+        return fallback
+
+
 def mix_documentary_audio(
     voice_path: Path,
     bgm_path: Optional[Path],
@@ -57,13 +104,15 @@ def mix_documentary_audio(
     target_lufs: float = -14.0,
     foley_path: Optional[Path] = None,
     sfx_path: Optional[Path] = None,
+    force_rerun: bool = False,
 ) -> Path:
     """Mix voiceover, ducked BGM (-26dB), organic foley (-30dB), and overlay transition SFX."""
     out = output_mixed_audio.resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    if out.is_file() and out.stat().st_size > 1000:
-        return out
+    if not force_rerun and out.is_file() and out.stat().st_size > 1000:
+        if not voice_path.is_file() or out.stat().st_mtime >= voice_path.stat().st_mtime:
+            return out
 
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
 
@@ -82,8 +131,8 @@ def mix_documentary_audio(
         num_inputs = 4 if has_sfx else 3
 
         filter_str = (
-            "[1:a]volume=0.42[bgm_base];"
-            "[bgm_base][0:a]sidechaincompress=threshold=0.035:ratio=6:attack=300:release=1100:makeup=1.0[bgm];"
+            "[1:a]volume=0.15[bgm_base];"
+            "[bgm_base][0:a]sidechaincompress=threshold=0.015:ratio=14:attack=150:release=800:makeup=1.0[bgm];"
             + foley_filter
             + sfx_filter
             + f"{mix_inputs}amix=inputs={num_inputs}:duration=first:dropout_transition=2[mixed];"
@@ -117,7 +166,7 @@ def mix_documentary_audio(
         logger.warning(f"sidechain_ducking_failed, retrying with static ducking: {err}")
         if bgm_path and bgm_path.is_file():
             fallback_filter = (
-                "[1:a]volume=0.12[bgm];"
+                "[1:a]volume=0.06[bgm];"
                 "[0:a][bgm]amix=inputs=2:duration=first:dropout_transition=2[mixed];"
                 f"[mixed]loudnorm=I={target_lufs}:TP=-1.0:LRA=7[out]"
             )

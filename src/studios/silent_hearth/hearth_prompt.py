@@ -39,6 +39,9 @@ SILENT HEARTH & BEACH CAMPFIRE DIRECTORIAL RULES:
    - Sand, pebble shore, coastal rock stacks, and horizon remain 100% frozen, rigid, and static.
    - Animate ONLY the crackling campfire flames, glowing embers, and rolling ocean surf.
    - Domain: "cozy_hearth".
+
+4. 4K HYPER-REALISTIC OPTICS & EMBER GLOW (Z-IMAGE & FLUX):
+   - Mandate Hasselblad H6D-100c prime lens framing, rich pulsing glowing amber-orange wood embers, dark wet pebble shore reflections, deep indigo ocean twilight waves, and razor-sharp driftwood and stone micro-textures. Strictly ban flat or desaturated night visuals.
 """
 
 

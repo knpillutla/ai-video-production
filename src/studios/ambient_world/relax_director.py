@@ -19,6 +19,7 @@ from src.studios.ambient_world.relax_models import (
     RelaxScreenplay, RelaxTravelTourismSpec,
 )
 from src.services.topic_memory import topic_memory
+from src.studios.directorial_configs import build_default_image_model_configs
 
 async def generate_relax_screenplay_gemini(
     primary: str = "",
@@ -112,20 +113,10 @@ def _build_deterministic_relax_screenplay(
                     f"Cinematic 8K UHD shot on Hasselblad H6D-100c with 24mm prime lens, {prompt}. "
                     f"Low-hanging clouds, dense billowing vapor mist, cool dark wet stone, strictly zero humans, zero vehicles, zero sunlight."
                 ),
-                image_model_configs={
-                    "flux_1_1_pro_ultra": {
-                        "model": "fal-ai/flux-pro/v1.1-ultra",
-                        "prompt": (
-                            f"Ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c with prime 24mm f/5.6 lens. "
-                            f"Dead-center symmetrical frontal vantage point, eye-level head-on straight perspective, centered bilateral composition with zero side-angle, zero three-quarter view. "
-                            f"Living wallpaper framing, ultra-wide panoramic picturesque landscape under soft moody overcast skies with low clouds and dense rising vapor mist. "
-                            f"{prompt}. Cool slate stones, dark wet rocks, emerald water, and billowing mist. "
-                            f"Pristine untouched wilderness, strictly zero humans, zero modern structures, zero vehicles, zero sunlight, zero blue sky."
-                        ),
-                        "aspect_ratio": "16:9",
-                        "raw": True,
-                    }
-                },
+                image_model_configs=build_default_image_model_configs(
+                    prompt=f"Vibrant natural scenery at {prompt}, rich colors, crystalline atmospheric depth.",
+                    landmark_name=clean_title,
+                ),
                 motion_prompt=(
                     "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, "
                     "zero panning, zero tilting, zero zooming. The rock cliffs, horizon line, and overall landscape structure "

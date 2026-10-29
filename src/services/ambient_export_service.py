@@ -162,7 +162,11 @@ def assemble_dual_masters(video_clips: list[Path], audio_path: Optional[Path], e
         if force_rerun or not m_narr.is_file() or m_narr.stat().st_size < 1000 or n_mis or any(sc.stat().st_mtime > m_narr.stat().st_mtime for sc in seamless_clips):
             if m_music.is_file() and m_music.stat().st_size > 1000:
                 t_r, t_dur = time.time(), float(eff_target_dur or get_media_duration(m_music) or 60.0)
-                fc = f"[0:a]volume=0.22[bgm];[1:a]volume=1.0[vox];[bgm][vox]amix=inputs=2:duration=first:dropout_transition=3,apad,afade=t=out:st={max(0, t_dur - 3.0):.2f}:d=3.0[aout]"
+                fc = (
+                    f"[0:a]volume=0.15[bgm_raw];[1:a]volume=1.0[vox];"
+                    f"[bgm_raw][vox]sidechaincompress=threshold=0.015:ratio=14:attack=150:release=800:makeup=1.0[bgm];"
+                    f"[bgm][vox]amix=inputs=2:duration=first:dropout_transition=3,apad,afade=t=out:st={max(0, t_dur - 3.0):.2f}:d=3.0[aout]"
+                )
                 cmd_r = [imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-nostats", "-loglevel", "error", "-i", str(m_music), "-i", str(narr_audio), "-filter_complex", fc, "-map", "0:v:0", "-map", "[aout]", "-c:v", "copy", "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-t", f"{t_dur:.2f}", "-movflags", "+faststart", str(m_narr)]
                 subprocess.run(cmd_r, check=True, creationflags=_SUBPROCESS_FLAGS)
             else:

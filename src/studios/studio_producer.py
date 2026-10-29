@@ -112,9 +112,17 @@ class StudioProducer:
             for k in match_keys:
                 if k in cfgs and isinstance(cfgs[k], dict) and cfgs[k].get("prompt"):
                     return str(cfgs[k]["prompt"]).strip()
-            if ("gemini" in m_target or "imagen" in m_target) and s.visual_prompt and s.visual_prompt.strip():
-                return s.visual_prompt.strip()
-            raise RuntimeError(f"Mandatory image_model_configs['{m_target}'] missing or empty. No fallbacks allowed.")
+            v_p = str(getattr(s, "visual_prompt", "") or "").strip()
+            if v_p:
+                from src.studios.directorial_configs import build_default_image_model_configs
+                loc = getattr(s, "location_hub", None) or getattr(s, "origin_name", None) or "Landmark"
+                cfgs = build_default_image_model_configs(v_p, loc)
+                s.image_model_configs = cfgs
+                for k in match_keys:
+                    if k in cfgs and isinstance(cfgs[k], dict) and cfgs[k].get("prompt"):
+                        return str(cfgs[k]["prompt"]).strip()
+                return v_p
+            raise RuntimeError(f"Mandatory image_model_configs['{m_target}'] missing or empty and no visual_prompt available.")
 
         keyframe_tasks = []
         map_rendered_paths = {}
@@ -269,6 +277,7 @@ class StudioProducer:
                     scenes=sb.scenes, ep_dir=ep_dir, fallback_script=spoken_text,
                     total_target_sec=float(sb.total_duration or 60.0), force_rerun=force_rerun and audio_only,
                     tts_model=tts_model,
+                    execution_mode=eff_exec,
                 )
                 if narr_res.get("narration_path") and Path(narr_res["narration_path"]).is_file():
                     voice_path = Path(narr_res["narration_path"])
@@ -277,7 +286,9 @@ class StudioProducer:
                         sc.duration_seconds = max(float(sc.duration_seconds or 0.0), float(n_dur))
                     tot_d = sum(float(sc.duration_seconds) for sc in sb.scenes)
                     if hasattr(sb, "total_duration"): sb.total_duration = tot_d
-                    sp_file = ep_dir / "screenplay.json"
+                    sp_file = ep_dir / "raw_gemini_screenplay.json"
+                    if not sp_file.is_file():
+                        sp_file = ep_dir / "screenplay.json"
                     if sp_file.is_file():
                         try:
                             sp_dict = json.loads(sp_file.read_text(encoding="utf-8"))
@@ -292,6 +303,9 @@ class StudioProducer:
                     if u_file.is_file():
                         try:
                             u_dict = json.loads(u_file.read_text(encoding="utf-8"))
+                            if "requested_duration_seconds" not in u_dict:
+                                u_dict["requested_duration_seconds"] = u_dict.get("duration_seconds", tot_d)
+                            u_dict["actual_audio_duration_seconds"] = tot_d
                             u_dict["duration_seconds"] = tot_d
                             u_file.write_text(json.dumps(u_dict, indent=2, ensure_ascii=False), encoding="utf-8")
                         except Exception:
@@ -429,11 +443,22 @@ class StudioProducer:
 
             for idx, (s, kf) in enumerate(zip(sb.scenes, valid_keyframes), 1):
                 out_clip = ep_dir / f"motion_p{idx}.mp4"
+                padded_stem = (ep_dir / "narration_stems" / f"chapter_{idx}_padded.mp3") if (ep_dir / "narration_stems" / f"chapter_{idx}_padded.mp3").is_file() else (ep_dir / "narration_stems" / f"shot_{idx}_padded.mp3")
+                req_dur = None
+                if padded_stem.is_file() and padded_stem.stat().st_size > 1000:
+                    from src.services.ambient_export_service import get_media_duration
+                    req_dur = get_media_duration(padded_stem)
+                if not req_dur or req_dur <= 0:
+                    req_dur = float(getattr(s, "duration_seconds", 0.0) or 5.0)
+
+                existing_dur = get_media_duration(out_clip) if (out_clip.is_file() and out_clip.stat().st_size > 1000) else None
+                dur_mismatch = bool(existing_dur and req_dur and abs(existing_dur - req_dur) > 1.5)
+
                 if target_shot_index is not None and idx != target_shot_index:
-                    if out_clip.is_file() and out_clip.stat().st_size > 1000:
+                    if out_clip.is_file() and out_clip.stat().st_size > 1000 and not dur_mismatch:
                         video_clips.append(out_clip)
                         continue
-                elif not force_rerun and out_clip.is_file() and out_clip.stat().st_size > 1000:
+                elif not force_rerun and out_clip.is_file() and out_clip.stat().st_size > 1000 and not dur_mismatch:
                     video_clips.append(out_clip)
                     continue
                 is_tour_slide = (
@@ -498,11 +523,13 @@ class StudioProducer:
                     elif not isinstance(local_cfg, dict):
                         local_cfg = {}
 
-                    target_choreo = local_cfg.get("movement") or getattr(s, "drone_choreography", None) or getattr(s, "camera_movement", None)
+                    target_choreo = local_cfg.get("movements") or local_cfg.get("movement") or getattr(s, "drone_choreography", None) or getattr(s, "camera_movement", None)
                     cam_mov = str(getattr(s, "camera_movement", "") or getattr(s, "camera_rig", "") or motion_model or "").lower()
 
                     if is_tour_slide:
                         eff_choreo = "stay"
+                    elif isinstance(target_choreo, list):
+                        eff_choreo = target_choreo
                     elif target_choreo:
                         if any(w in str(target_choreo).lower() for w in ("stay", "hold", "static", "fixed", "cinemagraph")):
                             eff_choreo = "stay"
@@ -520,7 +547,7 @@ class StudioProducer:
                     snow_int = "heavy" if (u_weather == "snow" or any(k in w_combo for k in ("heavy", "high", "blizzard", "storm"))) else "medium"
                     local_weather_info[idx] = {"rain": is_rain_scene, "snow": is_snow_scene}
 
-                    padded_stem = ep_dir / "narration_stems" / f"shot_{idx}_padded.mp3"
+                    padded_stem = (ep_dir / "narration_stems" / f"chapter_{idx}_padded.mp3") if (ep_dir / "narration_stems" / f"chapter_{idx}_padded.mp3").is_file() else (ep_dir / "narration_stems" / f"shot_{idx}_padded.mp3")
                     stem_dur = None
                     if padded_stem.is_file() and padded_stem.stat().st_size > 1000:
                         from src.services.ambient_export_service import get_media_duration
@@ -567,6 +594,8 @@ class StudioProducer:
                             hud_data = {
                                 "attraction_name": attraction_name, "timing_text": f"🕒 {start_t} – {end_t}  ({vis_dur})",
                                 "day_badge": f"DAY {day_n} • STOP {idx}", "cost_text": cost_t, "transit_text": trans_t,
+                                "show_map_locator": True, "show_itinerary_qr": bool(idx == len(sb.scenes)),
+                                "qr_url": getattr(sb, "google_maps_route_url", None) or "https://maps.google.com",
                             }
                         elif is_doc:
                             sub_loc = getattr(s, "location_hub", None) or getattr(sb, "destination_entity", "") or getattr(sb, "title", "").split(":")[0]
@@ -583,8 +612,8 @@ class StudioProducer:
                                 "fact_badge": getattr(s, "fact_badge", None),
                                 "country_entity": country_ent,
                                 "show_map_locator": show_map,
-                                "show_itinerary_qr": bool(idx == len(sb.scenes)),
-                                "qr_url": getattr(sb, "google_maps_route_url", None),
+                                "show_itinerary_qr": False,
+                                "qr_url": None,
                             }
                         else:
                             hud_data = None
@@ -616,18 +645,26 @@ class StudioProducer:
                     elif not isinstance(custom_model_cfg, dict):
                         custom_model_cfg = None
 
-                    padded_stem = ep_dir / "narration_stems" / f"shot_{idx}_padded.mp3"
+                    padded_stem = (ep_dir / "narration_stems" / f"chapter_{idx}_padded.mp3") if (ep_dir / "narration_stems" / f"chapter_{idx}_padded.mp3").is_file() else (ep_dir / "narration_stems" / f"shot_{idx}_padded.mp3")
                     stem_dur = None
                     if padded_stem.is_file() and padded_stem.stat().st_size > 1000:
                         from src.services.ambient_export_service import get_media_duration
                         stem_dur = get_media_duration(padded_stem)
                     diff_dur = stem_dur if (stem_dur and stem_dur > 0) else s.duration_seconds
 
-                    if is_doc:
-                        chosen_model = "h3_max"
-                        m_allow_fallback = allow_fallback
-                    elif target_shot_index is not None and is_diffusion_model:
+                    from src.services.motion_tier_router import scene_has_humans
+                    is_prod_exec = eff_exec in ("prod", "production", "live")
+                    has_humans = scene_has_humans(f"{getattr(s, 'visual_prompt', '')} {getattr(s, 'motion_prompt', '')}")
+
+                    if target_shot_index is not None and is_diffusion_model:
                         chosen_model = "h3_max" if motion_model in ("h3", "h3_max", "minimax") else motion_model
+                        m_allow_fallback = allow_fallback
+                    elif is_prod_exec and has_humans:
+                        chosen_model = "kling_v3_4k" if (getattr(s, "recommended_model", None) in ("kling_v3_4k", "kling_4k", "kling_v3")) else "kling_pro"
+                        m_allow_fallback = allow_fallback
+                    elif is_doc:
+                        rec_m = str(getattr(s, "recommended_model", "") or "").lower()
+                        chosen_model = "kling_v3_4k" if "kling" in rec_m else "h3_max"
                         m_allow_fallback = allow_fallback
                     else:
                         eff_g = getattr(sb, "genre", None) or getattr(sb, "sub_genre", None) or getattr(sb, "cluster", "doc")

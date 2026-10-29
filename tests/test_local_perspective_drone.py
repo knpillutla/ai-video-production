@@ -62,4 +62,31 @@ def test_normalize_choreography_sequence_timeline_and_stages():
     norm_relax = normalize_choreography_sequence(relax_input, default_duration=10.0)
     assert norm_relax == [("stay", 10.0)]
 
+    # Documentary screenplay parallel + sequential format with extended movements
+    doc_input = [
+        {"duration": 10.0, "parallel": ["slow-drone-forward", "tilt-down"]},
+        {"duration": 9.8, "motion": "crane-ascend"},
+    ]
+    norm_doc = normalize_choreography_sequence(doc_input, default_duration=19.8)
+    assert norm_doc[0] == ("parallel", [("slow-drone-forward", 10.0), ("tilt-down", 10.0)])
+    assert norm_doc[1] == ("crane-ascend", 9.8)
+
+
+def test_living_environment_engine_water_and_clouds():
+    from src.scripts.local_perspective_drone import LivingEnvironmentEngine
+
+    # Synthetic 480x270 image with bright cloudy upper sky and blue water in lower half
+    img = np.zeros((270, 480, 3), dtype=np.uint8)
+    img[:110, :] = (225, 220, 215)  # Light cloud sky
+    img[140:, :] = (160, 110, 40)   # BGR blue water body
+    eng = LivingEnvironmentEngine(img, 480, 270, enable_water=True, enable_clouds=True, total_frames=120)
+    assert eng.living_world.has_any is True
+    p0 = eng.get_source_plate(0)
+    p36 = eng.get_source_plate(36)
+    assert p0.shape == (270, 480, 3)
+    # Continuous non-repeating animation: frame 36 differs from frame 0 (no 36-frame snap-back)
+    assert not np.array_equal(p0, p36)
+
+
+
 

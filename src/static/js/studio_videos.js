@@ -121,6 +121,7 @@ function nextEpisodeIdForChannel(channelId, formatKey, productionName) {
   const normFmt = (formatKey || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "relaxation")).toLowerCase().trim();
   const rawProd = (productionName || (document.getElementById("studio-production-name")?.value) || "standalone").toLowerCase().trim().replace(/\s+/g, "_");
 
+  const cleanProd = (rawProd && rawProd !== "standalone") ? rawProd : null;
   const prefix = /^EP-(\d+)$/i;
   let highest = 0;
   records.forEach(record => {
@@ -130,8 +131,10 @@ function nextEpisodeIdForChannel(channelId, formatKey, productionName) {
     const rFmt = String(record.format_slug || record.format || "").toLowerCase().trim();
     if (normFmt && rFmt && rFmt !== normFmt) return;
 
-    const rProd = String(record.production_name || "standalone").toLowerCase().trim().replace(/\s+/g, "_");
-    if (rawProd && rProd && rProd !== rawProd) return;
+    if (cleanProd) {
+      const rProd = String(record.production_name || "standalone").toLowerCase().trim().replace(/\s+/g, "_");
+      if (rProd !== cleanProd) return;
+    }
 
     const match = String(record.episode_id || record.id || "").match(prefix);
     if (match) highest = Math.max(highest, Number(match[1]));
@@ -149,7 +152,7 @@ async function syncChannelEpisodesFromBackend() {
         const eds = (ep.editions && ep.editions.length > 0) ? ep.editions : [];
         const hasMaster = Boolean(eds.length > 0 && eds[0]?.url && !eds[0].url.includes("preview_master"));
         const masterUrl = hasMaster ? eds[0].url : null;
-        const curStage = hasMaster ? 5 : ((ep.motion_clips && ep.motion_clips.length > 0) ? 3 : ((ep.keyframes && ep.keyframes.length > 0) ? 2 : 1));
+        const curStage = hasMaster ? 5 : ((ep.motion_clips && ep.motion_clips.length > 0) ? 4 : ((ep.keyframes && ep.keyframes.length > 0) ? 3 : ((ep.audio_stems && ep.audio_stems.length > 0) ? 2 : 1)));
         const sceneCount = ep.screenplay?.scenes?.length || ep.script?.scenes?.length || ep.scenes?.length || ep.user_inputs?.num_shots || 1;
 
         const normEpId = (ep.episode_id || "").toUpperCase() || "EP-001";
@@ -167,7 +170,7 @@ async function syncChannelEpisodesFromBackend() {
           numShots: sceneCount, num_shots: sceneCount,
           status: hasMaster ? "completed" : "ready",
           currentStage: curStage,
-          progress: hasMaster ? 100 : (curStage === 3 ? 50 : (curStage === 2 ? 35 : 15)),
+          progress: hasMaster ? 100 : (curStage === 4 ? 75 : (curStage === 3 ? 50 : (curStage === 2 ? 30 : 15))),
           youtubeStatus: hasMaster ? "published" : "draft",
           youtubeChannel: ep.channel_handle || `@${ep.channel_id}`,
           youtubeUrl: masterUrl,

@@ -17,6 +17,7 @@ _DEFAULT_PROVIDER_MODELS = {
     "Fal.ai/FLUX.1-dev": {"unit_cost": 0.0250, "category": "visuals", "unit": "keyframes"},
     "Together AI/FLUX.1-schnell": {"unit_cost": 0.0030, "category": "visuals", "unit": "keyframes"},
     "Fal.ai/Kling-v1.5-Pro": {"unit_cost": 0.1400, "category": "motion", "unit": "clips"},
+    "Fal.ai/minimax-h3-max": {"unit_cost": 0.2600, "category": "motion", "unit": "clips"},
     "Azure Speech HD/Neural": {"unit_cost": 0.000016, "category": "voice", "unit": "characters"},
     "Edge-TTS/Serverless": {"unit_cost": 0.0000, "category": "voice", "unit": "characters"},
     "Suno/v3.5-pro": {"unit_cost": 0.0800, "category": "soundtrack", "unit": "tracks"},

@@ -154,7 +154,10 @@ function clearStudioInputs() {
   const prodInput = document.getElementById("studio-production-name");
   if (prodInput) prodInput.value = "";
   const epCode = document.getElementById("studio-episode-code");
-  if (epCode) epCode.value = "EP-001";
+  const chId = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel && selectedStudioChannel !== "all") ? selectedStudioChannel : null;
+  const fmt = document.getElementById("studio-active-format-val")?.value || "documentary";
+  const nextId = (typeof nextEpisodeIdForChannel === "function") ? nextEpisodeIdForChannel(chId, fmt, "") : "EP-001";
+  if (epCode) epCode.value = nextId;
   if (typeof currentActiveInspectorEpisode !== "undefined") currentActiveInspectorEpisode = null;
   document.querySelectorAll("input[name='niche_theme_radio']").forEach(r => r.checked = false);
   const setV = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
@@ -175,6 +178,9 @@ function deriveTitleFromInput(text, mode) {
 }
 
 function quickTestProduceFromPrompt() {
+  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode && currentActiveInspectorEpisode.status !== "processing") {
+    if (typeof unlockForNewProduction === "function") unlockForNewProduction();
+  }
   const promptInput = document.getElementById("youtube-prompt-input"), urlInput = document.getElementById("youtube-url-input");
   const userPrompt = (promptInput?.value || "").trim();
   const userUrl = (urlInput?.value || "").trim();
@@ -254,7 +260,7 @@ function quickTestProduceFromPrompt() {
     const optName = selOpt ? (selOpt.getAttribute("data-name") || selOpt.textContent.split("(")[0].trim()) : seriesSelect.value;
     if (optName && optName !== "standalone") selProdName = optName;
   }
-  const isGeoNationsMode = selGenreVal === "doc/nations" || selGenreVal === "nations" || (selSubgenreVal && selSubgenreVal.includes("nations")) || ["cities", "countries", "nations", "city", "nation", "country_dossier", "country_profile", "top_10_cities", "top_places_to_visit", "top_50_places", "supermarkets_and_grocery_culture", "supermarkets"].includes(selArchVal);
+  const isGeoNationsMode = selGenreVal === "doc/nations" || selGenreVal === "nations" || (selSubgenreVal && selSubgenreVal.includes("nations")) || ["cities", "countries", "nations", "city", "nation", "country_dossier", "country_profile", "country_overview", "country_encyclopedia", "tour_itinerary", "top_10_cities", "top_places_to_visit", "top_50_places", "top_cities", "supermarkets_and_grocery_culture", "supermarkets"].includes(selArchVal);
   if (!selProdName || selProdName.toLowerCase() === "standalone") {
     if (isGeoNationsMode) {
       selProdName = null;
@@ -266,7 +272,23 @@ function quickTestProduceFromPrompt() {
   const selAspect = document.getElementById("studio-selected-format")?.value || "16:9";
 
   const epInputVal = document.getElementById("studio-episode-code")?.value?.trim();
-  const newId = (epInputVal && /^EP-\d+$/i.test(epInputVal)) ? epInputVal.toUpperCase() : nextEpisodeIdForChannel(chId, selFormatVal, selProdName);
+  const allRecords = [
+    ...(Array.isArray(studioVideos) ? studioVideos : []),
+    ...(typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes) ? channelArchiveEpisodes : [])
+  ];
+  let newId = (epInputVal && /^EP-\d+$/i.test(epInputVal)) ? epInputVal.toUpperCase() : null;
+  const isExisting = newId && allRecords.some(r => {
+    const rId = String(r.id || r.episode_id || "").trim().toUpperCase();
+    const rCh = String(r.channelId || r.channel_id || "").trim().toLowerCase();
+    const rProd = String(r.production_name || "standalone").trim().toLowerCase().replace(/\s+/g, "_");
+    const myProd = String(selProdName || "standalone").trim().toLowerCase().replace(/\s+/g, "_");
+    return rId === newId && (!chId || rCh === chId.toLowerCase()) && rProd === myProd;
+  });
+  if (!newId || isExisting) {
+    newId = nextEpisodeIdForChannel(chId, selFormatVal, selProdName);
+  }
+  const epInputEl = document.getElementById("studio-episode-code");
+  if (epInputEl) epInputEl.value = newId;
   const uniqueJobId = `job_${newId.toLowerCase()}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
   const weatherMap = {
     normal: "☀️ Normal",
@@ -297,6 +319,9 @@ function quickTestProduceFromPrompt() {
       sub_genre: selSubgenreVal,
       primary_archetype: selArchVal,
       weather: selWeather,
+      duration_seconds: durationSec,
+      duration_secs: durationSec,
+      requested_duration_seconds: durationSec,
       selected_options: {
         genre: { value: selGenreVal, label: selGenreLabel },
         sub_genre: { value: selSubgenreVal || "", label: selSubgenreLabel },
@@ -310,7 +335,9 @@ function quickTestProduceFromPrompt() {
     status: "queued", youtubeStatus: "unpublished", youtubeChannel: null, youtubeUrl: null,
     youtubeReferenceUrl: ytUrl, videoUrl: "/static/videos/preview_master.mp4",
     keyframes: [], motion_clips: [], audio_stems: [], editions: [], long_play_editions: [], currentStage: 1, progress: 10,
-    durationSeconds: durationSec, duration: longPlayHours > 0 ? `${longPlayHours}h` : `${durationSec}s`, numShots, num_shots: numShots,
+    durationSeconds: durationSec, duration_seconds: durationSec, duration_secs: durationSec,
+    duration: (durationSec <= 0 || durationSec === -1) ? "Auto" : (longPlayHours > 0 ? `${longPlayHours}h` : `${durationSec}s`),
+    numShots, num_shots: numShots,
     longPlayHours: longPlayHours, long_play_hours: longPlayHours, executionMode: isTestMode ? "test" : "prod", execution_mode: isTestMode ? "test" : "prod",
     language: langVal === "te" ? "Telugu (te)" : (langVal === "hi" ? "Hindi (hi)" : "English (en)"), langCode: langVal, display_format: fmtStr, style: "Cinematic Photoreal",
     tierKey: tier.key, tierName: `${tier.name} (${tier.priceStr})`, cost: effCost, cost_usd: effCost, costStr: `$${effCost.toFixed(2)} USD`,
@@ -328,9 +355,12 @@ function quickTestProduceFromPrompt() {
   studioVideos.unshift(newVid);
   if (typeof saveVideosState === "function") saveVideosState();
   if (typeof setArchiveFormatFilter === "function") setArchiveFormatFilter(selFormatVal || "all");
+  currentActiveInspectorEpisode = newVid;
+  if (typeof setProductionControlsViewOnly === "function") setProductionControlsViewOnly(false, newVid.id);
   if (typeof switchCreationTab === "function") switchCreationTab("archive");
-  if (typeof selectArchiveEpisode === "function") selectArchiveEpisode(newVid.id, newVid.channel_id, newVid.format, newVid.production_name);
+  if (typeof renderInspectorFromVideo === "function") renderInspectorFromVideo(newVid);
   if (typeof renderStudioVideoHistory === "function") renderStudioVideoHistory();
+  if (typeof filterChannelArchive === "function") filterChannelArchive();
   if (typeof startStudioLiveStageProgress === "function") startStudioLiveStageProgress(newVid, newVid.pipelineStrategy);
 }
 

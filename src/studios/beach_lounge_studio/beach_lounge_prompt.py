@@ -55,6 +55,8 @@ BEACH LOUNGE & OCEAN TERRACE DIRECTORIAL RULES & CINEMATOGRAPHY:
      * Set 'suno_musical_tags': "sunset chillout lounge, warm Spanish nylon guitar, golden hour ambient synth pads, rolling ocean swell foley, peaceful 432Hz, -21 LUFS", tempo: 50-54 BPM.
    - Deep Sleep & Night Sanctuaries (Starlit Hammock / Night Pavilion):
      * Set 'suno_musical_tags': "deep delta sleep drone, 432Hz velvet ambient sleep pads, slow rhythmic midnight ocean surf, distant sea shell chimes, calming stress relief, zero drums, -21 LUFS", tempo: 50-54 BPM.
+5. 4K HYPER-REALISTIC OPTICS & TROPICAL COLOR SATURATION (Z-IMAGE & FLUX):
+   - Mandate Hasselblad H6D-100c prime lens framing, brilliant translucent turquoise and sapphire ocean swells, crisp white billowing linen, warm honey-toned teak decking, radiant golden amber sidelight, and razor-sharp palm frond micro-textures. Strictly prohibit flat or desaturated visuals.
 """
 
 

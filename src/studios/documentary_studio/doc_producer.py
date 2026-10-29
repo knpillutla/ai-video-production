@@ -1,6 +1,7 @@
 """Documentary Studio 4K Single-Pass Master Producer with 4-Stage Quality Gate."""
 from __future__ import annotations
 
+import asyncio
 import os
 from pathlib import Path
 import time
@@ -156,7 +157,9 @@ class DocumentaryProducer:
         if include_bgm:
             raw_bgm = ep_dir / "raw_doc_bgm.mp3"
             if not raw_bgm.is_file() or raw_bgm.stat().st_size < 1000:
-                await soundtrack_service.synthesize_ambient_soundtrack(sb.title, sb.audio_tags, raw_bgm, sb.total_duration)
+                await soundtrack_service.synthesize_ambient_soundtrack(
+                    sb.title, sb.audio_tags, raw_bgm, sb.total_duration, prompt=getattr(sb, "suno_prompt", None)
+                )
             bgm_path = raw_bgm
 
         # Stage 3C: Tactical Graphic Overlay SFX Generation
@@ -228,6 +231,8 @@ class DocumentaryProducer:
                     hud_data = {
                         "attraction_name": attraction_name, "timing_text": f"🕒 {start_t} – {end_t}  ({vis_dur})",
                         "day_badge": f"DAY {day_n} • STOP {scene.scene_index}", "cost_text": cost_t, "transit_text": trans_t,
+                        "show_map_locator": True, "show_itinerary_qr": bool(scene.scene_index == len(sb.scenes)),
+                        "qr_url": getattr(sb, "google_maps_route_url", None) or "https://maps.google.com",
                     }
                 else:
                     sub_loc = getattr(scene, "location_hub", None) or getattr(sb, "destination_entity", "") or getattr(sb, "title", "").split(":")[0]
@@ -238,9 +243,9 @@ class DocumentaryProducer:
                         "chapter_title": getattr(scene, "chapter_title", None), "chapter_subtitle": getattr(scene, "chapter_subtitle", None),
                         "chapter_stats": getattr(scene, "chapter_stats", None), "fact_badge": getattr(scene, "fact_badge", None),
                         "country_entity": country_ent, "show_map_locator": show_map,
-                        "show_itinerary_qr": bool(scene.scene_index == len(sb.scenes)), "qr_url": getattr(sb, "google_maps_route_url", None),
+                        "show_itinerary_qr": False, "qr_url": None,
                     }
-                choreo = local_cfg.get("movement") or scene.drone_choreography or getattr(scene, "camera_movement", None) or "dollyin"
+                choreo = local_cfg.get("movements") or local_cfg.get("movement") or scene.drone_choreography or getattr(scene, "camera_movement", None) or "dollyin"
                 return await render_perspective_drone_clip(
                     image_path=kf_path, output_path=out_clip, duration_seconds=scene.duration_seconds,
                     fps=24, target_res=(3840, 2160), choreography=choreo,

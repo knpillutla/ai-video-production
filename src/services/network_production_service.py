@@ -71,6 +71,7 @@ async def produce_channel_video(
     episode_id: Optional[str] = None,
     photos_only: bool = False,
     script_only: bool = False,
+    screenplay_only: bool = False,
     motion_only: bool = False,
     audio_only: bool = False,
     master_only: bool = False,
@@ -178,20 +179,28 @@ async def produce_channel_video(
     # channels/{channel_slug}/{format_slug}/{production_name}/{episode_id}
     is_geo_mode = (
         eff_genre in ("doc/nations", "doc_nations", "nations")
-        or (primary_archetype or "").lower().strip() in ("cities", "countries", "nations", "city", "nation", "country_dossier", "country_profile", "country_information", "top_10_cities", "top_places_to_visit", "top_50_places", "top_cities", "supermarkets_and_grocery_culture", "supermarkets")
+        or (primary_archetype or "").lower().strip() in (
+            "cities", "countries", "nations", "city", "nation", "country_dossier", "country_profile",
+            "country_information", "country_overview", "country_encyclopedia", "tour_itinerary",
+            "top_10_cities", "top_places_to_visit", "top_50_places", "top_cities",
+            "supermarkets_and_grocery_culture", "supermarkets",
+        )
         or (sub_genre and ("nations" in sub_genre.lower() or "europe_nations" in sub_genre.lower()))
     )
     is_downstream_stage = bool(photos_only or motion_only or audio_only or master_only)
     is_resume_flow = not (script_only or force_rerun)
 
     if is_geo_mode:
+        from src.studios.documentary_studio.doc_geo_rotation import is_known_geo_entity
         clean_pname = (production_name or "").strip().lower()
         is_generic_prod_name = (
             not clean_pname
             or clean_pname in ("standalone", "none", "documentary", "doc/nations", "nations")
             or "nations of" in clean_pname
             or clean_pname.endswith("_nations")
+            or (re.match(r"^ep[-_]?\d+$", clean_pname) is not None)
             or (sub_genre and clean_pname == sub_genre.lower().strip())
+            or not is_known_geo_entity(clean_pname)
         )
         # ONLY lock production_name from an existing episode if this is an explicit downstream resumption
         # (e.g. photos_only, motion_only, audio_only, master_only) and NOT a new script formulation.
@@ -211,9 +220,10 @@ async def produce_channel_video(
                         saved_p = u_dat.get("production_name")
                     except Exception:
                         pass
-                if not saved_p and (existing_ep_match / "screenplay.json").is_file():
+                sp_cand = (existing_ep_match / "raw_gemini_screenplay.json") if (existing_ep_match / "raw_gemini_screenplay.json").is_file() else (existing_ep_match / "screenplay.json")
+                if not saved_p and sp_cand.is_file():
                     try:
-                        s_dat = json.loads((existing_ep_match / "screenplay.json").read_text("utf-8"))
+                        s_dat = json.loads(sp_cand.read_text("utf-8"))
                         saved_p = s_dat.get("destination_entity") or (s_dat.get("title", "").split(":")[0].strip() if ":" in s_dat.get("title", "") else None)
                     except Exception:
                         pass
@@ -228,8 +238,14 @@ async def produce_channel_video(
         if is_generic_prod_name:
             try:
                 from src.studios.documentary_studio.doc_geo_rotation import resolve_autonomous_geo_entity
+                eff_sub_g = sub_genre
+                if not eff_sub_g or eff_sub_g in ("countries", "nations", "country_profile", "africa_nations", "asia_nations"):
+                    if "euro" in channel_id.lower() or "discovery" in channel_id.lower():
+                        eff_sub_g = "europe_nations"
+                    else:
+                        eff_sub_g = eff_sub_g or "europe_nations"
                 resolved_entity = resolve_autonomous_geo_entity(
-                    sub_genre=sub_genre or "europe_nations",
+                    sub_genre=eff_sub_g,
                     archetype=primary_archetype or "country_profile",
                     user_id=effective_user,
                     channel_id=channel_id,
@@ -261,7 +277,8 @@ async def produce_channel_video(
             )
     else:
         ep_dir = None
-    screenplay_file = (ep_dir / "screenplay.json") if ep_dir else None
+    raw_sp_file = (ep_dir / "raw_gemini_screenplay.json") if ep_dir else None
+    screenplay_file = raw_sp_file if (raw_sp_file and raw_sp_file.is_file()) else ((ep_dir / "screenplay.json") if (ep_dir and (ep_dir / "screenplay.json").is_file()) else raw_sp_file)
     pipeline_state_file = (ep_dir / "pipeline_state.json") if ep_dir else None
     manifest_file = (ep_dir / "episode_manifest.json") if ep_dir else None
     user_inputs_file = (ep_dir / "user_inputs.json") if ep_dir else None
@@ -302,9 +319,31 @@ async def produce_channel_video(
                 )
                 if is_legacy_fallback:
                     logger.warning(f"ignoring_legacy_fallback_screenplay: episode='{episode_id}'")
-                elif sp_data.get("scenes"):
+                elif sp_data.get("scenes") or sp_data.get("chapters"):
+                    from src.studios.documentary_studio.doc_directorial_motion_service import flatten_chapters_to_scenes
+                    eff_dur_target = None
+                    if duration_seconds is not None and float(duration_seconds) > 0 and float(duration_seconds) != -1:
+                        eff_dur_target = float(duration_seconds)
+                    elif saved_inputs.get("duration_seconds") and float(saved_inputs["duration_seconds"]) > 0 and float(saved_inputs["duration_seconds"]) != -1:
+                        eff_dur_target = float(saved_inputs["duration_seconds"])
+
+                    if sp_data.get("chapters"):
+                        all_chapter_scenes = flatten_chapters_to_scenes(sp_data["chapters"], target_duration=eff_dur_target, num_shots=num_shots)
+                        sp_data["scenes"] = all_chapter_scenes
+                        sp_data["total_duration_seconds"] = sum(s["duration_seconds"] for s in all_chapter_scenes)
+                    elif sp_data.get("scenes") and eff_dur_target:
+                        filtered_scenes = []
+                        acc_d = 0.0
+                        for sc in sp_data["scenes"]:
+                            filtered_scenes.append(sc)
+                            acc_d += float(sc.get("duration_seconds", 15.0))
+                            if acc_d >= eff_dur_target:
+                                break
+                        sp_data["scenes"] = filtered_scenes
+                        sp_data["total_duration_seconds"] = acc_d
+
                     existing_sp = RelaxScreenplay(**sp_data)
-                    logger.info(f"reusing_existing_screenplay: episode='{episode_id}' title='{existing_sp.title}' scenes={len(existing_sp.scenes)}")
+                    logger.info(f"reusing_existing_screenplay: episode='{episode_id}' title='{existing_sp.title}' scenes={len(existing_sp.scenes)} (duration={existing_sp.total_duration_seconds}s)")
             except Exception as ex:
                 logger.warning(f"screenplay_read_error: {ex}")
 
@@ -321,12 +360,13 @@ async def produce_channel_video(
         or (primary_archetype or "").lower() in ("cities", "tourist_places", "iconic_places", "spiritual_places", "natural_wonders", "remote_places")
         or num_shots == -1
     )
+    is_auto_dur = (duration_seconds is not None and (float(duration_seconds) <= 0 or float(duration_seconds) == -1)) or saved_inputs.get("duration_seconds") == -1
     if existing_sp and existing_sp.scenes:
         effective_shots = len(existing_sp.scenes)
         if getattr(existing_sp, "total_duration_seconds", None):
             duration_seconds = float(existing_sp.total_duration_seconds)
     elif is_travel_genre or num_shots == -1:
-        effective_shots = max(2, round((duration_seconds or 60.0) / 12.5))
+        effective_shots = 10 if is_auto_dur else max(2, round((duration_seconds or 60.0) / 12.5))
         logger.info(f"travel_cadence_override: channel='{channel_id}' genre='{eff_genre}' duration={duration_seconds}s -> effective_shots={effective_shots} (num_shots={num_shots})")
     elif num_shots is not None and num_shots > 0:
         effective_shots = num_shots
@@ -338,7 +378,7 @@ async def produce_channel_video(
     primary_archetype_final = (primary_archetype or "").strip() or (getattr(existing_sp, "primary_archetype", None) if existing_sp else "")
     prompt_final = (getattr(existing_sp, "story_topic", None) or prompt or saved_inputs.get("prompt", "")) if existing_sp else (prompt or "")
 
-    eff_dur = getattr(existing_sp, "total_duration_seconds", None) or duration_seconds or saved_inputs.get("duration_seconds", 60.0)
+    eff_dur = -1.0 if is_auto_dur else (getattr(existing_sp, "total_duration_seconds", None) or duration_seconds or saved_inputs.get("duration_seconds", 60.0))
     has_dual = bool(dual_editions or saved_inputs.get("dual_editions", False) or ((ep_dir / "master_4k_narration.mp4").is_file() if ep_dir else False))
     eff_exec_mode = execution_mode or saved_inputs.get("execution_mode", "test")
 
@@ -382,7 +422,9 @@ async def produce_channel_video(
         "episode_id": episode_id or "EP-001",
         "user_id": effective_user,
         "execution_mode": eff_exec_mode,
-        "duration_seconds": float(eff_dur),
+        "requested_duration_seconds": -1.0 if is_auto_dur else float(duration_seconds or saved_inputs.get("requested_duration_seconds") or eff_dur),
+        "duration_seconds": -1.0 if is_auto_dur else float(eff_dur),
+        "duration_secs": -1.0 if is_auto_dur else float(eff_dur),
         "long_play_hours": long_play_hours,
         "num_shots": -1 if (is_travel_genre or num_shots == -1) else effective_shots,
         "image_model": image_model or "zimage",
@@ -409,6 +451,104 @@ async def produce_channel_video(
             logger.warning(f"failed_to_write_user_inputs: {ex}")
 
     t_stage1 = time.time()
+    # Stage 1 for Documentary: Formulate Raw Story (21 Chapters) FIRST, decoupled from Screenplay (Stage 3).
+    is_doc_format = (
+        is_geo_mode
+        or "documentary" in str(format_slug or "").lower()
+        or "documentary" in str(eff_genre).lower()
+        or str(eff_genre).lower().startswith("doc")
+    )
+    if is_doc_format and script_only and not screenplay_only:
+        from src.studios.documentary_studio.doc_story_service import build_raw_documentary_story, persist_raw_documentary_story
+        st_dest = production_name or "Norway"
+        raw_story_target = ep_dir / "raw_gemini_story.json" if ep_dir else None
+
+        if raw_story_target and raw_story_target.is_file() and raw_story_target.stat().st_size > 50 and not force_rerun:
+            try:
+                doc_story = json.loads(raw_story_target.read_text("utf-8"))
+            except Exception:
+                doc_story = build_raw_documentary_story(destination=st_dest, custom_prompt=prompt, channel_id=channel_id)
+                if ep_dir:
+                    persist_raw_documentary_story(ep_dir, doc_story)
+        else:
+            doc_story = build_raw_documentary_story(destination=st_dest, custom_prompt=prompt, channel_id=channel_id)
+            if ep_dir:
+                persist_raw_documentary_story(ep_dir, doc_story)
+
+        derived_title = doc_story.get("title", f"{st_dest}: Sovereign Heritage, Living Culture & 21 Wonders")
+
+        pipeline_state_payload = {
+            "episode_id": episode_id or "EP-001",
+            "channel_id": channel_id,
+            "pipeline_strategy": pipeline_strategy,
+            "execution_mode": execution_mode,
+            "tier": eff_tier,
+            "current_stage": 1,
+            "stage_status": "ready",
+            "stages_completed": {"story": True, "narration": False, "screenplay": False, "keyframes": False, "bgm": False, "motion": False, "master": False},
+            "artifacts": [],
+        }
+        if pipeline_state_file:
+            try:
+                pipeline_state_file.parent.mkdir(parents=True, exist_ok=True)
+                pipeline_state_file.write_text(json.dumps(pipeline_state_payload, indent=2, ensure_ascii=False), encoding="utf-8")
+            except Exception as ex:
+                logger.warning(f"failed_to_write_pipeline_state: {ex}")
+
+        manifest_payload = {
+            "episode_id": episode_id,
+            "title": derived_title,
+            "production_name": st_dest,
+            "tier": eff_tier,
+            "prompt": prompt,
+            "genre": eff_genre,
+            "sub_genre": sub_genre,
+            "primary_archetype": primary_archetype,
+            "duration_seconds": duration_seconds,
+            "total_chapters": len(doc_story.get("chapters", [])),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        if manifest_file:
+            try:
+                manifest_file.parent.mkdir(parents=True, exist_ok=True)
+                manifest_file.write_text(json.dumps(manifest_payload, indent=2, ensure_ascii=False), encoding="utf-8")
+            except Exception as ex:
+                logger.warning(f"failed_to_write_manifest: {ex}")
+
+        dur_stage1 = time.time() - t_stage1
+        log_pipeline_step(
+            "checking script",
+            "Stage 1 (Documentary 21-Chapter Raw Story Formulation)",
+            "completed",
+            "21-chapter raw story created with country facts; screenplay deferred to Stage 3",
+            {"file": "raw_gemini_story.json", "chapters": len(doc_story.get("chapters", [])), "cost": "$0.00"},
+        )
+        return {
+            "success": True,
+            "job_id": f"job_{episode_id.lower() if episode_id else 'ep001'}",
+            "episode_id": episode_id or "EP-001",
+            "production_name": st_dest,
+            "title": derived_title,
+            "channel_id": channel_id,
+            "story": doc_story,
+            "script": None,
+            "pipeline_state": pipeline_state_payload,
+            "current_stage": 1,
+            "stage": 1,
+            "video_url": None,
+            "nature_video_url": None,
+            "editions": [],
+            "long_play_hours": long_play_hours,
+            "storage_path": str(ep_dir) if ep_dir else str(user_chan_dir / (episode_id or "EP-001")),
+            "file_size_bytes": 0,
+            "duration_seconds": duration_seconds,
+            "render_time_seconds": 0.5,
+            "keyframes": [],
+            "motion_clips": [],
+            "audio_stems": [],
+            "artifacts": [],
+        }
+
     log_pipeline_step("checking script", "Stage 1 (Screenplay Verification)", "started", metadata={"episode_id": episode_id, "channel": channel_id})
     if existing_sp:
         universal_sp = existing_sp
@@ -418,11 +558,16 @@ async def produce_channel_video(
             "Stage 1 (Screenplay Verification)",
             "completed",
             "script exists, script not recreated",
-            {"file": "screenplay.json", "scenes": len(universal_sp.scenes), "duration_seconds": getattr(universal_sp, "total_duration_seconds", 30.0), "cost": "$0.00"},
+            {"file": "raw_gemini_screenplay.json", "scenes": len(universal_sp.scenes), "duration_seconds": getattr(universal_sp, "total_duration_seconds", 30.0), "cost": "$0.00"},
         )
     elif is_downstream_stage and screenplay_file and screenplay_file.is_file() and screenplay_file.stat().st_size > 50:
-        universal_sp = RelaxScreenplay(**json.loads(screenplay_file.read_text("utf-8")))
-        log_pipeline_step("checking script", "Stage 1 (Screenplay Verification)", "completed", "script exists, script not recreated", {"file": "screenplay.json", "scenes": len(universal_sp.scenes), "cost": "$0.00"})
+        sp_data = json.loads(screenplay_file.read_text("utf-8"))
+        if sp_data.get("chapters") and not sp_data.get("scenes"):
+            from src.studios.documentary_studio.doc_directorial_motion_service import flatten_chapters_to_scenes
+            sp_data["scenes"] = flatten_chapters_to_scenes(sp_data["chapters"], target_duration=duration_seconds, num_shots=num_shots)
+            sp_data["total_duration_seconds"] = sum(s["duration_seconds"] for s in sp_data["scenes"])
+        universal_sp = RelaxScreenplay(**sp_data)
+        log_pipeline_step("checking script", "Stage 1 (Screenplay Verification)", "completed", "script exists, script not recreated", {"file": screenplay_file.name, "scenes": len(universal_sp.scenes), "cost": "$0.00"})
     else:
         active_llm_key = get_live_gemini_api_key()
         masked_llm_key = f"{active_llm_key[:2]}...{active_llm_key[-2:]}" if (active_llm_key and len(active_llm_key) >= 4) else "none"
@@ -444,7 +589,7 @@ async def produce_channel_video(
                 primary_archetype=primary_archetype,
                 channel_id=channel_id,
                 custom_prompt=eff_custom_prompt,
-                duration_seconds=duration_seconds or 60.0,
+                duration_seconds=-1.0 if is_auto_dur else (duration_seconds or 60.0),
                 num_shots=effective_shots,
                 camera_motion=camera_motion or "locked_tripod",
                 user_id=effective_user,
@@ -464,10 +609,79 @@ async def produce_channel_video(
                         raw_target.parent.mkdir(parents=True, exist_ok=True)
                         raw_target.write_text(json.dumps(universal_sp.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8")
                         logger.info(f"raw_gemini_screenplay_guaranteed: {raw_target}")
+                        g_sp_target = ep_dir / "gemini_screenplay_inputs.json"
+                        if not g_sp_target.exists():
+                            sp_in_data = {
+                                "model": "gemini-flash-latest",
+                                "tier": eff_tier,
+                                "genre": eff_genre,
+                                "sub_genre": sub_genre,
+                                "primary_archetype": primary_archetype,
+                                "channel_id": channel_id,
+                                "duration_seconds": duration_seconds,
+                                "custom_prompt": eff_custom_prompt,
+                                "created_at": datetime.now(timezone.utc).isoformat(),
+                            }
+                            g_sp_target.write_text(json.dumps(sp_in_data, indent=2, ensure_ascii=False), encoding="utf-8")
                     except Exception as raw_g_err:
                         logger.warning(f"failed_to_guarantee_raw_gemini_screenplay: {raw_g_err}")
+                raw_story_target = ep_dir / "raw_gemini_story.json"
+                if not raw_story_target.exists():
+                    try:
+                        if is_doc_pipeline or is_geo_mode or "documentary" in str(eff_genre).lower():
+                            from src.studios.documentary_studio.doc_story_service import build_raw_documentary_story
+                            st_dest = production_name or getattr(universal_sp, "destination_entity", None) or "Norway"
+                            st_payload = build_raw_documentary_story(
+                                destination=st_dest,
+                                custom_prompt=prompt,
+                                channel_id=channel_id,
+                            )
+                        else:
+                            chapters_list = []
+                            seen_ch = set()
+                            for s_idx, sc in enumerate(universal_sp.scenes, 1):
+                                ch_t = getattr(sc, "chapter_title", None) or f"Chapter {s_idx}"
+                                if ch_t in seen_ch:
+                                    continue
+                                seen_ch.add(ch_t)
+                                chapters_list.append({
+                                    "chapter_index": len(chapters_list) + 1,
+                                    "chapter_title": ch_t,
+                                    "chapter_subtitle": getattr(sc, "chapter_subtitle", "") or "",
+                                    "chapter_stats": getattr(sc, "chapter_stats", "") or "",
+                                    "fact_badge": getattr(sc, "fact_badge", "") or "",
+                                    "narration": getattr(sc, "narration_text", "") or "",
+                                })
+                            st_payload = {
+                                "episode_id": episode_id or "EP-001",
+                                "production_name": production_name or "standalone",
+                                "destination_entity": getattr(universal_sp, "destination_entity", None) or production_name,
+                                "title": universal_sp.title,
+                                "story_topic": universal_sp.story_topic,
+                                "synopsis": universal_sp.story_topic,
+                                "cluster": getattr(universal_sp, "cluster", "documentary"),
+                                "genre": getattr(universal_sp, "genre", eff_genre),
+                                "sub_genre": getattr(universal_sp, "sub_genre", sub_genre),
+                                "primary_archetype": getattr(universal_sp, "primary_archetype", primary_archetype),
+                                "chapters": chapters_list,
+                                "audio_master": {
+                                    "spoken_narration_script": getattr(universal_sp.audio_master, "spoken_narration_script", "") if getattr(universal_sp, "audio_master", None) else "",
+                                    "suno_prompt": getattr(universal_sp.audio_master, "suno_prompt", "") if getattr(universal_sp, "audio_master", None) else "",
+                                    "suno_musical_tags": getattr(universal_sp.audio_master, "suno_musical_tags", "") if getattr(universal_sp, "audio_master", None) else "",
+                                },
+                                "spoken_narration_script": getattr(universal_sp.audio_master, "spoken_narration_script", "") if getattr(universal_sp, "audio_master", None) else "",
+                                "total_words_count": getattr(universal_sp, "total_words_count", None),
+                                "created_at": datetime.now(timezone.utc).isoformat(),
+                            }
+                        raw_story_target.write_text(json.dumps(st_payload, indent=2, ensure_ascii=False), encoding="utf-8")
+                        logger.info(f"raw_gemini_story_guaranteed: {raw_story_target}")
+                    except Exception as st_err:
+                        logger.warning(f"failed_to_guarantee_raw_gemini_story: {st_err}")
+            calc_sp_dur = getattr(universal_sp, "total_duration_seconds", None)
+            if is_auto_dur and calc_sp_dur and float(calc_sp_dur) > 0:
+                duration_seconds = float(calc_sp_dur)
             logger.info(f"stage_completed: stage='Stage 1: Screenplay' episode_id='{episode_id}' duration={dur_stage1:.2f}s scenes={len(universal_sp.scenes)} timestamp={time.time()}")
-            log_pipeline_step("checking script", "Stage 1 (Screenplay Formulation)", "completed", "script created via Gemini", {"file": "screenplay.json", "scenes": len(universal_sp.scenes), "duration_seconds": getattr(universal_sp, "total_duration_seconds", 30.0)})
+            log_pipeline_step("checking script", "Stage 1 (Screenplay Formulation)", "completed", "script created via Gemini", {"file": "raw_gemini_screenplay.json", "scenes": len(universal_sp.scenes), "duration_seconds": getattr(universal_sp, "total_duration_seconds", 30.0)})
             print(f"[STAGE 1 COMPLETED] Screenplay ready in {dur_stage1:.2f}s ({len(universal_sp.scenes)} scenes).")
         except Exception as ex:
             dur_stage1 = time.time() - t_stage1
@@ -485,14 +699,15 @@ async def produce_channel_video(
         if ep_dir:
             current_prod_folder = ep_dir.parent.name.lower()
             clean_dest = re.sub(r"[^a-zA-Z0-9_-]", "_", str(dest_name).lower()).strip("_")
-            if current_prod_folder != clean_dest and ("nation" in current_prod_folder or current_prod_folder == "standalone"):
+            from src.studios.documentary_studio.doc_geo_rotation import is_known_geo_entity
+            if current_prod_folder != clean_dest and ("nation" in current_prod_folder or current_prod_folder == "standalone" or not is_known_geo_entity(current_prod_folder)):
                 target_dest_dir = ep_dir.parent.parent / clean_dest / ep_dir.name
                 try:
                     if not target_dest_dir.exists():
                         target_dest_dir.parent.mkdir(parents=True, exist_ok=True)
                         shutil.move(str(ep_dir), str(target_dest_dir))
                         ep_dir = target_dest_dir
-                        screenplay_file = ep_dir / "screenplay.json"
+                        screenplay_file = ep_dir / "raw_gemini_screenplay.json"
                         pipeline_state_file = ep_dir / "pipeline_state.json"
                         manifest_file = ep_dir / "episode_manifest.json"
                         user_inputs_file = ep_dir / "user_inputs.json"
@@ -520,10 +735,11 @@ async def produce_channel_video(
                     setattr(sc, "recommended_model", motion_model)
         except Exception:
             pass
-    if screenplay_file:
+    target_sp_file = (ep_dir / "raw_gemini_screenplay.json") if ep_dir else screenplay_file
+    if target_sp_file and not target_sp_file.is_file():
         try:
-            screenplay_file.parent.mkdir(parents=True, exist_ok=True)
-            screenplay_file.write_text(json.dumps(universal_sp.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8")
+            target_sp_file.parent.mkdir(parents=True, exist_ok=True)
+            target_sp_file.write_text(json.dumps(universal_sp.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8")
         except Exception as ex:
             logger.warning(f"failed_to_write_screenplay_file: {ex}")
 
@@ -561,10 +777,10 @@ async def produce_channel_video(
         "pipeline_strategy": pipeline_strategy,
         "execution_mode": execution_mode,
         "tier": eff_tier,
-        "current_stage": 1 if script_only else 5,
-        "stage_status": "ready" if script_only else "completed",
-        "stage_approvals": {"script": True, "keyframes": not script_only, "motion": not script_only, "audio": not script_only, "master": not script_only},
-        "stages_completed": {"script": True, "keyframes": not script_only, "motion": not script_only, "audio": not script_only, "master": not script_only},
+        "current_stage": 3 if (screenplay_only or (is_doc_format and not script_only)) else (1 if script_only else 5),
+        "stage_status": "ready" if (script_only or screenplay_only) else "completed",
+        "stage_approvals": {"script": True, "keyframes": not (script_only or screenplay_only), "motion": not (script_only or screenplay_only), "audio": not (script_only or screenplay_only), "master": not (script_only or screenplay_only)},
+        "stages_completed": {"script": True, "keyframes": not (script_only or screenplay_only), "motion": not (script_only or screenplay_only), "audio": not (script_only or screenplay_only), "master": not (script_only or screenplay_only)},
         "artifacts": [],
     }
 
@@ -601,7 +817,7 @@ async def produce_channel_video(
         except Exception as ex:
             logger.warning(f"failed_to_write_manifest: {ex}")
 
-    if script_only:
+    if script_only or screenplay_only:
         t_resynth_end = time.time()
         dt_resynth_end = datetime.now(timezone.utc).isoformat()
         total_time_sec = round(t_resynth_end - t_resynth_start, 2)
@@ -618,16 +834,21 @@ async def produce_channel_video(
                 "channel": channel_id,
             },
         )
+        story_ret = st_payload if "st_payload" in locals() and st_payload else (json.loads((ep_dir / "raw_gemini_story.json").read_text("utf-8")) if (ep_dir and (ep_dir / "raw_gemini_story.json").is_file()) else None)
+        title_ret = (story_ret.get("title") if isinstance(story_ret, dict) and story_ret.get("title") else universal_sp.title)
+        stage_num = 3 if (screenplay_only or is_doc_format) else 1
         return {
             "success": True,
             "job_id": f"job_{episode_id.lower() if episode_id else 'ep001'}",
             "episode_id": episode_id or "EP-001",
-            "title": universal_sp.title,
+            "production_name": production_name,
+            "title": title_ret,
             "channel_id": channel_id,
+            "story": story_ret,
             "script": universal_sp.model_dump(),
             "pipeline_state": pipeline_state_payload,
-            "current_stage": 1,
-            "stage": 1,
+            "current_stage": stage_num,
+            "stage": stage_num,
             "video_url": None,
             "nature_video_url": None,
             "editions": [],

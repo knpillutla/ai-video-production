@@ -265,10 +265,11 @@ class LivingEnvironmentEngine:
         height: int,
         remove_objects: bool = False,
         remove_object_list: Optional[List[str]] = None,
-        enable_water: bool = False,
-        enable_smoke: bool = False,
-        enable_clouds: bool = False,
-        enable_kinetic_objects: bool = False,
+        enable_water: bool = True,
+        enable_smoke: bool = True,
+        enable_clouds: bool = True,
+        enable_kinetic_objects: bool = True,
+        total_frames: int = 240,
     ):
         self.w, self.h = width, height
         self.scale = width / 1920.0
@@ -276,19 +277,42 @@ class LivingEnvironmentEngine:
         self.clean_base_plate = None
 
         resized = cv2.resize(img, (width, height), interpolation=cv2.INTER_LANCZOS4)
-        self.img_orig = resized
-        hsv = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
-        gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+        if remove_objects and ONNX_SESSION is not None:
+            try:
+                blob = cv2.dnn.blobFromImage(resized, 1 / 255.0, (640, 640), swapRB=True, crop=False)
+                preds = ONNX_SESSION.run(None, {"images": blob})[0][0]
+                rm_set = set(remove_object_list or ["person", "car", "bicycle", "motorcycle", "bus", "truck"])
+                mask = np.zeros((height, width), dtype=np.uint8)
+                for col in range(preds.shape[1]):
+                    cid = int(np.argmax(preds[4:, col]))
+                    if float(preds[4 + cid, col]) > 0.32 and cid < len(COCO_CLASSES) and COCO_CLASSES[cid] in rm_set:
+                        xc, yc, bw, bh = preds[:4, col]
+                        x1 = max(0, int((xc - bw * 0.6) * (width / 640.0)))
+                        y1 = max(0, int((yc - bh * 0.6) * (height / 640.0)))
+                        x2 = min(width, int((xc + bw * 0.6) * (width / 640.0)))
+                        y2 = min(height, int((yc + bh * 0.6) * (height / 640.0)))
+                        if (x2 - x1) * (y2 - y1) < 0.04 * width * height:
+                            mask[y1:y2, x1:x2] = 255
+                if np.any(mask > 0):
+                    self.clean_base_plate = cv2.inpaint(resized, mask, 4, cv2.INPAINT_TELEA)
+            except Exception:
+                self.clean_base_plate = None
+
+        base_img = self.clean_base_plate if self.clean_base_plate is not None else resized
+        self.img_orig = base_img
+        hsv = cv2.cvtColor(base_img, cv2.COLOR_BGR2HSV)
+        gray = cv2.cvtColor(base_img, cv2.COLOR_BGR2GRAY)
 
         # Precision Living Dynamics: specular water shimmer, cloud drift, micro-kinetic objects
         from src.scripts.drone_living_dynamics import DroneLivingWorld
         self.living_world = DroneLivingWorld(
-            resized,
+            base_img,
             width,
             height,
             enable_water=enable_water,
             enable_clouds=enable_clouds,
             enable_objects=enable_kinetic_objects,
+            total_frames=total_frames,
         )
 
         # Smoke Detection (Only active when explicitly requested, preventing sky distortion)
@@ -377,6 +401,14 @@ VALID_ACTIONS = {
     "--orbit-stage-to-audience": "orbit-stage-to-audience",
     "--stage-audience-split": "stage-audience-split",
     "--sweep-to-crowd": "sweep-to-crowd",
+    "--slow-drone-forward": "slow-drone-forward",
+    "--drone-forward": "slow-drone-forward",
+    "--slow-drone-pullback": "slow-drone-pullback",
+    "--drone-pullback": "slow-drone-pullback",
+    "--crane-ascend": "crane-ascend",
+    "--crane-descent": "crane-descent",
+    "--drone-sweep-left": "drone-sweep-left",
+    "--drone-sweep-right": "drone-sweep-right",
 }
 
 
@@ -496,7 +528,7 @@ def normalize_choreography_sequence(choreography: Union[list, dict, str, None], 
             # Waypoint format: {"motion": "dollyin", "duration_seconds": 6.0}
             dur = float(item.get("duration") or item.get("duration_seconds") or (default_duration / max(1, len(choreography))))
             dur = max(0.5, dur)
-            moves = item.get("movements") or item.get("movement") or item.get("motion") or item.get("action")
+            moves = item.get("parallel") or item.get("movements") or item.get("movement") or item.get("motion") or item.get("action")
             if isinstance(moves, str) and any(k in moves.lower() for k in ("orbit-stage", "orbit_stage", "stage-audience", "stage_audience", "sweep-to-crowd", "sweep_to_crowd")):
                 p1 = round(dur * 0.40, 2)
                 p2 = round(dur * 0.35, 2)
@@ -740,8 +772,24 @@ def precompute_sequence_matrices(
             if face_target is not None:
                 t_p = singer_target_p
                 t_t = singer_target_t
-        elif act in ("dollyout", "dolly-out", "zoomout", "zoom-out"):
+        elif act in ("slow-drone-forward", "drone-forward", "slow-push-in", "push-in"):
+            t_d = min(1.0, max(0.65, s_d + 0.55))
+        elif act in ("dollyout", "dolly-out", "zoomout", "zoom-out", "slow-drone-pullback", "drone-pullback", "dolly-pullback"):
             t_d = 0.0
+        elif act in ("crane-ascend", "crane-up-reveal"):
+            t_t = -0.85
+            t_d = max(0.0, s_d - 0.35) if s_d > 0.35 else 0.42
+        elif act in ("crane-descent", "crane-down-push"):
+            t_t = 0.75
+            t_d = min(1.0, max(0.50, s_d + 0.40))
+        elif act in ("drone-sweep-left", "sweep-left"):
+            t_p = -0.90; t_r = 1.5
+            if t_d < 0.38:
+                t_d = 0.42
+        elif act in ("drone-sweep-right", "sweep-right"):
+            t_p = 0.90; t_r = -1.5
+            if t_d < 0.38:
+                t_d = 0.42
         elif act in ("pan-left", "panleft"):
             t_p = -1.0
             if t_d < 0.35:
@@ -823,26 +871,26 @@ def precompute_sequence_matrices(
                     prog = min(1.0, f / max(1, sub_frames - 1)) if sub_frames > 1 else 1.0
                     e = calculate_easing(prog, curve)
                     act = sub_act.lower().replace("_", "-").replace(" ", "-")
-                    if any(k in act for k in ("dollyin", "zoom-in", "zoomin", "dollyout", "zoom-out", "zoomout", "singer", "face", "close")):
+                    if any(k in act for k in ("dollyin", "zoom-in", "zoomin", "dollyout", "zoom-out", "zoomout", "drone-forward", "pullback", "push-in", "crane", "singer", "face", "close")):
                         d_val = start_d + e * (tgt_d - start_d)
-                    if any(k in act for k in ("pan", "drift", "orbit", "left", "right", "guitarist")):
+                    if any(k in act for k in ("pan", "drift", "orbit", "sweep", "left", "right", "guitarist")):
                         p_val = start_p + e * (tgt_p - start_p)
-                    if any(k in act for k in ("tilt", "pedestal", "crane", "drift", "up", "down", "ascend", "descend", "singer", "face", "close", "guitarist", "drummer")):
+                    if any(k in act for k in ("tilt", "pedestal", "crane", "drift", "up", "down", "ascend", "descend", "descent", "singer", "face", "close", "guitarist", "drummer")):
                         t_val = start_t + e * (tgt_t - start_t)
-                    if any(k in act for k in ("roll", "orbit", "level")):
+                    if any(k in act for k in ("roll", "orbit", "sweep", "level")):
                         r_val = start_r + e * (tgt_r - start_r)
 
                 timeline_states.append((d_val, p_val, t_val, r_val))
 
             for sub_act, tgt_d, tgt_p, tgt_t, tgt_r, _ in channels:
                 act = sub_act.lower().replace("_", "-").replace(" ", "-")
-                if any(k in act for k in ("dollyin", "zoom-in", "zoomin", "dollyout", "zoom-out", "zoomout", "singer", "face", "close")):
+                if any(k in act for k in ("dollyin", "zoom-in", "zoomin", "dollyout", "zoom-out", "zoomout", "drone-forward", "pullback", "push-in", "crane", "singer", "face", "close")):
                     cur_depth = tgt_d
-                if any(k in act for k in ("pan", "drift", "orbit", "left", "right", "guitarist")):
+                if any(k in act for k in ("pan", "drift", "orbit", "sweep", "left", "right", "guitarist")):
                     cur_pan = tgt_p
-                if any(k in act for k in ("tilt", "pedestal", "crane", "drift", "up", "down", "ascend", "descend", "singer", "face", "close", "guitarist", "drummer")):
+                if any(k in act for k in ("tilt", "pedestal", "crane", "drift", "up", "down", "ascend", "descend", "descent", "singer", "face", "close", "guitarist", "drummer")):
                     cur_tilt = tgt_t
-                if any(k in act for k in ("roll", "orbit", "level")):
+                if any(k in act for k in ("roll", "orbit", "sweep", "level")):
                     cur_roll = tgt_r
 
         else:
@@ -1024,16 +1072,18 @@ def render_perspective_drone_clip_sync(
         face_target=face_center,
     )
 
+    is_static_hold = len(sequence) == 1 and sequence[0][0] == "stay"
     living_env = LivingEnvironmentEngine(
         img_enhanced,
         target_w,
         target_h,
         remove_objects=remove_objects,
         remove_object_list=remove_object_list,
-        enable_water=water,
+        enable_water=water and not is_static_hold,
         enable_smoke=smoke,
-        enable_clouds=clouds,
-        enable_kinetic_objects=kinetic_objects,
+        enable_clouds=clouds and not is_static_hold,
+        enable_kinetic_objects=kinetic_objects and not is_static_hold,
+        total_frames=total_frames,
     )
     rain_engine = CinematicRainEngine(target_w, target_h, intensity=rain_intensity, source_img=img_enhanced) if rain else None
     snow_engine = CinematicSnowEngine(target_w, target_h, intensity=snow_intensity, source_img=img_enhanced) if snow else None
@@ -1076,6 +1126,7 @@ def render_perspective_drone_clip_sync(
                     attraction_name=lower_third_hud.get("attraction_name", "Landmark"),
                     sub_location=lower_third_hud.get("sub_location") or lower_third_hud.get("timing_text"),
                     target_res=output_size,
+                    position=lower_third_hud.get("position", "bottom_left"),
                 )
                 if lower_third_hud.get("chapter_title"):
                     c_rgba = create_documentary_chapter_title_card(
@@ -1091,21 +1142,6 @@ def render_perspective_drone_clip_sync(
                     f_rgba = create_documentary_fact_badge_overlay(lower_third_hud["fact_badge"], target_res=output_size)
                     fact_bgr = cv2.cvtColor(f_rgba, cv2.COLOR_RGBA2BGR)
                     fact_alpha = (f_rgba[:, :, 3] / 255.0).astype(np.float32)
-
-                if lower_third_hud.get("show_map_locator") or any(w in str(lower_third_hud.get("chapter_title", "")).lower() for w in ("geography", "border", "climate", "coast", "area")):
-                    from src.studios.documentary_studio.doc_cartography_service import create_cartographic_locator_overlay
-                    c_query = lower_third_hud.get("country_entity") or lower_third_hud.get("sub_location") or lower_third_hud.get("attraction_name") or "France"
-                    m_rgba = create_cartographic_locator_overlay(c_query, target_res=output_size)
-                    map_bgr = cv2.cvtColor(m_rgba, cv2.COLOR_RGBA2BGR)
-                    map_alpha = (m_rgba[:, :, 3] / 255.0).astype(np.float32)
-
-                if lower_third_hud.get("qr_url") or lower_third_hud.get("show_itinerary_qr"):
-                    from src.studios.documentary_studio.doc_qr_service import create_itinerary_qr_overlay
-                    qr_url = lower_third_hud.get("qr_url") or "https://maps.google.com"
-                    dest_title = lower_third_hud.get("country_entity") or lower_third_hud.get("attraction_name") or "Itinerary Route"
-                    q_rgba = create_itinerary_qr_overlay(route_url=qr_url, destination_name=dest_title, target_res=output_size)
-                    qr_bgr = cv2.cvtColor(q_rgba, cv2.COLOR_RGBA2BGR)
-                    qr_alpha = (q_rgba[:, :, 3] / 255.0).astype(np.float32)
             else:
                 from src.services.map_route_engine import create_lower_third_hud_overlay
                 rgba = create_lower_third_hud_overlay(
@@ -1116,6 +1152,24 @@ def render_perspective_drone_clip_sync(
                     cost_text=lower_third_hud.get("cost_text"),
                     transit_text=lower_third_hud.get("transit_text"),
                 )
+
+            # Top-Right Cartographic / Route Map Locator (Active for tours or doc geography chapters)
+            if lower_third_hud.get("show_map_locator") or (lower_third_hud.get("is_documentary") and any(w in str(lower_third_hud.get("chapter_title", "")).lower() for w in ("geography", "border", "climate", "coast", "area"))):
+                from src.studios.documentary_studio.doc_cartography_service import create_cartographic_locator_overlay
+                c_query = lower_third_hud.get("country_entity") or lower_third_hud.get("sub_location") or lower_third_hud.get("attraction_name") or "France"
+                m_rgba = create_cartographic_locator_overlay(c_query, target_res=output_size)
+                map_bgr = cv2.cvtColor(m_rgba, cv2.COLOR_RGBA2BGR)
+                map_alpha = (m_rgba[:, :, 3] / 255.0).astype(np.float32)
+
+            # Bottom-Right Scannable QR Code Card (Strictly for Tour Itineraries with active qr_url)
+            if lower_third_hud.get("show_itinerary_qr") and lower_third_hud.get("qr_url"):
+                from src.studios.documentary_studio.doc_qr_service import create_itinerary_qr_overlay
+                qr_url = lower_third_hud.get("qr_url") or "https://maps.google.com"
+                dest_title = lower_third_hud.get("attraction_name") or lower_third_hud.get("country_entity") or "Itinerary Route"
+                q_rgba = create_itinerary_qr_overlay(route_url=qr_url, destination_name=dest_title, target_res=output_size)
+                qr_bgr = cv2.cvtColor(q_rgba, cv2.COLOR_RGBA2BGR)
+                qr_alpha = (q_rgba[:, :, 3] / 255.0).astype(np.float32)
+
             hud_bgr = cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGR)
             hud_alpha = (rgba[:, :, 3] / 255.0).astype(np.float32)
         except Exception:
@@ -1190,9 +1244,9 @@ def render_perspective_drone_clip_sync(
                     m_eff_alpha = (map_alpha * m_fade)[:, :, None]
                     frame = (frame.astype(np.float32) * (1.0 - m_eff_alpha) + map_bgr.astype(np.float32) * m_eff_alpha).astype(np.uint8)
 
-            # Lower-third HUD display: 5s fade-in/fade-out for documentary, solid for tour itineraries
+            # Lower-third HUD display: 6s fade-in/fade-out for documentary, solid for tour itineraries
             if hud_bgr is not None and hud_alpha is not None:
-                display_dur = float(lower_third_hud.get("display_duration", 5.0 if lower_third_hud.get("is_documentary") else 0.0))
+                display_dur = float(lower_third_hud.get("display_duration", 6.0 if lower_third_hud.get("is_documentary") else 0.0))
                 # When a chapter card is displayed, start the lower-third as the chapter slate fades out
                 hud_delay = int(fps * 3.0) if (chap_bgr is not None) else 0
                 adj_i = i - hud_delay
@@ -1282,8 +1336,9 @@ def render_perspective_drone_clip_sync(
             subprocess.run(cmd_h264, capture_output=True, text=True)
             temp_raw.unlink(missing_ok=True)
 
-    from src.services.video_4k_encoder import ensure_video_4k
-    ensure_video_4k(out)
+    if max(target_w, target_h) >= 3840:
+        from src.services.video_4k_encoder import ensure_video_4k
+        ensure_video_4k(out)
     return out
 
 

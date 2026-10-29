@@ -29,6 +29,9 @@ FOREST STUDIO DIRECTORIAL RULES & CINEMATOGRAPHY:
    - Ancient tree trunks, boulders, and forest floor remain 100% rigid, frozen, and temporally stable.
    - Animate ONLY crystal water currents, subtle fern sway, and drifting morning mist.
    - Domain: "landscape_solid".
+
+4. 4K HYPER-REALISTIC OPTICS & COLOR VIBRANCY (Z-IMAGE & FLUX):
+   - Mandate Hasselblad H6D-100c prime lens framing, deep vibrant emerald moss carpets, warm honey-amber tree bark striations, crystalline brook reflections, radiant komorebi sunbeam shafts, and razor-sharp pine needle micro-textures. Strictly prohibit flat or desaturated visuals.
 """
 
 

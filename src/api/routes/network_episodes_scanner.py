@@ -119,7 +119,8 @@ def scan_all_channel_episodes(storage_dir: Path, user_id: str | None = None) -> 
                                     ep_dict = _build_episode_record(ep_path, ch_meta, storage_dir)
                                     if ep_dict:
                                         ep_dict["format"] = fmt_name
-                                        ep_dict["production_name"] = p_name
+                                        if not ep_dict.get("production_name") or ep_dict["production_name"] == "standalone":
+                                            ep_dict["production_name"] = p_name
                                         episodes.append(ep_dict)
 
     # Also scan global productions: storage_dir / user / productions / {format} / {production_name} / {episode}
@@ -176,8 +177,14 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
         except Exception:
             pass
 
+    story_data = json.loads(files["raw_gemini_story.json"].read_text(encoding="utf-8")) if "raw_gemini_story.json" in files else {}
     screenplay_data = {}
-    if "screenplay.json" in files:
+    if "raw_gemini_screenplay.json" in files:
+        try:
+            screenplay_data = json.loads(files["raw_gemini_screenplay.json"].read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    elif "screenplay.json" in files:
         try:
             screenplay_data = json.loads(files["screenplay.json"].read_text(encoding="utf-8"))
         except Exception:
@@ -251,9 +258,9 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
         (["master_4k_3hour_broadcast.mp4", "master_4k_3hour_sleep.mp4"], "3h_music", "3-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "3:00:00 (3 Hours)", "16:9 Long-Play", "published", "12.87 GB"),
         (["master_4k_3hour_nature_only_broadcast.mp4", "master_4k_3hour_nature_only.mp4"], "3h_nature", "3-Hour 4K Broadcast (Pure Nature)", "fa-leaf text-emerald-400", "Pure Nature Foley ASMR", "3:00:00 (3 Hours)", "16:9 Long-Play", "published", "12.87 GB"),
         (["master_4k_1hour_broadcast.mp4", "master_4k_1hour_sleep.mp4"], "1h_music", "1-Hour 4K Broadcast (Music)", "fa-music text-indigo-400", "Music + 432Hz BGM", "1:00:00 (1 Hour)", "16:9 Long-Play", "published", "4.29 GB"),
+        (["master_4k_narration.mp4"], "master_narration", "4K Master Set (Narration + BGM)", "fa-microphone text-teal-400", "Spoken Voiceover + Ducked BGM", "Master", "16:9 Master", "completed", "155 MB"),
         (["master_4k_ambient.mp4"], "master_music", "4K Master Set (Broadcast / Music)", "fa-music text-indigo-400", "Music + Spatial Foley", "Master", "16:9 Master", "completed", "155 MB"),
         (["master_4k_nature.mp4", "master_4k_ambient_nature_only.mp4"], "master_nature", "4K Pure Nature Master (ASMR)", "fa-leaf text-emerald-400", "Pure Nature Foley (No Music)", "Master", "16:9 Master", "completed", "155 MB"),
-        (["master_4k_narration.mp4"], "master_narration", "4K Master Set (Narration + BGM)", "fa-microphone text-teal-400", "Spoken Voiceover + Ducked BGM", "Master", "16:9 Master", "completed", "155 MB"),
         (["short_9x16_teaser.mp4"], "short_teaser", "9:16 Vertical Short Teaser", "fa-mobile-screen text-pink-400", "Music + Ambient", "20s (Short)", "9:16 Short", "completed", "6.6 MB"),
     ]
     for fn_list, eid, name, icon, mode, dur, fmt, st, sz in edition_defs:
@@ -295,7 +302,7 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
         keyframes = [{"name": f"Scene {p.stem.replace('scene_', '')}", "url": f"{rel_prefix}/scenes/{p.name}?t={int(p.stat().st_mtime)}", "filename": p.name} for p in sorted((ep_path / "scenes").glob("scene_*.jpg")) if p.stat().st_size > 1000]
 
     motion_clips = [{"name": f"Motion {m.replace('motion_p', '').replace('.mp4', '')}", "url": f"{rel_prefix}/{m}?t={int(files[m].stat().st_mtime)}", "filename": m, "model": "Kling Pro" if "p1" in m else "Wan 2.1"} for m in sorted(files.keys()) if m.startswith("motion_p") and m.endswith(".mp4") and not m.endswith("_fwd_seamless.mp4")]
-    audio_stems = []
+    audio_stems = [{"name": "Neural Broadcast Narration", "url": f"{rel_prefix}/spoken_narration.mp3?t={int(files['spoken_narration.mp3'].stat().st_mtime)}", "filename": "spoken_narration.mp3", "role": "narration", "stem_type": "narration", "type": "azure_speech", "voice_name": "en-GB-RyanNeural", "color": "indigo"}] if ("spoken_narration.mp3" in files and files["spoken_narration.mp3"].stat().st_size > 1000) else []
     if "raw_soundtrack.mp3" in files and files["raw_soundtrack.mp3"].stat().st_size > 1000:
         audio_stems.append({
             "name": "Suno Soundtrack",
@@ -402,7 +409,8 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
         "video_url": primary_master,
         "videoUrl": primary_master,
         "nature_video_url": next((e["url"] for e in master_editions if e["edition_id"] == "master_nature"), None),
-        "script": screenplay_data if screenplay_data else manifest_data,
+        "story": story_data if story_data else None,
+        "script": screenplay_data if screenplay_data else None,
         "screenplay": screenplay_data if screenplay_data else None,
         "user_inputs": user_inputs_data if user_inputs_data else None,
         "pipeline_state": pipeline_state_data if pipeline_state_data else None,

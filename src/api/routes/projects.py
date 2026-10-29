@@ -1,5 +1,6 @@
 """User-scoped Episode and Project management API routes."""
 
+import re
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel

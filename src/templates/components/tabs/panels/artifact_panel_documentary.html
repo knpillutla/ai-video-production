@@ -1,0 +1,108 @@
+<!-- ARTIFACT PANEL: DOCUMENTARY FORMAT (7 Stages: Story -> Narration -> Screenplay -> Photos -> BGM -> Motion -> Master) -->
+<div id="artifact-panel-documentary" class="format-artifact-panel space-y-2">
+  <!-- STAGE 1: RAW STORY SCRIPT (21 Master Sovereign Chapters) -->
+  <div id="panel-stage-row-story" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <div class="flex items-center gap-2">
+        <span class="stage-header-title"><span class="stage-number-badge">1</span> <span>Raw Story Script</span></span>
+        <span id="panel-story-status" class="text-[var(--text-muted)] font-mono text-xs">Ready</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button type="button" onclick="openScriptDrawer('story')" class="btn-runway-secondary py-0.5 px-2 text-[10px] font-bold flex items-center gap-1" title="View Full 21-Chapter Story Syllabus">
+          <i class="fa-solid fa-book-open text-[9px]"></i>
+          <span>View Story (21 Ch)</span>
+        </button>
+      </div>
+    </div>
+    <div id="panel-section-story" class="w-full min-h-[38px] pb-0.5">
+      <!-- Rendered by documentary_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 2: NARRATION AUDIO (AZURE SPEECH NEURAL TTS) -->
+  <div id="panel-stage-row-narration" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <div class="flex items-center gap-2">
+        <span class="stage-header-title"><span class="stage-number-badge">2</span> <span>Narration (Azure Speech)</span></span>
+        <span id="panel-narration-status" class="text-[var(--text-muted)] font-mono text-xs">Idle</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button type="button" id="btn-generate-narration-header" onclick="advanceToNarrationStage(currentActiveInspectorEpisode, 'azure_speech')" class="btn-runway-primary py-0.5 px-2 text-[10px] font-bold shadow-sm flex items-center gap-1" title="Synthesize Voiceover Narration">
+          <i class="fa-solid fa-microphone-lines text-[9px]"></i>
+          <span>Generate Narration</span>
+        </button>
+      </div>
+    </div>
+    <div id="panel-section-narration" class="w-full min-h-[44px] pb-0.5">
+      <!-- Rendered by documentary_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 3: RAW GEMINI SCREENPLAY -->
+  <div id="panel-stage-row-script" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <div class="flex items-center gap-2">
+        <span class="stage-header-title"><span class="stage-number-badge">3</span> <span>Raw Gemini Screenplay</span></span>
+        <span id="panel-script-status" class="text-[var(--text-muted)] font-mono text-xs">Idle</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button type="button" id="btn-generate-screenplay-header" onclick="advanceToScriptStage(currentActiveInspectorEpisode)" class="btn-runway-primary py-0.5 px-2 text-[10px] font-bold shadow-sm flex items-center gap-1" title="Generate Screenplay from Narration">
+          <i class="fa-solid fa-sparkles text-[9px]"></i>
+          <span>Generate Script</span>
+        </button>
+      </div>
+    </div>
+    <div id="panel-section-script" class="w-full min-h-[38px] pb-0.5">
+      <!-- Rendered by documentary_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 4: KEYFRAME PHOTOS -->
+  <div id="panel-stage-row-images" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <span class="stage-header-title"><span class="stage-number-badge">4</span> <span>Keyframe Photos</span></span>
+      <span id="panel-images-count" class="px-2 py-0.5 rounded-full bg-[var(--card-subtle)] text-[var(--text)] font-mono text-xs font-bold border border-[var(--border)]">0 Shots</span>
+    </div>
+    <div id="panel-section-images" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 w-full items-start pb-1">
+      <!-- Rendered by documentary_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 5: BGM SOUNDTRACK & AUDIO STEMS -->
+  <div id="panel-stage-row-audio" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <span class="stage-header-title"><span class="stage-number-badge">5</span> <span>BGM Soundtrack (Suno v3.5)</span></span>
+      <div class="flex items-center gap-1">
+        <button type="button" onclick="advanceToBgmStage(currentActiveInspectorEpisode, true)" class="btn-runway-primary py-0.5 px-2 text-[10px] font-bold shadow-sm flex items-center gap-1" title="Synthesize BGM Soundtrack">
+          <i class="fa-solid fa-music text-[9px]"></i>
+          <span>Suno BGM</span>
+        </button>
+      </div>
+    </div>
+    <div id="panel-section-audio" class="grid grid-cols-2 gap-1.5 w-full min-h-[52px] pb-0.5">
+      <!-- Rendered by documentary_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 6: RAW VIDEO MOTION -->
+  <div id="panel-stage-row-motion" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <span class="stage-header-title"><span class="stage-number-badge">6</span> <span>Raw Video Motion</span></span>
+      <span id="panel-raw-videos-count" class="px-2 py-0.5 rounded-full bg-[var(--card-subtle)] text-[var(--text)] font-mono text-xs font-bold border border-[var(--border)]">0 Clips</span>
+    </div>
+    <div id="panel-section-raw-videos" class="grid grid-cols-3 gap-1.5 w-full min-h-[50px] pb-0.5">
+      <!-- Rendered by documentary_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 7: 4K MASTER DELIVERABLES -->
+  <div id="panel-stage-row-master" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <span class="stage-header-title"><span class="stage-number-badge">7</span> <span>4K Master Deliverables</span></span>
+      <span class="text-xs font-mono text-[var(--text-muted)]">Broadcast Master</span>
+    </div>
+    <div id="panel-section-master-videos" class="grid grid-cols-2 gap-1.5 w-full min-h-[48px] pt-0.5 pb-0.5">
+      <!-- Rendered by documentary_artifacts_renderer.js -->
+    </div>
+  </div>
+</div>

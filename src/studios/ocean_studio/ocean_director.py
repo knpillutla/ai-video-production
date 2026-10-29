@@ -20,6 +20,7 @@ from src.studios.screenplay_models import (
     RelaxSceneDirective,
     RelaxScreenplay,
 )
+from src.studios.directorial_configs import build_default_image_model_configs
 from src.studios.ocean_studio.ocean_catalog import OCEAN_ARCHETYPES
 from src.studios.ocean_studio.ocean_prompt import OCEAN_LANDMARKS, build_ocean_prompt
 
@@ -179,6 +180,7 @@ def _fallback_catalog_screenplay(archetype: str, prompt: Optional[str], duration
             location_hub=arch.display_name,
             shot_type="wide_panoramic_picturesque",
             visual_prompt=arch.wide_visual_prompt,
+            image_model_configs=build_default_image_model_configs(prompt=arch.wide_visual_prompt, landmark_name=arch.display_name),
             motion_prompt=arch.wide_motion_prompt,
             duration_seconds=duration,
             domain=arch.default_domain,

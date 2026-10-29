@@ -30,6 +30,9 @@ BLIZZARD STUDIO DIRECTORIAL RULES & CINEMATOGRAPHY:
    - Cabin architecture, timber beams, and mugs remain 100% rigid, frozen, and temporally stable.
    - Animate ONLY swirling blizzard snowflakes outside glass, window frost caustics, and hearth embers.
    - Domain: "cozy_hearth".
+
+4. 4K HYPER-REALISTIC OPTICS & FROST CONTRAST (Z-IMAGE & FLUX):
+   - Mandate Hasselblad H6D-100c prime lens framing, sparkling diamond frost crystals on window panes, warm glowing 2200K amber hearth embers contrasting deep sapphire twilight snowdrifts, and razor-sharp log micro-textures. Strictly prohibit flat grey or washed-out visuals.
 """
 
 

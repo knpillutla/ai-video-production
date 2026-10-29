@@ -69,7 +69,7 @@ def resolve_autonomous_geo_details(
         or clean_cp_low.endswith("_nations")
     )
 
-    # If the user explicitly typed a genuine custom prompt, honor it directly
+    # If the user explicitly typed a genuine custom prompt, check if it specifies a real entity
     if clean_cp and not is_generic_label:
         eff_genre = ARCHETYPE_GENRE_MAP.get(eff_arch, DocGenre.PLACES)
         matched_entity = None
@@ -78,15 +78,29 @@ def resolve_autonomous_geo_details(
                 matched_entity = cand
                 record_visited_entity(cand, category, sub_clean, user_id, channel_id)
                 break
-        selected_entity = matched_entity or clean_cp.split(":")[0].strip()[:32]
-        if clean_cp.strip().lower() == selected_entity.strip().lower():
-            candidates = ARCHETYPE_TEMPLATES.get(eff_arch, ARCHETYPE_TEMPLATES.get(category, [
-                "{entity}: Complete Documentary - Attractions, Nature, History, Luminaries, Inventions & Trade"
-            ]))
-            theme_title = candidates[0].format(entity=selected_entity)
-        else:
-            theme_title = clean_cp
-        return eff_genre, eff_arch, theme_title, selected_entity
+
+        # Also search across other continent pools in case of cross-continental query
+        if not matched_entity:
+            all_maps = CONTINENT_CITIES_MAP if is_city_mode else CONTINENT_COUNTRIES_MAP
+            for p in all_maps.values():
+                for cand in p:
+                    if cand.lower() in clean_cp.lower():
+                        matched_entity = cand
+                        record_visited_entity(cand, category, sub_clean, user_id, channel_id)
+                        break
+                if matched_entity:
+                    break
+
+        if matched_entity:
+            selected_entity = matched_entity
+            if clean_cp.strip().lower() == selected_entity.strip().lower():
+                candidates = ARCHETYPE_TEMPLATES.get(eff_arch, ARCHETYPE_TEMPLATES.get(category, [
+                    "{entity}: Complete Documentary - Attractions, Nature, History, Luminaries, Inventions & Trade"
+                ]))
+                theme_title = candidates[0].format(entity=selected_entity)
+            else:
+                theme_title = clean_cp
+            return eff_genre, eff_arch, theme_title, selected_entity
 
     # Retrieve recent topics for cross-system deduplication
     recent_topics = []
@@ -114,8 +128,10 @@ def resolve_autonomous_geo_details(
         channel_id=channel_id,
     )
 
-    # Build theme title matching archetype templates or 4-pillar exploration
-    if eff_arch in ("cities", "city"):
+    # Build theme title matching archetype templates or custom guidance
+    if clean_cp and not is_generic_label:
+        theme_title = f"{selected_entity}: {clean_cp}"
+    elif eff_arch in ("cities", "city"):
         if is_recycled:
             theme_title = f"{selected_entity}: Hidden Gems, Great Minds, Historic Squares & Cultural Quarters"
         else:
@@ -123,7 +139,7 @@ def resolve_autonomous_geo_details(
                 "{entity}: Famous Attractions, Living Spirit, Luminaries & Historic Squares"
             ])
             theme_title = candidates[0].format(entity=selected_entity)
-    elif eff_arch in ("countries", "country", "nations", "nation"):
+    elif eff_arch in ("countries", "country", "nations", "nation", "country_overview", "country_encyclopedia"):
         if is_recycled:
             theme_title = f"{selected_entity}: Hidden Frontiers, National Spirit, Great Luminaries & Gathering Piazzas"
         else:
@@ -184,6 +200,20 @@ def resolve_autonomous_geo_entity(
     return entity
 
 
+def is_known_geo_entity(name: str) -> bool:
+    """Check if name matches any known country or city in the geographic pools."""
+    if not name or not isinstance(name, str):
+        return False
+    clean = name.strip().lower()
+    for p in CONTINENT_COUNTRIES_MAP.values():
+        if any(c.lower() == clean for c in p):
+            return True
+    for p in CONTINENT_CITIES_MAP.values():
+        if any(c.lower() == clean for c in p):
+            return True
+    return False
+
+
 __all__ = [
     "CONTINENT_COUNTRIES_MAP",
     "CONTINENT_CITIES_MAP",
@@ -193,4 +223,5 @@ __all__ = [
     "resolve_autonomous_geo_details",
     "resolve_autonomous_geo_theme",
     "resolve_autonomous_geo_entity",
+    "is_known_geo_entity",
 ]

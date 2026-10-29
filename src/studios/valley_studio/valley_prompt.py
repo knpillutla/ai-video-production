@@ -29,6 +29,9 @@ VALLEY STUDIO DIRECTORIAL RULES & CINEMATOGRAPHY:
    - Valley floor, timber barns, and mountain backdrops remain 100% rigid, frozen, and temporally stable.
    - Animate ONLY gentle wildflower sway, crystal glacial brook current, or delicate morning mist ribbons.
    - Domain: "landscape_solid".
+
+4. 4K HYPER-REALISTIC OPTICS & WILDFLOWER COLOR VIBRANCY (Z-IMAGE & FLUX):
+   - Mandate Hasselblad H6D-100c prime lens framing, brilliant saturated wildflower carpets (purple lupines, golden buttercups, crimson alpine poppies), crystal turquoise glacial streams, radiant amber sidelight, deep cobalt skies, and razor-sharp petal and grass textures. Strictly ban flat or desaturated visuals.
 """
 
 

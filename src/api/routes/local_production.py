@@ -69,9 +69,12 @@ class LocalProduceRequest(BaseModel):
     primary_archetype_label: Optional[str] = None
     image_model: Optional[str] = "zimage"
     script_only: Optional[bool] = False
+    narration_only: Optional[bool] = False
+    screenplay_only: Optional[bool] = False
     photos_only: Optional[bool] = False
     motion_only: Optional[bool] = False
     audio_only: Optional[bool] = False
+    bgm_only: Optional[bool] = False
     master_only: Optional[bool] = False
     pipeline_strategy: Optional[str] = "manual"
     execution_mode: Optional[str] = "test"
@@ -94,6 +97,9 @@ class LocalProduceResponse(BaseModel):
     job_id: str
     episode_id: str
     title: str
+    production_name: Optional[str] = None
+    story: Optional[dict[str, Any]] = None
+    screenplay: Optional[dict[str, Any]] = None
     script: Optional[dict[str, Any]] = None
     video_url: Optional[str] = None
     nature_video_url: Optional[str] = None
@@ -111,24 +117,35 @@ class LocalProduceResponse(BaseModel):
     stage: Optional[int] = 1
 
 
-def _reserve_next_episode_id(user_id: str, channel_id: str) -> str:
-    """Reserve next sequential episode ID code without creating premature empty directories on disk."""
-    channel_dir = storage_service.get_network_path(user_id, channel_id)
+def _reserve_next_episode_id(
+    user_id: str,
+    channel_id: str,
+    format_slug: Optional[str] = None,
+    production_name: Optional[str] = None,
+) -> str:
+    """Reserve next sequential episode ID code strictly scoped to production_name/title (starts at EP-001)."""
+    clean_fmt = re.sub(r"[^a-zA-Z0-9_-]", "_", str(format_slug or 'documentary').lower()).strip("_")
+    clean_prod = re.sub(r"[^a-zA-Z0-9_-]", "_", str(production_name or '').lower()).strip("_")
+    if not clean_prod or clean_prod in ("standalone", "none", "documentary", "relaxation"):
+        return "EP-001"
+
+    prod_dir = storage_service.get_channel_path(user_id, channel_id) / clean_fmt / clean_prod
     highest = 0
-    if channel_dir.exists():
-        for path in channel_dir.rglob("*"):
-            if path.is_dir() and path.name.upper().startswith("EP-"):
-                suffix = path.name[3:]
-                if suffix.isdigit():
-                    highest = max(highest, int(suffix))
-    return f"EP-{highest + 1:03d}"
+    if prod_dir.exists() and prod_dir.is_dir():
+        for sub in prod_dir.iterdir():
+            if sub.is_dir():
+                m = re.search(r"ep[-_]?(\d+)", sub.name, re.IGNORECASE)
+                if m:
+                    highest = max(highest, int(m.group(1)))
+    return f"ep-{highest + 1:03d}"
 
 
 @router.post("/local-produce", response_model=LocalProduceResponse, status_code=status.HTTP_200_OK)
 async def produce_video_locally(req: LocalProduceRequest):
     """Synthesize a complete broadcast-grade MP4 video with scenes and audio stems."""
-    title = req.title or (req.prompt[:36] if len(req.prompt) > 36 else req.prompt) or "Gemini-Directed Production"
-    capped_duration = min(28800.0, max(4.0, float(req.duration_seconds or 6.0)))
+    raw_dur = req.duration_seconds
+    is_auto_dur = raw_dur is not None and (float(raw_dur) <= 0 or float(raw_dur) == -1)
+    capped_duration = -1.0 if is_auto_dur else min(28800.0, max(4.0, float(raw_dur or 6.0)))
     eff_bgm = req.enable_bgm if req.enable_bgm is not None else (req.bgm if req.bgm is not None else True)
     user_id_val = req.user_id or "user_krishna_01"
     strat = req.pipeline_strategy or "manual"
@@ -152,7 +169,16 @@ async def produce_video_locally(req: LocalProduceRequest):
             if user_chans:
                 eff_channel_id = user_chans[0].channel_slug
     eff_channel_id = eff_channel_id or "default_channel"
-    episode_id = req.episode_id or _reserve_next_episode_id(user_id_val, eff_channel_id)
+    eff_fmt_req = str(req.format_slug or req.format or "documentary").lower()
+    eff_prod_req = req.production_name or req.prompt or req.title or ""
+    episode_id = req.episode_id or _reserve_next_episode_id(
+        user_id_val, eff_channel_id, format_slug=eff_fmt_req, production_name=eff_prod_req
+    )
+    title = (req.title or req.prompt or req.production_name or f"Episode {episode_id}").strip()
+    if len(title) > 80:
+        title = title[:77] + "..."
+    if not title:
+        title = f"Episode {episode_id}"
 
     topic_check = None
     if req.prompt.strip():
@@ -171,7 +197,7 @@ async def produce_video_locally(req: LocalProduceRequest):
 
     has_fal = bool(_fal_api_key())
     eff_fallback = bool(req.allow_fallback or not has_fal)
-    eff_motion = req.motion_model if req.motion_model and req.motion_model != "auto" else ("wan" if capped_duration <= 10.0 else "auto")
+    eff_motion = req.motion_model if req.motion_model and req.motion_model != "auto" else ("wan" if (capped_duration > 0 and capped_duration <= 10.0) else "auto")
 
     t0 = time.time()
     logger.info(
@@ -261,13 +287,13 @@ async def produce_video_locally(req: LocalProduceRequest):
             )
         elif eff_photos_only:
             job_manager.update_job(
-                job_id=eff_job_id, stage=2, progress=35, status="ready",
+                job_id=eff_job_id, stage=2, progress=40, status="ready",
                 keyframes=result.get("keyframes", []), motion_clips=[],
                 audio_stems=[], video_url=None,
             )
         elif eff_audio_only:
             job_manager.update_job(
-                job_id=eff_job_id, stage=3, progress=60, status="ready",
+                job_id=eff_job_id, stage=3, progress=65, status="ready",
                 keyframes=result.get("keyframes", []), motion_clips=[],
                 audio_stems=result.get("audio_stems", []), video_url=None,
             )
@@ -351,6 +377,8 @@ async def poll_production_artifacts(
     vids = [{"name": f"Motion {m.replace('motion_p','').replace('.mp4','')}", "url": _file_url(files[m]), "model": m_model} for m in sorted(files) if m.startswith("motion_p") and m.endswith(".mp4") and not m.endswith("_fwd_seamless.mp4") and files[m].stat().st_size > 1000]
 
     stems = []
+    if "spoken_narration.mp3" in files and files["spoken_narration.mp3"].stat().st_size > 1000:
+        stems.append({"name": "Neural Broadcast Narration", "filename": "spoken_narration.mp3", "url": _file_url(files["spoken_narration.mp3"]), "role": "narration", "stem_type": "narration", "type": "azure_speech", "voice_name": "en-GB-RyanNeural", "color": "indigo"})
     if "raw_soundtrack.mp3" in files and files["raw_soundtrack.mp3"].stat().st_size > 1000:
         stems.append({"name": "Suno Soundtrack", "filename": "raw_soundtrack.mp3", "url": _file_url(files["raw_soundtrack.mp3"]), "color": "cyan"})
     if "velvet_binaural_master_48k.mp3" in files and files["velvet_binaural_master_48k.mp3"].stat().st_size > 1000:
@@ -397,10 +425,41 @@ async def poll_production_artifacts(
                 sz_mb = round(target_f.stat().st_size / (1024 * 1024), 1)
                 long_play_editions.append({"edition_id": eid, "name": name, "icon": icon, "audio_mode": mode, "duration": dur, "format": fmt, "status": "completed", "url": _file_url(target_f), "size_str": f"{sz_mb} MB" if sz_mb < 1000 else f"{round(sz_mb/1024, 2)} GB", "filename": target_f.name})
 
-    screenplay_file = c_dir / "screenplay.json"
-    if not screenplay_file.exists():
-        screenplay_file = c_dir / "storyboard.json"
+    raw_sp = c_dir / "raw_gemini_screenplay.json"
+    screenplay_file = raw_sp if (raw_sp.exists() and raw_sp.stat().st_size > 100) else (c_dir / "screenplay.json" if (c_dir / "screenplay.json").exists() else c_dir / "storyboard.json")
     screenplay_data = json.loads(screenplay_file.read_text("utf-8")) if screenplay_file.exists() else None
+
+    raw_story_file = c_dir / "raw_gemini_story.json"
+    if not raw_story_file.exists():
+        raw_story_file = c_dir / "story.json"
+    story_data = json.loads(raw_story_file.read_text("utf-8")) if raw_story_file.exists() else None
+    if not story_data and screenplay_data:
+        ch_list = []
+        seen = set()
+        for sc in screenplay_data.get("scenes", []):
+            ct = sc.get("chapter_title") or f"Chapter {len(ch_list) + 1}"
+            if ct in seen:
+                continue
+            seen.add(ct)
+            ch_list.append({
+                "chapter_index": len(ch_list) + 1,
+                "chapter_title": ct,
+                "chapter_subtitle": sc.get("chapter_subtitle", ""),
+                "chapter_stats": sc.get("chapter_stats", ""),
+                "fact_badge": sc.get("fact_badge", ""),
+                "narration": sc.get("narration_text", "") or sc.get("narration", ""),
+            })
+        story_data = {
+            "episode_id": episode_id,
+            "title": screenplay_data.get("title") or m_data.get("title"),
+            "story_topic": screenplay_data.get("story_topic") or m_data.get("story_topic"),
+            "destination_entity": screenplay_data.get("destination_entity") or m_data.get("production_name"),
+            "synopsis": screenplay_data.get("story_topic") or m_data.get("prompt"),
+            "chapters": ch_list,
+            "spoken_narration_script": (screenplay_data.get("audio_master") or {}).get("spoken_narration_script", ""),
+            "total_words_count": screenplay_data.get("total_words_count"),
+            "pinned_comment": screenplay_data.get("pinned_comment"),
+        }
 
     pipeline_state_file = c_dir / "pipeline_state.json"
     pipeline_state_data = json.loads(pipeline_state_file.read_text("utf-8")) if pipeline_state_file.exists() else None
@@ -412,6 +471,15 @@ async def poll_production_artifacts(
     ep_status = "completed" if has_master_file else (pipeline_state_data.get("status") if pipeline_state_data else "ready")
     eff_format = "relaxation" if is_relax_fmt else (m_data.get("format") or "relaxation")
     eff_genre = m_data.get("genre") or ("relax/rain" if "rain" in c_dir.name else "relax/nature")
+
+    user_inputs_file = c_dir / "user_inputs.json"
+    u_data = json.loads(user_inputs_file.read_text("utf-8")) if user_inputs_file.exists() else None
+
+    gemini_story_inputs_file = c_dir / "gemini_story_inputs.json"
+    g_story_inputs = json.loads(gemini_story_inputs_file.read_text("utf-8")) if gemini_story_inputs_file.exists() else None
+
+    gemini_sp_inputs_file = c_dir / "gemini_screenplay_inputs.json"
+    g_sp_inputs = json.loads(gemini_sp_inputs_file.read_text("utf-8")) if gemini_sp_inputs_file.exists() else None
 
     return {
         "keyframes": kfs, "motion_clips": vids, "audio_stems": stems,
@@ -425,8 +493,14 @@ async def poll_production_artifacts(
         "genre": eff_genre,
         "script": screenplay_data if screenplay_data else (m_data if m_data else None),
         "screenplay": screenplay_data,
+        "story": story_data,
         "pipeline_state": pipeline_state_data,
         "manifest": m_data if m_data else None,
+        "user_inputs": u_data,
+        "gemini_story_inputs": g_story_inputs,
+        "gemini_screenplay_inputs": g_sp_inputs,
+        "gemini_inputs": g_story_inputs,
+        "production_name": (u_data.get("production_name") if u_data else (m_data.get("production_name") if m_data else (story_data.get("destination_entity") if story_data else None))),
         "is_approved": is_approved_val,
         "long_play_hours": m_data.get("long_play_hours"),
     }

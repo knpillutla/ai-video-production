@@ -42,6 +42,9 @@ WATERFALL DIRECTORIAL RULES & FRAMING:
    - Flanking canyon rock walls, mountains, and alpine meadows remain 100% frozen, rigid, and static.
    - Animate ONLY the plunging cascading water curtain and gentle rising spray mist plumes.
    - Domain: "water_fluid".
+
+4. 4K HYPER-REALISTIC OPTICS & CASCADE CLARITY (Z-IMAGE & FLUX):
+   - Mandate Hasselblad H6D-100c prime lens framing, brilliant translucent turquoise and emerald plunge basins, vivid emerald moss on basalt cliffs, prismatic rainbow mist catching warm golden sidelight, and razor-sharp cascading water droplet micro-textures. Strictly prohibit flat or desaturated visuals.
 """
 
 

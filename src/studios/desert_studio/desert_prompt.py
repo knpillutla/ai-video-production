@@ -46,6 +46,9 @@ DESERT STUDIO DIRECTORIAL RULES & CINEMATOGRAPHY (ALL 6 DIURNAL TIMINGS):
    - Sand dunes, furniture, brass teapot, and horizon line remain 100% frozen, rigid, and temporally stable.
    - Animate ONLY subtle sheer linen curtain flutter, delicate tea steam wisps, fine sand skimming distant crests, or gentle rain/embers.
    - Domain: "landscape_solid".
+
+5. 4K HYPER-REALISTIC OPTICS & COLOR VIBRANCY (Z-IMAGE & FLUX):
+   - Mandate Hasselblad H6D-100c prime lens framing, rich saturated apricot and terracotta dune sand, deep cobalt/indigo skies, warm glowing engraved brass tea service, and razor-sharp wind-sculpted sand ripple textures. Strictly ban flat or washed-out visuals.
 """
 
 

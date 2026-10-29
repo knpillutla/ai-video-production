@@ -12,6 +12,37 @@ from typing import Any, Tuple
 from src.core.telemetry import logger
 
 
+def scene_has_humans(scene_or_prompt: Any) -> bool:
+    """Detect whether a scene visual prompt, motion prompt, or metadata features human subjects."""
+    if not scene_or_prompt:
+        return False
+    if isinstance(scene_or_prompt, str):
+        text = scene_or_prompt.lower()
+    else:
+        v_p = getattr(scene_or_prompt, "visual_prompt", "") or ""
+        m_p = getattr(scene_or_prompt, "motion_prompt", "") or ""
+        desc = getattr(scene_or_prompt, "description", "") or ""
+        c_p = getattr(scene_or_prompt, "character_prompt", "") or ""
+        text = f"{v_p} {m_p} {desc} {c_p}".lower()
+
+    if any(neg in text for neg in ("zero humans", "no humans", "no people", "zero people", "devoid of humans", "uninhabited")):
+        return False
+
+    human_keywords = (
+        "human", "humans", "person", "persons", "people",
+        "pedestrian", "pedestrians", "crowd", "crowds",
+        "man", "men", "woman", "women", "girl", "girls", "boy", "boys",
+        "child", "children", "dancer", "dancers", "shepherd", "shepherds",
+        "artisan", "artisans", "baker", "bakers", "monk", "monks",
+        "locals walking", "locals strolling", "locals gathered",
+        "tourist", "tourists", "student", "students", "vendor", "vendors",
+        "shopper", "shoppers", "passerby", "passersby", "commuter", "commuters",
+        "facial expression", "walking down", "strolling along",
+        "people walking", "people gathered", "performer"
+    )
+    return any(k in text for k in human_keywords)
+
+
 def resolve_scene_motion_model(
     scene: Any,
     tier: str = "balanced",
@@ -34,6 +65,8 @@ def resolve_scene_motion_model(
     if base_model == "auto":
         base_model = "h3_max"
     clean_exec = (execution_mode or "test").strip().lower()
+    is_prod = clean_exec in ("prod", "production", "live")
+    has_humans = scene_has_humans(scene)
 
     # 0. User / Directorial Selection of Local Motion Engine
     if base_model in ("local_drone", "locked_tripod", "local_zoompan", "local", "offline"):
@@ -54,11 +87,16 @@ def resolve_scene_motion_model(
 
     # 1. Flagship Cinematic Tier or Explicit AI Motion Request -> 100% AI Video Diffusion
     if clean_tier in ("cinematic", "movie", "high", "flagship") or force_ai_motion:
+        if is_prod and has_humans:
+            eff_model = "kling_v3"
+            rationale = f"Prod mode human motion mandate: Kling v3 4K selected for authentic human anatomy and motion (Scene {scene_index + 1})"
+            return eff_model, False, rationale
+
         if is_doc:
-            eff_model = "h3_max"
+            rec_model = getattr(scene, "recommended_model", None) or getattr(scene, "motion_model", None)
+            eff_model = "kling_v3" if (rec_model and "kling" in str(rec_model).lower()) else "h3_max"
         else:
             rec_model = getattr(scene, "recommended_model", None) or getattr(scene, "motion_model", None)
-            # Explicit user/pipeline requested model takes top priority over script default
             if base_model and base_model != "auto":
                 eff_model = base_model
             elif rec_model and rec_model not in ("auto", "local_drone"):
@@ -94,15 +132,21 @@ def resolve_scene_motion_model(
             "The screenplay script is the foundation for all production. Fallback is prohibited; stopping."
         )
 
-    is_doc = any(k in str(genre).lower() for k in ("doc", "nations", "documentary", "tour"))
-
     if raw_motion_type in ("ai_diffusion", "diffusion", "neural", "neural_diffusion"):
-        # Documentary format mandate: always use h3_max ($0.015/s) to save cost instead of script recommended_model
+        # Prod mode human motion rule: humans in scene must use Kling
+        if is_prod and has_humans:
+            eff_model = "kling_v3"
+            rationale = (
+                f"Prod mode human motion mandate: Scene {scene_index + 1} features human subjects "
+                f"-> Kling v3 4K selected for high-fidelity human anatomy and locomotion"
+            )
+            return eff_model, False, rationale
+
         if is_doc:
             eff_model = "h3_max"
             rationale = (
                 f"Documentary format mandate: Scene {scene_index + 1} strictly uses "
-                f"cost-optimized h3_max ($0.015/s) for all ai_diffusion motion instead of script recommended model"
+                f"cost-optimized h3_max ($0.015/s) for all ai_diffusion motion without humans"
             )
             return eff_model, False, rationale
 
@@ -110,6 +154,8 @@ def resolve_scene_motion_model(
         eff_model = rec_model if (rec_model and rec_model not in ("auto", "local_drone")) else base_model
         if eff_model in ("h3", "h3_max", "minimax", "hailuo"):
             eff_model = "h3_max"
+        elif "kling" in str(eff_model).lower():
+            eff_model = "kling_v3"
         rationale = (
             f"Prod tier (Gemini Directive): Scene {scene_index + 1} dictates "
             f"live AI video diffusion via model '{eff_model}'"
@@ -129,4 +175,4 @@ def resolve_scene_motion_model(
     )
 
 
-__all__ = ["resolve_scene_motion_model"]
+__all__ = ["resolve_scene_motion_model", "scene_has_humans"]

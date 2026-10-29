@@ -15,27 +15,11 @@ from src.providers.tts.azure_speech import AzureSpeechTTSAdapter
 
 # Curated Documentary Voice Matrix
 VOICE_MAP: Dict[str, Dict[str, Tuple[str, str]]] = {
-    # lang -> { "male": (voice_id, lang_code), "female": (voice_id, lang_code) }
-    "en": {
-        "male": ("en-GB-RyanNeural", "en-GB"),  # Authoritative BBC/David Attenborough cadence
-        "female": ("en-GB-SoniaNeural", "en-GB"),  # Stately BBC Earth natural history cadence
-    },
-    "en-us": {
-        "male": ("en-US-AndrewMultilingualNeural", "en-US"),
-        "female": ("en-US-AvaMultilingualNeural", "en-US"),
-    },
-    "te": {
-        "male": ("te-IN-MohanNeural", "te-IN"),  # Resonant Telugu documentary narrator
-        "female": ("te-IN-ShrutiNeural", "te-IN"),
-    },
-    "hi": {
-        "male": ("hi-IN-MadhurNeural", "hi-IN"),  # Authoritative Hindi documentary narrator
-        "female": ("hi-IN-SwaraNeural", "hi-IN"),
-    },
-    "es": {
-        "male": ("es-ES-AlvaroNeural", "es-ES"),
-        "female": ("es-ES-ElviraNeural", "es-ES"),
-    },
+    "en": {"male": ("en-GB-RyanNeural", "en-GB"), "female": ("en-GB-SoniaNeural", "en-GB")},
+    "en-us": {"male": ("en-US-AndrewMultilingualNeural", "en-US"), "female": ("en-US-AvaMultilingualNeural", "en-US")},
+    "te": {"male": ("te-IN-MohanNeural", "te-IN"), "female": ("te-IN-ShrutiNeural", "te-IN")},
+    "hi": {"male": ("hi-IN-MadhurNeural", "hi-IN"), "female": ("hi-IN-SwaraNeural", "hi-IN")},
+    "es": {"male": ("es-ES-AlvaroNeural", "es-ES"), "female": ("es-ES-ElviraNeural", "es-ES")},
 }
 
 
@@ -190,4 +174,121 @@ class DocumentaryVoiceService:
 
 
 doc_voice_service = DocumentaryVoiceService()
-__all__ = ["DocumentaryVoiceService", "doc_voice_service", "VOICE_MAP"]
+
+
+async def produce_documentary_narration_stage(
+    ep_dir: Path,
+    voice_id: str = "en-GB-RyanNeural",
+    tts_model: str = "azure_speech",
+    speech_rate: str = "-16%",
+    force_rerun: bool = False,
+    execution_mode: str = "test",
+) -> Dict[str, Any]:
+    """Synthesizes high-fidelity voiceover narration for all chapters of a documentary episode."""
+    import json
+    import time
+    from src.core.storage import storage_service
+    from src.studios.documentary_studio.doc_chapter_cadence_service import synthesize_chapter_aligned_narration
+
+    story_file = ep_dir / "raw_gemini_story.json"
+    sp_file = ep_dir / "raw_gemini_screenplay.json"
+
+    scenes: list[dict[str, Any]] = []
+    story_data: dict[str, Any] = {}
+    if story_file.is_file():
+        try:
+            story_data = json.loads(story_file.read_text("utf-8"))
+            for ch in story_data.get("chapters", []):
+                scenes.append({
+                    "chapter_index": ch.get("chapter_index", 1),
+                    "chapter_title": ch.get("chapter_title", ""),
+                    "narration_text": ch.get("narration") or ch.get("narration_text", ""),
+                    "duration_seconds": max(12.0, round(len((ch.get("narration") or ch.get("narration_text", "")).split()) / 2.0 + 3.0, 1)),
+                })
+        except Exception as ex:
+            logger.warning(f"failed_to_read_raw_story_for_narration: {ex}")
+
+    if not scenes and sp_file.is_file():
+        try:
+            sp_data = json.loads(sp_file.read_text("utf-8"))
+            scenes = sp_data.get("scenes", [])
+        except Exception as ex:
+            logger.warning(f"failed_to_read_screenplay_for_narration: {ex}")
+
+    if not scenes:
+        raise RuntimeError(f"No story chapters or screenplay found in {ep_dir} to synthesize narration.")
+
+    res = await synthesize_chapter_aligned_narration(
+        scenes=scenes,
+        ep_dir=ep_dir,
+        voice_id=voice_id,
+        speech_rate=speech_rate,
+        lead_in_sec=0.8,
+        min_tail_pause_sec=2.5,
+        force_rerun=force_rerun,
+        tts_model=tts_model,
+        execution_mode=execution_mode,
+    )
+
+    out_master = ep_dir / "spoken_narration.mp3"
+    mtime = int(time.time())
+    try:
+        rel = out_master.resolve().relative_to(storage_service.root_dir.resolve())
+        url = f"/storage/{str(rel).replace('\\', '/')}?t={mtime}"
+    except Exception:
+        url = f"/storage/{out_master.name}?t={mtime}"
+
+    narr_stem = {
+        "name": "Neural Broadcast Narration",
+        "filename": "spoken_narration.mp3",
+        "type": "azure_speech",
+        "role": "narration",
+        "stem_type": "narration",
+        "voice_name": voice_id,
+        "duration": f"{res.get('total_duration', 60.0):.1f}s",
+        "url": url,
+        "status": "completed",
+        "color": "indigo",
+    }
+
+    pipe_file = ep_dir / "pipeline_state.json"
+    pipe_state: dict[str, Any] = {}
+    if pipe_file.is_file():
+        try:
+            pipe_state = json.loads(pipe_file.read_text("utf-8"))
+        except Exception:
+            pass
+
+    stems = pipe_state.get("audio_stems", [])
+    stems = [s for s in stems if s.get("filename") != "spoken_narration.mp3" and s.get("role") != "narration"]
+    stems.insert(0, narr_stem)
+    pipe_state["audio_stems"] = stems
+    pipe_state["current_stage"] = max(pipe_state.get("current_stage", 1), 2)
+    stages_comp = pipe_state.setdefault("stages_completed", {})
+    stages_comp["story"] = True
+    stages_comp["narration"] = True
+    stages_comp["audio"] = True
+    pipe_state["stage_status"] = "ready"
+    try:
+        pipe_file.write_text(json.dumps(pipe_state, indent=2, ensure_ascii=False), encoding="utf-8")
+        logger.info(f"pipeline_state_updated_with_narration: {pipe_file}")
+    except Exception as ex:
+        logger.warning(f"failed_to_write_pipeline_state_narration: {ex}")
+
+    return {
+        "success": True,
+        "stage": 2,
+        "current_stage": 2,
+        "narration_path": str(out_master),
+        "audio_stems": stems,
+        "total_duration": res.get("total_duration", 60.0),
+        "story": story_data or None,
+    }
+
+
+__all__ = [
+    "DocumentaryVoiceService",
+    "doc_voice_service",
+    "produce_documentary_narration_stage",
+    "VOICE_MAP",
+]

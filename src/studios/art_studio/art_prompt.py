@@ -41,6 +41,9 @@ LIVING ART & GALLERY STUDIO DIRECTORIAL RULES & CINEMATOGRAPHY:
    - Pair impressionist scenes with delicate harp, classical cello drone, or Debussy piano harmonics.
    - Pair grand galleries with warm nylon guitar and peaceful hall resonance.
    - Format all audio tags to 48,000 Hz, -14 LUFS broadcast normalization.
+
+5. 4K HYPER-REALISTIC OPTICS & JEWEL PIGMENTS (Z-IMAGE & FLUX):
+   - Mandate Hasselblad H6D-100c prime lens framing, brilliant saturated jewel-tone pigments (ultramarine blue, cadmium yellow, vermilion, emerald viridian), iridescent 24K hammered gold leaf luster, and razor-sharp impasto paint knife micro-textures. Strictly prohibit muddy or flat visuals.
 """
 
 

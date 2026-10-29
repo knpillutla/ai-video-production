@@ -3,6 +3,7 @@ let currentWizardStep = 1;
 let wizardSelectedTier = "balanced";
 
 function openCreateVideoWizardModal() {
+  if (typeof unlockForNewProduction === "function") unlockForNewProduction();
   currentWizardStep = 1;
   const heroPrompt = (document.getElementById("youtube-prompt-input")?.value || "").trim();
   const heroUrl = (document.getElementById("youtube-url-input")?.value || "").trim();

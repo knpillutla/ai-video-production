@@ -100,11 +100,10 @@ class RelaxSceneDirective(BaseModel):
     destination_name: Optional[str] = None
     origin_coords: Optional[List[float]] = None
     destination_coords: Optional[List[float]] = None
-    distance_local: Optional[str] = None
-    transit_mode: Optional[str] = "walk"
-    chapter_title: Optional[str] = None
-    chapter_subtitle: Optional[str] = None
-    chapter_stats: Optional[str] = None
+    distance_local: Optional[str] = None; transit_mode: Optional[str] = "walk"
+    chapter_title: Optional[str] = None; chapter_subtitle: Optional[str] = None
+    chapter_stats: Optional[str] = None; chapter_index: Optional[int] = None
+    is_chapter_head: Optional[bool] = None; fact_badge: Optional[str] = None
     camera_waypoints: List[CameraWaypointDirective] = Field(default_factory=list)
     kinetic_micro_zones: Optional[KineticMicroSpec] = None
 
@@ -267,7 +266,7 @@ def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> BaseStoryboard:
                 narration_text=getattr(s, "narration_text", None),
                 camera_waypoints=getattr(s, "camera_waypoints", []),
                 kinetic_micro_zones=getattr(s, "kinetic_micro_zones", None),
-                image_model_configs=s.image_model_configs,
+                image_model_configs=getattr(s, "image_model_configs", None) or (__import__("src.studios.directorial_configs", fromlist=["build_default_image_model_configs"]).build_default_image_model_configs(s.visual_prompt, getattr(s, "location_hub", "Scene") or "Scene") if getattr(s, "visual_prompt", None) else {}),
                 model_configs={k: v.model_dump() for k, v in s.model_configs.items()} if s.model_configs else {},
                 is_itinerary_overview=getattr(s, "is_itinerary_overview", False),
                 is_map_transition=getattr(s, "is_map_transition", False),
@@ -281,7 +280,8 @@ def relax_to_ambient_storyboard(sp: RelaxScreenplay) -> BaseStoryboard:
                 origin_coords=getattr(s, "origin_coords", None), destination_coords=getattr(s, "destination_coords", None),
                 distance_local=getattr(s, "distance_local", None), transit_mode=getattr(s, "transit_mode", "walk"),
                 chapter_title=getattr(s, "chapter_title", None), chapter_subtitle=getattr(s, "chapter_subtitle", None),
-                chapter_stats=getattr(s, "chapter_stats", None),
+                chapter_stats=getattr(s, "chapter_stats", None), chapter_index=getattr(s, "chapter_index", None),
+                is_chapter_head=getattr(s, "is_chapter_head", None), fact_badge=getattr(s, "fact_badge", None),
             )
         )
     return BaseStoryboard(

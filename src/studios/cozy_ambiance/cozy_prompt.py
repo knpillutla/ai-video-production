@@ -38,6 +38,9 @@ COZY AMBIANCE DIRECTORIAL RULES & CINEMATOGRAPHY:
    - Timber walls, stone mantel, furniture, and window frames remain 100% frozen, rigid, and static.
    - Animate ONLY the dancing fireplace flames, glowing embers, and gentle rain trickling down the glass windowpane.
    - Domain: "cozy_hearth".
+
+4. 4K HYPER-REALISTIC OPTICS & WARM CONTRAST (Z-IMAGE & FLUX):
+   - Mandate Hasselblad H6D-100c prime lens framing, rich glowing golden-amber oak embers, honeyed timber log grains, glistening crystalline rain rivulets on window glass, and deep atmospheric contrast. Strictly ban flat or desaturated interior visuals.
 """
 
 

@@ -29,6 +29,8 @@ MOUNTAIN STUDIO DIRECTORIAL RULES & CINEMATOGRAPHY:
    - Mountains, rocky ridges, and viewpoints remain 100% rigid, frozen, and temporally stable.
    - Animate ONLY subtle high-altitude mist drifts or gentle lake ripples.
    - Domain: "landscape_solid".
+4. 4K HYPER-REALISTIC OPTICS & COLOR VIBRANCY (Z-IMAGE & FLUX):
+   - Mandate Hasselblad H6D-100c prime lens framing, vivid emerald alpine valley pastures, turquoise glacial tarns, deep cobalt skies, radiant golden amber sidelight, and razor-sharp granite crag striations. Strictly prohibit flat or desaturated grey rock visuals.
 """
 
 

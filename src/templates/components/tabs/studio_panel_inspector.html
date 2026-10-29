@@ -1,212 +1,91 @@
 <!-- PANEL 3: MASTER ARTIFACT INSPECTOR (Right Panel: 4K Master, Photos, Clips, Stems) -->
 <div class="h-full flex flex-col bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-sm space-y-2 overflow-y-auto custom-scrollbar">
+  <!-- Top Panel Header: Artifacts Panel Title & In-Place Refresh Action -->
+  <div class="flex items-center justify-between border-b border-[var(--border)] pb-1.5">
+    <div class="flex items-center gap-2">
+      <div class="w-6 h-6 rounded-lg bg-[var(--accent)]/10 text-[var(--accent)] flex items-center justify-center font-bold text-xs shrink-0">
+        <i class="fa-solid fa-layer-group"></i>
+      </div>
+      <span class="text-sm font-black text-[var(--text)] tracking-tight">Artifacts Panel</span>
+    </div>
+
+    <div class="flex items-center gap-1.5">
+      <button type="button" onclick="refreshArtifactsPanel()" id="btn-refresh-artifacts-panel" class="btn-runway-secondary py-1 px-2.5 text-xs text-[var(--text)] hover:text-[var(--accent)] flex items-center gap-1.5 transition active:scale-95" title="Refresh Artifacts Panel (re-fetch episode artifacts and media without reloading page)">
+        <i class="fa-solid fa-arrows-rotate text-[10px]" id="icon-refresh-artifacts"></i>
+        <span class="font-bold">Refresh</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Panel 3 Header & Tab Switcher -->
-  <div class="flex items-start justify-between border-b border-[var(--border)] pb-1.5 gap-2">
-    <div class="flex items-start gap-2 min-w-0 flex-1">
-      <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 mt-1"></span>
-      <div class="min-w-0 flex-1 space-y-0.5">
-        <div class="flex items-center gap-1.5 flex-wrap">
-          <a href="javascript:void(0)" onclick="openActiveEpisodeModal()" id="panel-header-ep-link" class="text-xs font-mono font-bold text-[var(--accent)] hover:underline inline-flex items-center gap-1" title="View details">
-            <span id="panel-header-ep-id">NEW</span>
-            <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
-          </a>
-          <button type="button" onclick="reprocessActiveEpisodeId()" id="btn-header-reprocess-ep" class="btn-runway-secondary py-0.5 px-2 text-xs" title="Re-Synthesize and resume episode (--id)">
-            <i class="fa-solid fa-arrows-rotate text-[8px]"></i>
-            <span>Re-Synthesize</span>
-          </button>
-          <button type="button" onclick="deleteActiveInspectorEpisode()" class="btn-runway-secondary py-0.5 px-1.5 text-xs text-rose-500 hover:text-rose-600" title="Delete Episode">
-            <i class="fa-solid fa-trash-can text-xs"></i>
-          </button>
-          <span class="text-xs px-2 py-0.5 rounded-full font-bold bg-[var(--card-subtle)] text-[var(--text)] border border-[var(--border)]" id="panel-header-type-badge">Ready</span>
-          <span class="text-xs font-mono text-[var(--text-muted)]" id="panel-header-meta">4K UHD • 24 FPS</span>
+  <div class="flex flex-col border-b border-[var(--border)] pb-2 gap-1.5">
+    <div class="flex items-start justify-between gap-2">
+      <div class="flex items-start gap-2 min-w-0 flex-1">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 mt-1"></span>
+        <div class="min-w-0 flex-1 space-y-0.5">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <a href="javascript:void(0)" onclick="openActiveEpisodeModal()" id="panel-header-ep-link" class="text-xs font-mono font-bold text-[var(--accent)] hover:underline inline-flex items-center gap-1" title="View details">
+              <span id="panel-header-ep-id">NEW</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+            </a>
+            <button type="button" onclick="reprocessActiveEpisodeId()" id="btn-header-reprocess-ep" class="btn-runway-secondary py-0.5 px-2 text-xs" title="Re-Synthesize and resume episode (--id)">
+              <i class="fa-solid fa-arrows-rotate text-[8px]"></i>
+              <span>Re-Synthesize</span>
+            </button>
+            <button type="button" onclick="deleteActiveInspectorEpisode()" class="btn-runway-secondary py-0.5 px-1.5 text-xs text-rose-500 hover:text-rose-600" title="Delete Episode">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
+            <span class="text-xs px-2 py-0.5 rounded-full font-bold bg-[var(--card-subtle)] text-[var(--text)] border border-[var(--border)]" id="panel-header-type-badge">Ready</span>
+            <span class="text-xs font-mono text-[var(--text-muted)]" id="panel-header-meta">4K UHD • 24 FPS</span>
+          </div>
+          <div class="font-bold text-[var(--text)] text-xs truncate" id="panel-header-title">4K Master Inspector</div>
+          <div class="text-xs text-[var(--text-muted)] line-clamp-1 leading-tight" id="panel-header-story">No episode synthesized yet. Click Produce Video to begin.</div>
         </div>
-        <div class="font-bold text-[var(--text)] text-xs truncate" id="panel-header-title">4K Master Inspector</div>
-        <div class="text-xs text-[var(--text-muted)] line-clamp-1 leading-tight" id="panel-header-story">No episode synthesized yet. Click Produce Video to begin.</div>
+      </div>
+
+      <!-- Tri-Tab Switcher (Segmented Control) -->
+      <div class="segmented-track shrink-0">
+        <button type="button" onclick="switchInspectorView('stems')" id="btn-inspector-view-stems" class="segmented-btn active">🎬 Stems</button>
+        <button type="button" onclick="switchInspectorView('console')" id="btn-inspector-view-console" class="segmented-btn">⚡ Console</button>
+        <button type="button" onclick="switchInspectorView('distribution')" id="btn-inspector-view-dist" class="segmented-btn">🚀 YouTube</button>
       </div>
     </div>
 
-    <!-- Tri-Tab Switcher (Segmented Control) -->
-    <div class="segmented-track shrink-0">
-      <button type="button" onclick="switchInspectorView('stems')" id="btn-inspector-view-stems" class="segmented-btn active">🎬 Stems</button>
-      <button type="button" onclick="switchInspectorView('console')" id="btn-inspector-view-console" class="segmented-btn">⚡ Console</button>
-      <button type="button" onclick="switchInspectorView('distribution')" id="btn-inspector-view-dist" class="segmented-btn">🚀 YouTube</button>
+    <!-- Compact Horizontal Progress Bar & Stage Scroll Bar Below Title in This Same Section -->
+    <div id="panel-header-progress-wrap" class="hidden pt-1 space-y-1 bg-[var(--card-subtle)]/60 p-2 rounded-xl border border-[var(--border)]">
+      <div class="flex items-center justify-between text-[11px] leading-tight">
+        <div class="flex items-center gap-1.5 min-w-0 text-[var(--accent)] font-semibold truncate">
+          <i class="fa-solid fa-circle-notch fa-spin text-[10px] shrink-0 text-purple-500" id="panel-header-progress-spinner"></i>
+          <span id="panel-header-progress-stage" class="truncate font-bold">Stage 1: Raw Story Formulation</span>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0 pl-2">
+          <span id="panel-header-progress-sub" class="text-[10px] text-[var(--text-muted)] font-mono hidden sm:inline">Gemini 2.5 Flash</span>
+          <span id="panel-header-progress-pct" class="text-[10px] font-mono font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20">20%</span>
+        </div>
+      </div>
+
+      <!-- Horizontal Progress Bar Track -->
+      <div class="w-full h-1.5 bg-[var(--card)] rounded-full overflow-hidden border border-[var(--border)] relative">
+        <div id="panel-header-progress-bar" class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500 transition-all duration-300 rounded-full shadow-sm" style="width: 20%;"></div>
+      </div>
+
+      <!-- Horizontal Stage Scroll Bar -->
+      <div id="panel-header-stage-scroll" class="flex items-center gap-1 overflow-x-auto custom-scrollbar pt-0.5 text-[9px] font-mono text-[var(--text-muted)]">
+        <!-- Rendered dynamically by updateStagePillsForFormat(vid) -->
+      </div>
     </div>
   </div>
 
   <!-- VIEW A: MEDIA STEMS INSPECTION -->
   <div id="inspector-view-stems" class="space-y-2 flex-1 flex flex-col">
 
-    <!-- HERO MASTER 4K CINEMA PLAYER & FAL.AI-STYLE RESULT CARD -->
-    <div class="space-y-1.5">
-      <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
-        <div class="flex items-center gap-2">
-          <span class="stage-header-title"><i class="fa-solid fa-crown text-xs text-[var(--text-muted)]"></i> Result</span>
-          <span id="panel-player-status-badge" class="px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-[var(--card-subtle)] text-[var(--text-muted)] border border-[var(--border)]">Idle</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <button type="button" onclick="openActiveMasterVideoInPopup()" class="btn-runway-secondary py-0.5 px-2 text-xs" title="Open Preview Player">
-            <i class="fa-solid fa-image text-[10px]"></i>
-            <span>Preview</span>
-          </button>
-          <button type="button" onclick="openActiveEpisodeModal()" class="btn-runway-secondary py-0.5 px-2 text-xs" title="View Episode JSON Manifest">
-            <i class="fa-solid fa-code text-[10px]"></i>
-            <span>JSON</span>
-          </button>
-        </div>
-      </div>
+    {% include 'components/tabs/inspector_hero_player.html' %}
 
-      <div class="relative bg-[var(--card)] rounded-xl overflow-hidden aspect-video min-h-[175px] max-h-[220px] border border-[var(--border)] shadow-sm group flex items-center justify-center">
-        <video id="studio-panel-video" controls playsinline preload="none" class="w-full h-full object-contain block bg-black"></video>
-
-        <!-- Empty Idle State -->
-        <div id="studio-panel-empty-overlay" class="absolute inset-0 bg-[var(--card)] flex flex-col items-center justify-center p-4 text-center space-y-2">
-          <div class="w-10 h-10 rounded-full bg-[var(--card-subtle)] border border-[var(--border)] flex items-center justify-center text-[var(--text-muted)]">
-            <i class="fa-solid fa-film text-base"></i>
-          </div>
-          <div>
-            <div class="font-bold text-[var(--text)] text-xs">No Master Video Yet</div>
-            <div class="text-xs text-[var(--text-muted)] mt-0.5">Click Run (Ctrl+Enter) to begin autonomous generation</div>
-          </div>
-        </div>
-
-        <!-- Fal.ai-Grade Active Progress Overlay -->
-        <div id="studio-panel-processing-overlay" class="hidden absolute inset-0 bg-[var(--card)] flex flex-col items-center justify-center p-4 text-center space-y-3 z-20">
-          <div class="fal-spinner">
-            <div class="fal-spinner-ring"></div>
-            <div class="fal-spinner-core">
-              <i class="fa-solid fa-sparkles text-[10px]"></i>
-            </div>
-          </div>
-
-          <div class="space-y-1 w-full max-w-[280px]">
-            <div id="studio-panel-processing-title" class="font-bold text-[var(--text)] text-sm tracking-tight">AI Pipeline Active</div>
-            <div id="studio-panel-processing-subtitle" class="text-xs text-[var(--text-muted)] font-medium leading-tight">Synthesizing 4K Master...</div>
-          </div>
-
-          <!-- Sleek Progress Bar Track -->
-          <div class="fal-progress-track">
-            <div id="studio-panel-progress-bar" class="fal-progress-fill" style="width: 40%;"></div>
-          </div>
-
-          <div class="flex items-center justify-between w-full max-w-[260px] text-[10px] font-mono text-[var(--text-muted)]">
-            <span id="studio-panel-stage-step">Stage 2 of 5</span>
-            <span id="studio-panel-stage-pct">40%</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- STAGE 1: SCRIPT & STORYBOARD -->
-    <div class="space-y-1">
-      <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
-        <span class="stage-header-title"><span class="stage-number-badge">1</span> Script &amp; Storyboard</span>
-        <span id="panel-script-status" class="text-[var(--text-muted)] font-mono text-xs">Idle</span>
-      </div>
-      <div id="panel-section-script" class="w-full min-h-[38px] pb-0.5">
-        <div class="h-9 bg-[var(--card)] border border-[var(--border)] rounded-xl flex items-center justify-between gap-2 text-[var(--text)] px-2.5 shadow-sm">
-          <div class="flex items-center gap-1.5 min-w-0">
-            <i class="fa-solid fa-file-lines text-[var(--text-muted)] text-xs shrink-0"></i>
-            <span id="panel-script-preview-text" class="text-xs font-medium text-[var(--text)] truncate">No Script Synthesized Yet</span>
-          </div>
-          <span class="text-[10px] text-[var(--text-muted)] font-mono shrink-0">(Gemini 2.5)</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- STAGE 2: KEYFRAME PHOTOS -->
-    <div class="space-y-1">
-      <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
-        <span class="stage-header-title"><span class="stage-number-badge">2</span> Keyframe Photos</span>
-        <span id="panel-images-count" class="px-2 py-0.5 rounded-full bg-[var(--card-subtle)] text-[var(--text)] font-mono text-xs font-bold border border-[var(--border)]">0 Shots</span>
-      </div>
-      <div id="panel-section-images" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 w-full items-start pb-1">
-        <div class="col-span-full min-h-12 bg-[var(--card)] border border-[var(--border)] rounded-xl flex items-center justify-center gap-2 text-[var(--text)] px-3 shadow-sm">
-          <i class="fa-solid fa-images text-[var(--text-muted)] text-xs"></i>
-          <span class="text-xs font-bold text-[var(--text)]">No Keyframe Photos Yet</span>
-          <span class="text-xs text-[var(--text-muted)] font-mono">(1 Shot via FLUX Pro)</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- STAGE 3: AUDIO & SOUNDSCAPE STEMS -->
-    <div class="space-y-1">
-      <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
-        <span class="stage-header-title"><span class="stage-number-badge">3</span> Audio &amp; Vocals (48kHz)</span>
-      </div>
-      <div id="panel-section-audio" class="grid grid-cols-3 gap-1.5 w-full h-[52px] min-h-[52px] max-h-[52px] overflow-hidden">
-        <div class="col-span-3 h-12 bg-[var(--card)] border border-[var(--border)] rounded-xl flex items-center justify-center gap-2 text-[var(--text)] px-3 shadow-sm">
-          <i class="fa-solid fa-wave-square text-[var(--text-muted)] text-xs"></i>
-          <span class="text-xs font-bold text-[var(--text)]">No Audio Stems Yet</span>
-          <span class="text-xs text-[var(--text-muted)] font-mono">(Azure TTS, Suno &amp; Velvet DSP)</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- STAGE 4: RAW MOTION VIDEO CLIPS -->
-    <div class="space-y-1">
-      <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
-        <span class="stage-header-title"><span class="stage-number-badge">4</span> Raw Video Motion</span>
-        <div class="flex items-center gap-1.5">
-          <span id="panel-raw-videos-count" class="px-2 py-0.5 rounded-full bg-[var(--card-subtle)] text-[var(--text)] font-mono text-xs font-bold border border-[var(--border)]">0 Clips</span>
-        </div>
-      </div>
-      <div id="panel-section-raw-videos" class="grid grid-cols-3 gap-1.5 w-full min-h-[50px] pb-0.5">
-        <div class="col-span-3 h-12 bg-[var(--card)] border border-[var(--border)] rounded-xl flex items-center justify-between gap-2 text-[var(--text)] px-3 shadow-sm">
-          <div class="flex items-center gap-1.5">
-            <i class="fa-solid fa-film text-[var(--text-muted)] text-xs"></i>
-            <span class="text-xs font-bold text-[var(--text)]">No Motion Clips Yet</span>
-            <span class="text-xs text-[var(--text-muted)] font-mono">(Kling v3 / Wan 2.1)</span>
-          </div>
-          <button type="button" onclick="reprocessActiveEpisodeId()" class="btn-runway-secondary px-2.5 py-1 text-xs" title="Re-Synthesize (--id)">
-            <i class="fa-solid fa-arrows-rotate text-[8px]"></i>
-            <span>Re-Synthesize</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- STAGE 5: 4K MASTER DELIVERABLES -->
-    <div class="space-y-1">
-      <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
-        <span class="stage-header-title"><span class="stage-number-badge">5</span> 4K Master Deliverables</span>
-        <span class="text-xs font-mono text-[var(--text-muted)]">Click to Play / Switch</span>
-      </div>
-      <div id="panel-section-master-videos" class="grid grid-cols-2 gap-1.5 w-full min-h-[48px] pt-0.5 pb-0.5">
-        <!-- Rendered by renderMasterVideosList(vid) -->
-      </div>
-    </div>
-
-    <!-- STAGE 6: LONG-PLAY BROADCAST DELIVERIES -->
-    <div id="panel-section-longplay-container" class="space-y-1.5 p-2.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl hidden">
-      <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
-        <span class="stage-header-title"><span class="stage-number-badge">6</span> Long-Play Broadcast (3h / 8h)</span>
-        <span id="panel-longplay-status-badge" class="px-2 py-0.5 rounded bg-[var(--card)] text-[var(--text)] border border-[var(--border)] text-xs font-mono font-bold">Sleep Broadcast</span>
-      </div>
-
-      <!-- Long-Play Stretch Approval Card -->
-      <div id="panel-longplay-approval-card" class="p-2.5 bg-[var(--card)] border border-[var(--border)] rounded-lg flex flex-col gap-1.5 shadow-sm">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-1.5">
-            <i class="fa-solid fa-tv text-[var(--text-muted)] text-xs"></i>
-            <span id="panel-longplay-prompt-label" class="text-xs font-bold text-[var(--text)]">Multi-Hour Broadcast Master</span>
-          </div>
-          <select id="panel-longplay-hours-select" class="text-xs font-mono bg-[var(--card-subtle)] border border-[var(--border)] rounded px-2 py-0.5 text-[var(--text)] font-bold">
-            <option value="3.0" selected>3 Hours (Standard)</option>
-            <option value="8.0">8 Hours (Overnight)</option>
-            <option value="1.0">1 Hour (Quick)</option>
-          </select>
-        </div>
-        <button type="button" id="btn-approve-longplay" onclick="approveAndGenerateLongPlay()" class="btn-runway-primary w-full py-2 text-xs">
-          <i class="fa-solid fa-circle-check text-xs"></i>
-          <span id="btn-approve-longplay-text">Approve &amp; Generate Dual 4K Broadcasts</span>
-          <span class="kbd-badge">CTRL ↵</span>
-        </button>
-      </div>
-
-      <!-- Live Dual Broadcast Progress / Preview Cards -->
-      <div id="panel-longplay-dual-grid" class="grid grid-cols-2 gap-1.5 w-full">
-        <!-- Rendered dynamically by renderLongPlayStretchSection(vid) -->
-      </div>
+    <!-- FORMAT-SPECIFIC ARTIFACT PANELS (Decoupled Architecture) -->
+    <div id="format-artifacts-container" class="space-y-2">
+      {% include 'components/tabs/panels/artifact_panel_documentary.html' %}
+      {% include 'components/tabs/panels/artifact_panel_relaxation.html' %}
+      {% include 'components/tabs/panels/artifact_panel_music_video.html' %}
     </div>
   </div>
 

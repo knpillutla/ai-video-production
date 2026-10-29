@@ -44,6 +44,9 @@ GLOBAL HEALING SANCTUARY DIRECTORIAL RULES & CINEMATOGRAPHY:
    - Ancient tree trunks, canyon walls, travertine rock terraces, and mountain peaks remain 100% frozen, rigid, and static.
    - Animate ONLY the gentle thermal vapor mist rising, subtle glassy water ripples, and sparkling light glints.
    - Domain: "water_fluid" (springs/thermal pools) or "landscape_solid" (cathedral groves).
+
+4. 4K HYPER-REALISTIC OPTICS & COLOR VIBRANCY (Z-IMAGE & FLUX):
+   - Mandate Hasselblad H6D-100c prime lens framing, luminous translucent turquoise geothermal pools, vivid emerald moss and ferns, blooming pink lotus blossoms, warm golden amber sidelight, and razor-sharp mineral texture fidelity. Strictly prohibit desaturated or flat visuals.
 """
 
 

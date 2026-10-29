@@ -31,7 +31,14 @@ async def synthesize_vocal_scenes(
 ) -> list[Path]:
     """Synthesize or reuse 4K scene images locking character consistency and optional network LoRAs."""
     scenes_dir.mkdir(parents=True, exist_ok=True)
-    count = max(1, num_images)
+    scenes_list = storyboard_data.get("scenes") or []
+    if str(num_images).lower() in ("auto", "none", ""):
+        count = len(scenes_list) if scenes_list else 1
+    else:
+        try:
+            count = max(1, int(num_images))
+        except (ValueError, TypeError):
+            count = len(scenes_list) if scenes_list else 1
     eff_use_loras = use_loras or (count > 1)
     script_loras = storyboard_data.get("loras") or storyboard_data.get("character_loras") or []
     effective_explicit = explicit_loras or script_loras
@@ -41,8 +48,6 @@ async def synthesize_vocal_scenes(
         else (effective_explicit or [])
     )
     trigger_words = " ".join(l.get("trigger_word", "") for l in loras if l.get("trigger_word")).strip()
-
-    scenes_list = storyboard_data.get("scenes") or []
     prompts_model = storyboard_data.get("prompts_by_model") or {}
     base_prompt = prompts_model.get("z_image") or prompts_model.get("flux_dev") or ""
 
@@ -163,7 +168,8 @@ async def synthesize_vocal_scenes(
         is_cutaway = idx <= len(scenes_list) and any(k in f"{scenes_list[idx-1].get('character_pose', '')} {raw_prompt}".lower() for k in ("cutaway", "contextual insert", "percussion close", "troupe only", "drone insert", "scenic insert"))
         eff_anchor = "" if is_cutaway else anchor_prefix
         eff_expr = "" if is_cutaway else f", {expression_token}"
-        effective_prompt = f"{eff_anchor}{effective_prompt}{eff_expr}, {safety_tokens}{troupe_token}".strip(", ")
+        optics_prefix = "Hyper-realistic 4K UHD photograph shot on Hasselblad H6D-100c prime lens, vibrant saturated natural colors, warm golden sidelight, razor-sharp textures, " if "hasselblad" not in f"{effective_prompt} {eff_anchor}".lower() else ""
+        effective_prompt = f"{optics_prefix}{eff_anchor}{effective_prompt}{eff_expr}, {safety_tokens}{troupe_token}".strip(", ")
 
         # Use deterministic shared song seed for character consistency across all scenes in song
         max_attempts = 3 if force_live else 1

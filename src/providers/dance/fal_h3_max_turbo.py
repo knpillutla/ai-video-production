@@ -46,10 +46,10 @@ def _extract_video_url(payload: Any) -> str | None:
 
 
 class FalH3MaxTurboAdapter:
-    """MiniMax H3 Max fast prototype video generation adapter on Fal.ai.
+    """MiniMax H3 Max video generation adapter on Fal.ai (minimax/h3-max/image-to-video).
 
-    Cost: ~$0.04–$0.06 per generation (High-throughput turbo tier).
-    Best for: Rapid prototyping, testing Gemini camera movement & motion prompts at minimum cost.
+    Cost: $0.26 per 5s clip (~$0.052/sec).
+    Best for: Living atmospheric motion, subtle vehicles/crowds, and fast 9s turnaround.
     """
 
     def __init__(self, api_key: str | None = None, endpoint: str | None = None) -> None:
@@ -189,7 +189,7 @@ class FalH3MaxTurboAdapter:
                     out.write_bytes(dl_res.content)
                     job_sidecar.unlink(missing_ok=True)
                     print(f"\n    [SUCCESS] Draft Generated: {out.name}")
-                    print(f"    👉 Open this link to evaluate the camera path: {video_url}\n")
+                    print(f"    -> Open this link to evaluate the camera path: {video_url}\n")
                     logger.info(f"fal_h3_turbo_download_complete [model=minimax/h3-max]: {out.name} ({len(dl_res.content)} B)")
                     return video_url, out
                 job_sidecar.unlink(missing_ok=True)

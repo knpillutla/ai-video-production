@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 import imageio_ffmpeg
+from src.core.config import settings
 from src.core.step_logger import log_pipeline_step
 from src.providers.tts.tts_router import get_tts_adapter
 from src.services.ambient_export_service import get_media_duration
@@ -32,6 +33,7 @@ async def synthesize_shot_aligned_narration(
     force_rerun: bool = False,
     is_documentary: bool = False,
     tts_model: Optional[str] = None,
+    execution_mode: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Synthesize shot-aligned voiceover with anti-fatigue pauses and dynamic duration extension.
     
@@ -70,6 +72,22 @@ async def synthesize_shot_aligned_narration(
                         except Exception:
                             pass
             voice_id = "en-GB-RyanNeural" if is_documentary else "en-US-JennyNeural"
+
+    # Route documentary or chapter-grouped productions to the audio-first chapter cadence engine
+    has_chapters = any(hasattr(sc, "chapter_index") and getattr(sc, "chapter_index") is not None for sc in scenes)
+    if is_documentary or has_chapters:
+        from src.studios.documentary_studio.doc_chapter_cadence_service import synthesize_chapter_aligned_narration
+        return await synthesize_chapter_aligned_narration(
+            scenes=scenes,
+            ep_dir=ep_dir,
+            voice_id=voice_id,
+            speech_rate=speech_rate,
+            lead_in_sec=lead_in_sec,
+            min_tail_pause_sec=min_tail_pause_sec,
+            force_rerun=force_rerun,
+            tts_model=tts_model,
+            execution_mode=execution_mode,
+        )
 
     # Collect texts per scene
     scene_texts: List[str] = []

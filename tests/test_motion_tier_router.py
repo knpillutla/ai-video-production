@@ -89,3 +89,40 @@ def test_tier_persistence_reprocess_logic():
 
     eff_tier_override = cli_tier_cinematic or saved_inputs.get("tier", "balanced")
     assert eff_tier_override == "cinematic"
+
+
+def test_prod_mode_human_motion_uses_kling():
+    """Verify that in prod mode, scenes with human subjects strictly route to Kling."""
+    from src.services.motion_tier_router import scene_has_humans
+
+    # 1. Human scene in prod mode
+    s_human = SimpleNamespace(
+        motion_type="ai_diffusion",
+        domain="street_vitality",
+        visual_prompt="Historic Victoria Street with pedestrians and locals walking down curved cobblestones",
+        motion_prompt="Pedestrians strolling smoothly past shops",
+    )
+    assert scene_has_humans(s_human) is True
+
+    model, allow_fb, rationale = resolve_scene_motion_model(
+        scene=s_human, tier="balanced", requested_motion_model="h3_max",
+        scene_index=0, total_scenes=1, genre="documentary", execution_mode="prod",
+    )
+    assert model == "kling_v3"
+    assert "human motion mandate" in rationale
+
+    # 2. Nature scene without humans in prod mode uses h3_max for documentary to save cost
+    s_nature = SimpleNamespace(
+        motion_type="ai_diffusion",
+        domain="water_fluid",
+        visual_prompt="Highland waterfall cascading over granite boulders, zero humans, pristine untouched wilderness",
+        motion_prompt="Water churning into foam",
+    )
+    assert scene_has_humans(s_nature) is False
+
+    model_nat, _, rationale_nat = resolve_scene_motion_model(
+        scene=s_nature, tier="balanced", requested_motion_model="h3_max",
+        scene_index=0, total_scenes=1, genre="documentary", execution_mode="prod",
+    )
+    assert model_nat == "h3_max"
+    assert "without humans" in rationale_nat

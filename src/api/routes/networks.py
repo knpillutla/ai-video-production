@@ -381,17 +381,17 @@ async def get_next_episode(
     highest_ep = 0
     if prod_dir.exists() and prod_dir.is_dir():
         for ep_item in prod_dir.iterdir():
-            if ep_item.is_dir() and (ep_item.name.upper().startswith("EP-") or ep_item.name.upper().startswith("EP_")):
-                ep_suffix = ep_item.name.replace("EP-", "").replace("EP_", "").replace("ep-", "").replace("ep_", "")
-                if ep_suffix.isdigit():
-                    highest_ep = max(highest_ep, int(ep_suffix))
+            if ep_item.is_dir():
+                m = re.search(r"ep[-_]?(\d+)", ep_item.name, re.IGNORECASE)
+                if m:
+                    highest_ep = max(highest_ep, int(m.group(1)))
     return {
         "status": "ok",
         "channel_slug": channel_slug,
         "format": clean_fmt,
         "production_name": clean_prod,
         "highest_ep": highest_ep,
-        "next_episode_code": f"EP-{(highest_ep + 1):03d}",
+        "next_episode_code": f"ep-{(highest_ep + 1):03d}",
     }
 
 

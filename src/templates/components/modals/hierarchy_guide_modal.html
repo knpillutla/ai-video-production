@@ -1,15 +1,15 @@
 <!-- Modal: Production Hierarchy & Field Reference Guide -->
 <div id="hierarchy-guide-modal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 hidden">
-  <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-2xl w-full p-5 space-y-4 shadow-2xl overflow-y-auto max-h-[85vh] custom-scrollbar text-[var(--text)]">
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-3xl w-full p-5 space-y-4 shadow-2xl overflow-y-auto max-h-[88vh] custom-scrollbar text-[var(--text)]">
     <!-- Header -->
     <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-bold border border-indigo-500/30">
-          <i class="fa-solid fa-book-open"></i>
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-bold border border-indigo-500/30">
+          <i class="fa-solid fa-compass"></i>
         </div>
         <div>
-          <h3 class="text-sm font-black text-[var(--text)]">CineAI Studio Production Guide</h3>
-          <p class="text-[11px] text-[var(--text-muted)]">Understanding Formats, Genres, Biomes, and Weather Controls</p>
+          <h3 class="text-sm font-black text-[var(--text)] tracking-tight">Studio Production Guide &amp; Decision Recipes</h3>
+          <p class="text-[11px] text-[var(--text-muted)]">Understanding Format, Genre, Sub-Genre, Archetypes &amp; Mapped Prompt Blueprints</p>
         </div>
       </div>
       <button type="button" onclick="closeHierarchyGuideModal()" class="p-1.5 text-[var(--text-muted)] hover:text-[var(--text)] rounded-lg hover:bg-[var(--card-subtle)] transition">
@@ -17,122 +17,227 @@
       </button>
     </div>
 
-    <!-- Tier 1: Format -->
-    <div class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
-      <div class="flex items-center gap-2 text-xs font-black text-indigo-500">
-        <i class="fa-solid fa-film"></i>
-        <span>Level 1: Format (The Content Medium)</span>
+    <!-- Quick Production Recipes Box (Decision Matrix) -->
+    <div class="p-3.5 bg-indigo-950/20 border border-indigo-500/30 rounded-xl space-y-2.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2 text-xs font-black text-indigo-400">
+          <i class="fa-solid fa-lightbulb"></i>
+          <span>Interactive Recipes: "What Should I Select?"</span>
+        </div>
+        <span class="text-[10px] text-indigo-300/70 font-mono">Click to Auto-Configure</span>
       </div>
       <p class="text-[11px] text-[var(--text-muted)] leading-relaxed">
-        Defines the production engine, pacing contract, audio mastering, and camera cadence:
+        Select a real-world production goal below to automatically configure the exact Genre, Sub-Genre, and Archetype:
       </p>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] pt-1">
-        <div class="p-2 bg-[var(--card)] rounded-lg border border-[var(--border)]">
-          <strong class="text-[var(--text)]">🦅 Documentary:</strong>
-          <span class="text-[var(--text-muted)]"> BBC/NatGeo style with authoritative voiceover, 4-scene narrative arc, 24fps cinema cadence, and active 4K perspective drone choreography (2s–14s).</span>
+
+      <!-- Recipe Cards Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+        <!-- Recipe 1: Indus Valley Civilization -->
+        <div class="p-2.5 bg-[var(--card)] border border-[var(--border)] rounded-lg space-y-1.5 hover:border-indigo-500/50 transition">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-[var(--text)] flex items-center gap-1.5">
+              <span>🏺</span> Indus Valley Civilization
+            </span>
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-mono font-bold">Civilization</span>
+          </div>
+          <div class="text-[10px] text-[var(--text-muted)] space-y-0.5 font-mono">
+            <div><strong class="text-[var(--text)]">Genre:</strong> doc/civilizations (Ancient Civilizations &amp; Spheres)</div>
+            <div><strong class="text-[var(--text)]">Sub-Genre:</strong> indus_vedic (Indus &amp; Vedic Civilizations)</div>
+            <div><strong class="text-[var(--text)]">Archetype:</strong> civilizational_origins (Origins &amp; City Planning)</div>
+            <div class="text-[9px] text-indigo-400/80 pt-0.5">
+              <span>📜 Story Prompt: civilizational_origins.prompt.md</span><br>
+              <span>🎬 Screenplay Prompt: civilizational_origins.screenplay.prompt.md</span>
+            </div>
+          </div>
+          <button type="button" onclick="loadGuideRecipe('doc/civilizations', 'indus_vedic', 'civilizational_origins', 'Indus Valley Civilization: Harappa, Mohenjo-daro &amp; Bronze Age Urban Marvels')" class="w-full mt-1 py-1 px-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition">
+            <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i> Load Indus Valley Recipe
+          </button>
         </div>
-        <div class="p-2 bg-[var(--card)] rounded-lg border border-[var(--border)]">
-          <strong class="text-[var(--text)]">🧘 Relaxation & Ambient:</strong>
-          <span class="text-[var(--text-muted)]"> Living wallpaper soundscape, single locked perspective (zero drift), 432Hz acoustic pads, ASMR natural audio, and 0% voiceover.</span>
+
+        <!-- Recipe 2: Ireland Country Overview (21 Chapters) -->
+        <div class="p-2.5 bg-[var(--card)] border border-[var(--border)] rounded-lg space-y-1.5 hover:border-indigo-500/50 transition">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-[var(--text)] flex items-center gap-1.5">
+              <span>🇮🇪</span> Ireland Country Overview
+            </span>
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono font-bold">21 Chapters</span>
+          </div>
+          <div class="text-[10px] text-[var(--text-muted)] space-y-0.5 font-mono">
+            <div><strong class="text-[var(--text)]">Genre:</strong> doc/nations (Sovereign Nations &amp; Countries)</div>
+            <div><strong class="text-[var(--text)]">Sub-Genre:</strong> europe_nations (European Nations)</div>
+            <div><strong class="text-[var(--text)]">Archetype:</strong> country_overview (Country Overview - 21 Chapters)</div>
+            <div class="text-[9px] text-indigo-400/80 pt-0.5">
+              <span>📜 Story Prompt: country_overview.prompt.md</span><br>
+              <span>🎬 Screenplay Prompt: country_overview.screenplay.prompt.md</span>
+            </div>
+          </div>
+          <button type="button" onclick="loadGuideRecipe('doc/nations', 'europe_nations', 'country_overview', 'Ireland: Sovereign Heritage, Living Culture &amp; 21 Wonders')" class="w-full mt-1 py-1 px-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition">
+            <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i> Load Ireland Overview Recipe
+          </button>
         </div>
-        <div class="p-2 bg-[var(--card)] rounded-lg border border-[var(--border)]">
-          <strong class="text-[var(--text)]">🚶 4K Walking Tour:</strong>
-          <span class="text-[var(--text-muted)]"> First-person POV steadycam at human walking pace (~1.5–2.0 km/h) with natural footstep sway and binaural street audio.</span>
+
+        <!-- Recipe 3: Norway National Encyclopedia (35 Chapters) -->
+        <div class="p-2.5 bg-[var(--card)] border border-[var(--border)] rounded-lg space-y-1.5 hover:border-indigo-500/50 transition">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-[var(--text)] flex items-center gap-1.5">
+              <span>🇳🇴</span> Norway National Encyclopedia
+            </span>
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono font-bold">35 Chapters</span>
+          </div>
+          <div class="text-[10px] text-[var(--text-muted)] space-y-0.5 font-mono">
+            <div><strong class="text-[var(--text)]">Genre:</strong> doc/nations (Sovereign Nations &amp; Countries)</div>
+            <div><strong class="text-[var(--text)]">Sub-Genre:</strong> nordic_polar_nations (Nordic Realms)</div>
+            <div><strong class="text-[var(--text)]">Archetype:</strong> country_encyclopedia (Country Encyclopedia - 35 Chapters)</div>
+            <div class="text-[9px] text-indigo-400/80 pt-0.5">
+              <span>📜 Story Prompt: country_encyclopedia.prompt.md</span><br>
+              <span>🎬 Screenplay Prompt: country_encyclopedia.screenplay.prompt.md</span>
+            </div>
+          </div>
+          <button type="button" onclick="loadGuideRecipe('doc/nations', 'nordic_polar_nations', 'country_encyclopedia', 'Norway: The Definitive National Encyclopedia &amp; Sovereign Almanac')" class="w-full mt-1 py-1 px-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition">
+            <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i> Load Norway Encyclopedia Recipe
+          </button>
         </div>
-        <div class="p-2 bg-[var(--card)] rounded-lg border border-[var(--border)]">
-          <strong class="text-[var(--text)]">💃 Musical Dance & Folk:</strong>
-          <span class="text-[var(--text-muted)]"> Beat-driven choreographic progression, Suno vocal arrangement, synchronized lip-sync, and 30fps dynamic footwork.</span>
+
+        <!-- Recipe 4: The Celtic World Across Western Europe -->
+        <div class="p-2.5 bg-[var(--card)] border border-[var(--border)] rounded-lg space-y-1.5 hover:border-indigo-500/50 transition">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-[var(--text)] flex items-center gap-1.5">
+              <span>☘️</span> Celtic Civilization &amp; Atlantic Arc
+            </span>
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-mono font-bold">Civilization</span>
+          </div>
+          <div class="text-[10px] text-[var(--text-muted)] space-y-0.5 font-mono">
+            <div><strong class="text-[var(--text)]">Genre:</strong> doc/civilizations (Ancient Civilizations &amp; Spheres)</div>
+            <div><strong class="text-[var(--text)]">Sub-Genre:</strong> celtic_world (Celtic &amp; Gaelic Realm)</div>
+            <div><strong class="text-[var(--text)]">Archetype:</strong> civilizational_origins (Origins &amp; Megaliths)</div>
+            <div class="text-[9px] text-indigo-400/80 pt-0.5">
+              <span>📜 Story Prompt: civilizational_origins.prompt.md</span><br>
+              <span>🎬 Screenplay Prompt: civilizational_origins.screenplay.prompt.md</span>
+            </div>
+          </div>
+          <button type="button" onclick="loadGuideRecipe('doc/civilizations', 'celtic_world', 'civilizational_origins', 'The Celtic World: Ancient Gaels, Druids &amp; Atlantic Citadels')" class="w-full mt-1 py-1 px-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition">
+            <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i> Load Celtic World Recipe
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Tier 2: Sub-Genre / Biome -->
-    <div class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
-      <div class="flex items-center gap-2 text-xs font-black text-emerald-500">
-        <i class="fa-solid fa-mountain-sun"></i>
-        <span>Level 2: Sub-Genre (Subject Matter &amp; Biome)</span>
-      </div>
-      <p class="text-[11px] text-[var(--text-muted)] leading-relaxed">
-        Specifies the environmental domain, physical materials, and lighting characteristics:
-      </p>
-      <div class="grid grid-cols-2 gap-2 text-[11px] pt-1">
-        <div class="p-1.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
-          <strong class="text-[var(--text)]">🏔️ Mountains & Alpines:</strong>
-          <span class="text-[var(--text-muted)]"> Glacial peaks, granite faces, alpine meadows, and valleys.</span>
+    <!-- TIER DEFINITIONS ACCORDION -->
+    <div class="space-y-2 pt-1">
+      <!-- Tier 1: Format -->
+      <div id="guide-tier-format" class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5 transition">
+        <div class="flex items-center gap-2 text-xs font-black text-indigo-400">
+          <i class="fa-solid fa-film"></i>
+          <span>1. Format (The Content Medium &amp; Pacing Contract)</span>
         </div>
-        <div class="p-1.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
-          <strong class="text-[var(--text)]">🌊 Oceans & Marine:</strong>
-          <span class="text-[var(--text-muted)]"> Coral reefs, crystalline lagoons, abyssal midnight trenches.</span>
-        </div>
-        <div class="p-1.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
-          <strong class="text-[var(--text)]">🏖️ Coastal & Beaches:</strong>
-          <span class="text-[var(--text-muted)]"> Tropical white sand, volcanic black sand, sea stacks, cabanas.</span>
-        </div>
-        <div class="p-1.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
-          <strong class="text-[var(--text)]">🌲 Forests & Canopies:</strong>
-          <span class="text-[var(--text-muted)]"> Redwood giants, mossy temperate rainforests, bamboo groves.</span>
-        </div>
-        <div class="p-1.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
-          <strong class="text-[var(--text)]">🏜️ Deserts & Dunes:</strong>
-          <span class="text-[var(--text-muted)]"> Colossal star dunes, canyon chasms, Bedouin desert hearths.</span>
-        </div>
-        <div class="p-1.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
-          <strong class="text-[var(--text)]">🏛️ Cities & Heritage:</strong>
-          <span class="text-[var(--text-muted)]"> Historic old towns, ancient Egyptian pyramids, stone fortresses.</span>
+        <p class="text-[11px] text-[var(--text-muted)] leading-relaxed">
+          The top-level production framework determining audio mastering, frame rate, and narration:
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-1.5 text-[10px] pt-0.5">
+          <div class="p-2 bg-[var(--card)] rounded border border-[var(--border)]">
+            <strong class="text-[var(--text)]">🎬 Documentary:</strong> 24 fps cinematic pacing, voiceover narration, verified facts, educational HUD stats.
+          </div>
+          <div class="p-2 bg-[var(--card)] rounded border border-[var(--border)]">
+            <strong class="text-[var(--text)]">🧘 Relaxation:</strong> 24 fps serene drifts, 432Hz acoustic music + pure nature ASMR dual masters.
+          </div>
+          <div class="p-2 bg-[var(--card)] rounded border border-[var(--border)]">
+            <strong class="text-[var(--text)]">🚶 Walking Tour:</strong> 60 fps ultra-slow human walking cadence (1.5-2.0 km/h) with steadycam sway.
+          </div>
+          <div class="p-2 bg-[var(--card)] rounded border border-[var(--border)]">
+            <strong class="text-[var(--text)]">🎵 Music Video:</strong> 30 fps beat-driven choreography, Suno song stems &amp; avatar lip-sync.
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Tier 3: Archetype -->
-    <div class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
-      <div class="flex items-center gap-2 text-xs font-black text-amber-500">
-        <i class="fa-solid fa-map-location-dot"></i>
-        <span>Level 3: Archetype (Setting Template &amp; Landmark)</span>
+      <!-- Tier 2: Genre -->
+      <div id="guide-tier-genre" class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5 transition">
+        <div class="flex items-center gap-2 text-xs font-black text-purple-400">
+          <i class="fa-solid fa-shapes"></i>
+          <span>2. Genre (The Thematic Category)</span>
+        </div>
+        <p class="text-[11px] text-[var(--text-muted)] leading-relaxed">
+          The primary subject category of the production. For documentaries:
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] pt-0.5">
+          <div class="p-2 bg-[var(--card)] rounded border border-[var(--border)]">
+            <strong class="text-[var(--text)]">🌍 doc/nations (Sovereign Nations):</strong>
+            <p class="text-[var(--text-muted)] mt-0.5">For single modern countries (e.g. Ireland, Norway, India, Japan, France). Explores sovereign governance, capitals, geography, society, universities, economy, and living culture.</p>
+          </div>
+          <div class="p-2 bg-[var(--card)] rounded border border-[var(--border)]">
+            <strong class="text-[var(--text)]">🏺 doc/civilizations (Ancient Civilizations):</strong>
+            <p class="text-[var(--text-muted)] mt-0.5">For trans-national ancient realms, lost empires, and founding historical epochs that transcend modern borders (e.g. Indus Valley, Celtic World, Viking Realm, Silk Road, Greco-Roman Antiquity).</p>
+          </div>
+        </div>
       </div>
-      <p class="text-[11px] text-[var(--text-muted)] leading-relaxed">
-        Picks a curated real-world location template (e.g. <em>Swiss Alps - Lauterbrunnen Valley</em>, <em>Whitsundays - Whitehaven Beach</em>, <em>Sahara Grand Erg Dunes</em>), pre-populating historical lore and visual prompts.
-      </p>
-    </div>
 
-    <!-- Tier 4: Weather & Atmosphere -->
-    <div class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5">
-      <div class="flex items-center gap-2 text-xs font-black text-sky-500">
-        <i class="fa-solid fa-cloud-sun-rain"></i>
-        <span>Level 4: Weather &amp; Atmosphere (Procedural Dynamic FX)</span>
+      <!-- Tier 3: Sub-Genre -->
+      <div id="guide-tier-subgenre" class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5 transition">
+        <div class="flex items-center gap-2 text-xs font-black text-emerald-400">
+          <i class="fa-solid fa-layer-group"></i>
+          <span>3. Sub-Genre (Regional Sphere &amp; Cultural Scope)</span>
+        </div>
+        <p class="text-[11px] text-[var(--text-muted)] leading-relaxed">
+          Refines the thematic category to a specific regional, geographical, or cultural sphere:
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] pt-0.5">
+          <div class="p-2 bg-[var(--card)] rounded border border-[var(--border)]">
+            <strong class="text-[var(--text)]">🏺 indus_vedic:</strong>
+            <p class="text-[var(--text-muted)] mt-0.5">Indus Valley civilization, Harappa, Mohenjo-daro, Saraswati river basin, Lothal dockyards, and early Vedic epochs.</p>
+          </div>
+          <div class="p-2 bg-[var(--card)] rounded border border-[var(--border)]">
+            <strong class="text-[var(--text)]">☘️ celtic_world:</strong>
+            <p class="text-[var(--text-muted)] mt-0.5">Celtic and Gaelic civilizations across Ireland, Scotland, Wales, Cornwall, and Brittany.</p>
+          </div>
+          <div class="p-2 bg-[var(--card)] rounded border border-[var(--border)]">
+            <strong class="text-[var(--text)]">🌍 europe_nations:</strong>
+            <p class="text-[var(--text-muted)] mt-0.5">European democracies, alpine republics, and Atlantic maritime nations.</p>
+          </div>
+        </div>
       </div>
-      <p class="text-[11px] text-[var(--text-muted)] leading-relaxed">
-        Explicit physical weather engine applied to the scene without changing the underlying biome:
-      </p>
-      <div class="grid grid-cols-3 gap-1.5 text-[10px] pt-1">
-        <div class="p-1.5 bg-[var(--card)] rounded border border-[var(--border)]">
-          <strong class="text-[var(--text)]">☀️ Normal:</strong>
-          <span class="text-[var(--text-muted)]"> Crisp 5400K natural daylight, clean air, balanced skin/rock tones.</span>
+
+      <!-- Tier 4: Archetype & Prompt Blueprint Mapping -->
+      <div id="guide-tier-archetype" class="p-3 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl space-y-1.5 transition">
+        <div class="flex items-center gap-2 text-xs font-black text-sky-400">
+          <i class="fa-solid fa-mountain-sun"></i>
+          <span>4. Archetype (Chapter Blueprint &amp; Mapped Prompt Files)</span>
         </div>
-        <div class="p-1.5 bg-[var(--card)] rounded border border-[var(--border)]">
-          <strong class="text-[var(--text)]">🌧️ Rain:</strong>
-          <span class="text-[var(--text-muted)]"> 3-layer translucent rain, water ripples, mist layer & petrichor ASMR.</span>
-        </div>
-        <div class="p-1.5 bg-[var(--card)] rounded border border-[var(--border)]">
-          <strong class="text-[var(--text)]">❄️ Snow:</strong>
-          <span class="text-[var(--text-muted)]"> Aerodynamic drifting flakes, wind tilt, frosted pines & winter breeze.</span>
-        </div>
-        <div class="p-1.5 bg-[var(--card)] rounded border border-[var(--border)]">
-          <strong class="text-[var(--text)]">🌫️ Mist/Fog:</strong>
-          <span class="text-[var(--text-muted)]"> Soft volumetric god rays, morning mountain cloud layers.</span>
-        </div>
-        <div class="p-1.5 bg-[var(--card)] rounded border border-[var(--border)]">
-          <strong class="text-[var(--text)]">🌅 Sunset:</strong>
-          <span class="text-[var(--text-muted)]"> Warm 3200K amber alpenglow, long purple shadows across terrain.</span>
-        </div>
-        <div class="p-1.5 bg-[var(--card)] rounded border border-[var(--border)]">
-          <strong class="text-[var(--text)]">🌌 Starlit:</strong>
-          <span class="text-[var(--text-muted)]"> Deep indigo sky, glittering Milky Way galaxy & night stillness.</span>
+        <p class="text-[11px] text-[var(--text-muted)] leading-relaxed">
+          Each archetype in <code class="text-indigo-300 font-mono text-[10px]">format_taxonomy.json</code> maps to two dedicated prompt files:
+          <strong>(1) Story Prompt File</strong> (governs narrative chapters, real-world educational facts, badges, and narration) and 
+          <strong>(2) Screenplay Prompt File</strong> (governs camera angles, 1:1 show-and-tell synchrony, Ken Burns motion, and diffusion prompts).
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] pt-0.5">
+          <div class="p-2 bg-[var(--card)] rounded border border-[var(--border)]">
+            <strong class="text-[var(--text)]">🌍 Country Overview (21 Ch):</strong>
+            <p class="text-[var(--text-muted)] mt-0.5">Standard 20-minute sovereign overview covering government, geography, cities, universities, and economy.</p>
+            <div class="text-[9px] text-indigo-400/80 pt-1 font-mono">
+              <div>Story: country_overview.prompt.md</div>
+              <div>Screenplay: country_overview.screenplay.prompt.md</div>
+            </div>
+          </div>
+          <div class="p-2 bg-[var(--card)] rounded border border-[var(--border)]">
+            <strong class="text-[var(--text)]">📚 Country Encyclopedia (35 Ch):</strong>
+            <p class="text-[var(--text-muted)] mt-0.5">Exhaustive 40-minute national compendium in 5 Acts (adds prehistory, waterways, science, health, rail, diaspora, sports).</p>
+            <div class="text-[9px] text-indigo-400/80 pt-1 font-mono">
+              <div>Story: country_encyclopedia.prompt.md</div>
+              <div>Screenplay: country_encyclopedia.screenplay.prompt.md</div>
+            </div>
+          </div>
+          <div class="p-2 bg-[var(--card)] rounded border border-[var(--border)]">
+            <strong class="text-[var(--text)]">🏺 Civilizational Origins:</strong>
+            <p class="text-[var(--text-muted)] mt-0.5">Deep civilizational origin stories, ancient urban grids, seals, sacred megaliths, and trade networks.</p>
+            <div class="text-[9px] text-indigo-400/80 pt-1 font-mono">
+              <div>Story: civilizational_origins.prompt.md</div>
+              <div>Screenplay: civilizational_origins.screenplay.prompt.md</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Footer -->
-    <div class="pt-2 flex justify-end">
+    <div class="pt-2 flex justify-between items-center border-t border-[var(--border)]">
+      <span class="text-[10px] text-[var(--text-muted)]">Tip: All formats, genres, sub-genres, archetypes, and prompt mappings are configured in format_taxonomy.json.</span>
       <button type="button" onclick="closeHierarchyGuideModal()" class="btn-runway-primary py-1.5 px-4 text-xs font-bold">
         Got It
       </button>

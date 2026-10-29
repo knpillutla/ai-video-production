@@ -39,8 +39,10 @@ def create_documentary_lower_third_overlay(
     attraction_name: str,
     sub_location: Optional[str] = None,
     target_res: Tuple[int, int] = (3840, 2160),
+    position: str = "bottom_left",
+    theme: str = "gold_subtitle",
 ) -> np.ndarray:
-    """Renders a prestigious 4K RGBA lower-third frosted glass card with safe margins."""
+    """Renders a prestigious 4K RGBA location overlay card with high-contrast typography."""
     w, h = target_res
     s = h / 2160.0  # Scale factor normalized to 4K
 
@@ -48,8 +50,8 @@ def create_documentary_lower_third_overlay(
     pil_overlay = Image.fromarray(overlay)
     draw = ImageDraw.Draw(pil_overlay)
 
-    font_title = _load_font(int(46 * s), bold=True)
-    font_sub = _load_font(int(28 * s), bold=False)
+    font_title = _load_font(int(44 * s), bold=True)
+    font_sub = _load_font(int(26 * s), bold=True)
 
     clean_title = (attraction_name or "Iconic Landmark").strip().upper()[:42]
     clean_sub = (sub_location or "").strip()[:54]
@@ -62,42 +64,55 @@ def create_documentary_lower_third_overlay(
         s_bbox = draw.textbbox((0, 0), clean_sub, font=font_sub)
         sub_w = s_bbox[2] - s_bbox[0]
 
-    content_w = max(title_w + int(70 * s), sub_w + int(70 * s))
-    card_w = max(int(520 * s), min(int(w * 0.45), content_w + int(80 * s)))
-    card_h = int(140 * s) if clean_sub else int(105 * s)
+    content_w = max(title_w, sub_w)
+    card_w = max(int(480 * s), min(int(w * 0.45), content_w + int(70 * s)))
+    card_h = int(120 * s) if clean_sub else int(85 * s)
 
-    # Bottom-left safe zone: x=5.5% from left, y=82% from top (well above YouTube progress bar)
-    card_x = int(w * 0.055)
-    card_y = int(h * 0.82) - (card_h - int(105 * s))
+    if position == "top_right":
+        card_x = int(w * 0.945) - card_w
+        card_y = int(h * 0.065)
+    else:
+        # Bottom-left safe zone: x=5.5% from left, y=82% from top (well above YouTube progress bar)
+        card_x = int(w * 0.055)
+        card_y = int(h * 0.82) - (card_h - int(85 * s))
 
-    # 1. Frosted Slate Glass Card (midnight charcoal with 84% opacity)
+    bar_w = max(4, int(5 * s))
     card_rgba = np.zeros((card_h, card_w, 4), dtype=np.uint8)
-    card_rgba[:, :] = [10, 14, 22, 215]
 
-    # 2. Golden Left Accent Bar (5px wide)
-    bar_w = max(4, int(6 * s))
-    card_rgba[:, :bar_w] = [255, 196, 37, 255]
-
-    # 3. Fine hairline top and bottom borders (1px, 20% white)
-    card_rgba[0, :] = [255, 255, 255, 50]
-    card_rgba[-1, :] = [255, 255, 255, 50]
-    card_rgba[:, -1] = [255, 255, 255, 50]
+    if theme == "pearl_black":
+        # Frosted Pearl Glass (light background with crisp black / slate font)
+        card_rgba[:, :] = [250, 250, 252, 215]
+        card_rgba[:, :bar_w] = [217, 119, 6, 255]
+        card_rgba[0, :] = [255, 255, 255, 180]
+        card_rgba[-1, :] = [200, 205, 215, 120]
+        card_rgba[:, -1] = [200, 205, 215, 120]
+        t_color, s_color = (15, 23, 42, 255), (71, 85, 105, 255)
+    else:
+        # Midnight Charcoal Glass with Gold Subtitle (highest contrast and visual luxury)
+        card_rgba[:, :] = [10, 15, 26, 185]
+        card_rgba[:, :bar_w] = [255, 196, 37, 255]
+        card_rgba[0, :] = [255, 255, 255, 50]
+        card_rgba[-1, :] = [255, 255, 255, 50]
+        card_rgba[:, -1] = [255, 255, 255, 50]
+        t_color, s_color = (255, 255, 255, 255), (255, 204, 51, 255)
 
     overlay[card_y : card_y + card_h, card_x : card_x + card_w] = card_rgba
     pil_overlay = Image.fromarray(overlay)
     draw = ImageDraw.Draw(pil_overlay)
 
-    # 4. Text Rendering
+    # Text Rendering with subtle drop shadow
     text_x = card_x + bar_w + int(24 * s)
-    title_y = card_y + int(20 * s)
+    title_y = card_y + int(14 * s)
 
-    # Pin / Dot Symbol in Amber
-    draw.text((text_x, title_y - int(2 * s)), "📍", fill=(255, 215, 0, 255), font=font_sub)
-    draw.text((text_x + int(36 * s), title_y), clean_title, fill=(255, 255, 255, 255), font=font_title)
+    if theme != "pearl_black":
+        draw.text((text_x + 2, title_y + 2), clean_title, fill=(0, 0, 0, 220), font=font_title)
+    draw.text((text_x, title_y), clean_title, fill=t_color, font=font_title)
 
     if clean_sub:
-        sub_y = title_y + int(56 * s)
-        draw.text((text_x + int(36 * s), sub_y), clean_sub, fill=(240, 225, 185, 230), font=font_sub)
+        sub_y = title_y + int(52 * s)
+        if theme != "pearl_black":
+            draw.text((text_x + 2, sub_y + 2), clean_sub, fill=(0, 0, 0, 220), font=font_sub)
+        draw.text((text_x, sub_y), clean_sub, fill=s_color, font=font_sub)
 
     return np.array(pil_overlay)
 
@@ -233,9 +248,28 @@ def create_documentary_fact_badge_overlay(
     return np.array(pil_overlay)
 
 
+def build_shot_documentary_hud(sp_data: dict, ch: dict, shot: dict) -> Optional[dict]:
+    """Build complete broadcast graphics HUD config for Shot 1 of a documentary chapter."""
+    if int(shot.get("shot_index") or 1) != 1:
+        return None
+    return {
+        "is_documentary": True,
+        "attraction_name": ch.get("location_hub") or shot.get("location_hub") or ch.get("chapter_title") or "Landmark",
+        "sub_location": ch.get("chapter_title") or "",
+        "chapter_title": ch.get("chapter_title"),
+        "chapter_subtitle": ch.get("chapter_subtitle"),
+        "chapter_stats": ch.get("chapter_stats"),
+        "fact_badge": ch.get("fact_badge"),
+        "country_entity": sp_data.get("destination_entity") or (sp_data.get("title") or "").split(":")[0].strip(),
+        "position": "bottom_left",
+        "display_duration": 6.0,
+    }
+
+
 __all__ = [
     "create_documentary_lower_third_overlay",
     "create_documentary_chapter_title_card",
     "create_documentary_fact_badge_overlay",
+    "build_shot_documentary_hud",
 ]
 

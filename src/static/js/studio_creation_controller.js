@@ -13,8 +13,11 @@ function switchCreationTab(tabKey) {
   if (tabKey === "new") {
     if (viewNew) viewNew.classList.remove("hidden");
     if (viewArch) viewArch.classList.add("hidden");
-    if (!currentActiveInspectorEpisode && typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
-    else if (currentActiveInspectorEpisode && typeof populateProductionControlsFromEpisode === "function") populateProductionControlsFromEpisode(currentActiveInspectorEpisode);
+    if (currentActiveInspectorEpisode && typeof unlockForNewProduction === "function") {
+      unlockForNewProduction();
+    } else if (typeof renderEmptyInspectorState === "function") {
+      renderEmptyInspectorState();
+    }
   } else {
     if (viewNew) viewNew.classList.add("hidden");
     if (viewArch) viewArch.classList.remove("hidden");
@@ -22,14 +25,61 @@ function switchCreationTab(tabKey) {
   }
 }
 
-function openHierarchyGuideModal() {
+function openHierarchyGuideModal(highlightSection = null) {
   const modal = document.getElementById("hierarchy-guide-modal");
-  if (modal) modal.classList.remove("hidden");
+  if (modal) {
+    modal.classList.remove("hidden");
+    if (highlightSection) {
+      setTimeout(() => {
+        const el = document.getElementById(`guide-tier-${highlightSection}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-2', 'ring-indigo-400', 'bg-indigo-950/30');
+          setTimeout(() => el.classList.remove('ring-2', 'ring-indigo-400', 'bg-indigo-950/30'), 2500);
+        }
+      }, 60);
+    }
+  }
 }
 
 function closeHierarchyGuideModal() {
   const modal = document.getElementById("hierarchy-guide-modal");
   if (modal) modal.classList.add("hidden");
+}
+
+function loadGuideRecipe(genre, subgenre, archetype, promptText) {
+  closeHierarchyGuideModal();
+  // Ensure documentary format is selected
+  if (typeof selectStudioFormat === "function" && activeStudioFormat !== "documentary") {
+    selectStudioFormat("documentary", genre);
+  }
+
+  const gSel = document.getElementById("studio-genre-selector");
+  const subSel = document.getElementById("studio-subgenre-selector");
+  const archSel = document.getElementById("studio-archetype-selector");
+  const promptEl = document.getElementById("youtube-prompt-input") || document.getElementById("studio-prompt-input");
+
+  if (gSel && genre) {
+    gSel.value = genre;
+    if (typeof onGenreChange === "function") onGenreChange(genre);
+  }
+
+  setTimeout(() => {
+    if (subSel && subgenre) {
+      subSel.value = subgenre;
+      if (typeof onSubGenreChange === "function") onSubGenreChange(subgenre);
+    }
+    setTimeout(() => {
+      if (archSel && archetype) {
+        archSel.value = archetype;
+        if (typeof onArchetypeChange === "function") onArchetypeChange(archetype);
+      }
+      if (promptEl && promptText) {
+        promptEl.value = promptText;
+        if (typeof onPromptInputChange === "function") onPromptInputChange();
+      }
+    }, 120);
+  }, 120);
 }
 
 const STUDIO_FORMAT_DEFINITIONS = {
@@ -317,10 +367,10 @@ function selectStudioFormat(fmtKey, preserveGenre = null) {
     }
   }
 
-  // Show/Hide Country & Region/Language Shelf for Music Video and Documentary formats
+  // Show/Hide Country & Region/Language Shelf (STRICTLY for Music Video format only)
   const countryShelf = document.getElementById("studio-country-language-shelf");
   if (countryShelf) {
-    const showCountry = (fmtKey === "music_video" || fmtKey === "documentary");
+    const showCountry = (fmtKey === "music_video");
     countryShelf.classList.toggle("hidden", !showCountry);
     if (showCountry) {
       initMusicCountryAndLanguageFromNetwork(chSlug);
@@ -394,7 +444,7 @@ function syncGenreDropdownOnly(channelSlug, preserveGenre = null) {
 function syncGenreDropdownForChannel(channelSlug) {
   renderFormatChipsForActiveNetwork(channelSlug);
   syncGenreDropdownOnly(channelSlug);
-  if (activeStudioFormat === "music_video" || activeStudioFormat === "documentary") {
+  if (activeStudioFormat === "music_video") {
     initMusicCountryAndLanguageFromNetwork(channelSlug);
   }
 }
@@ -446,7 +496,7 @@ function onStudioCountryChange(countryVal, preserveSubRegion = null, preserveLan
       });
   }
 
-  const chSlug = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : "telugu_rhythms";
+  const chSlug = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel) ? selectedStudioChannel : "euro_discovery";
   fetchAndPopulateExistingSeries(chSlug, activeStudioFormat);
   if (activeStudioFormat === "music_video") {
     const gSelector = document.getElementById("studio-genre-selector");
@@ -532,12 +582,14 @@ function initMusicCountryAndLanguageFromNetwork(channelSlug) {
   if (!contSelector || !cSelector || !sSelector || !lSelector) return;
 
   const slug = String(channelSlug || "").toLowerCase();
-  let defaultContinent = "Asia";
-  let defaultCountry = "India";
-  let defaultSubRegion = "south_india";
-  let defaultLang = "te";
+  let defaultContinent = (activeStudioFormat === "documentary" || slug.includes("euro") || slug.includes("discovery")) ? "Europe" : "Asia";
+  let defaultCountry = (activeStudioFormat === "documentary" || slug.includes("euro") || slug.includes("discovery")) ? "Norway" : "India";
+  let defaultSubRegion = (activeStudioFormat === "documentary" || slug.includes("euro") || slug.includes("discovery")) ? "norway_fjords" : "south_india";
+  let defaultLang = (activeStudioFormat === "documentary" || slug.includes("euro") || slug.includes("discovery")) ? "en" : "te";
 
-  if (slug.includes("japan") || slug.includes("tokyo")) {
+  if (slug.includes("euro") || slug.includes("europe") || slug.includes("discovery") || slug.includes("nordic") || slug.includes("swiss") || slug.includes("alpine")) {
+    defaultContinent = "Europe"; defaultCountry = "Norway"; defaultSubRegion = "norway_fjords"; defaultLang = "en";
+  } else if (slug.includes("japan") || slug.includes("tokyo")) {
     defaultContinent = "Asia"; defaultCountry = "Japan"; defaultSubRegion = "kanto_tokyo"; defaultLang = "ja";
   } else if (slug.includes("france") || slug.includes("paris")) {
     defaultContinent = "Europe"; defaultCountry = "France"; defaultSubRegion = "paris_ile_de_france"; defaultLang = "fr";
@@ -1138,15 +1190,16 @@ function selectArchiveEpisode(epId, chId, formatSlug, prodName) {
       if (curFmt && !curFmt.includes(normFmt) && !normFmt.includes(curFmt)) return false;
     }
     if (normProd) {
-      const curProd = String(x.production_name || "").trim().toLowerCase().replace(/\s+/g, "_");
-      if (curProd && curProd !== normProd) return false;
+      const curProd = String(x.production_name || "standalone").trim().toLowerCase().replace(/\s+/g, "_");
+      if (curProd !== normProd) return false;
     }
     return true;
   };
 
-  let ep = (typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) ? studioVideos.find(matchFn) : null;
-  if (!ep && typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) {
-    ep = channelArchiveEpisodes.find(matchFn);
+  // Authoritative disk scan in channelArchiveEpisodes takes priority over localStorage
+  let ep = (typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) ? channelArchiveEpisodes.find(matchFn) : null;
+  if (!ep && typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) {
+    ep = studioVideos.find(matchFn);
   }
   if (!ep) {
     const looseMatch = x => {
@@ -1156,14 +1209,21 @@ function selectArchiveEpisode(epId, chId, formatSlug, prodName) {
         const curFmt = String(x.format || x.format_slug || "").trim().toLowerCase();
         if (curFmt && !curFmt.includes(normFmt) && !normFmt.includes(curFmt)) return false;
       }
+      if (normProd) {
+        const curProd = String(x.production_name || "standalone").trim().toLowerCase().replace(/\s+/g, "_");
+        if (curProd !== normProd) return false;
+      }
       return true;
     };
-    ep = (typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) ? studioVideos.find(looseMatch) : null;
-    if (!ep && typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) {
-      ep = channelArchiveEpisodes.find(looseMatch);
+    ep = (typeof channelArchiveEpisodes !== "undefined" && Array.isArray(channelArchiveEpisodes)) ? channelArchiveEpisodes.find(looseMatch) : null;
+    if (!ep && typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) {
+      ep = studioVideos.find(looseMatch);
     }
   }
   if (!ep) return;
+
+  // Clone episode to ensure mutations don't leak across productions
+  ep = Object.assign({}, ep);
 
   // Sanitize cross-format artifact bleed
   const epFmt = String(ep.format || ep.format_slug || normFmt || "").toLowerCase();

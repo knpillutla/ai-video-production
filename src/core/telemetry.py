@@ -112,7 +112,7 @@ def setup_logger(name: str = "video_studio", level: int = logging.INFO) -> loggi
         logs_dir = Path("logs")
         try:
             logs_dir.mkdir(parents=True, exist_ok=True)
-            for fname in ("studio.log", "studio_server.log"):
+            for fname in ("studio.log",):
                 file_handler = RotatingFileHandler(
                     logs_dir / fname,
                     maxBytes=10 * 1024 * 1024,

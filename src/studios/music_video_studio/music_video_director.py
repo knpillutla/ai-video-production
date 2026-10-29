@@ -148,10 +148,10 @@ def _build_offline_multilingual_storyboard(
         "hook_thesis": f"An evocative {sub_genre} celebrating love and music in {country}.",
         "suno_tags": eff_suno_tags, "vocal_gender": vocal_gender, "lyrics": sp["lyrics"],
         "prompts_by_model": {
-            "z_image": f"4K photograph of lead singer in {country}. {character_desc}",
-            "flux_dev": f"Cinematic photograph of lead vocalist in {country}. {character_desc}",
-            "flux_pro_ultra": f"35mm Master Prime f/1.4 photograph in {country}. {character_desc}",
-            "imagen3": f"Photorealistic 4K portrait in {country}. {character_desc}",
+            "z_image": f"A hyper-realistic 4K UHD cinematic photograph of lead singer in {country}, shot on Hasselblad H6D-100c with prime lens. {character_desc}. Vibrant saturated jewel-tone colors, warm golden sidelight, crystalline atmospheric depth, razor-sharp textures, 16:9.",
+            "flux_dev": f"A hyper-realistic, colorful 16:9 cinematic photograph of lead vocalist in {country}. {character_desc}. Rich saturated colors, radiant golden lighting, razor-sharp detail.",
+            "flux_pro_ultra": f"Ultra-photorealistic 8K UHD shot on 35mm Master Prime f/1.4 lens in {country}. {character_desc}. Saturated natural tones, deep dynamic range, rich micro-textures.",
+            "imagen3": f"Hyper-realistic 4K UHD portrait in {country}. {character_desc}. Vibrant natural colors, warm cinematic lighting.",
             "midjourney": f"Cinematic still in {country}. {character_desc} --ar 16:9",
         },
         "characters": [{

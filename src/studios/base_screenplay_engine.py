@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -85,6 +86,20 @@ async def execute_directorial_screenplay(
             raw_p.parent.mkdir(parents=True, exist_ok=True)
             raw_p.write_text(raw_json, encoding="utf-8")
             logger.info(f"raw_gemini_screenplay_artifact_saved: {raw_p}")
+            sp_inputs_payload = {
+                "model": "gemini-flash-latest",
+                "tier": eff_tier,
+                "genre": genre,
+                "sub_genre": sub_genre,
+                "cluster": cluster,
+                "primary_archetype": primary_archetype,
+                "google_search_enabled": google_search_enabled,
+                "system_prompt": sys_prompt,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            (raw_p.parent / "gemini_screenplay_inputs.json").write_text(
+                json.dumps(sp_inputs_payload, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
             grounding = candidates[0].get("groundingMetadata")
             if grounding:
                 grounding_path = raw_p.with_suffix(".grounding.json")

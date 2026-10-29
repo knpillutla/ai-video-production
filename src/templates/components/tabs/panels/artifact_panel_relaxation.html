@@ -1,0 +1,75 @@
+<!-- ARTIFACT PANEL: RELAXATION FORMAT (6 Stages: Storyboard -> Photos -> Audio -> Motion -> Master -> LongPlay) -->
+<div id="artifact-panel-relaxation" class="format-artifact-panel space-y-2 hidden">
+  <!-- STAGE 1: AMBIANCE CONCEPT & STORYBOARD -->
+  <div id="panel-stage-row-relax-script" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <div class="flex items-center gap-2">
+        <span class="stage-header-title"><span class="stage-number-badge">1</span> <span>Ambiance Storyboard</span></span>
+        <span id="panel-relax-script-status" class="text-[var(--text-muted)] font-mono text-xs">Ready</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button type="button" onclick="openScriptDrawer('visual')" class="btn-runway-secondary py-0.5 px-2 text-[10px] font-bold flex items-center gap-1" title="View Storyboard Scenes">
+          <i class="fa-solid fa-scroll text-[9px]"></i>
+          <span>View Storyboard</span>
+        </button>
+      </div>
+    </div>
+    <div id="panel-section-relax-script" class="w-full min-h-[38px] pb-0.5">
+      <!-- Rendered by relaxation_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 2: KEYFRAME PHOTOS -->
+  <div id="panel-stage-row-relax-images" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <span class="stage-header-title"><span class="stage-number-badge">2</span> <span>Keyframe Photos</span></span>
+      <span id="panel-relax-images-count" class="px-2 py-0.5 rounded-full bg-[var(--card-subtle)] text-[var(--text)] font-mono text-xs font-bold border border-[var(--border)]">0 Shots</span>
+    </div>
+    <div id="panel-section-relax-images" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 w-full items-start pb-1">
+      <!-- Rendered by relaxation_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 3: BINAURAL ASMR & 432HZ SOUNDSCAPES -->
+  <div id="panel-stage-row-relax-audio" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <span class="stage-header-title"><span class="stage-number-badge">3</span> <span>Binaural ASMR &amp; 432Hz Audio</span></span>
+      <div class="flex items-center gap-1">
+        <button type="button" onclick="advanceToAudioStage(currentActiveInspectorEpisode, null, true)" class="btn-runway-primary py-0.5 px-2 text-[10px] font-bold shadow-sm flex items-center gap-1" title="Synthesize Soundscape">
+          <i class="fa-solid fa-water text-[9px]"></i>
+          <span>Synthesize Audio</span>
+        </button>
+      </div>
+    </div>
+    <div id="panel-section-relax-audio" class="grid grid-cols-2 gap-1.5 w-full min-h-[52px] pb-0.5">
+      <!-- Rendered by relaxation_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 4: PROCEDURAL VIDEO MOTION -->
+  <div id="panel-stage-row-relax-motion" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <span class="stage-header-title"><span class="stage-number-badge">4</span> <span>Procedural Video Motion</span></span>
+      <span id="panel-relax-raw-videos-count" class="px-2 py-0.5 rounded-full bg-[var(--card-subtle)] text-[var(--text)] font-mono text-xs font-bold border border-[var(--border)]">0 Clips</span>
+    </div>
+    <div id="panel-section-relax-raw-videos" class="grid grid-cols-3 gap-1.5 w-full min-h-[50px] pb-0.5">
+      <!-- Rendered by relaxation_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 5: 4K MASTER VIDEO -->
+  <div id="panel-stage-row-relax-master" class="space-y-1">
+    <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+      <span class="stage-header-title"><span class="stage-number-badge">5</span> <span>4K Master Video</span></span>
+      <span class="text-xs font-mono text-[var(--text-muted)]">Cinematic Render</span>
+    </div>
+    <div id="panel-section-relax-master-videos" class="grid grid-cols-2 gap-1.5 w-full min-h-[48px] pt-0.5 pb-0.5">
+      <!-- Rendered by relaxation_artifacts_renderer.js -->
+    </div>
+  </div>
+
+  <!-- STAGE 6: LONG-PLAY BROADCAST HOURS -->
+  <div id="panel-stage-row-relax-longplay" class="space-y-1">
+    {% include 'components/tabs/inspector_longplay_section.html' %}
+  </div>
+</div>

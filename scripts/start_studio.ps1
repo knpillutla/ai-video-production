@@ -127,7 +127,7 @@ $UvicornArgs = @(
 )
 
 if (-not $NoReload) {
-    $UvicornArgs += "--reload"
+    $UvicornArgs += @("--reload", "--reload-dir", "src", "--timeout-graceful-shutdown", "2")
 }
 
 # 8. Foreground option

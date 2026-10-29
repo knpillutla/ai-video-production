@@ -36,9 +36,22 @@ DOC_GENRE_MAP = {
     "asia_nations": DocGenre.PLACES, "africa_nations": DocGenre.PLACES,
     "americas_nations": DocGenre.PLACES, "oceania_nations": DocGenre.PLACES,
     "nordic_polar_nations": DocGenre.PLACES,
+    "doc/civilizations": DocGenre.ANCIENT_STRUCTURES, "doc_civilizations": DocGenre.ANCIENT_STRUCTURES,
+    "civilizations": DocGenre.ANCIENT_STRUCTURES, "civilization": DocGenre.ANCIENT_STRUCTURES,
+    "indus_vedic": DocGenre.ANCIENT_STRUCTURES, "celtic_world": DocGenre.ANCIENT_STRUCTURES,
+    "viking_norse": DocGenre.ANCIENT_STRUCTURES, "greco_roman": DocGenre.ANCIENT_STRUCTURES,
+    "silk_road": DocGenre.ANCIENT_STRUCTURES, "islamic_golden_age": DocGenre.ANCIENT_STRUCTURES,
+    "mesoamerican_andean": DocGenre.ANCIENT_STRUCTURES, "east_asian_dynasties": DocGenre.ANCIENT_STRUCTURES,
+    "mesopotamian_persian": DocGenre.ANCIENT_STRUCTURES, "byzantine_empire": DocGenre.ANCIENT_STRUCTURES,
+    "civilizational_origins": DocGenre.ANCIENT_STRUCTURES, "maritime_expansion_voyages": DocGenre.ANCIENT_STRUCTURES,
 }
 
 DEFAULT_DOC_THEMES = {
+    "indus_vedic": "Indus Valley Civilization: Harappa, Mohenjo-daro & Ancient Urban Planning",
+    "celtic_world": "The Celtic World: Ancient Gaels, Druids & Atlantic Citadels",
+    "viking_norse": "Viking Seafarers: Longships, Norse Sagas & Atlantic Voyages",
+    "greco_roman": "Classical Antiquity: Mediterranean Empires, Philosophy & Forum Geometry",
+    "silk_road": "The Silk Road: Caravans, Oasis Metropolises & Trans-Eurasian Commerce",
     "ancient_civilizations_history": "Ancient Civilizations: Lost Metropolises & Monumental World History",
     "giza_megalithic_pyramids": "Ancient Giza: Megalithic Engineering & The Great Pyramids",
     "scotland_highlands_isles": "Scottish Highlands: Ancient Castles & Mist-Veiled Isles",

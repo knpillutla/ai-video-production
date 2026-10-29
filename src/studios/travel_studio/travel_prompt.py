@@ -29,6 +29,7 @@ TRAVEL & SCENIC STUDIO DIRECTORIAL & AUTONOMOUS CURATION RULES:
    - All shots feature deep 4K aerial drone cinematography with multi-waypoint camera choreography ('camera_waypoints').
    - Compound Rigs: Employ forward drone sweeps, orbital wraps, elevation reveals, and coastal glides with continuous perspective flight.
    - Architectural Elegance: Keep focus on breathtaking architectural geometry, bridges, and city planning without crowd clutter.
+   - 4K HYPER-REALISTIC OPTICS & COLOR VIBRANCY: In visual prompts and image_model_configs (zimage, flux_dev, flux_pro), mandate hyper-realistic 4K UHD Hasselblad H6D-100c prime lens framing, vibrant saturated natural colors (turquoise waters, deep cobalt skies, golden amber sunset sidelight, terracotta roofs), crystalline clarity, and razor-sharp micro-textures. Strictly ban flat, grey, or desaturated visuals.
 
 4. 100% TIER-0 LOCAL 4K PERSPECTIVE ENGINE ($0.00 COMPUTE):
    - Set "motion_type": "ken_burns" for all architectural & skyline scenes to preserve 100% geometric stability without AI diffusion warping.

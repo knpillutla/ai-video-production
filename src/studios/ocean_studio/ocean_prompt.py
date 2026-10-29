@@ -39,6 +39,8 @@ OCEAN RETREAT STUDIO DIRECTORIAL RULES & CINEMATOGRAPHY:
    - Structural architecture, daybeds, furniture, and skies remain 100% rigid, frozen, and temporally stable.
 4. PURITY & SOLITUDE MANDATE:
    - Strictly ZERO humans, zero tourists, zero boats, zero plastic trash, zero modern clutter.
+5. 4K HYPER-REALISTIC OPTICS & COLOR VIBRANCY (Z-IMAGE & FLUX):
+   - Mandate Hasselblad H6D-100c prime lens framing, vibrant saturated gemstone colors (translucent turquoise shallows, deep cobalt-sapphire wave barrels, crisp white sea foam, warm golden sunlight glints), crystalline water clarity, and razor-sharp sand, wood, and water micro-textures. Strictly prohibit flat or desaturated visuals.
 """
 
 

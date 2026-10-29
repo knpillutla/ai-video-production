@@ -103,7 +103,7 @@ def build_ambient_directorial_prompt(
             "   - MANDATORY 80/20 COST-OPTIMIZATION SPLIT ACROSS SCENES:\n"
             '     * 80% OF SCENES (e.g. 4 of 5 scenes) MUST USE "motion_type": "ken_burns", "recommended_model": "local_drone".\n'
             '       CRITICAL ZERO-MOTION IMAGE PROMPT MANDATE (COST $0.00): Visual prompts for these 80% scenes MUST depict STILL, TIMELESS scenery with ZERO moving elements (STRICTLY NO flying birds, NO crashing ocean waves or surf, NO moving vehicles/boats, NO walking people, NO active animals, NO turbulent rushing water). Use glassy mirror-still reflections, towering peaks, ancient architecture, quiet meadows. Camera rig strictly "locked_tripod_telephoto", camera_movement: [{"stage": 1, "duration": ' + str(per_shot_dur) + ', "movements": ["stay"]}]. Local 4K steadycam hold ($0.00 compute)!\n'
-            '     * 20% OF SCENES (e.g. 1 of 5 scenes) MUST USE "motion_type": "ai_diffusion", "recommended_model": "kling_v3_4k" (or "wan_2_1").\n'
+            '     * 20% OF SCENES (e.g. 1 of 5 scenes) MUST USE "motion_type": "ai_diffusion", "recommended_model": "kling_v3_4k" (or "wan_2_1"). In PROD mode, if any scene features humans, people, or artisans, Gemini MUST set "recommended_model": "kling_v3_4k".\n'
             '       DYNAMIC HERO MOTION: Reserve AI diffusion exclusively for hero scenes with dynamic fluid motion (crashing ocean surf, flying birds soaring overhead, cascading waterfall impact, swirling campfire embers, rustling canopy in storm).'
         )
         ex_motion_type = "ken_burns"
@@ -172,9 +172,9 @@ STRICT PURE NATURE & AMBIENT DIRECTIVES (NON-NEGOTIABLE):
 
 4. MODEL-SPECIFIC IMAGE PROMPTS ("image_model_configs") - MANDATORY NO FALLBACKS:
    - For every scene, generate model-tailored image prompts inside "image_model_configs" for ALL target image models ("flux_dev", "flux_pro", "zimage"):
-     * "flux_dev": fal-ai/flux/dev, 16:9 cinematic framing, guidance_scale 3.5, 28 steps.
-     * "flux_pro": fal-ai/flux-pro/v1.1-ultra, 8K UHD, 16:9, raw: true.
-     * "zimage": fal-ai/z-image/turbo, sub-second high-detail photorealism, sharp natural lighting, 8 steps.
+     * "flux_dev": fal-ai/flux/dev, hyper-realistic 4K UHD, Leica prime optics, vibrant saturated natural colors, rich textures, warm golden sidelight, 16:9, guidance_scale 3.5, 28 steps.
+     * "flux_pro": fal-ai/flux-pro/v1.1-ultra, ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c prime lens, rich saturated natural jewel tones, golden amber sidelight, raw micro-textures, 16:9, raw: true.
+     * "zimage": fal-ai/z-image/turbo, hyper-realistic 4K UHD, vibrant saturated natural colors, rich textures, warm golden sidelight, 8 steps.
 
 5. MODEL-SPECIFIC VIDEO DIFFUSION DIRECTIVES ("model_configs") - MANDATORY NO FALLBACKS:
    - For every scene, you MUST generate model-specific positive prompts, negative prompts, and optimal API settings inside "model_configs" for:
@@ -244,9 +244,9 @@ Return ONLY a valid JSON object matching RelaxScreenplay:
       "color_temp_kelvin": 5500,
       "visual_prompt": "A photorealistic, wide panoramic landscape view of [Landmark Name]. Symmetrical 16:9 cinematic framing, shot on a locked tripod. In background, towering jagged mountain peaks; in foreground, lush alpine meadows with wildflowers frame a tranquil glacial stream. Pristine wilderness, zero buildings, zero tourists, zero modern structures.",
       "image_model_configs": {{
-        "flux_dev": {{ "model": "fal-ai/flux/dev", "prompt": "Photorealistic wide panoramic view, 16:9 cinematic.", "aspect_ratio": "16:9", "guidance_scale": 3.5, "num_inference_steps": 28 }},
-        "flux_pro": {{ "model": "fal-ai/flux-pro/v1.1-ultra", "prompt": "A photorealistic wide panoramic landscape of [Landmark Name], locked tripod, crisp natural daylight, pristine untouched wilderness.", "aspect_ratio": "16:9", "raw": true }},
-        "zimage": {{ "model": "fal-ai/z-image/turbo", "prompt": "Stunning photorealistic panoramic landscape, 16:9 locked tripod framing, sharp natural lighting.", "aspect_ratio": "16:9", "num_inference_steps": 8 }}
+        "flux_dev": {{ "model": "fal-ai/flux/dev", "prompt": "Hyper-realistic 4K UHD landscape, 16:9 cinematic, vibrant saturated natural colors, golden amber sidelight, crystalline water, razor-sharp textures.", "aspect_ratio": "16:9", "guidance_scale": 3.5, "num_inference_steps": 28 }},
+        "flux_pro": {{ "model": "fal-ai/flux-pro/v1.1-ultra", "prompt": "Ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c prime lens, locked tripod, vibrant natural jewel tones, golden amber sidelight, deep dynamic range, raw micro-textures.", "aspect_ratio": "16:9", "raw": true }},
+        "zimage": {{ "model": "fal-ai/z-image/turbo", "prompt": "Hyper-realistic 4K UHD landscape, locked tripod, vibrant emerald foliage, golden amber sidelight, crystalline water, razor-sharp detail.", "aspect_ratio": "16:9", "num_inference_steps": 8 }}
       }},
       "motion_prompt": "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement, zero panning, zero tilting, zero zooming. Landscape structure remains 100% frozen and static. Continuous downward flowing stream water, soft slow-moving vapor mist, zero humans.",
       "motion_negative_prompt": "camera movement, camera pan, panning, tilt, zoom, morphing landscape, changing environment, hallucinating objects, appearing foliage, shifting rocks, flickering, temporal jump, sunny sky, rainbow, changing lighting, artifacts, humans, tourist, boat, buildings",

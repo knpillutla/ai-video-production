@@ -22,6 +22,7 @@ from src.studios.ambient_world.relax_models import (
     RelaxScreenplay,
 )
 from src.studios.silent_hearth.hearth_prompt import HEARTH_LANDMARK_POOL, build_hearth_prompt
+from src.studios.directorial_configs import build_default_image_model_configs
 
 
 async def generate_hearth_screenplay(
@@ -106,18 +107,10 @@ def _build_deterministic_hearth_screenplay(prompt: str, duration_seconds: float,
                     "twilight sky while gentle rhythmic ocean waves roll and surge along the shoreline. 100% open-air outdoor beach, strictly zero indoor rooms, "
                     "zero sofas, zero living room furniture, zero interior walls, zero ceilings, zero glass windows."
                 ),
-                image_model_configs={
-                    "flux_1_1_pro_ultra": {
-                        "model": "fal-ai/flux-pro/v1.1-ultra",
-                        "prompt": (
-                            f"A photorealistic, eye-level frontal view of a cozy natural stone campfire burning directly on the wet pebble beach at {prompt}. "
-                            "Symmetrical 16:9 cinematic framing, shot on a locked tripod. Warm glowing wood logs crackle under an open twilight sky while "
-                            "gentle rhythmic ocean waves surge in the background. 100% open-air outdoor beach, strictly zero indoor rooms, zero sofas, zero furniture."
-                        ),
-                        "aspect_ratio": "16:9",
-                        "raw": True,
-                    }
-                },
+                image_model_configs=build_default_image_model_configs(
+                    prompt=f"Cozy natural stone campfire burning directly on wet pebble beach at {prompt}, glowing amber wood logs, radiant sparks, deep twilight sky, rolling rhythmic ocean waves.",
+                    landmark_name=prompt,
+                ),
                 motion_prompt=(
                     "Living wallpaper cinemagraph style. Completely stationary locked frame, absolute zero camera movement. "
                     "Pebble beach, shoreline rocks, and horizon remain 100% frozen and static. Only the hypnotic glowing wood fire "

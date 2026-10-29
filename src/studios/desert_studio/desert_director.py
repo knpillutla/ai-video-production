@@ -20,6 +20,7 @@ from src.studios.screenplay_models import (
     RelaxSceneDirective,
     RelaxScreenplay,
 )
+from src.studios.directorial_configs import build_default_image_model_configs
 from src.studios.desert_studio.desert_catalog import DESERT_ARCHETYPES
 from src.studios.desert_studio.desert_prompt import DESERT_LANDMARK_POOL, build_desert_prompt
 
@@ -167,6 +168,7 @@ def _fallback_catalog_screenplay(archetype: str, prompt: Optional[str], duration
             location_hub=arch.display_name,
             shot_type="wide_panoramic_picturesque",
             visual_prompt=arch.wide_visual_prompt,
+            image_model_configs=build_default_image_model_configs(prompt=arch.wide_visual_prompt, landmark_name=arch.display_name),
             motion_prompt=arch.wide_motion_prompt,
             duration_seconds=duration,
             domain=arch.default_domain,

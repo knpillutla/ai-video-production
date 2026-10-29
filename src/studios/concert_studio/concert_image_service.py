@@ -77,11 +77,11 @@ def _build_lead_character_prompt(storyboard_data: dict[str, Any], raw_prompt: st
     lighting_env = f"{v_preset.lighting_environment} ({v_preset.time_of_day}), pristine optical clarity, zero artificial yellow haze"
     ctx = f" {raw_prompt.strip()}." if raw_prompt and len(raw_prompt.strip()) > 30 else ""
     return (
-        f"Wide-angle eye-level 4K broadcast concert stage master shot of {title_role}, {trigger_words}, {physique}, "
+        f"Hyper-realistic 4K UHD concert stage master shot shot on Hasselblad H6D-100c prime lens of {title_role}, {trigger_words}, {physique}, "
         f"{posture_action}. {pronoun} wears an attractive, stylish, and elegant {outfit}, "
         f"adorned with {acc}. Dignified non-exposing attire (zero cleavage, covered chest, covered midriff, covered waist and torso). "
         f"{flank_ensemble}. {stage_env} {lighting_env}.{ctx} "
-        f"Wide-angle eye-level horizontal framing showing lead performers together on stage, 8k resolution."
+        f"Wide-angle eye-level framing, vibrant saturated colors, warm golden amber lighting, razor-sharp micro-textures, 8k resolution."
     )
 
 

@@ -35,6 +35,18 @@ def _file_url(f: Path) -> str:
         return f"/storage/{p_str.split('/storage/', 1)[1]}?t={mtime}" if "/storage/" in p_str else f"/storage/{f.name}?t={mtime}"
 
 
+@router.post("/stages/{stage_name}", response_model=LocalProduceResponse, status_code=status.HTTP_200_OK)
+async def execute_music_video_stage(stage_name: str, req: LocalProduceRequest):
+    """Execute a specific music video stage (script, photos, audio, motion, master)."""
+    st = (stage_name or "").strip().lower()
+    req.script_only = st in ("script", "story", "screenplay")
+    req.photos_only = st in ("photos", "keyframes")
+    req.audio_only = st in ("audio", "bgm")
+    req.motion_only = st == "motion"
+    req.master_only = st == "master"
+    return await produce_music_video(req)
+
+
 @router.post("/produce", response_model=LocalProduceResponse, status_code=status.HTTP_200_OK)
 async def produce_music_video(req: LocalProduceRequest):
     """Synthesize broadcast 4K music video with independent storyboards and lyrics."""

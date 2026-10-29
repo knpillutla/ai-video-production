@@ -42,6 +42,9 @@ ZEN DIRECTORIAL RULES & CINEMATOGRAPHY:
    - Temple verandas, raked gravel patterns, granite boulders, and stone lanterns remain 100% frozen, rigid, and static.
    - Animate ONLY subtle micro-ripples across the glassy water surface and gentle pine needle whispers in the faint morning breeze.
    - Domain: "landscape_solid" (gravel courtyard) or "water_fluid" (lotus pond / tsukubai).
+
+4. 4K HYPER-REALISTIC OPTICS & NATURAL HARMONY (Z-IMAGE & FLUX):
+   - Mandate Hasselblad H6D-100c prime lens framing, velvety emerald moss mounds, dark honeyed cedar timber grain, pristine raked white gravel ripples, glowing dawn caustics on still pond water, and razor-sharp granite lantern textures. Strictly prohibit flat or desaturated visuals.
 """
 
 

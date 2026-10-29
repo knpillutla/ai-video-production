@@ -29,8 +29,7 @@ class MultiTenantStorageService:
         self._ensure_root()
 
     def _ensure_root(self) -> None:
-        if self.backend == "local":
-            self.root_dir.mkdir(parents=True, exist_ok=True)
+        if self.backend == "local": self.root_dir.mkdir(parents=True, exist_ok=True)
 
     def get_user_container_path(self, user_id: str) -> Path:
         """Return root path for a user's isolated container."""
@@ -39,69 +38,44 @@ class MultiTenantStorageService:
             from uuid import UUID
             u = repo.users.get(UUID(str(user_id))) if str(user_id).count("-") == 4 else repo.get_user_by_email(str(user_id))
             if u and getattr(u, "storage_container_name", None):
-                container_name = sanitize_container_name(u.storage_container_name)
-                container_path = self.root_dir / container_name
-                container_path.mkdir(parents=True, exist_ok=True)
-                return container_path
+                p = self.root_dir / sanitize_container_name(u.storage_container_name)
+                p.mkdir(parents=True, exist_ok=True)
+                return p
         except Exception:
             pass
-        container_name = sanitize_container_name(user_id)
-        container_path = self.root_dir / container_name
-        container_path.mkdir(parents=True, exist_ok=True)
-        return container_path
+        p = self.root_dir / sanitize_container_name(user_id)
+        p.mkdir(parents=True, exist_ok=True)
+        return p
 
     def get_creative_vault_path(self, user_id: str, show_slug: str) -> Path:
-        """Return path for a user's network universe (unified to networks/{network})."""
         clean_slug = re.sub(r"[^a-zA-Z0-9_-]", "_", str(show_slug).lower()).strip("_") or "default_network"
-        clean_slug = re.sub(r"_+", "_", clean_slug)[:64]
-        return self.get_network_path(user_id, clean_slug)
+        return self.get_network_path(user_id, re.sub(r"_+", "_", clean_slug)[:64])
 
     def get_character_path(self, user_id: str, show_slug: str, character_id: str) -> Path:
-        """Return path for a character's IP assets within a network."""
-        base = self.get_network_path(user_id, show_slug)
-        char_path = base / "characters" / character_id
-        char_path.mkdir(parents=True, exist_ok=True)
-        return char_path
+        p = self.get_network_path(user_id, show_slug) / "characters" / character_id
+        p.mkdir(parents=True, exist_ok=True)
+        return p
 
-    def get_episode_path(
-        self,
-        user_id: str,
-        show_slug: str,
-        episode_id: str,
-        format_slug: str = "general",
-        production_name: str | None = None,
-    ) -> Path:
-        """Return path for an episode organized under networks/{network}/{format}/{title}/{episode}."""
-        clean_ep = str(episode_id).lower()
-        if not clean_ep.startswith("ep-"):
-            clean_ep = f"ep-{int(clean_ep):03d}" if clean_ep.isdigit() else clean_ep
-        return self.get_channel_format_production_episode_path(
-            user_id=user_id,
-            channel_id=show_slug,
-            format_slug=format_slug,
-            production_name=production_name or show_slug,
-            episode_id=clean_ep,
-        )
+    def get_episode_path(self, user_id: str, show_slug: str, episode_id: str, format_slug: str = "general", production_name: str | None = None) -> Path:
+        clean_ep = str(episode_id).lower().strip()
+        m = re.match(r"^ep[-_]?(\d+)$", clean_ep)
+        clean_ep = f"ep-{int(m.group(1)):03d}" if m else (f"ep-{int(clean_ep):03d}" if clean_ep.isdigit() else clean_ep)
+        return self.get_channel_format_production_episode_path(user_id=user_id, channel_id=show_slug, format_slug=format_slug, production_name=production_name or show_slug, episode_id=clean_ep)
 
     def get_network_path(self, user_id: str, network_id: str) -> Path:
-        """Return path for a user's network under networks/{network}."""
         clean_net = re.sub(r"[^a-zA-Z0-9_-]", "_", str(network_id).lower()).strip("_") or "default_network"
-        base = self.get_user_container_path(user_id)
-        net_path = base / "networks" / clean_net
-        net_path.mkdir(parents=True, exist_ok=True)
-        return net_path
+        p = self.get_user_container_path(user_id) / "networks" / clean_net
+        p.mkdir(parents=True, exist_ok=True)
+        return p
 
     def get_channel_path(self, user_id: str, channel_id: str) -> Path:
-        """Alias for get_network_path."""
         return self.get_network_path(user_id, channel_id)
 
     def get_channel_episode_path(self, user_id: str, channel_id: str, episode_id: str) -> Path:
-        """Return path for an episode within a user's network."""
         clean_ep = re.sub(r"[^a-zA-Z0-9_-]", "_", str(episode_id).lower()).strip("_") or "ep_001"
-        chan_path = self.get_network_path(user_id, channel_id)
-        ep_path = chan_path / clean_ep
-        ep_path.mkdir(parents=True, exist_ok=True)
-        return ep_path
+        p = self.get_network_path(user_id, channel_id) / clean_ep
+        p.mkdir(parents=True, exist_ok=True)
+        return p
 
     def get_global_assets_path(self, user_id: str, category: str | None = None) -> Path:
         """Return path for universal global assets shared across all channels (storage/user/assets/{category})."""
@@ -155,8 +129,17 @@ class MultiTenantStorageService:
         if channel_id:
             search_roots.append(self.get_network_path(user_id, channel_id))
             search_roots.append(user_root / "channels" / channel_id)
+            for fb in ("knpillutla@gmail.com", "user_krishna_01"):
+                if fb != user_id:
+                    search_roots.extend([self.get_network_path(fb, channel_id), self.get_user_container_path(fb) / "channels" / channel_id])
+            search_roots.extend([self.root_dir / "networks" / channel_id, self.root_dir / "channels" / channel_id])
         else:
             search_roots.extend([user_root / "networks", user_root / "channels"])
+            for fb in ("knpillutla@gmail.com", "user_krishna_01"):
+                if fb != user_id:
+                    fb_root = self.get_user_container_path(fb)
+                    search_roots.extend([fb_root / "networks", fb_root / "channels"])
+            search_roots.extend([self.root_dir / "networks", self.root_dir / "channels"])
 
         clean_fmt = re.sub(r"[^a-zA-Z0-9_-]", "_", str(format_slug).lower()).strip("_") if format_slug else None
         if clean_fmt:
@@ -166,11 +149,17 @@ class MultiTenantStorageService:
                     break
 
         if channel_id and clean_fmt and production_name:
-            exact_dir = self.get_channel_format_production_episode_path(
-                user_id, channel_id, clean_fmt, production_name, episode_id
-            )
-            if exact_dir.exists() and exact_dir.is_dir():
-                return exact_dir
+            for uid in [user_id, "knpillutla@gmail.com", "user_krishna_01"]:
+                exact_dir = self.get_channel_format_production_episode_path(
+                    uid, channel_id, clean_fmt, production_name, episode_id
+                )
+                if exact_dir.exists() and exact_dir.is_dir():
+                    has_content = any(
+                        (exact_dir / f).exists()
+                        for f in ("raw_gemini_story.json", "raw_gemini_screenplay.json", "screenplay.json", "storyboard.json", "spoken_narration.mp3")
+                    ) or any(exact_dir.glob("keyframe_p*.jpg")) or any(exact_dir.glob("motion_p*.mp4"))
+                    if has_content:
+                        return exact_dir
 
         matches = []
         for root in search_roots:
@@ -183,9 +172,23 @@ class MultiTenantStorageService:
             if flat_candidate_clean.exists() and flat_candidate_clean.is_dir() and flat_candidate_clean != flat_candidate:
                 matches.append(flat_candidate_clean)
             try:
-                for sub in root.rglob("*"):
-                    if sub.is_dir() and sub.name.lower() in (episode_id.lower(), clean_ep):
-                        if sub not in matches:
+                # Fast path: check standard 1-level, 2-level, and 3-level directory depths
+                for pattern in (
+                    f"*/{clean_ep}",
+                    f"*/*/{clean_ep}",
+                    f"*/{episode_id}",
+                    f"*/*/{episode_id}",
+                    f"*/{clean_ep.upper()}",
+                    f"*/*/{clean_ep.upper()}",
+                ):
+                    for sub in root.glob(pattern):
+                        if sub.is_dir() and sub not in matches:
+                            matches.append(sub)
+
+                # Fallback to targeted rglob only if no structural matches found
+                if not matches:
+                    for sub in root.rglob(f"{clean_ep}"):
+                        if sub.is_dir() and sub not in matches:
                             matches.append(sub)
             except Exception:
                 pass
@@ -222,6 +225,8 @@ class MultiTenantStorageService:
                 pass
             if any(p.glob("motion_p*.mp4")): score += 100
             if any(p.glob("keyframe_p*.jpg")): score += 50
+            if (p / "raw_gemini_screenplay.json").exists(): score += 300
+            if (p / "raw_gemini_story.json").exists(): score += 250
             if (p / "screenplay.json").exists(): score += 10
             if (p / "episode_manifest.json").exists(): score += 5
             if (p / "user_inputs.json").exists(): score += 2
@@ -252,7 +257,6 @@ class MultiTenantStorageService:
         return ep_path
 
     async def save_json(self, file_path: Path, data: dict[str, Any]) -> None:
-        """Atomically persist JSON metadata."""
         file_path.parent.mkdir(parents=True, exist_ok=True)
         temp_file = file_path.with_suffix(".tmp")
         with open(temp_file, "w", encoding="utf-8") as f:
@@ -260,14 +264,12 @@ class MultiTenantStorageService:
         temp_file.replace(file_path)
 
     async def load_json(self, file_path: Path) -> dict[str, Any] | None:
-        """Load and parse JSON metadata."""
         if not file_path.exists():
             return None
         with open(file_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
     async def generate_signed_url(self, user_id: str, relative_blob_path: str) -> str:
-        """Generate a short-lived 15-minute SAS or Signed URL depending on active storage backend."""
         container_name = sanitize_container_name(user_id)
         if self.backend == "azure" and settings.storage.azure_storage_connection_string:
             return f"https://mystorage.blob.core.windows.net/{container_name}/{relative_blob_path}?se=mock_sas_token"
@@ -277,7 +279,6 @@ class MultiTenantStorageService:
         return f"/api/vault/stream/{container_name}/{relative_blob_path}"
 
     async def generate_sas_url(self, user_id: str, relative_blob_path: str) -> str:
-        """Backwards-compatible alias for generate_signed_url."""
         return await self.generate_signed_url(user_id, relative_blob_path)
 
 

@@ -70,7 +70,6 @@ async def dispatch_studio_director(
         **extra_kwargs,
     )
 
-
     # 0. Dedicated Blue-Chip Documentary & Science Studio Dispatch
     is_science = "science" in genre_lower or "science" in sub_lower or "science" in arch_lower
     if "doc" in genre_lower or "documentary" in ch_lower or "doc" in sub_lower or is_science or "nations" in genre_lower:
@@ -118,7 +117,7 @@ async def dispatch_studio_director(
                 motion_prompt=s.motion_prompt,
                 motion_negative_prompt=getattr(s, "motion_negative_prompt", None) or "rapid cuts, chaotic movement, jerky shake, disorienting pans",
                 model_configs=getattr(s, "model_configs", None) or {},
-                image_model_configs=getattr(s, "image_model_configs", None) or {},
+                image_model_configs=getattr(s, "image_model_configs", None) or (__import__("src.studios.directorial_configs", fromlist=["build_default_image_model_configs"]).build_default_image_model_configs(s.visual_prompt, getattr(s, "location_hub", "Scene") or "Scene") if getattr(s, "visual_prompt", None) else {}),
                 domain=getattr(s, "motion_domain", "landscape_solid"),
                 motion_type=getattr(s, "motion_type", "ken_burns"),
                 recommended_model="h3_max" if getattr(s, "motion_type", "") in ("ai_diffusion", "diffusion", "neural") else getattr(s, "recommended_model", "local_drone"),
@@ -135,6 +134,11 @@ async def dispatch_studio_director(
                 origin_name=getattr(s, "origin_name", None), destination_name=getattr(s, "destination_name", None),
                 origin_coords=getattr(s, "origin_coords", None), destination_coords=getattr(s, "destination_coords", None),
                 distance_local=getattr(s, "distance_local", None), transit_mode=getattr(s, "transit_mode", "walk") or "walk",
+                chapter_index=getattr(s, "chapter_index", None), is_chapter_head=getattr(s, "is_chapter_head", True),
+                chapter_title=getattr(s, "chapter_title", None), chapter_subtitle=getattr(s, "chapter_subtitle", None),
+                chapter_stats=getattr(s, "chapter_stats", None), fact_badge=getattr(s, "fact_badge", None),
+                secondary_visual_prompt=getattr(s, "secondary_visual_prompt", None),
+                secondary_motion_prompt=getattr(s, "secondary_motion_prompt", None),
             )
             for idx, s in enumerate(non_summary_scenes)
         ]

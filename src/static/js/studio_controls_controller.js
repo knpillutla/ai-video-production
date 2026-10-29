@@ -9,13 +9,11 @@ function persistCurrentEpisodeInputs(patch) {
   const epId = ep.id || ep.episode_id;
   if (!epId) return;
   Object.assign(ep, patch);
-  if (patch.pipeline_strategy) { ep.pipelineStrategy = patch.pipeline_strategy; ep.pipeline_strategy = patch.pipeline_strategy; }
-  if (patch.execution_mode) { ep.executionMode = patch.execution_mode; ep.execution_mode = patch.execution_mode; }
+  if (patch.pipeline_strategy) ep.pipelineStrategy = ep.pipeline_strategy = patch.pipeline_strategy;
+  if (patch.execution_mode) ep.executionMode = ep.execution_mode = patch.execution_mode;
   if (ep.user_inputs) Object.assign(ep.user_inputs, patch);
   const ch = ep.channelId || ep.channel_id || ((typeof selectedStudioChannel !== "undefined" && selectedStudioChannel !== "all") ? selectedStudioChannel : "");
-  const fmt = ep.format || ep.format_slug || "";
-  const prod = ep.production_name || "";
-  const user = (typeof currentUser !== "undefined" && currentUser.email) ? currentUser.email : "knpillutla@gmail.com";
+  const fmt = ep.format || ep.format_slug || "", prod = ep.production_name || "", user = currentUser?.email || "knpillutla@gmail.com";
   fetch(`/api/production/episodes/${encodeURIComponent(epId)}/update-inputs?channel_id=${encodeURIComponent(ch)}&format=${encodeURIComponent(fmt)}&production_name=${encodeURIComponent(prod)}&user_id=${encodeURIComponent(user)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -25,11 +23,10 @@ function persistCurrentEpisodeInputs(patch) {
 
 function setExecutionMode(mode, skipPersist = false) {
   activeExecutionMode = mode;
-  document.getElementById("btn-exec-test")?.classList.toggle("active", mode === "test");
-  document.getElementById("btn-exec-prod")?.classList.toggle("active", mode === "prod");
-  document.getElementById("exec-options-test")?.classList.toggle("hidden", mode !== "test");
-  document.getElementById("exec-options-prod")?.classList.toggle("hidden", mode !== "prod");
-
+  ["test", "prod"].forEach(m => {
+    document.getElementById(`btn-exec-${m}`)?.classList.toggle("active", mode === m);
+    document.getElementById(`exec-options-${m}`)?.classList.toggle("hidden", mode !== m);
+  });
   const shotsLabel = activeShotsCount === -1 ? "Auto" : `${activeShotsCount} Shot${activeShotsCount > 1 ? 's' : ''}`;
   const btnProduceText = document.getElementById("btn-produce-text");
   if (btnProduceText) {
@@ -43,20 +40,15 @@ function setExecutionMode(mode, skipPersist = false) {
   calculateLiveCostEstimate();
 
   if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) {
-    currentActiveInspectorEpisode.executionMode = mode;
-    currentActiveInspectorEpisode.execution_mode = mode;
-    if (!currentActiveInspectorEpisode.imageModel) {
-      currentActiveInspectorEpisode.imageModel = "zimage";
-      currentActiveInspectorEpisode.image_model = "zimage";
-    }
+    currentActiveInspectorEpisode.executionMode = currentActiveInspectorEpisode.execution_mode = mode;
+    if (!currentActiveInspectorEpisode.imageModel) currentActiveInspectorEpisode.imageModel = currentActiveInspectorEpisode.image_model = "zimage";
   }
   if (!skipPersist) persistCurrentEpisodeInputs({ execution_mode: mode });
 }
 
 function setPipelineExecutionMode(strat, skipPersist = false) {
   activePipelineStrategy = strat;
-  document.getElementById("btn-pipe-auto")?.classList.toggle("active", strat === "auto");
-  document.getElementById("btn-pipe-manual")?.classList.toggle("active", strat === "manual");
+  ["auto", "manual"].forEach(s => document.getElementById(`btn-pipe-${s}`)?.classList.toggle("active", strat === s));
   const btnProduceText = document.getElementById("btn-produce-text");
   if (btnProduceText) {
     btnProduceText.textContent = strat === "auto"
@@ -65,8 +57,7 @@ function setPipelineExecutionMode(strat, skipPersist = false) {
   }
   document.getElementById("studio-stage-controls-dock")?.classList.toggle("hidden", strat === "auto");
   if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) {
-    currentActiveInspectorEpisode.pipelineStrategy = strat;
-    currentActiveInspectorEpisode.pipeline_strategy = strat;
+    currentActiveInspectorEpisode.pipelineStrategy = currentActiveInspectorEpisode.pipeline_strategy = strat;
     if (typeof updateStageGateDock === "function") updateStageGateDock(currentActiveInspectorEpisode);
   }
   if (!skipPersist) persistCurrentEpisodeInputs({ pipeline_strategy: strat });
@@ -99,6 +90,7 @@ function setTestShots(val) {
 
 function parseTestDuration(val, isTravel) {
   const v = String(val || ""), num = parseFloat(v) || 0.0;
+  if (v === "-1" || v === "auto" || v === "full_story") return { durSec: -1, lpHours: 0.0 };
   if (v === "custom") {
     const custNum = Math.max(0.1, parseFloat(document.getElementById("studio-custom-minutes-input")?.value || "2") || 2);
     return { durSec: custNum * 60.0, lpHours: 0.0 };
@@ -107,7 +99,7 @@ function parseTestDuration(val, isTravel) {
   if (v === "0.0167" || v === "60s" || v === "1m" || (num > 0.015 && num < 0.020)) return { durSec: 60.0, lpHours: 0.0167 };
   if (v === "0.033" || v === "120s" || v === "2m" || (num > 0.030 && num < 0.040)) return { durSec: 120.0, lpHours: 0.033 };
   if (num >= 1.0) return { durSec: Math.round(num * 3600), lpHours: num };
-  if (isTravel) return { durSec: 120.0, lpHours: 0.033 };
+  if (isTravel) return { durSec: -1, lpHours: 0.0 };
   return { durSec: (activeShotsCount || 1) * 5.0, lpHours: 0.0 };
 }
 
@@ -117,6 +109,17 @@ function setBroadcastHours(val) {
   activeBroadcastHours = parsed.lpHours;
   activeTestDuration = parsed.durSec;
   document.getElementById("studio-custom-duration-container")?.classList.toggle("hidden", val !== "custom");
+  const durToPersist = parsed.durSec;
+  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) {
+    currentActiveInspectorEpisode.durationSeconds = durToPersist;
+    currentActiveInspectorEpisode.duration_seconds = durToPersist;
+    persistCurrentEpisodeInputs({
+      duration_seconds: durToPersist,
+      duration_secs: durToPersist,
+      requested_duration_seconds: durToPersist,
+      test_stretch: val,
+    });
+  }
   calculateLiveCostEstimate();
 }
 
@@ -125,7 +128,7 @@ function updateDurationOptionsForNiche(groupKey) {
   const select = document.getElementById("studio-stretch-hours");
   if (!select) return;
   const prevVal = select.value;
-  let opts = (currentNicheGroup === "relaxation") ? `<option value="90s">Short Master (90s)</option>` : "";
+  let opts = (currentNicheGroup === "relaxation") ? `<option value="90s">Short Master (90s)</option>` : `<option value="-1">⚡ Auto (Full Story Duration)</option>`;
   for (let m = (currentNicheGroup === "relaxation" ? 2 : 1); m <= 15; m++) opts += `<option value="${m}m">${m} min (${m * 60}s)</option>`;
   if (currentNicheGroup === "relaxation") {
     for (let h = 1; h <= 8; h++) opts += `<option value="${h}h" ${h === 3 && !prevVal ? 'selected' : ''}>${h === 3 ? "3 Hours (4K Broadcast)" : (h === 8 ? "8 Hours (Overnight)" : `${h} Hour${h > 1 ? 's' : ''} Stream`)}</option>`;
@@ -137,48 +140,65 @@ function updateDurationOptionsForNiche(groupKey) {
   calculateLiveCostEstimate();
 }
 
+function parseDurationVal(val) {
+  const v = String(val || "").trim();
+  if (v === "-1" || v === "auto" || v === "full_story") return -1;
+  if (v === "custom") {
+    const custNum = Math.max(0.1, parseFloat(document.getElementById("studio-custom-minutes-input")?.value || "2") || 2);
+    return custNum * 60.0;
+  }
+  if (v.endsWith("h")) return 90.0;
+  if (v.endsWith("m")) return (parseInt(v, 10) || 2) * 60.0;
+  if (v === "90s" || v === "0") return 90.0;
+  const num = parseFloat(v) || 2.0;
+  return num <= 8 ? 90.0 : num * 60.0;
+}
+
 function onStudioDurationDropdownChange(val) {
   document.getElementById("studio-custom-duration-container")?.classList.toggle("hidden", val !== "custom");
+  const durToPersist = parseDurationVal(val);
+  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) {
+    currentActiveInspectorEpisode.durationSeconds = durToPersist;
+    currentActiveInspectorEpisode.duration_seconds = durToPersist;
+    persistCurrentEpisodeInputs({
+      duration_seconds: durToPersist,
+      duration_secs: durToPersist,
+      requested_duration_seconds: durToPersist,
+      stretch_hours: val,
+    });
+  }
   calculateLiveCostEstimate();
 }
 
 function onCustomMinutesInput(val) {
   const mins = Math.max(0.1, parseFloat(val) || 2);
   activeTestDuration = mins * 60.0;
+  if (typeof currentActiveInspectorEpisode !== "undefined" && currentActiveInspectorEpisode) {
+    currentActiveInspectorEpisode.durationSeconds = mins * 60.0;
+    persistCurrentEpisodeInputs({
+      duration_seconds: mins * 60.0,
+      duration_secs: mins * 60.0,
+      requested_duration_seconds: mins * 60.0,
+    });
+  }
   calculateLiveCostEstimate();
 }
 
 function getEffectiveProductionDuration() {
   const isTravel = (typeof isTravelOrSkylineChannel === "function") && isTravelOrSkylineChannel();
-  const isTest = (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test");
-
-  if (isTest) {
-    const testStretchEl = document.getElementById("studio-test-stretch");
-    const testVal = testStretchEl?.value || (isTravel ? "0.033" : "0");
-    if (testVal === "custom") {
-      const custNum = Math.max(0.1, parseFloat(document.getElementById("studio-custom-minutes-input")?.value || "2") || 2);
-      return { durSec: custNum * 60.0, lpHours: 0.0 };
-    }
-    return parseTestDuration(testVal, isTravel);
-  }
-
-  const durVal = document.getElementById("studio-stretch-hours")?.value || "2m";
-  let resolvedDur = { durSec: 120.0, lpHours: 0.0 };
-
-  if (durVal === "custom") {
+  const testVal = document.getElementById("studio-test-stretch")?.value || "";
+  const durVal = document.getElementById("studio-stretch-hours")?.value || "";
+  if (testVal === "-1" || durVal === "-1" || testVal === "auto" || durVal === "auto") return { durSec: -1, lpHours: 0.0 };
+  const isCust = testVal === "custom" || durVal === "custom";
+  if (isCust) {
     const custNum = Math.max(0.1, parseFloat(document.getElementById("studio-custom-minutes-input")?.value || "2") || 2);
-    resolvedDur = { durSec: custNum * 60.0, lpHours: (custNum >= 60 ? custNum / 60.0 : 0.0) };
-  } else if (durVal.endsWith("h")) {
-    resolvedDur = { durSec: 90.0, lpHours: parseFloat(durVal) || 3.0 };
-  } else if (durVal.endsWith("m")) {
-    resolvedDur = { durSec: (parseInt(durVal, 10) || 2) * 60.0, lpHours: 0.0 };
-  } else if (durVal === "90s" || durVal === "0") {
-    resolvedDur = { durSec: 90.0, lpHours: 0.0 };
-  } else {
-    const num = parseFloat(durVal) || 2.0;
-    resolvedDur = num <= 8 ? { durSec: 90.0, lpHours: num } : { durSec: num * 60.0, lpHours: 0.0 };
+    return { durSec: custNum * 60.0, lpHours: (custNum >= 60 ? custNum / 60.0 : 0.0) };
   }
-  return resolvedDur;
+  const isTest = (typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test");
+  if (isTest) return parseTestDuration(testVal || (isTravel ? "-1" : "0"), isTravel);
+  const durSec = parseDurationVal(durVal);
+  const lpHours = durVal.endsWith("h") ? (parseFloat(durVal) || 3.0) : 0.0;
+  return { durSec, lpHours };
 }
 
 function isTravelOrSkylineChannel() {
@@ -187,12 +207,9 @@ function isTravelOrSkylineChannel() {
   const subgVal = (document.getElementById("studio-subgenre-selector")?.value || "").toLowerCase();
   const archVal = (document.getElementById("studio-archetype-selector")?.value || "").toLowerCase();
   const fmtVal = (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "").toLowerCase();
-  return (
-    selChan.includes("skyline") || genreVal.startsWith("travel") || genreVal === "documentary" ||
-    genreVal.includes("doc_places") || subgVal.includes("doc_places") || subgVal.includes("tour") ||
-    archVal.includes("tour") || archVal.includes("itinerary") || fmtVal === "documentary" || fmtVal === "walking_tour" ||
-    (typeof currentChannel !== "undefined" && (currentChannel?.genre?.startsWith("travel") || currentChannel?.genre === "documentary"))
-  );
+  const chGenre = typeof currentChannel !== "undefined" ? (currentChannel?.genre || "") : "";
+  const matchStr = `${selChan} ${genreVal} ${subgVal} ${archVal} ${fmtVal} ${chGenre}`.toLowerCase();
+  return /skyline|travel|documentary|doc_places|tour|itinerary|walking_tour/.test(matchStr);
 }
 
 function syncTravelShotUI() {
@@ -207,19 +224,14 @@ function syncTravelShotUI() {
   if (isRelax) {
     if (testShotsEl) { testShotsEl.style.display = ""; testShotsEl.value = "1"; testShotsEl.disabled = true; activeShotsCount = 1; }
     if (prodShotsEl) { prodShotsEl.style.display = ""; prodShotsEl.value = "1"; prodShotsEl.disabled = true; }
-    if (testStretchEl) { testStretchEl.disabled = false; }
-    if (prodStretchEl) { prodStretchEl.disabled = false; }
   } else if (isDocOrTour) {
     if (testShotsEl) { testShotsEl.style.display = "none"; testShotsEl.disabled = false; testShotsEl.value = "-1"; activeShotsCount = -1; }
     if (prodShotsEl) { prodShotsEl.style.display = "none"; prodShotsEl.disabled = false; prodShotsEl.value = "-1"; }
-    if (testStretchEl) testStretchEl.disabled = false;
-    if (prodStretchEl) prodStretchEl.disabled = false;
   } else {
-    if (testShotsEl) { testShotsEl.style.display = ""; testShotsEl.disabled = false; }
-    if (prodShotsEl) { prodShotsEl.style.display = ""; prodShotsEl.disabled = false; }
-    if (testStretchEl) testStretchEl.disabled = false;
-    if (prodStretchEl) prodStretchEl.disabled = false;
+    [testShotsEl, prodShotsEl].forEach(el => { if (el) { el.style.display = ""; el.disabled = false; } });
   }
+  if (testStretchEl) testStretchEl.disabled = false;
+  if (prodStretchEl) prodStretchEl.disabled = false;
 
   if (testStretchEl?.parentElement) testStretchEl.parentElement.className = isDocOrTour ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-2 gap-1.5";
   if (prodStretchEl?.parentElement) prodStretchEl.parentElement.className = isDocOrTour ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-2 gap-1.5";
@@ -244,32 +256,26 @@ function calculateLiveCostEstimate() {
   const isTravel = isTravelOrSkylineChannel();
   const effective = (typeof getEffectiveProductionDuration === "function") ? getEffectiveProductionDuration() : { durSec: 120, lpHours: 0.0 };
   const durSec = effective.durSec;
-  const shots = isTravel ? Math.max(2, Math.round(durSec / 12.5)) : (activeExecutionMode === "test" ? activeShotsCount : parseInt(document.getElementById("studio-prod-shots")?.value || "1", 10));
+  const isAutoDur = durSec <= 0 || durSec === -1;
+  const shots = isTravel ? (isAutoDur ? 10 : Math.max(2, Math.round(durSec / 12.5))) : (activeExecutionMode === "test" ? activeShotsCount : parseInt(document.getElementById("studio-prod-shots")?.value || "1", 10));
   const durSelectVal = document.getElementById("studio-stretch-hours")?.value || "3h";
   const testSelectVal = document.getElementById("studio-test-stretch")?.value || "0.0167";
 
-  let baseCost = shots * 0.04, durLabel = "";
+  let baseCost = (shots > 0 ? shots : 8) * 0.04, durLabel = "";
   if (isTravel) {
-    const pace = shots > 0 ? Math.round(durSec / shots) : 12;
-    durLabel = ` • ${durSec}s (${shots} Landmarks @ ${pace}s)`;
+    durLabel = isAutoDur ? " • Auto (Full Story from Narration)" : ` • ${durSec}s (${shots} Landmarks)`;
   } else if (activeExecutionMode === "test") {
-    if (testSelectVal === "custom") {
-      const custNum = parseFloat(document.getElementById("studio-custom-minutes-input")?.value || "2") || 2;
-      durLabel = ` (${custNum}m Custom Preview)`;
-    } else {
-      durLabel = activeBroadcastHours >= 1.0 ? ` + ${activeBroadcastHours}h 4K Broadcast` : (activeTestDuration > 10 ? ` (${activeTestDuration}s Preview)` : " (Draft)");
-    }
+    durLabel = (testSelectVal === "custom") ? ` (${parseFloat(document.getElementById("studio-custom-minutes-input")?.value || "2") || 2}m Custom Preview)` : (activeBroadcastHours >= 1.0 ? ` + ${activeBroadcastHours}h 4K Broadcast` : (activeTestDuration <= 0 ? " (Auto Full Story)" : (activeTestDuration > 10 ? ` (${activeTestDuration}s Preview)` : " (Draft)")));
   } else if (durSelectVal === "custom") {
-    const custNum = parseFloat(document.getElementById("studio-custom-minutes-input")?.value || "2") || 2;
-    durLabel = ` • ${custNum} min Master`;
+    durLabel = ` • ${parseFloat(document.getElementById("studio-custom-minutes-input")?.value || "2") || 2} min Master`;
+  } else if (durSelectVal === "-1" || durSelectVal === "auto") {
+    durLabel = " (Auto Full Story Duration)";
   } else if (durSelectVal.endsWith("h")) {
     durLabel = ` + ${parseFloat(durSelectVal)}h 4K Broadcast`;
   } else if (durSelectVal.endsWith("m")) {
     durLabel = ` • ${parseInt(durSelectVal, 10)} min Master`;
-  } else if (durSelectVal === "90s" || durSelectVal === "0") {
-    durLabel = " (Short Master 90s)";
   } else {
-    durLabel = ` • ${durSelectVal}`;
+    durLabel = (durSelectVal === "90s" || durSelectVal === "0") ? " (Short Master 90s)" : ` • ${durSelectVal}`;
   }
 
   if (badge) badge.textContent = `$${baseCost.toFixed(2)} USD (${shots} Shot${shots > 1 ? 's' : ''}${durLabel})`;

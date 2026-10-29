@@ -19,6 +19,7 @@ from src.studios.ambient_world.relax_models import (
     RelaxSceneDirective,
     RelaxScreenplay,
 )
+from src.studios.directorial_configs import build_default_image_model_configs
 from src.studios.zen_studio.zen_prompt import ZEN_LANDMARK_POOL, build_zen_prompt
 
 
@@ -31,6 +32,7 @@ class ZenScenePrompt(BaseModel):
     duration_seconds: float = 30.0
     domain: str = "landscape_solid"
     location_hub: str = ""
+    image_model_configs: dict = Field(default_factory=dict)
 
 
 class ZenStoryboard(BaseModel):
@@ -168,6 +170,7 @@ def generate_zen_storyboard(
 ) -> ZenStoryboard:
     """Deterministic fallback returning ZenStoryboard."""
     num_shots = max(1, int(num_shots))
+    zen_prompt = "Hyper-realistic 4K UHD photograph of a sacred tranquil Japanese Zen garden at dawn shot on Hasselblad H6D-100c, locked tripod. Velvety emerald moss mounds, dark weathered cedar timber veranda, pristine raked white gravel ripples, glowing dawn caustics on still reflection pond, and razor-sharp granite lantern textures."
     return ZenStoryboard(
         title=theme,
         theme=theme,
@@ -179,7 +182,8 @@ def generate_zen_storyboard(
             ZenScenePrompt(
                 scene_index=idx + 1,
                 perspective_type="wide_panoramic_picturesque",
-                visual_prompt="Masterpiece 4K photograph of a sacred tranquil Japanese Zen garden at dawn with raked gravel and mossy granite stones.",
+                visual_prompt=zen_prompt,
+                image_model_configs=build_default_image_model_configs(prompt=zen_prompt, landmark_name="Kyoto Zen Courtyard"),
                 motion_prompt="Fixed locked tripod camera, zero movement, morning mist slowly drifting across gravel ripples.",
                 duration_seconds=duration_seconds / num_shots,
                 domain="landscape_solid",

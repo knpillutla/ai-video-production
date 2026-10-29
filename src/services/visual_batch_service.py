@@ -18,8 +18,8 @@ from src.providers.visual.fal_kling_v3 import FalKlingV3Adapter
 from src.providers.visual.fal_wan21 import FalWan21Adapter
 from src.providers.visual.fal_zimage import FalZImageAdapter
 from src.providers.visual.google_imagen3 import GoogleImagen3Adapter
-from src.providers.visual.fal_aura_sr import FalAuraSRAdapter
-from src.services.image_4k_encoder import is_image_4k
+from src.providers.visual.fal_aura_sr import FalAuraSRAdapter; from src.services.image_4k_encoder import is_image_4k
+from src.core.step_logger import log_pipeline_step
 
 
 @dataclass
@@ -31,10 +31,7 @@ class MotionClipTask:
     negative_prompt: Optional[str] = None; model_configs: Optional[dict[str, Any]] = None
     camera_waypoints: Optional[list] = None; kinetic_micro_zones: Optional[dict] = None
     camera_movement: Optional[Any] = None; interpolation: str = "cubic"
-    is_relaxation: bool = False; secondary_image_path: Optional[Path] = None
-
-
-from src.core.step_logger import log_pipeline_step
+    is_relaxation: bool = False; secondary_image_path: Optional[Path] = None; lower_third_hud: Optional[dict] = None
 
 
 def resolve_motion_model(model: str, prompt_context: str, total_shots: int = 4) -> tuple[str, str]:
@@ -44,9 +41,7 @@ def resolve_motion_model(model: str, prompt_context: str, total_shots: int = 4) 
         return "local_drone", "Local Perspective Drone ($0.00 compute)"
     if m_clean in ("h3", "h3_max", "minimax", "hailuo", "minimax_h3", "h3-max-turbo"):
         return "h3_max", "MiniMax H3 Max Turbo (~$0.015/s subtle atmospheric motion)"
-    if m_clean in ("wan_4k", "wan_super_res", "wan_upscale", "wan-2.1-4k", "wan2.1 4k", "wan2.1-4k"):
-        return "wan_4k", "Alibaba Wan 2.1 (1080p) + AI 4K Super-Resolution"
-    if m_clean in ("wan", "wan_2_1", "wan21"):
+    if m_clean in ("wan_4k", "wan_super_res", "wan_upscale", "wan-2.1-4k", "wan2.1 4k", "wan2.1-4k", "wan", "wan_2_1", "wan21"):
         return "wan_4k", "Alibaba Wan 2.1 4K motion diffusion"
     if m_clean in ("kling_pro", "kling_v1_6_pro", "kling_v1_5_pro", "kling_1_6", "kling_1_5", "kling"):
         return "kling_pro", "Kling 1.6 Pro high-coherence video diffusion"
@@ -55,6 +50,9 @@ def resolve_motion_model(model: str, prompt_context: str, total_shots: int = 4) 
     if m_clean in ("hunyuan", "lanczos", "local_zoompan", "ken_burns", "zoompan"):
         return m_clean, f"Configuration override ({model})"
     p = prompt_context.lower()
+    from src.services.motion_tier_router import scene_has_humans
+    if scene_has_humans(p):
+        return "kling_v3", "Kling v3 4K Native high-fidelity human anatomy and locomotion"
     if any(k in p for k in ("fire", "flame", "ember", "hearth", "waterfall", "rapids", "cascade", "chimney")):
         return "kling_v3", "Kling v3 4K Native for fluid dynamics"
     return "h3_max", "MiniMax H3 Max Turbo default motion diffusion"
@@ -78,14 +76,7 @@ class VisualBatchService:
     def fal_key(self, value: Optional[str]) -> None:
         self._fal_key = value or ""
 
-    async def render_keyframes_batch(
-        self,
-        tasks: List[Tuple[str, Path, Optional[Path], int]],
-        aspect_ratio: str = "16:9",
-        force_rerun: bool = False,
-        image_model: str = "zimage",
-        enable_4k_upscale: bool = True,
-    ) -> List[Path]:
+    async def render_keyframes_batch(self, tasks: List[Tuple[str, Path, Optional[Path], int]], aspect_ratio: str = "16:9", force_rerun: bool = False, image_model: str = "zimage", enable_4k_upscale: bool = True) -> List[Path]:
         """Render batch of keyframes concurrently with disk caching and dynamic image model routing."""
         async def _process_single_keyframe(prompt: str, out_path: Path, req_file: Optional[Path], idx: int) -> Path:
             log_pipeline_step("checking keyframes", f"Shot {idx} Keyframe", "started", metadata={"file": out_path.name})
@@ -128,7 +119,13 @@ class VisualBatchService:
             log_pipeline_step("checking keyframes", f"Shot {idx} Keyframe", "completed", "keyframe created", {"file": out_path.name, "size_bytes": out_path.stat().st_size if out_path.is_file() else 0})
             return out_path
 
-        return list(await asyncio.gather(*[_process_single_keyframe(p, out, req, idx) for p, out, req, idx in tasks]))
+        sem = asyncio.Semaphore(6)
+
+        async def _bounded_kf(prompt: str, out_path: Path, req_file: Optional[Path], idx: int) -> Path:
+            async with sem:
+                return await _process_single_keyframe(prompt, out_path, req_file, idx)
+
+        return list(await asyncio.gather(*[_bounded_kf(p, out, req, idx) for p, out, req, idx in tasks]))
 
     async def render_motion_batch(
         self,
@@ -157,13 +154,13 @@ class VisualBatchService:
             if chosen_model in ("lanczos", "local_zoompan", "ken_burns", "zoompan", "local_drone", "locked_tripod", "local"):
                 raw_cfg = task.model_configs if isinstance(task.model_configs, dict) else {}
                 local_cfg = raw_cfg.get("local_drone") or raw_cfg.get("ken_burns") or {}
-                mov = local_cfg.get("movement") or task.camera_movement or task.camera_waypoints or "stay"
+                mov = local_cfg.get("movements") or local_cfg.get("movement") or task.camera_movement or task.camera_waypoints or "stay"
                 res_f = await self._render_local_fallback(
                     task.image_path, task.output_path, task.duration_seconds, movement=mov,
                     waypoints=task.camera_waypoints, kinetic_micro_zones=task.kinetic_micro_zones,
                     interpolation=task.interpolation, start_pan=local_cfg.get("start_pan", "center"),
                     start_zoom=local_cfg.get("start_zoom", "normal"), start_tilt=local_cfg.get("start_tilt", "center"),
-                    curve=local_cfg.get("curve", "cosine"),
+                    curve=local_cfg.get("curve", "cosine"), lower_third_hud=task.lower_third_hud,
                 )
                 log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip created via local perspective drone", {"file": task.output_path.name, "cost": "$0.00"})
                 return res_f
@@ -177,11 +174,15 @@ class VisualBatchService:
                 elif chosen_model in ("kling_pro", "kling"):
                     m_cfg = task.model_configs.get("kling_v1_6_pro") or task.model_configs.get("kling_pro") or task.model_configs.get("kling")
                 elif chosen_model in ("wan", "wan_2_1", "wan_4k"):
-                    m_cfg = task.model_configs.get("wan_2_1") or task.model_configs.get("wan")
+                    m_cfg = task.model_configs.get("wan_2_1") or task.model_configs.get("wan") or task.model_configs.get("ai_diffusion")
                 else:
-                    m_cfg = task.model_configs.get(chosen_model)
-                if not m_cfg:
-                    raise RuntimeError(f"Mandatory motion config for '{chosen_model}' missing from screenplay model_configs. No fallbacks allowed.")
+                    m_cfg = task.model_configs.get(chosen_model) or task.model_configs.get("ai_diffusion")
+                if not m_cfg and chosen_model in ("kling_v3", "kling_4k", "kling_v3_4k", "kling_pro", "kling"):
+                    from src.studios.directorial_configs import build_default_video_model_configs
+                    def_cfgs = build_default_video_model_configs(task.motion_prompt, task.visual_prompt)
+                    m_cfg = def_cfgs.get("kling_v3_4k") if chosen_model in ("kling_v3", "kling_4k", "kling_v3_4k") else def_cfgs.get("kling_v1_6_pro")
+                if isinstance(m_cfg, dict) and m_cfg.get("motion_prompt"):
+                    eff_prompt = str(m_cfg["motion_prompt"]).strip()
                 prompts = m_cfg.get("prompts") if isinstance(m_cfg, dict) else getattr(m_cfg, "prompts", None)
                 settings = m_cfg.get("settings") if isinstance(m_cfg, dict) else getattr(m_cfg, "settings", {})
                 if prompts:
@@ -242,15 +243,12 @@ class VisualBatchService:
 
                     if raw_diff.is_file() and raw_diff.stat().st_size > 1000:
                         from src.services.motion_hybrid_expander import expand_motion_clip_if_needed
-                        final_clip = await expand_motion_clip_if_needed(
-                            diff_clip=raw_diff, target_duration=task.duration_seconds,
-                            image_path=task.image_path, output_path=task.output_path,
-                            secondary_image_path=getattr(task, "secondary_image_path", None),
-                            motion_prompt=task.motion_prompt, visual_prompt=task.visual_prompt,
-                        )
-                        logger.info(f"ai_diffusion_motion_rendered: model={chosen_model} {task.output_path.name}")
-                        log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip created", {"file": task.output_path.name, "cost": "$0.00"})
-                        return final_clip
+                        final_clip = await expand_motion_clip_if_needed(diff_clip=raw_diff, target_duration=task.duration_seconds, image_path=task.image_path, output_path=task.output_path, secondary_image_path=getattr(task, "secondary_image_path", None), motion_prompt=task.motion_prompt, visual_prompt=task.visual_prompt)
+                        if final_clip and final_clip.is_file() and final_clip.stat().st_size > 1000:
+                            logger.info(f"ai_diffusion_motion_rendered: model={chosen_model} {task.output_path.name}")
+                            log_pipeline_step("checking motion", f"Motion Clip ({task.output_path.name})", "completed", "motion clip created", {"file": task.output_path.name, "cost": "$0.00"})
+                            return final_clip
+                        raise RuntimeError(f"Motion clip empty or missing after expansion: {task.output_path.name}")
                 except Exception as e:
                     logger.error(f"ai_diffusion_error: {e}")
                     if not task.allow_fallback:
@@ -273,7 +271,7 @@ class VisualBatchService:
 
         return list(await asyncio.gather(*[_process_single_motion(t) for t in tasks]))
 
-    async def _render_local_fallback(self, img_path: Path, out_path: Path, duration_sec: float, movement: Any = "stay", waypoints: Optional[list] = None, kinetic_micro_zones: Optional[dict] = None, interpolation: str = "cubic", start_pan: str = "center", start_zoom: str = "normal", start_tilt: str = "center", curve: str = "cosine") -> Path:
+    async def _render_local_fallback(self, img_path: Path, out_path: Path, duration_sec: float, movement: Any = "stay", waypoints: Optional[list] = None, kinetic_micro_zones: Optional[dict] = None, interpolation: str = "cubic", start_pan: str = "center", start_zoom: str = "normal", start_tilt: str = "center", curve: str = "cosine", lower_third_hud: Optional[dict] = None) -> Path:
         """Deterministic 4K CPU motion engine ($0.00 spend): pure locked default, calm drone on demand."""
         m_str = str(movement) if isinstance(movement, (list, dict)) else (movement or "")
         m_lower = m_str.lower()
@@ -281,7 +279,7 @@ class VisualBatchService:
             logger.info(f"decision_motion_fallback: 4K CPU multi-angle skyline drone for {out_path.name}")
             from src.scripts.local_perspective_multiangle_drone import render_multiangle_drone_clip
             return await render_multiangle_drone_clip(image_path=img_path, output_path=out_path, duration_seconds=duration_sec, fps=30, target_res=(3840, 2160), force_rerun=True, kinetic_micro_zones=kinetic_micro_zones)
-        choreo = "stay" if any(w in m_lower for w in ("stay", "locked", "tripod", "static", "fixed", "hold")) else movement
+        choreo = "stay" if (isinstance(movement, str) and any(w in m_lower for w in ("stay", "locked", "tripod", "static", "fixed", "hold"))) else movement
         logger.info(f"decision_motion_fallback: 4K CPU perspective drone for {out_path.name} (choreo: {choreo}, inter: {interpolation})")
         from src.scripts.local_perspective_drone import render_perspective_drone_clip
         return await render_perspective_drone_clip(
@@ -289,6 +287,7 @@ class VisualBatchService:
             fps=24, target_res=(3840, 2160), camera_movement=movement, choreography=choreo, speed_factor=1.0,
             force_rerun=True, camera_waypoints=waypoints, kinetic_micro_zones=kinetic_micro_zones,
             interpolation=interpolation, start_pan=start_pan, start_zoom=start_zoom, start_tilt=start_tilt, curve=curve,
+            lower_third_hud=lower_third_hud,
         )
 
 visual_batch_service = VisualBatchService()

@@ -10,20 +10,20 @@ def build_default_image_model_configs(prompt: str, landmark_name: str = "Landmar
     return {
         "flux_dev": {
             "model": "fal-ai/flux/dev",
-            "prompt": f"A photorealistic, symmetrical 16:9 cinematic landscape view of {landmark_name}. Shot on locked tripod. {clean_p}. Pristine natural wilderness, zero buildings, zero tourists, zero vehicles.",
+            "prompt": f"A hyper-realistic, colorful 16:9 cinematic vista of {landmark_name}. {clean_p}. Vibrant natural colors, rich textures, warm golden sidelight, crystalline atmospheric depth, pristine composition.",
             "aspect_ratio": "16:9",
             "guidance_scale": 3.5,
             "num_inference_steps": 28,
         },
         "flux_pro": {
             "model": "fal-ai/flux-pro/v1.1-ultra",
-            "prompt": f"Ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c with prime 24mm f/5.6 lens. Symmetrical 16:9 cinematic framing, shot on a locked tripod. {clean_p}. Pristine untouched wilderness, strictly zero humans, zero modern structures, zero vehicles.",
+            "prompt": f"Ultra-photorealistic 8K UHD shot on Hasselblad H6D-100c with prime 24mm f/5.6 lens. 16:9 panoramic cinematic framing. {clean_p}. Saturated natural jewel tones, rich architectural and environmental relief, deep dynamic range, raw texture, pristine clarity.",
             "aspect_ratio": "16:9",
             "raw": True,
         },
         "zimage": {
             "model": "fal-ai/z-image/turbo",
-            "prompt": f"Stunning photorealistic panoramic landscape of {landmark_name}, 16:9 locked tripod framing, {clean_p}, pristine nature, 8k, sharp focus.",
+            "prompt": f"A hyper-realistic 4K UHD panoramic vista of {landmark_name}, shot on Hasselblad H6D-100c with prime lens. {clean_p}. Vibrant saturated natural colors, sun-drenched golden amber light, rich environmental textures, deep cobalt sky, crystalline atmospheric depth, razor-sharp edge-to-edge optical clarity, 16:9.",
             "aspect_ratio": "16:9",
             "num_inference_steps": 8,
         },

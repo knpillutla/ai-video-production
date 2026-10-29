@@ -32,13 +32,17 @@ def assemble_documentary_4k_master(
     output_master: Path,
     srt_path: Optional[Path] = None,
     crf: int = 22,
+    force_rerun: bool = False,
 ) -> Path:
-    """Assemble seamless 4K 24fps documentary master with dynamic crossfades and optimized CRF 22 encoding."""
+    """Assemble seamless 4K 24fps documentary master with audio-synchronized duration and zero cutoffs."""
     out = output_master.resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    if out.is_file() and out.stat().st_size > 1000:
-        return out
+    if not force_rerun and out.is_file() and out.stat().st_size > 1000:
+        out_mtime = out.stat().st_mtime
+        is_stale = any(c.is_file() and c.stat().st_mtime > out_mtime for c in video_clips) or (audio_path.is_file() and audio_path.stat().st_mtime > out_mtime)
+        if not is_stale:
+            return out
 
     from src.services.cineloop_service import ensure_thumbnail_intro_clip
     t_intro = ensure_thumbnail_intro_clip(out.parent, crf=crf)
@@ -48,53 +52,80 @@ def assemble_documentary_4k_master(
     ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
     n = len(video_clips)
     durations = [_probe_clip_duration(c) for c in video_clips]
-    x_dur = 1.0
+    a_dur = _probe_clip_duration(audio_path) if (audio_path and audio_path.is_file()) else 0.0
+    x_dur = 0.5
 
     if n == 1:
+        c_dur = durations[0]
+        shortfall = max(0.0, a_dur - c_dur) + (1.2 if a_dur > 0 else 0.0)
+        target_dur = round(c_dur + shortfall, 2)
+        v_scale = f"[0:v]scale=3840:2160,setsar=1,fps=24"
+        if shortfall > 0.05:
+            v_scale += f",tpad=stop_mode=clone:stop_duration={shortfall:.2f}"
+        v_scale += "[v]"
+        afade_st = max(0.0, target_dur - 2.5)
         cmd = [
             ffmpeg_bin, "-y",
-            "-i", str(video_clips[0]),
-            "-i", str(audio_path),
+            "-i", str(video_clips[0]), "-i", str(audio_path),
+            "-filter_complex", f"{v_scale};[1:a]volume=1.0,apad,afade=t=out:st={afade_st:.2f}:d=2.5[aout]",
+            "-map", "[v]", "-map", "[aout]",
             "-r", "24",
             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
             "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-            "-shortest", "-movflags", "+faststart",
+            "-t", f"{target_dur:.2f}", "-movflags", "+faststart",
             str(out)
         ]
     else:
+        offsets = [0.0]
+        curr_off = max(0.1, durations[0] - x_dur)
+        for i in range(1, n - 1):
+            offsets.append(curr_off)
+            curr_off += max(0.1, durations[i] - x_dur)
+        offsets.append(curr_off)
+
+        natural_v_dur = curr_off + durations[-1]
+        shortfall = (max(0.0, a_dur - natural_v_dur) + (1.2 if a_dur > 0 else 0.0)) if a_dur <= (natural_v_dur + 20.0) else 0.0
+        final_target_dur = round(natural_v_dur + shortfall, 2)
+
         inputs = []
         for c in video_clips:
             inputs.extend(["-i", str(c)])
         inputs.extend(["-i", str(audio_path)])
 
-        scales = [f"[{i}:v]scale=3840:2160,setsar=1,fps=24[s{i}]" for i in range(n)]
+        scales = []
+        for i in range(n):
+            if i == n - 1 and shortfall > 0.05:
+                scales.append(f"[{i}:v]scale=3840:2160,setsar=1,fps=24,tpad=stop_mode=clone:stop_duration={shortfall:.2f}[s{i}]")
+            else:
+                scales.append(f"[{i}:v]scale=3840:2160,setsar=1,fps=24[s{i}]")
+
         filter_parts = list(scales)
         prev_tag = "s0"
-        curr_offset = max(0.1, durations[0] - x_dur)
-
         for i in range(1, n):
             out_tag = f"v{i}" if i < n - 1 else "v"
-            filter_parts.append(f"[{prev_tag}][s{i}]xfade=transition=fade:duration={x_dur:.2f}:offset={curr_offset:.2f}[{out_tag}]")
+            filter_parts.append(f"[{prev_tag}][s{i}]xfade=transition=fade:duration={x_dur:.2f}:offset={offsets[i]:.2f}[{out_tag}]")
             prev_tag = out_tag
-            clip_dur = durations[i] if i < len(durations) else 15.0
-            curr_offset += max(0.1, clip_dur - x_dur)
+
+        afade_st = max(0.0, final_target_dur - 2.5)
+        filter_parts.append(f"[{n}:a]volume=1.0,apad,afade=t=out:st={afade_st:.2f}:d=2.5[aout]")
 
         cmd = [
             ffmpeg_bin, "-y",
             *inputs,
             "-filter_complex", ";".join(filter_parts),
             "-map", "[v]",
-            "-map", f"{n}:a",
+            "-map", "[aout]",
             "-r", "24",
             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-threads", "4", "-crf", str(crf),
             "-c:a", "aac", "-b:a", "320k", "-ar", "48000",
-            "-shortest", "-movflags", "+faststart",
+            "-t", f"{final_target_dur:.2f}",
+            "-movflags", "+faststart",
             str(out)
         ]
 
     try:
         subprocess.run(cmd, capture_output=True, check=True)
-        logger.info(f"documentary_master_assembled: {out.name}")
+        logger.info(f"documentary_master_assembled: {out.name} ({final_target_dur:.2f}s)")
     except subprocess.CalledProcessError as err:
         logger.error(f"failed_to_assemble_doc_master: {err}")
         raise

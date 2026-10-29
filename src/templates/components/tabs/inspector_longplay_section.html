@@ -1,0 +1,32 @@
+<!-- STAGE 6: LONG-PLAY BROADCAST DELIVERIES -->
+<div id="panel-section-longplay-container" class="space-y-1.5 p-2.5 bg-[var(--card-subtle)] border border-[var(--border)] rounded-xl hidden">
+  <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
+    <span class="stage-header-title"><span class="stage-number-badge" id="badge-longplay">6</span> Long-Play Broadcast (3h / 8h)</span>
+    <span id="panel-longplay-status-badge" class="px-2 py-0.5 rounded bg-[var(--card)] text-[var(--text)] border border-[var(--border)] text-xs font-mono font-bold">Sleep Broadcast</span>
+  </div>
+
+  <!-- Long-Play Stretch Approval Card -->
+  <div id="panel-longplay-approval-card" class="p-2.5 bg-[var(--card)] border border-[var(--border)] rounded-lg flex flex-col gap-1.5 shadow-sm">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-1.5">
+        <i class="fa-solid fa-tv text-[var(--text-muted)] text-xs"></i>
+        <span id="panel-longplay-prompt-label" class="text-xs font-bold text-[var(--text)]">Multi-Hour Broadcast Master</span>
+      </div>
+      <select id="panel-longplay-hours-select" class="text-xs font-mono bg-[var(--card-subtle)] border border-[var(--border)] rounded px-2 py-0.5 text-[var(--text)] font-bold">
+        <option value="3.0" selected>3 Hours (Standard)</option>
+        <option value="8.0">8 Hours (Overnight)</option>
+        <option value="1.0">1 Hour (Quick)</option>
+      </select>
+    </div>
+    <button type="button" id="btn-approve-longplay" onclick="approveAndGenerateLongPlay()" class="btn-runway-primary w-full py-2 text-xs">
+      <i class="fa-solid fa-circle-check text-xs"></i>
+      <span id="btn-approve-longplay-text">Approve &amp; Generate Dual 4K Broadcasts</span>
+      <span class="kbd-badge">CTRL ↵</span>
+    </button>
+  </div>
+
+  <!-- Live Dual Broadcast Progress / Preview Cards -->
+  <div id="panel-longplay-dual-grid" class="grid grid-cols-2 gap-1.5 w-full">
+    <!-- Rendered dynamically by renderLongPlayStretchSection(vid) -->
+  </div>
+</div>

@@ -104,7 +104,9 @@ function populateProductionControlsFromEpisode(rawVid) {
   }
 
   // 5. Durations & Hours Resolution
-  const durSec = parseFloat(inputs.duration_seconds || vid.duration_seconds || vid.durationSeconds || screenplay.total_duration_seconds || 120.0);
+  const rawDur = inputs.duration_seconds ?? inputs.duration_secs ?? inputs.requested_duration_seconds ?? vid.duration_seconds ?? vid.durationSeconds;
+  const isAuto = (rawDur === -1 || rawDur === "-1" || rawDur === "auto" || rawDur === 0 || rawDur === "0");
+  const durSec = isAuto ? -1 : parseFloat(rawDur || screenplay.total_duration_seconds || 120.0);
   const lpHours = parseFloat(inputs.long_play_hours || vid.longPlayHours || vid.long_play_hours || 0);
 
   // 6. Execution Mode (Test vs Prod)
@@ -120,28 +122,17 @@ function populateProductionControlsFromEpisode(rawVid) {
   const isDocOrTour = (typeof isTravelOrSkylineChannel === "function" && isTravelOrSkylineChannel()) ||
                       (vid.genre && (vid.genre === "documentary" || vid.genre.startsWith("travel"))) ||
                       (vid.primary_archetype && vid.primary_archetype.includes("tour"));
-  let shotCount = -1;
-  if (!isDocOrTour) {
-    if (inputs.num_shots && inputs.num_shots > 0) shotCount = inputs.num_shots;
-    else if (vid.numShots && vid.numShots > 0) shotCount = vid.numShots;
-  }
-
-  const testShotsSel = document.getElementById("studio-test-shots");
-  if (testShotsSel) {
-    const val = (isDocOrTour || inputs.num_shots === -1 || vid.num_shots === -1 || vid.numShots === -1) ? "-1" : String(shotCount);
-    testShotsSel.value = (Array.from(testShotsSel.options).some(o => o.value === val)) ? val : "-1";
-    if (typeof setTestShots === "function") setTestShots(testShotsSel.value);
-  }
-  const prodShotsSel = document.getElementById("studio-prod-shots");
-  if (prodShotsSel) {
-    const val = (isDocOrTour || inputs.num_shots === -1 || vid.num_shots === -1 || vid.numShots === -1) ? "-1" : String(shotCount);
-    prodShotsSel.value = (Array.from(prodShotsSel.options).some(o => o.value === val)) ? val : "-1";
-  }
+  const shotCount = (!isDocOrTour && (inputs.num_shots > 0 ? inputs.num_shots : (vid.numShots > 0 ? vid.numShots : -1))) || -1;
+  const shotVal = (isDocOrTour || shotCount === -1 || inputs.num_shots === -1 || vid.num_shots === -1 || vid.numShots === -1) ? "-1" : String(shotCount);
+  const testShotsSel = document.getElementById("studio-test-shots"), prodShotsSel = document.getElementById("studio-prod-shots");
+  if (testShotsSel) { testShotsSel.value = Array.from(testShotsSel.options).some(o => o.value === shotVal) ? shotVal : "-1"; setTestShots?.(testShotsSel.value); }
+  if (prodShotsSel) prodShotsSel.value = Array.from(prodShotsSel.options).some(o => o.value === shotVal) ? shotVal : "-1";
 
   // 9. Duration & Stretch Hours Selectors (Test & Prod)
   let targetStretchVal = "0";
   const mOptVal = `${Math.round(durSec / 60)}m`;
-  if (lpHours >= 1.0) targetStretchVal = String(lpHours);
+  if (durSec === -1 || isAuto) targetStretchVal = "-1";
+  else if (lpHours >= 1.0) targetStretchVal = String(lpHours);
   else if (durSec % 60 === 0 && durSec >= 60 && durSec <= 900 && document.querySelector(`#studio-stretch-hours option[value="${mOptVal}"]`)) {
     targetStretchVal = mOptVal;
   } else if (durSec >= 110 && durSec <= 130) targetStretchVal = "0.033";
@@ -200,19 +191,19 @@ function setProductionControlsViewOnly(isViewOnly, episodeId) {
     if (isViewOnly && bannerText) bannerText.textContent = `Episode ${episodeId || ''} Loaded (View-Only Mode)`;
   }
 
-  // Lock or Unlock Action Buttons
-  [btnProduce, btnReset, btnStop].forEach(btn => {
+  // Configure Action Buttons
+  [btnReset, btnStop].forEach(btn => {
     if (btn) {
-      btn.disabled = isViewOnly;
-      btn.classList.toggle("opacity-40", isViewOnly);
-      btn.classList.toggle("cursor-not-allowed", isViewOnly);
-      btn.classList.toggle("pointer-events-none", isViewOnly);
+      btn.disabled = false;
+      btn.classList.remove("opacity-40", "cursor-not-allowed", "pointer-events-none");
     }
   });
   if (btnProduce) {
-    btnProduce.title = isViewOnly ? "Episode already exists. Use Re-Synthesize to advance or resume." : "Produce / Test Video";
+    btnProduce.disabled = false;
+    btnProduce.classList.remove("opacity-40", "cursor-not-allowed", "pointer-events-none");
+    btnProduce.title = isViewOnly ? "Start producing a new sequential episode" : "Produce / Test Video";
     if (btnProduceText) {
-      btnProduceText.textContent = isViewOnly ? "Locked (Use Re-Synthesize)" : ((typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test") ? `Run Test (${typeof activeShotsCount !== "undefined" ? activeShotsCount : 1} Shots)` : "Produce Master Video");
+      btnProduceText.textContent = isViewOnly ? "+ New Episode" : ((typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test") ? `Run Test (${typeof activeShotsCount !== "undefined" ? activeShotsCount : 1} Shots)` : "Produce Master Video");
     }
   }
   if (btnResume) {
@@ -269,18 +260,18 @@ function setProductionControlsViewOnly(isViewOnly, episodeId) {
   });
 }
 
-function unlockForNewProduction() {
+async function unlockForNewProduction() {
   currentActiveInspectorEpisode = null;
   setProductionControlsViewOnly(false, null);
   const pInput = document.getElementById("studio-production-name");
   if (pInput) pInput.value = "";
   const epCode = document.getElementById("studio-episode-code");
-  if (epCode) epCode.value = "EP-001";
+  const chId = (typeof selectedStudioChannel !== "undefined" && selectedStudioChannel && selectedStudioChannel !== "all") ? selectedStudioChannel : "euro_discovery";
+  const fmt = document.getElementById("studio-active-format-val")?.value || (typeof activeStudioFormat !== "undefined" ? activeStudioFormat : "documentary");
+  const nextId = (typeof nextEpisodeIdForChannel === "function") ? nextEpisodeIdForChannel(chId, fmt, "") : "ep-001";
+  if (epCode) epCode.value = nextId;
   if (typeof renderEmptyInspectorState === "function") renderEmptyInspectorState();
-  if (typeof switchCreationTab === "function" && typeof activeCreationTab !== "undefined" && activeCreationTab !== "new") {
-    switchCreationTab("new");
-  }
-  if (typeof clearStudioInputs === "function") clearStudioInputs();
+  if (typeof switchCreationTab === "function" && typeof activeCreationTab !== "undefined" && activeCreationTab !== "new") switchCreationTab("new");
 }
 
 // Hook into StudioBus episode selection event

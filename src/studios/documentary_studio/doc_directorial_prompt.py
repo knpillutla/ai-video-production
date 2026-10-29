@@ -12,19 +12,17 @@ from src.studios.base_directorial_prompt import build_base_directorial_prompt
 from src.studios.documentary_studio.doc_nations_archetypes import get_nations_archetype_directive
 
 TOUR_ARCHETYPES = {
-    "itinerary_map_tour",
-    "travel_itinerary_tour",
-    "grand_tour",
-    "top_attractions_tour",
-    "local_neighborhood_tour",
-    "culinary_food_tour",
-    "architecture_design_tour",
+    "itinerary_map_tour", "travel_itinerary_tour", "tour_itinerary", "grand_tour",
+    "top_attractions_tour", "top_places_to_visit", "top_10_cities", "top_20_places",
+    "local_neighborhood_tour", "culinary_food_tour", "architecture_design_tour",
+    "tourism_guide", "road_trip_tour", "spiritual_journeys",
 }
 
 
 def is_tour_archetype(archetype: str) -> bool:
     """Check if an archetype belongs to the dedicated Tour Map Itinerary Director."""
-    return (archetype or "").lower().strip() in TOUR_ARCHETYPES
+    clean = (archetype or "").lower().strip()
+    return clean in TOUR_ARCHETYPES or any(k in clean for k in ("itinerary", "tour", "places_to_visit", "attractions", "tourism_guide"))
 
 
 def build_doc_directorial_prompt(
@@ -38,6 +36,7 @@ def build_doc_directorial_prompt(
     speech_words_per_sec: float = 2.0,
     tts_provider_name: str = "Azure Speech Neural",
     channel_id: Optional[str] = "euro_discovery",
+    execution_mode: str = "prod",
 ) -> str:
     """Build BBC/NatGeo blue-chip documentary instructions layered on base directorial prompt."""
     doc_rules = """
@@ -49,52 +48,53 @@ DOCUMENTARY DIRECTORIAL MANDATES (BBC / NATGEO BLUE-CHIP CALIBER):
    - Sweeping slow aerial glides over pristine terrain, slow crane descents over granite peaks, deep optical depth-of-field.
    - Strictly prohibit high-speed zooms or jerky translations.
 
-2. MANDATORY AUDIO-VISUAL GROUNDING & SHOW-AND-TELL COHESION:
-   - In "scenes[].narration_text", every line MUST DIRECTLY DESCRIBE AND INTERPRET WHAT IS VISIBLE ON SCREEN in that scene's "visual_prompt" and "location_hub".
-   - The viewer must hear authoritative commentary anchored strictly to the landscape, architecture, and geology seen in the camera frame.
-   - ZERO PHANTOM SUBJECTS & SCALE CLASHES:
-     * Never narrate off-screen geography (e.g., speaking of flowing rivers when the visual depicts desert rock-cut reservoirs, or speaking of oceans in a mountain pass).
-     * Never describe handheld or microscopic objects (e.g., handheld seals, coins, pottery shards) during wide panoramic landscape drone vistas.
-     * Scale Matching: Wide panoramic shots require narration on macro-architecture, landscape topography, and civil engineering systems. Close-ups focus on craftsmanship and textures.
-   - TRIADIC SCENE HARMONY: "visual_prompt" establishes the visual subject -> "narration_text" explains what the eyes see -> "motion_prompt" guides the camera towards the focus of narration.
-   - In "audio_master.spoken_narration_script", unify the per-scene narration texts into a poetic, scientifically accurate master narrative (~120 WPM) weaving geological and cultural lore.
+2. MANDATORY SHOW-AND-TELL STORY SYNCHRONY (THE IMAGE MUST FOLLOW THE STORY):
+   - DOCUMENTARY FIRST PRINCIPLE: The visual image MUST directly depict and illustrate what is being narrated on screen at that exact moment. ZERO OUT-OF-BOUND IMAGERY PERMITTED!
+   - 1:1 TOPIC-TO-VISUAL GROUNDING MATRIX:
+     * Education & Schools -> Universities, colleges, schools, historic libraries, lecture halls, campus quadrangles, student research labs. (STRICTLY BAN generic mountains, rivers, or random streets).
+     * Trade, Shipping & Logistics -> Deepwater container berths, cargo shipping yards, massive gantry cranes, container ships, wholesale trade markets, freight logistics warehouses. (STRICTLY BAN beaches or empty hills).
+     * Airports, Aviation & Transit -> International airport runways, commercial passenger airliners taxiing or taking off, modern glass terminal concourses, air traffic control towers, apron cargo freighters, high-speed rail hubs. (STRICTLY BAN empty roads or generic sky).
+     * Clean Energy & Utilities -> Modern wind turbine farms, solar arrays, geothermal steam stations, or hydroelectric dams. (STRICTLY BAN barren mountains or rocks).
+     * Industry & Manufacturing -> Automotive mega-factories, robotic assembly arms, molten metal foundries, or aerospace hangars.
+     * Farming & Agriculture -> Golden wheat/crop fields, vineyards, combine harvesters, center-pivot irrigation, or pastoral dairy paddocks.
+     * Civics, Governance & Politics -> National parliament buildings, executive state houses, supreme courts, or monumental civic government plazas.
+     * Population, Family & Daily Life -> Historic living town squares, community markets, or lively pedestrian avenues.
+     * Geography, Wilderness & Geology -> (ONLY when narrating geography, geology, or national parks) Majestic mountain massifs, glacial fjords, or pristine ancient rainforests.
+   - STRICT BAN ON OUT-OF-BOUNDS VISUALS: If narrating education, PROHIBIT mountains or factories. If narrating trade or airports, PROHIBIT beaches or forests. If narrating clean power, PROHIBIT bare rocks without infrastructure. The visual subject MUST be the physical manifestation of what is spoken!
+   - OVERLAY & BADGE GROUNDING: On-screen badges ("chapter_stats", "fact_badge") must quantify what the eyes see.
+   - ZERO PHANTOM SUBJECTS: In "scenes[].narration_text", every line must directly describe what is visible on screen. Triadic harmony: visual establishes subject -> narration explains it -> camera moves toward it.
+   - In "audio_master.spoken_narration_script", unify per-scene narration into a poetic, scientifically accurate master narrative (~120 WPM).
 
-3. SOUND DESIGN & ACOUSTIC SPATIAL FOLEY:
-   - Grand orchestral elements (swelling strings, French horn fanfares, cello drone) layered with natural environmental foley.
+3. SOUND DESIGN & CULTURALLY AUTHENTIC BGM (SUNO DIRECTORIAL SPEC):
+   - In "audio_master", Gemini MUST author explicit musical instructions for Suno tailored to the destination's authentic heritage:
+     * "suno_prompt": Descriptive acoustic & orchestral score direction (e.g. for Pacific Islands: traditional South Pacific acoustic guitar, gentle lali slit drums, soothing tropical trade-wind foley; for Rome: classical chamber strings, gentle Renaissance lute, understated orchestral swells).
+     * "suno_musical_tags": Specific musical tags (e.g. "cinematic documentary score, traditional acoustic instruments, 48kHz, subtle, zero vocals, broadcast master").
+     * "ducking_db": -18.0 dB (ducking BGM under spoken voiceover).
    - Target -14.0 LUFS broadcast loudness with -18.0 dB ducking during voiceover narration.
 
 4. FLUID KINETICS & SURVIVAL REALISM (Rules 18, 20):
    - For mountain/extreme climates: depictions of biting sub-zero blizzards, wind gusts carving powder drifts, weathered timber shelters.
    - For rivers/waterfalls: parallel flow camera alignment, smooth glassy currents, zero static foam blobs.
 
-5. LOCAL DRONE CAMERA MOVEMENTS ("model_configs.local_drone"):
-   - For documentary and travel shots, model_configs["local_drone"] MUST specify dynamic camera flight matching the scene:
-     * Supported primitives: "dollyin", "dollyout", "pan-left", "pan-right", "tilt-up", "tilt-down", "orbit-left", "orbit-right", "stay".
-     * Sequential timeline array: "movement": [{{"movement": "dollyin", "duration": 6.0}}, {{"movement": "pan-right", "duration": 4.0}}]
-     * Parallel compound movements: "movement": [{{"stage": 1, "duration": 5.0, "movements": ["dollyin", "pan-right"]}}]
-     * Framing: "start_pan": "center"|"left"|"right", "start_zoom": "normal"|"wide"|"in", "curve": "cosine"
-   - Camera movements for AI diffusion models (kling, wan, h3_max) are part of their prompt text, not mechanical commands.
+5. DYNAMIC LOCAL KEN BURNS DRONE MOVEMENTS (80% OF SCENES - NEVER STATIC):
+   - 80% of scenes use local Ken Burns / perspective drone ($0.00 compute).
+   - NEVER A STATIC SCREEN: The camera MUST actively move ("dollyin", "dollyout", "pan-left", "pan-right", "tilt-up", "drift-up-right") across 4K images illustrating that scene's story topic (power grids, farmlands, universities, factories, or peaks).
+   - Supported primitives: "dollyin", "dollyout", "pan-left", "pan-right", "tilt-up", "tilt-down", "orbit-left", "orbit-right".
+   - Multi-stage: [{{"movement": "dollyin", "duration": 6.0}}, {{"movement": "pan-right", "duration": 4.0}}].
 
-6. AI VIDEO DIFFUSION & MINIMAX H3 MAX TURBO DIRECTIVE:
-   - For scenes requiring living micro-motion, Gemini can select:
-     * "h3_max" (MiniMax H3 Max Turbo, ~$0.015/sec): Subtle atmospheric movement. Ideal for low-intensity animations like moving clouds, smoke plumes, drifting fog, gentle tree sway, or light water texture movement without changing the original image structure. Camera strictly locked or slow pan.
-     * "wan_4k": Native 4K continuous laminar fluid dynamics (flowing rivers, coastal swells).
-     * "kling_v3_4k": Native 4K violent impact (crashing surf, cascading waterfalls).
-   - In "motion_prompt" for "h3_max", explicitly direct subtle micro-motion: "Subtle atmospheric movement, locked stationary camera. Architecture, cliffs, and land topography remain 100% structurally frozen and unmoving. Only subtle organic micro-motion of drifting clouds, gentle breeze on distant foliage, and soft water ripples."
+6. HIERARCHICAL CHAPTER & MULTI-SHOT CADENCE (BBC / NATGEO 4-6s VISUAL RHYTHM):
+   - In broadcast documentary production, the Voiceover Track is the master clock. A 12-16s narration chapter cuts between 2 to 3 complementary perspectives inside "shots", ALL STRICTLY WITHIN THE CHAPTER'S TOPIC:
+     * Shot 1 (Establishing Wide Vista): Sweeping 4K high-altitude aerial drone vista or wide panorama of the chapter's specific subject (e.g. grand university campus, container port, or international airport).
+     * Shot 2 (Living Kinetic Perspective): Living AI diffusion clip (5.0s native duration, "motion_type": "ai_diffusion", "recommended_model": "h3_max" | "kling_v3_4k") capturing intrinsic physical movement of that same subject (e.g. students walking in quad, gantry cranes loading container ship, or jetliner taxiing on tarmac). NEVER use generic rushing river rapids or unrelated town squares!
+     * Shot 3 (Intimate Detail / Macro Architecture): 85mm optical bokeh close-up, low-angle monumental perspective, or architectural relief of that same subject (e.g. university clocktower crest, cargo ship mooring lines, or air traffic control tower).
+   - ZERO ARTIFICIAL EXTENSIONS: AI diffusion clips run for their native 5.0s length; complementary Ken Burns cutaways carry the remaining narration duration without temporal snap-backs.
+   - Inside each chapter in "chapters" (or "scenes"), populate: "chapter_title", "chapter_subtitle", "fact_badge", "chapter_stats", "narration_text", and "shots": [shot1, shot2, shot3].
 
 7. COMPREHENSIVE EDUCATIONAL DOCUMENTARY DIRECTIVES (COUNTRY & CITY EXPLORATION):
    When exploring a nation or city ("countries", "cities", "nations", "country", "city"), this is a high-caliber, BBC/NatGeo-grade EDUCATIONAL DOCUMENTARY exploring everything about the destination:
    A. FOR COUNTRY EXPLORATION & 360° DOSSIER ("countries", "nations", "country", "nation", "country_dossier", "country_profile"):
-      Gemini must dedicate the ENTIRE documentary to ONE SINGLE COUNTRY as an authoritative, BBC/NatGeo-grade 360° Country Profile & Almanac, systematically structuring scenes across these core factual sections:
-      * 1. NATIONAL IDENTITY & SOVEREIGN ESSENCE: What this country is about, national spirit, world position, borders, and founding character.
-      * 2. GEOGRAPHY, AREA & CLIMATE EXTREMES: Total land area in km², coastline length, mountains, primeval forests, major rivers/seas, four seasons, and precipitation extremes (max and min annual rainfalls/snowfalls).
-      * 3. CAPITAL CITY & GREAT METROPOLISES: The capital city (government seat, iconic architecture) and major regional economic/cultural cities.
-      * 4. PEOPLE, POPULATION & EDUCATION: Demographics, population count, daily lifestyle and living standards, high education levels, and world-renowned top universities.
-      * 5. ECONOMY, PRODUCTION & EMPLOYMENT: What the country produces (manufacturing, agriculture, high-tech, exports), primary jobs, major industries, and economic engines.
-      * 6. TRADE, POLITICS & GLOBAL ALLIANCES: International commerce, major trading partners, political structure and major parties, memberships in international bodies (UN, EU, NATO, etc.), international peacekeeping/humanitarian missions, and diplomatic allies.
-      * 7. HISTORIC CITADELS & ARCHIVAL PATINA: Ancient citadels, castles, and titans who shaped history. Contrast modern majesty with archival patina: 5200K grading, weathered stone cloister sunbeams, and tactile macro craftsmanship.
-      * 8. GRAND CONCLUSION & FUTURE OUTLOOK: Summary of national resilience, modern vision, and heartfelt closing reflection.
-      * MANDATORY OVERLAY FIELDS: Output "chapter_title", "chapter_subtitle", "chapter_stats" (e.g. "Area: 551,695 km² • Coastline: 3,427 km"), and "fact_badge" (compact frosted pill badge, e.g. "⚡ 70% Nuclear Energy", "💶 $3.0T GDP (Rank #7)", "🏛️ 58 UNESCO Sites").
+      Gemini must dedicate the ENTIRE documentary to ONE SINGLE COUNTRY as an authoritative, BBC/NatGeo-grade 360° Country Profile & Almanac, systematically structuring scenes across the Master Sovereign Syllabus below.
+      * MANDATORY OVERLAY FIELDS: Output "chapter_title", "chapter_subtitle", "chapter_stats" (e.g. "Area: 551,695 km² • Coastline: 3,427 km"), and "fact_badge" (compact frosted pill badge, e.g. "⚡ 70% Clean Energy", "🏛️ Capital City").
    B. FOR TOP COUNTDOWN EPISODES ("top_20_places", "top_10_cities", "top_places_to_visit", "top_20", "top_cities"):
       MANDATORY REVERSE COUNTDOWN (RETENTION RULE): All countdowns MUST count backwards from the highest number down to #1 (e.g. #20, #19, #18... down to #01; or #10 down to #01) to maximize YouTube retention and anticipation for the #1 climax!
       * In & Nearby Formula: Each scene showcases the attraction atmosphere + #1 landmark + nearby day trips / surrounding gems.
@@ -126,9 +126,9 @@ DOCUMENTARY DIRECTORIAL MANDATES (BBC / NATGEO BLUE-CHIP CALIBER):
    E. MANDATORY FINAL SCENE CONCLUSION DIRECTIVE (10 TO 12 SECONDS CINEMATIC OUTRO):
       The FINAL scene of the documentary MUST strictly provide an inspiring, poetic conclusion:
       * Duration: Exactly 10.0 to 12.0 seconds ("duration_seconds": 11.0).
-      * Proper Cinematic Image: A breathtaking wide panoramic landscape or architectural skyline at golden twilight or sunset (e.g. dramatic aerial pull-back over the historic capital citadel, iconic hills, or shimmering horizon vista). STRICTLY a proper photographic image—NEVER an infographic slide, table, or recap card!
-      * Motion Engine: Smooth cinematic drone pull-back or slow drift ("motion_type": "ken_burns", "recommended_model": "local_drone", "camera_movement": "dollyout").
-      * Conclusion Narration: An authoritative, heartfelt closing reflection honoring the enduring spirit, timeless cultural legacy, resilience, and living soul of [Destination Name], warmly inviting the audience to explore its heritage.
+      * Proper Photographic Image Matching Outro Subject: Breathtaking wide panoramic vista at twilight/sunset strictly matching the closing topic (e.g. vast wind turbine arrays at sunset for clean energy & sovereign resilience; illuminated capital skyline for modern governance; or majestic peaks for alpine geography). NEVER mismatch badges/stats with an unrelated visual!
+      * Motion Engine: Smooth drone pull-back ("motion_type": "ken_burns", "recommended_model": "local_drone", "camera_movement": "dollyout").
+      * Conclusion Narration: Authoritative, heartfelt closing reflection honoring the enduring spirit, resilience, and living soul of [Destination Name].
 
 8. STRICT BAN ON OUTRO INFOGRAPHIC SUMMARY CARDS & YOUTUBE END-SCREEN SAFE ZONE:
    - Conclude naturally on a panoramic twilight pull-back vista (never an infographic recap slide).
@@ -145,16 +145,41 @@ DOCUMENTARY DIRECTORIAL MANDATES (BBC / NATGEO BLUE-CHIP CALIBER):
    To deliver BBC Earth & National Geographic visual grandeur:
    A. 80% Monumental Aerials & 3D Drone Orbits (Scenes 1, 2, 3, 5, 7, 8):
       * Lens & Perspective: "High-altitude 45-degree bird's-eye aerial drone perspective from 250m altitude, expansive panoramic vista, 18mm ultra-wide lens, deep optical field of view, generous sky headroom". Maintain 20%-30% environmental border buffer.
-      * Rich Aesthetics: "Vibrant natural color palette, authentic architectural relief, Hasselblad H6D-100c medium-format clarity, zero plastic sheen, context-matched lighting (crisp balanced daylight, golden hour sidelight, or atmospheric night illumination with warm architectural glow)".
+      * Rich Aesthetics: "Hyper-realistic 4K UHD, vibrant saturated natural colors (luminous turquoise, emerald green, golden amber, sun-baked terracotta, deep cobalt), razor-sharp architectural relief, Hasselblad H6D-100c medium-format clarity, warm golden sidelight, crystalline atmospheric depth, zero grey haze".
       * Motion: Slow forward drone push or smooth continuous 360-degree orbital banking flight around the landmark ("camera_movement": "slow_drone_forward"|"orbit-left"|"orbit-right").
    B. 20% Intimate 85mm Optical Bokeh (Scenes 4 & 6 - Education, People & Artisanal Craft):
       * Scene 4 (Education & Universities): "85mm portrait lens, f/1.8 creamy optical bokeh, luminous golden sunbeams streaming through gothic university library cloisters or historic cobblestones".
       * Scene 6 (Trade & Craftsmanship): "Tactile 85mm macro craftsmanship, f/1.8 depth-of-field, artisan hands shaping copper/glass or aged oak wine barrels in historic cellars".
-      * Motion: Locked stationary cinemagraph hold ("camera_movement": "locked_stationary_cinemagraph").
+      * Motion: Locked stationary cinemagraph hold ("camera_movement": "locked_stationary_cinemagraph"). In PROD mode, if humans/artisans/students appear, Gemini MUST assign "recommended_model": "kling_v3_4k" (or "kling_pro") with "motion_type": "ai_diffusion". Kling is required for authentic human anatomy and motion.
 """
-    arch_mandate = get_nations_archetype_directive(archetype)
+    arch_mandate = get_nations_archetype_directive(
+        archetype, duration_seconds=duration_seconds, custom_prompt=custom_prompt
+    )
     if arch_mandate:
         doc_rules += f"\n11. THEMATIC ARCHETYPE DIRECTIVE:\n{arch_mandate}\n"
+    is_auto = (duration_seconds is None or duration_seconds <= 0 or duration_seconds == -1)
+    dur_guidance = (
+        "   - DURATION MODE: AUTO (-1) / COMPLETE STORY. Gemini MUST author the COMPLETE, UNABRIDGED story covering ALL syllabus chapters (never skip, omit, or merge chapters).\n"
+        if is_auto
+        else f"   - DURATION MODE: TARGET DURATION ~{duration_seconds}s. Gemini MUST budget the narration words across ALL syllabus chapters so that the sum of narration durations equals approximately ~{duration_seconds}s. ALL chapters must still be covered!\n"
+    )
+    doc_rules += (
+        "\n12. PASS 1 STORY FORMULATION & NARRATION-BASED DURATION MANDATE:\n"
+        "   - FULL STORY FOR ALL CHAPTERS: The raw Gemini story script MUST ALWAYS author the FULL story covering ALL chapters in the syllabus.\n"
+        f"{dur_guidance}"
+        "   - NARRATION TIME DERIVATION: Author authoritative, measured 'narration_text' (~120 WPM, 2.0 words/sec).\n"
+        "   - For each chapter, compute and output:\n"
+        "     * 'origin_coords': [latitude, longitude] (floats),\n"
+        "     * 'chapter_title', 'chapter_subtitle', 'fact_badge', 'chapter_stats', 'location_hub',\n"
+        "     * 'estimated_narration_seconds': round(word_count / 2.0, 1),\n"
+        "     * 'visual_padding_seconds': 3.0,\n"
+        "     * 'duration_seconds': estimated_narration_seconds + visual_padding_seconds.\n"
+        "   - ROOT DURATION EXTRACTION: Set root 'total_duration_seconds' = sum of all chapter 'duration_seconds', and root 'estimated_narration_duration_seconds' = sum of all chapter 'estimated_narration_seconds', so the rough production video duration is explicitly defined in the raw screenplay.\n"
+    )
+    doc_scene_schema = """      "chapter_title": "1. SOVEREIGN ESSENCE & FOUNDATIONS", "chapter_subtitle": "Founding Character & Sovereign Origins", "chapter_stats": "Area: [AREA] km² • Population: [POP]M", "fact_badge": "🏛️ CAPITAL: [CAPITAL_CITY]", "location_hub": "Capital City & Landmark Citadel", "origin_coords": [-18.1416, 178.4419],
+      "estimated_narration_seconds": 12.0, "visual_padding_seconds": 3.0, "duration_seconds": 15.0,
+      "narration_text": "Deep, poetic, authoritative voiceover narrative crafted for measured spoken delivery (~120 WPM)." """
+    doc_root_schema = """  "estimated_narration_duration_seconds": 120.0, "total_words_count": 240,"""
     return build_base_directorial_prompt(
         genre="documentary",
         sub_genre=archetype,
@@ -167,9 +192,12 @@ DOCUMENTARY DIRECTORIAL MANDATES (BBC / NATGEO BLUE-CHIP CALIBER):
         specific_rules=doc_rules,
         channel_id=channel_id or "euro_discovery",
         tier="balanced",
+        extra_root_schema=doc_root_schema,
+        extra_scene_schema=doc_scene_schema,
         speech_cadence_wpm=speech_cadence_wpm,
         speech_words_per_sec=speech_words_per_sec,
         tts_provider_name=tts_provider_name,
+        execution_mode=execution_mode,
     )
 
 
@@ -183,6 +211,7 @@ def build_tour_directorial_prompt(
     speech_words_per_sec: float = 2.0,
     tts_provider_name: str = "Azure Speech Neural",
     channel_id: Optional[str] = "euro_discovery",
+    execution_mode: str = "prod",
 ) -> str:
     """Build dedicated Tour Director instructions layered on base directorial prompt."""
     tour_rules = """
@@ -225,42 +254,8 @@ TOUR & ITINERARY DIRECTORIAL MANDATES (RICK STEVES & BBC TRAVEL CALIBER):
      * Framing: "start_pan": "center"|"left"|"right", "start_zoom": "normal"|"wide"|"in", "curve": "cosine".
    - Camera movements for AI diffusion models (kling, wan, h3_max) are written into their prompt text, not mechanical flight names.
 """
-    tour_root_schema = """  "itinerary_summary": [
-    {
-      "day": 1,
-      "day_title": "Day 1 Highlights",
-      "attractions": ["Landmark 1", "Landmark 2", "Landmark 3"],
-      "total_attraction_time": "6.5 hrs",
-      "total_travel_time": "1.0 hr",
-      "total_walk_time": "25 mins",
-      "total_drive_time": "35 mins",
-      "transit_distance": "6.8 km circuit",
-      "total_travel_cost": "£24–£34 (~$45 USD)",
-      "meal_break": "1.0 hr Lunch Break at Local Market"
-    }
-  ],"""
-
-    tour_scene_schema = """      "is_itinerary_overview": false,
-      "is_map_transition": false,
-      "origin_name": "Landmark 1",
-      "destination_name": "Landmark 1",
-      "origin_coords": [51.4994, -0.1273],
-      "destination_coords": [51.4994, -0.1273],
-      "distance_local": null,
-      "transit_mode": null,
-      "transit_duration": null,
-      "approx_leg_cost": null,
-      "attraction_name": "Landmark 1",
-      "start_time": "09:00 AM",
-      "end_time": "11:30 AM",
-      "visit_duration": "2.5 hrs",
-      "attraction_cost": "£29.00 Ticket",
-      "transit_to_next": {
-        "transit_mode": "drive",
-        "transit_duration": "14 min cab",
-        "approx_leg_cost": "£12–£16 Uber",
-        "transit_narration": "Next, an eastbound drive traces the Thames toward the ancient Norman stronghold of the Tower of London."
-      },"""
+    tour_root_schema = """  "itinerary_summary": [{"day": 1, "day_title": "Day 1 Highlights", "attractions": ["Landmark 1", "Landmark 2"], "total_attraction_time": "6.5 hrs", "total_travel_time": "1.0 hr", "total_walk_time": "25 mins", "total_drive_time": "35 mins", "transit_distance": "6.8 km", "total_travel_cost": "£24–£34", "meal_break": "1.0 hr Lunch Break"}],"""
+    tour_scene_schema = """      "is_itinerary_overview": false, "is_map_transition": false, "origin_name": "Landmark 1", "destination_name": "Landmark 1", "origin_coords": [51.4994, -0.1273], "destination_coords": [51.4994, -0.1273], "distance_local": null, "transit_mode": null, "transit_duration": null, "approx_leg_cost": null, "attraction_name": "Landmark 1", "start_time": "09:00 AM", "end_time": "11:30 AM", "visit_duration": "2.5 hrs", "attraction_cost": "£29.00 Ticket", "transit_to_next": {"transit_mode": "drive", "transit_duration": "14 min cab", "approx_leg_cost": "£12–£16 Uber", "transit_narration": "Next, an eastbound drive traces the Thames toward the ancient Norman stronghold."},"""
 
     return build_base_directorial_prompt(
         genre="documentary",
@@ -279,6 +274,7 @@ TOUR & ITINERARY DIRECTORIAL MANDATES (RICK STEVES & BBC TRAVEL CALIBER):
         speech_cadence_wpm=speech_cadence_wpm,
         speech_words_per_sec=speech_words_per_sec,
         tts_provider_name=tts_provider_name,
+        execution_mode=execution_mode,
     )
 
 
