@@ -75,6 +75,7 @@ class DocStoryboard:
     title: str
     genre: DocGenre
     total_duration: float
+    youtube_title: Optional[str] = None
     scenes: List[DocScene] = field(default_factory=list)
     language: str = "en"
     audio_tags: str = "cinematic orchestral documentary, sparse ambient foley, 48kHz broadcast master"

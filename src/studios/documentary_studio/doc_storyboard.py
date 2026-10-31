@@ -188,20 +188,24 @@ async def generate_documentary_storyboard_gemini(
                 default_model=default_model,
             )
 
-            th_head = data.get("thumbnail_headline") or data.get("thumbnail_text") or (f"WHAT IS {dest_entity.upper()} BEST KNOWN FOR?" if is_geo_mode and dest_entity else "WHAT ARE THEY HIDING HERE?")
-            th_vars = data.get("thumbnail_variants") or [
-                {"variant": "A", "headline": th_head.strip().upper(), "angle": "sovereign_question"},
-                {"variant": "B", "headline": f"{dest_entity.upper() if dest_entity else 'EUROPE'}'S GREATEST SECRET", "angle": "hidden_anomaly"},
-                {"variant": "C", "headline": f"HOW {dest_entity.upper() if dest_entity else 'THEY'} SURVIVED", "angle": "scale_paradox"},
-            ]
-            pin_comm = data.get("pinned_comment") or f"📍 PINNED COMMUNITY QUIZ: Did you know this about {dest_entity or 'this destination'}? Which landmark or story surprised you most? Drop your perspective below! 👇"
+            from src.studios.documentary_studio.doc_curiosity_title_service import derive_contextual_doc_titles
+            ctr_t, auto_thumb, auto_vars = derive_contextual_doc_titles(
+                dest_entity, data.get('title') or theme_seed, data.get('synopsis'),
+                gemini_yt_title=data.get('youtube_title'),
+                gemini_thumb_headline=data.get('thumbnail_headline'),
+                gemini_thumb_variants=data.get('thumbnail_variants')
+            )
+            th_head = auto_thumb
+            th_vars = auto_vars
+            pin_comm = data.get('pinned_comment') or f'?? PINNED COMMUNITY QUIZ: Did you know this about {dest_entity or "this destination"}? Which landmark or story surprised you most? Drop your perspective below! ??'
 
-            audio_m = data.get("audio_master") or {}
-            suno_p = audio_m.get("suno_prompt") or data.get("suno_prompt")
-            suno_t = audio_m.get("suno_musical_tags") or data.get("audio_tags") or "cinematic orchestral documentary, sparse ambient foley, 48kHz broadcast master"
+            audio_m = data.get('audio_master') or {}
+            suno_p = audio_m.get('suno_prompt') or data.get('suno_prompt')
+            suno_t = audio_m.get('suno_musical_tags') or data.get('audio_tags') or 'cinematic orchestral documentary, sparse ambient foley, 48kHz broadcast master'
 
             sb = DocStoryboard(
-                title=data.get("title") or (theme_seed.title() if theme_seed else "Documentary"),
+                title=data.get('title') or (theme_seed.title() if theme_seed else 'Documentary'),
+                youtube_title=ctr_t,
                 genre=genre, total_duration=calc_total_duration, scenes=doc_scenes, language=language,
                 audio_tags=suno_t, suno_prompt=suno_p,
                 itinerary_summary=itinerary_summary, thumbnail_headline=th_head.strip().upper(),

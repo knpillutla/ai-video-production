@@ -105,6 +105,7 @@ def scan_all_channel_episodes(storage_dir: Path, user_id: str | None = None) -> 
                                 ep_dict = _build_episode_record(prod_path, ch_meta, storage_dir)
                                 if ep_dict:
                                     ep_dict["format"] = fmt_name
+                                    ep_dict["format_slug"] = fmt_name
                                     ep_dict["production_name"] = "standalone"
                                     episodes.append(ep_dict)
                         else:
@@ -119,6 +120,7 @@ def scan_all_channel_episodes(storage_dir: Path, user_id: str | None = None) -> 
                                     ep_dict = _build_episode_record(ep_path, ch_meta, storage_dir)
                                     if ep_dict:
                                         ep_dict["format"] = fmt_name
+                                        ep_dict["format_slug"] = fmt_name
                                         if not ep_dict.get("production_name") or ep_dict["production_name"] == "standalone":
                                             ep_dict["production_name"] = p_name
                                         episodes.append(ep_dict)
@@ -169,6 +171,9 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
     """Extract metadata, video editions, files, models, and script for one episode."""
     ep_id = ep_path.name
     files = {f.name: f for f in ep_path.iterdir() if f.is_file()}
+    valid_markers = ('raw_gemini_story.json', 'story.json', 'raw_gemini_screenplay.json', 'screenplay.json', 'storyboard.json', 'user_inputs.json', 'pipeline_state.json', 'episode_manifest.json')
+    if not (any(m in files for m in valid_markers) or any(k.startswith(('keyframe_', 'shot_', 'motion_', 'master_')) for k in files)):
+        return None
 
     manifest_data = {}
     if "episode_manifest.json" in files:
@@ -227,10 +232,12 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
 
     title = (
         manifest_data.get("title")
+        or story_data.get("title")
         or screenplay_data.get("title")
         or screenplay_data.get("title_en")
         or yt_pack.get("title")
         or user_inputs_data.get("prompt")
+        or (f"{story_data.get('destination_entity')}: {ep_id.upper()}" if story_data.get("destination_entity") else None)
         or ep_id.replace("ep_", "").replace("_", " ").title()
     )
     desc = yt_pack.get("description") or screenplay_data.get("lore_narrative", "")
@@ -271,13 +278,22 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
 
     fmt_val = str(user_inputs_data.get("format") or manifest_data.get("format") or "").lower()
     ep_genre_str = str(manifest_data.get("genre") or screenplay_data.get("genre") or user_inputs_data.get("genre") or "").lower()
+    is_doc_fmt = (
+        fmt_val in ("documentary", "doc")
+        or ep_genre_str.startswith("doc")
+        or "/documentary/" in ep_path.as_posix().lower()
+        or "\\documentary\\" in ep_path.as_posix().lower()
+        or ch_meta.get("id") in ("euro_discovery", "cineai_docs")
+    )
     is_relax_fmt = (
-        fmt_val in ("relaxation", "relax")
-        or fmt_val.startswith("relax")
-        or ep_genre_str.startswith("relax")
-        or "relax" in ep_genre_str
-        or "/relaxation/" in ep_path.as_posix().lower()
-        or "\\relaxation\\" in ep_path.as_posix().lower()
+        not is_doc_fmt and (
+            fmt_val in ("relaxation", "relax")
+            or fmt_val.startswith("relax")
+            or ep_genre_str.startswith("relax")
+            or "relax" in ep_genre_str
+            or "/relaxation/" in ep_path.as_posix().lower()
+            or "\\relaxation\\" in ep_path.as_posix().lower()
+        )
     )
     long_play_editions = [e for e in editions if "Long-Play" in e["format"]] if is_relax_fmt else []
     master_editions = [e for e in editions if "Master" in e["format"] or "master" in e["edition_id"]]
@@ -357,7 +373,7 @@ def _build_episode_record(ep_path: Path, ch_meta: dict[str, str], storage_dir: P
     has_master_file = bool(primary_master or ("master_4k_ambient.mp4" in files) or ("master_4k_nature.mp4" in files))
     ep_status = "completed" if has_master_file else (pipeline_state_data.get("status") or manifest_data.get("status") or "ready")
     curr_stage = 4 if has_master_file else int(pipeline_state_data.get("current_stage") or (3 if len(audio_stems) > 0 else (2 if len(keyframes) > 0 else 1)))
-    eff_format = "relaxation" if is_relax_fmt else (user_inputs_data.get("format") or manifest_data.get("format") or "relaxation")
+    eff_format = "documentary" if is_doc_fmt else ("relaxation" if is_relax_fmt else (user_inputs_data.get("format") or manifest_data.get("format") or "relaxation"))
 
     return {
         "episode_id": ep_id,

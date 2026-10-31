@@ -70,9 +70,17 @@ class GeminiAudioTTSAdapter(TTSProviderProtocol):
             out.write_bytes(self._generate_synthetic_wav(duration_seconds=max(2.0, len(text.split()) * 0.4)))
             return out
 
-        import imageio_ffmpeg
-        from google import genai
-        from google.genai import types
+        # Attempt Gemini Flash Audio synthesis; fall back smoothly to AzureSpeechTTSAdapter if google-genai is unavailable
+        try:
+            import imageio_ffmpeg
+            from google import genai
+            from google.genai import types
+        except ImportError:
+            logger.info("google-genai package not found; falling back seamlessly to AzureSpeechTTSAdapter")
+            from src.providers.tts.azure_speech import AzureSpeechTTSAdapter
+            azure_tts = AzureSpeechTTSAdapter()
+            fb_voice = "en-GB-RyanNeural" if "en" in voice_id.lower() or voice_id in ("Charon", "Puck", "Fenrir", "Aoede", "Kore") else voice_id
+            return await azure_tts.synthesize_to_file(text, output_path=out, voice_id=fb_voice, speech_rate=speech_rate, force_live=force_live)
 
         eff_key = get_live_gemini_api_key(self.api_key)
         if not eff_key:
@@ -88,7 +96,7 @@ class GeminiAudioTTSAdapter(TTSProviderProtocol):
             f"cadence with natural pauses and warm clarity:\n\n\"{text}\""
         )
 
-        candidate_models = ["gemini-2.5-flash-preview-tts", "gemini-3.8-flash-tts", "gemini-2.5-pro-preview-tts"]
+        candidate_models = ["gemini-3.8-flash", "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts"]
         pcm_bytes = None
         last_error = None
 
@@ -118,7 +126,11 @@ class GeminiAudioTTSAdapter(TTSProviderProtocol):
                 logger.warning(f"gemini_tts_model_failed: model='{model_name}' error='{ex}'")
 
         if not pcm_bytes:
-            raise RuntimeError(f"Gemini Audio TTS synthesis failed: {last_error or 'No audio parts returned'}")
+            logger.warning(f"gemini_tts_all_candidates_failed: {last_error}. Delegating to AzureSpeechTTSAdapter fallback.")
+            from src.providers.tts.azure_speech import AzureSpeechTTSAdapter
+            azure_tts = AzureSpeechTTSAdapter()
+            fb_voice = "en-GB-RyanNeural" if "en" in voice_id.lower() or voice_id in ("Charon", "Puck", "Fenrir", "Aoede", "Kore") else voice_id
+            return await azure_tts.synthesize_to_file(text, output_path=out, voice_id=fb_voice, speech_rate=speech_rate, force_live=force_live)
 
         # Convert 24kHz raw PCM to broadcast 48kHz mono 16-bit PCM WAV via FFmpeg
         with tempfile.NamedTemporaryFile(suffix=".pcm", delete=False) as raw_tmp:

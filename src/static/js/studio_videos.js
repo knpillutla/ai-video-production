@@ -131,11 +131,6 @@ function nextEpisodeIdForChannel(channelId, formatKey, productionName) {
     const rFmt = String(record.format_slug || record.format || "").toLowerCase().trim();
     if (normFmt && rFmt && rFmt !== normFmt) return;
 
-    if (cleanProd) {
-      const rProd = String(record.production_name || "standalone").toLowerCase().trim().replace(/\s+/g, "_");
-      if (rProd !== cleanProd) return;
-    }
-
     const match = String(record.episode_id || record.id || "").match(prefix);
     if (match) highest = Math.max(highest, Number(match[1]));
   });

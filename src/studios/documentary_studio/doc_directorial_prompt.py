@@ -63,6 +63,7 @@ DOCUMENTARY DIRECTORIAL MANDATES (BBC / NATGEO BLUE-CHIP CALIBER):
    - STRICT BAN ON OUT-OF-BOUNDS VISUALS: If narrating education, PROHIBIT mountains or factories. If narrating trade or airports, PROHIBIT beaches or forests. If narrating clean power, PROHIBIT bare rocks without infrastructure. The visual subject MUST be the physical manifestation of what is spoken!
    - OVERLAY & BADGE GROUNDING: On-screen badges ("chapter_stats", "fact_badge") must quantify what the eyes see.
    - ZERO PHANTOM SUBJECTS: In "scenes[].narration_text", every line must directly describe what is visible on screen. Triadic harmony: visual establishes subject -> narration explains it -> camera moves toward it.
+   - MANDATORY LOCATION FIRST-WORD ANCHOR: The very first word (or opening phrase) of each chapter's "narration_text" MUST be the specific location or landmark name (e.g., "Nidaros Cathedral, rising high above Trondheim...", "Geirangerfjord, carved deep by prehistoric glaciers..."). This immediately tells viewers what they are looking at from the first spoken syllable.
    - In "audio_master.spoken_narration_script", unify per-scene narration into a poetic, scientifically accurate master narrative (~120 WPM).
 
 3. SOUND DESIGN & CULTURALLY AUTHENTIC BGM (SUNO DIRECTORIAL SPEC):
@@ -82,13 +83,16 @@ DOCUMENTARY DIRECTORIAL MANDATES (BBC / NATGEO BLUE-CHIP CALIBER):
    - Supported primitives: "dollyin", "dollyout", "pan-left", "pan-right", "tilt-up", "tilt-down", "orbit-left", "orbit-right".
    - Multi-stage: [{{"movement": "dollyin", "duration": 6.0}}, {{"movement": "pan-right", "duration": 4.0}}].
 
-6. HIERARCHICAL CHAPTER & MULTI-SHOT CADENCE (BBC / NATGEO 4-6s VISUAL RHYTHM):
-   - In broadcast documentary production, the Voiceover Track is the master clock. A 12-16s narration chapter cuts between 2 to 3 complementary perspectives inside "shots", ALL STRICTLY WITHIN THE CHAPTER'S TOPIC:
-     * Shot 1 (Establishing Wide Vista): Sweeping 4K high-altitude aerial drone vista or wide panorama of the chapter's specific subject (e.g. grand university campus, container port, or international airport).
-     * Shot 2 (Living Kinetic Perspective): Living AI diffusion clip (5.0s native duration, "motion_type": "ai_diffusion", "recommended_model": "h3_max" | "kling_v3_4k") capturing intrinsic physical movement of that same subject (e.g. students walking in quad, gantry cranes loading container ship, or jetliner taxiing on tarmac). NEVER use generic rushing river rapids or unrelated town squares!
-     * Shot 3 (Intimate Detail / Macro Architecture): 85mm optical bokeh close-up, low-angle monumental perspective, or architectural relief of that same subject (e.g. university clocktower crest, cargo ship mooring lines, or air traffic control tower).
-   - ZERO ARTIFICIAL EXTENSIONS: AI diffusion clips run for their native 5.0s length; complementary Ken Burns cutaways carry the remaining narration duration without temporal snap-backs.
-   - Inside each chapter in "chapters" (or "scenes"), populate: "chapter_title", "chapter_subtitle", "fact_badge", "chapter_stats", "narration_text", and "shots": [shot1, shot2, shot3].
+6. HIERARCHICAL CHAPTER & EXACTLY 3 SHOTS CADENCE (BBC / NATGEO VISUAL RHYTHM):
+   - In broadcast documentary production, each chapter has EXACTLY 3 complementary shots inside "shots" [shot1, shot2, shot3]:
+     * Shot 1 (Establishing Wide Vista): Sweeping 4K high-altitude aerial drone vista or wide panorama of the chapter's specific subject.
+     * Shot 2 (Living Kinetic or 3D Orbital Perspective): Dynamic movement, pedestrian/vehicle flow, or 3D orbital banking flight.
+     * Shot 3 (Intimate Detail / Macro Architecture): 85mm optical bokeh close-up, ground perspective, or architectural relief.
+   - INTELLIGENT SHOT ROUTING (EVEN IN 4K MASTER TIER): Gemini must NOT blindly direct all 3 shots to AI diffusion!
+     * Use "local_drone" ("motion_type": "ken_burns", "recommended_model": "local_drone", $0.00) for sweeping high aerials, static stone monuments, cathedrals, and architectural macro details to guarantee rock-solid geometry without morphing artifacts.
+     * Use "ai_diffusion" (5.0s native duration, "motion_type": "ai_diffusion", "recommended_model": "h3_max" | "kling_v3_4k") for shots featuring pedestrians, moving vehicles, flowing rivers/waves, or dynamic weather.
+     * ZERO ARTIFICIAL EXTENSIONS: AI diffusion clips run for their native 5.0s length; complementary local drone cutaways carry the remaining duration.
+     * Populate: "chapter_title", "chapter_subtitle", "fact_badge", "chapter_stats", "narration_text", and "shots": [shot1, shot2, shot3].
 
 7. COMPREHENSIVE EDUCATIONAL DOCUMENTARY DIRECTIVES (COUNTRY & CITY EXPLORATION):
    When exploring a nation or city ("countries", "cities", "nations", "country", "city"), this is a high-caliber, BBC/NatGeo-grade EDUCATIONAL DOCUMENTARY exploring everything about the destination:

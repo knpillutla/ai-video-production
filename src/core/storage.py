@@ -149,10 +149,11 @@ class MultiTenantStorageService:
                     break
 
         if channel_id and clean_fmt and production_name:
+            clean_prod = re.sub(r"[^a-zA-Z0-9_-]", "_", str(production_name).lower()).strip("_") or "standalone"
+            clean_e = re.sub(r"[^a-zA-Z0-9_-]", "_", str(episode_id).lower()).strip("_") or "ep-001"
             for uid in [user_id, "knpillutla@gmail.com", "user_krishna_01"]:
-                exact_dir = self.get_channel_format_production_episode_path(
-                    uid, channel_id, clean_fmt, production_name, episode_id
-                )
+                chan_path = self.get_channel_path(uid, channel_id)
+                exact_dir = chan_path / clean_fmt / clean_prod / clean_e
                 if exact_dir.exists() and exact_dir.is_dir():
                     has_content = any(
                         (exact_dir / f).exists()
@@ -182,13 +183,13 @@ class MultiTenantStorageService:
                     f"*/*/{clean_ep.upper()}",
                 ):
                     for sub in root.glob(pattern):
-                        if sub.is_dir() and sub not in matches:
+                        if sub.is_dir() and sub not in matches and any(sub.iterdir()):
                             matches.append(sub)
 
                 # Fallback to targeted rglob only if no structural matches found
                 if not matches:
                     for sub in root.rglob(f"{clean_ep}"):
-                        if sub.is_dir() and sub not in matches:
+                        if sub.is_dir() and sub not in matches and any(sub.iterdir()):
                             matches.append(sub)
             except Exception:
                 pass

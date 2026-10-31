@@ -199,7 +199,24 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
     const tEl = document.getElementById("studio-banner-title");
     if (tEl) { tEl.textContent = isManual ? "Manual Stage Pipeline Active" : "Autonomous Pipeline Active (--id)"; tEl.className = "font-black text-emerald-950 dark:text-white"; }
     const dEl = document.getElementById("studio-banner-detail");
-    if (dEl) { dEl.textContent = `Episode ${vid.id || vid.episode_id} ("${vid.title || 'Resuming'}"): Synthesizing & Assembling 4K Broadcast Master...`; dEl.className = "text-[10px] text-emerald-900 dark:text-gray-200 font-medium truncate"; }
+    if (dEl) {
+      if (isScriptOnly) {
+        dEl.textContent = `Episode ${vid.id || vid.episode_id} ("${vid.title || 'New'}"): Generating 22-Chapter Sovereign Story Script (Stage 1 of 7)...`;
+      } else if (isNarrationOnly) {
+        dEl.textContent = `Episode ${vid.id || vid.episode_id} ("${vid.title || 'Resuming'}"): Synthesizing Spoken Narration (Stage 2 of 7)...`;
+      } else if (isScreenplayOnly) {
+        dEl.textContent = `Episode ${vid.id || vid.episode_id} ("${vid.title || 'Resuming'}"): Formulating Directorial Screenplay (Stage 3 of 7)...`;
+      } else if (isPhotosOnly) {
+        dEl.textContent = `Episode ${vid.id || vid.episode_id} ("${vid.title || 'Resuming'}"): Generating Keyframe Photos (Stage 4 of 7)...`;
+      } else if (isBgmOnly) {
+        dEl.textContent = `Episode ${vid.id || vid.episode_id} ("${vid.title || 'Resuming'}"): Composing BGM Soundtrack (Stage 5 of 7)...`;
+      } else if (isMotionOnly) {
+        dEl.textContent = `Episode ${vid.id || vid.episode_id} ("${vid.title || 'Resuming'}"): Synthesizing Video Motion (Stage 6 of 7)...`;
+      } else {
+        dEl.textContent = `Episode ${vid.id || vid.episode_id} ("${vid.title || 'Resuming'}"): Synthesizing & Assembling 4K Broadcast Master...`;
+      }
+      dEl.className = "text-[10px] text-emerald-900 dark:text-gray-200 font-medium truncate";
+    }
     const bb = document.getElementById("studio-banner-phase-badge");
     if (bb) {
       bb.classList.remove("hidden");
@@ -250,6 +267,26 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
       if (res.ok) {
         const data = await res.json();
         let changed = false;
+        const polledDest = data.production_name || data.story?.destination_entity || data.script?.destination_entity;
+        if (polledDest && (!vid.production_name || vid.production_name === "standalone")) {
+          vid.production_name = polledDest;
+          vid.country = polledDest;
+          changed = true;
+        }
+        if (data.story) {
+          if (data.story.title && vid.title !== data.story.title) {
+            vid.title = data.story.title;
+            changed = true;
+          }
+          if (data.story.destination_entity && vid.production_name !== data.story.destination_entity) {
+            vid.production_name = data.story.destination_entity;
+            vid.country = data.story.destination_entity;
+            changed = true;
+          }
+          if (typeof hideCreationProgressModal === "function") {
+            hideCreationProgressModal();
+          }
+        }
         if (data.story && (!vid.story || JSON.stringify(vid.story) !== JSON.stringify(data.story))) {
           vid.story = data.story;
           changed = true;
@@ -415,12 +452,12 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
           if (vid && (vid.tier || vid.tierKey)) return vid.tier || vid.tierKey;
           return "balanced";
         })(),
-        motion_model: vid.motionModel || "wan_4k",
+        motion_model: vid.motionModel || (isDocFmt ? "auto" : "wan_4k"),
         image_model: vid.imageModel || "zimage",
         enable_bgm: vid.enableBgm !== false,
         enable_voiceover: (isDocFmt || isNarrationOnly || Boolean(vid.enableVoiceOver)),
         dual_editions: Boolean(vid.dual_editions ?? document.getElementById("studio-toggle-dual-editions")?.checked),
-        tts_model: document.getElementById("studio-tts-model")?.value || vid.ttsModel || "azure_speech",
+        tts_model: document.getElementById("studio-tts-model")?.value || vid.ttsModel || "gemini",
         allow_fallback: vid.allowFallback || false,
         pipeline_strategy: isSingleSection ? "manual" : (vid.pipelineStrategy || vid.pipeline_strategy || (typeof activePipelineStrategy !== "undefined" ? activePipelineStrategy : "manual")),
         execution_mode: vid.execution_mode || vid.executionMode || (typeof activeExecutionMode !== "undefined" ? activeExecutionMode : "test"),
@@ -514,11 +551,14 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
     }
 
     if (res.ok && resData.success) {
-      if (resData.production_name) {
-        vid.production_name = resData.production_name;
-      }
-      if (resData.script?.destination_entity && !vid.production_name) {
-        vid.production_name = resData.script.destination_entity;
+      const resolvedDest = resData.production_name || resData.story?.destination_entity || resData.script?.destination_entity || resData.destination_entity;
+      if (resolvedDest) {
+        vid.production_name = resolvedDest;
+        vid.country = resolvedDest;
+        const pInput = document.getElementById("studio-production-name");
+        if (pInput) pInput.value = resolvedDest;
+        const cSel = document.getElementById("studio-country-selector");
+        if (cSel) cSel.value = resolvedDest;
       }
       if (resData.story) {
         vid.story = resData.story;
@@ -554,6 +594,23 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
       if (resData.editions?.length) vid.editions = resData.editions;
       if (resData.cost_usd !== undefined) vid.cost_usd = resData.cost_usd;
 
+      if (resData.story) {
+        vid.story = resData.story;
+        if (resData.story.title) vid.title = resData.story.title;
+        if (resData.story.destination_entity) {
+          vid.production_name = resData.story.destination_entity;
+          vid.country = resData.story.destination_entity;
+        }
+      }
+      if (resData.title) vid.title = resData.title;
+      if (resData.production_name) {
+        vid.production_name = resData.production_name;
+        vid.country = resData.production_name;
+      }
+      if (typeof hideCreationProgressModal === "function") {
+        hideCreationProgressModal();
+      }
+
       if (isSingleSection && isScriptOnly) {
         vid.status = "ready";
         vid.progress = 20;
@@ -562,13 +619,13 @@ async function startStudioLiveStageProgress(vid, strategy, manualPhase) {
         vid.failedStage = null;
         const bb = document.getElementById("studio-banner-phase-badge");
         if (bb) {
-          bb.textContent = isDocFmt ? "Stage 1: 21-Chapter Story Ready (Review Below)" : "Stage 1: Script Ready (Approve Photos Below)";
+          bb.textContent = isDocFmt ? "Stage 1: 22-Chapter Story Ready (Review Below)" : "Stage 1: Script Ready (Approve Photos Below)";
           bb.className = "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-600 text-white";
         }
         const banner = document.getElementById("studio-queued-banner");
         if (banner) {
           const tEl = document.getElementById("studio-banner-title");
-          if (tEl) tEl.textContent = isDocFmt ? "21-Chapter Story Dossier Ready" : "Director Script Ready";
+          if (tEl) tEl.textContent = isDocFmt ? "22-Chapter Story Dossier Ready" : "Director Script Ready";
           const dEl = document.getElementById("studio-banner-detail");
           if (dEl) dEl.textContent = `Episode ${vid.id || vid.episode_id}: Script created. Review story chapters below, then proceed to Narration.`;
         }
@@ -915,6 +972,8 @@ function advanceToNarrationStage(vid, ttsModelOverride, forceRerun = false) {
     target.ttsModel = ttsModelOverride;
     const ttsSelect = document.getElementById("studio-tts-model");
     if (ttsSelect) ttsSelect.value = ttsModelOverride;
+  } else if (!target.ttsModel) {
+    target.ttsModel = document.getElementById("studio-tts-model")?.value || "gemini";
   }
   currentActiveInspectorEpisode = target;
   renderInspectorFromVideo(target);
@@ -954,6 +1013,8 @@ function advanceToAudioStage(vid, ttsModelOverride, forceRerun = false) {
     target.ttsModel = ttsModelOverride;
     const ttsSelect = document.getElementById("studio-tts-model");
     if (ttsSelect) ttsSelect.value = ttsModelOverride;
+  } else if (!target.ttsModel) {
+    target.ttsModel = document.getElementById("studio-tts-model")?.value || "gemini";
   }
   currentActiveInspectorEpisode = target;
   renderInspectorFromVideo(target);

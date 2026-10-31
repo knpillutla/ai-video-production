@@ -56,12 +56,17 @@ async function openScriptDrawer(initialTab = "story") {
   const epId = vid.id || vid.episode_id || "EP-001";
   const chSlug = vid.channel_id || vid.channelId || (typeof selectedStudioChannel !== "undefined" ? selectedStudioChannel : "euro_discovery");
 
+  const vFmt = String(vid.format || vid.format_slug || "").toLowerCase().trim();
+  const isDoc = vFmt.includes("documentary") || String(vid.genre || "").toLowerCase().startsWith("doc") || chSlug.includes("euro") || chSlug.includes("discovery");
+  const isMv = vFmt.includes("music_video") || String(vid.genre || "").toLowerCase().startsWith("music/") || String(vid.genre || "").toLowerCase().startsWith("dance/");
+  const pollEndpoint = isMv ? "/api/music-video/poll-artifacts" : (isDoc ? "/api/documentary/poll-artifacts" : "/api/production/poll-artifacts");
+
   if (!vid.screenplay || !vid.story || !vid.pipeline_state) {
     try {
       const uEmail = (typeof currentUser !== "undefined" && currentUser?.email) ? currentUser.email : "knpillutla@gmail.com";
-      const fmtQ = encodeURIComponent(vid.format || vid.format_slug || "");
-      const prodQ = encodeURIComponent(vid.production_name || "");
-      const res = await fetch(`/api/production/poll-artifacts?channel_id=${chSlug}&episode_id=${epId}&format=${fmtQ}&production_name=${prodQ}&user_id=${encodeURIComponent(uEmail)}`);
+      const fmtQ = encodeURIComponent(vid.format || vid.format_slug || (isDoc ? "documentary" : "relaxation"));
+      const prodQ = encodeURIComponent(vid.production_name || vid.country || vid.location_hub || "");
+      const res = await fetch(`${pollEndpoint}?channel_id=${chSlug}&episode_id=${epId}&format=${fmtQ}&production_name=${prodQ}&user_id=${encodeURIComponent(uEmail)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.story) vid.story = data.story;
@@ -77,7 +82,7 @@ async function openScriptDrawer(initialTab = "story") {
   }
 
   const script = vid.screenplay || vid.script || vid.manifest || {};
-  const story = vid.story || script;
+  const story = vid.story || vid.raw_story || script;
   const docShots = (script.chapters || []).flatMap((ch, cIdx) =>
     (ch.shots || []).map((sh, sIdx) => ({
       ...sh,
@@ -87,14 +92,21 @@ async function openScriptDrawer(initialTab = "story") {
     }))
   );
   const scenes = docShots.length > 0 ? docShots : (script.scenes || vid.scenes || []);
-  const rawChapters = story.chapters || scenes.map((sc, i) => ({
-    chapter_index: i + 1,
-    chapter_title: sc.chapter_title || `Chapter ${i + 1}`,
-    chapter_subtitle: sc.chapter_subtitle || "",
-    chapter_stats: sc.chapter_stats || "",
-    fact_badge: sc.fact_badge || "",
-    narration: sc.narration_text || sc.narration || "",
-  }));
+  let rawChapters = [];
+  if (story.chapters && Array.isArray(story.chapters) && story.chapters.length > 0) {
+    rawChapters = story.chapters;
+  } else if (script.chapters && Array.isArray(script.chapters) && script.chapters.length > 0) {
+    rawChapters = script.chapters;
+  } else if (Array.isArray(scenes) && scenes.length > 0) {
+    rawChapters = scenes.map((sc, i) => ({
+      chapter_index: i + 1,
+      chapter_title: sc.chapter_title || `Chapter ${i + 1}`,
+      chapter_subtitle: sc.chapter_subtitle || "",
+      chapter_stats: sc.chapter_stats || "",
+      fact_badge: sc.fact_badge || "",
+      narration: sc.narration_text || sc.narration || "",
+    }));
+  }
 
   const pipelineState = vid.pipeline_state || { current_stage: vid.currentStage || 1, is_approved: Boolean(vid.is_approved), status: vid.status || "ready" };
   const manifest = vid.manifest || vid.script || {};

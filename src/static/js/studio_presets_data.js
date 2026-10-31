@@ -481,12 +481,12 @@ const DEFAULT_CHANNEL_GENRES = {
 
 const STUDIO_SUBOPTIONS_MAP = {
   "doc/nations": [
-    { val: "europe_nations", label: "🇪🇺 Nations of Europe (21/35 Ch)" },
-    { val: "asia_nations", label: "🌏 Nations of Asia (21/35 Ch)" },
-    { val: "africa_nations", label: "🌍 Nations of Africa (21/35 Ch)" },
-    { val: "americas_nations", label: "🌎 Nations of the Americas (21/35 Ch)" },
+    { val: "europe_nations", label: "🇪🇺 Nations of Europe (22/35 Ch)" },
+    { val: "asia_nations", label: "🌏 Nations of Asia (22/35 Ch)" },
+    { val: "africa_nations", label: "🌍 Nations of Africa (22/35 Ch)" },
+    { val: "americas_nations", label: "🌎 Nations of the Americas (22/35 Ch)" },
     { val: "oceania_nations", label: "🏝️ Nations of Oceania & the Pacific" },
-    { val: "nordic_polar_nations", label: "❄️ Nordic & Polar Realms (21/35 Ch)" }
+    { val: "nordic_polar_nations", label: "❄️ Nordic & Polar Realms (22/35 Ch)" }
   ],
   "doc/civilizations": [
     { val: "indus_vedic", label: "🏺 Indus Valley & Vedic Civilizations" },
@@ -920,10 +920,8 @@ const STUDIO_ARCHETYPES_MAP = {
     { val: "cities", label: "🏙️ Deep-Dive Single City Exploration & Living Spirit" }
   ],
   "doc/nations": [
-    { val: "country_overview", label: "🌍 Country Overview (21 Chapters)" },
+    { val: "country_overview", label: "🌍 Country Overview (22 Chapters)" },
     { val: "country_encyclopedia", label: "📚 Country Encyclopedia (35 Chapters)" },
-    { val: "country_dossier", label: "🌍 Country Overview (21 Chapters)" },
-    { val: "countries", label: "🌍 Country Overview (21 Chapters)" },
     { val: "top_places_to_visit", label: "✨ Top Places to Visit (National Highlights)" },
     { val: "top_10_cities", label: "🏙️ Top 10 Cities Countdown" },
     { val: "tour_itinerary", label: "🗺️ Travel Itinerary Tour" },

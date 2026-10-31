@@ -13,10 +13,17 @@ from typing import Dict
 
 PILLARS_ALMANAC: Dict[str, Dict[str, str]] = {
     # --- ACT I: ORIGINS, SOVEREIGNTY & LAND ---
+    "prologue": {
+        "title": "PROLOGUE & SOVEREIGN EXPEDITION ROADMAP",
+        "focus": "Topic declaration, national character, geographic scale, central paradox, and 360° journey roadmap.",
+        "visual": "Sweeping golden-hour aerial drone flight over iconic topography, kinetic societal pulse, hero landmark reveal.",
+        "banned": "Generic office cubicles or hyper-local details without national scope.",
+        "badge": "🌍 Sovereign Expedition",
+    },
     "identity": {
-        "title": "SOVEREIGN IDENTITY & FOUNDING CHARACTER",
-        "focus": "National spirit, constitutional origins, world position, founding self-determination.",
-        "visual": "Monumental founding monument, sovereign dawn over national topography.",
+        "title": "ORIGINS, INDEPENDENCE & CONSTITUTIONAL DAWN",
+        "focus": "When and how it became a nation, ancient founding cradle, declaration of independence, and constitutional sovereignty.",
+        "visual": "Ancient stone fortress ruins, historic independence landmark/square, original constitution parchment.",
         "banned": "Generic office cubicles or random highways.",
         "badge": "🏛️ Sovereignty Established",
     },
@@ -29,7 +36,7 @@ PILLARS_ALMANAC: Dict[str, Dict[str, str]] = {
     },
     "capital_governance": {
         "title": "CAPITAL CITY & EXECUTIVE GOVERNANCE",
-        "focus": "The capital city, parliamentary democracy, executive government seat, supreme courts.",
+        "focus": "The capital city (MUST explicitly state it is the capital of the nation), parliamentary democracy, executive seat.",
         "visual": "National parliament building, executive state house, civic precinct.",
         "banned": "Residential suburbs or generic park benches.",
         "badge": "🏛️ Capital & Government Seat",
@@ -279,4 +286,5 @@ BROADCAST_21_KEYS = [
     "conclusion_future"
 ]
 
+BROADCAST_22_KEYS = ["prologue"] + BROADCAST_21_KEYS
 ALMANAC_35_KEYS = list(PILLARS_ALMANAC.keys())

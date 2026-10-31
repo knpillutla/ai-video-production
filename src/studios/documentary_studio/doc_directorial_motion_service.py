@@ -70,24 +70,18 @@ def build_pass2_directorial_prompt(
 === PASS 2 AUDIO-FIRST 3-ANGLE SHOT SIZING & LOCAL DRONE CHOREOGRAPHY FOR "{title}" ===
 1. VISUAL PADDING & CONTEMPLATION TIME:
    Each chapter's voiceover has been recorded ("Measured Narration Duration"). Add "visual_padding_seconds" (2.0s to 6.0s) so "chapter_total_duration" = Measured Narration Duration + visual_padding_seconds.
-2. MULTI-ANGLE SHOT PROGRESSION & STRICT 5.0s AI DIFFUSION CAP:
-   Author 3 or more distinct shots in each chapter's "shots" array (you may create 3, 4, or 5 shots per chapter as needed) whose "duration_seconds" sum EXACTLY to "chapter_total_duration":
-   - Shot 1 (High Aerial Vista): 18mm ultra-wide panoramic high-altitude bird's-eye perspective ("local_drone", $0.00).
-   - Shot 2 (45° Top View / 3D Orbit): 45-degree angle top view or 3D orbital banking flight around the landmark ("local_drone", $0.00).
-   - Shot 3+ (Living Kinetic Perspective & Complementary Local Drone Angles):
-     * STRICT 5.0s AI DIFFUSION CONSTRAINT: For cost saving, EVERY shot with "motion_type": "ai_diffusion" ("{diff_model}") MUST be assigned "duration_seconds": 5.0 (STRICTLY 5.0s, never longer!).
-     * Use complementary "local_drone" ($0.00) shots (and add a 4th or 5th shot if helpful) to cover the remaining duration of the chapter so all shots in the chapter sum EXACTLY to "chapter_total_duration"!
-3. LOCAL PERSPECTIVE DRONE ("motion_type": "ken_burns", "recommended_model": "local_drone") NATIVE SCHEMA:
-   - In "model_configs.local_drone", use ONLY native engine primitives:
-     "dollyin", "dollyout", "slow-drone-forward", "slow-drone-pullback", "crane-ascend", "crane-descent", "drone-sweep-left", "drone-sweep-right", "pan-left", "pan-right", "tilt-up", "tilt-down", "orbit-left", "orbit-right", "drift-up-right", "drift-up-left", "drift-down-right", "drift-down-left", "roll-left", "roll-right", "level", "stay".
-   - Parallel stage format: {{"stage": 1, "duration": 10.0, "movements": ["slow-drone-forward", "tilt-down"]}}
-   - Sequential stage format: {{"stage": 2, "duration": 10.0, "movement": "crane-ascend"}}
-   - Include "camera_movement": "<primary_primitive>", "start_pan": "center"|"left"|"right", "start_zoom": "normal"|"in", "start_tilt": "center"|"up"|"down", "curve": "cosine"|"cubic"|"ramp-up"|"ramp-down".
-4. GEMINI AUTONOMOUS MOTION DECISION ("local_drone" vs "{diff_model}"):
-   - YOU (Gemini) autonomously decide for every single shot whether it should use "local_drone" or "{diff_model}" based strictly on what is inside the shot (no fixed quota):
-   - Choose "motion_type": "ken_burns", "recommended_model": "local_drone" ($0.00) when the shot depicts purely static subjects (stone monuments, historic interiors, libraries, manuscripts, ruins, statues, or solid terrain without moving objects).
-   - Choose "motion_type": "ai_diffusion", "recommended_model": "{diff_model}" whenever the shot contains any movable or dynamic objects—including humans, pedestrians, crowds, artisans, vehicles (cars, buses, trucks, trains), boats, ships, birds, airplanes, water (rivers, canals, ocean waves, lakes, waterfalls), clouds, skies, smoke, or fire—so those elements animate naturally and never look frozen! Populate "motion_prompt" and "model_configs.{diff_model}".
-   - MANDATORY 5.0-SECOND CAP ON AI DIFFUSION: Every "{diff_model}" shot MUST have `"duration_seconds": 5.0`! Allocate the remaining seconds of `"chapter_total_duration"` across the complementary `"local_drone"` shots (adding additional `"local_drone"` shots if needed) so the chapter's shots sum EXACTLY to `"chapter_total_duration"`.
+2. EXACTLY 3 SHOTS PER CHAPTER & STRICT 5.0s AI DIFFUSION CAP:
+   Author EXACTLY 3 distinct shots in each chapter's "shots" array [shot1, shot2, shot3] whose "duration_seconds" sum EXACTLY to "chapter_total_duration":
+   - Shot 1 (High Aerial Vista): 18mm ultra-wide panoramic high-altitude bird's-eye perspective.
+   - Shot 2 (Living Kinetic or 3D Orbit): Dynamic physical movement or 3D orbital banking flight.
+   - Shot 3 (Intimate Detail / Macro Architecture): 85mm optical bokeh close-up or architectural relief.
+3. INTELLIGENT SHOT ROUTING (EVEN IN 4K MASTER TIER):
+   - Gemini MUST NOT blindly direct all shots to AI diffusion! Intelligently select "local_drone" vs "{diff_model}" per shot:
+   - Use "motion_type": "ken_burns", "recommended_model": "local_drone" ($0.00) for sweeping high aerials, static stone monuments, historic interiors, and architectural details to guarantee rock-solid geometry without morphing artifacts.
+   - Use "motion_type": "ai_diffusion", "recommended_model": "{diff_model}" whenever the shot contains pedestrians, crowds, vehicles (cars, trains, boats), flowing water, or dynamic weather.
+   - STRICT 5.0s CAP: Every "{diff_model}" shot MUST have "duration_seconds": 5.0 (strictly 5.0s, never longer!). Distribute remaining seconds across the "local_drone" shots so the 3 shots sum EXACTLY to "chapter_total_duration".
+4. LOCAL DRONE ENGINE SCHEMA:
+   - In "model_configs.local_drone", use native primitives ("dollyin", "dollyout", "slow-drone-forward", "crane-ascend", "orbit-left", "orbit-right", "drift-up-right", "stay", etc.). Parallel stage: {{"stage": 1, "duration": 5.0, "movements": ["slow-drone-forward", "tilt-down"]}}. Sequential stage: {{"stage": 2, "duration": 5.0, "movement": "crane-ascend"}}.
 
 === CHAPTERS & REAL MEASURED AUDIO DURATIONS ===
 {chapters_context}

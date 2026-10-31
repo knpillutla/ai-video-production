@@ -1,4 +1,4 @@
-"""Deterministic offline tests for Documentary Curiosity Thumbnail Generation & Lower-Third HUD."""
+"""Deterministic offline tests for Documentary Curiosity Thumbnail Generation ."""
 from pathlib import Path
 import pytest
 from PIL import Image
@@ -9,7 +9,6 @@ from src.studios.documentary_studio.doc_thumbnail_service import (
     render_high_ctr_curiosity_thumbnail,
     generate_documentary_thumbnail_variants,
 )
-from src.studios.documentary_studio.doc_overlay_service import create_documentary_lower_third_overlay
 
 
 def _make_dummy_scene(index: int, narration: str) -> DocScene:
@@ -99,22 +98,53 @@ def test_generate_documentary_thumbnail_fallback_headline(tmp_path: Path):
 
     pkg = generate_documentary_thumbnail_variants(sb, ep_dir, [kf1])
     assert pkg
-    assert "WHAT IS ROME" in pkg["thumbnail_headline"]
+    assert pkg["thumbnail_headline"] == "THE ETERNAL CITY"
     assert (ep_dir / "thumbnail.jpg").is_file()
 
 
-def test_create_documentary_lower_third_overlay():
-    """Verify 4K broadcast frosted glass lower-third attraction card rendering."""
-    overlay = create_documentary_lower_third_overlay(
-        attraction_name="Wawel Royal Castle",
-        sub_location="Kraków, Poland",
-        target_res=(3840, 2160),
+def test_derive_contextual_doc_titles_different_countries():
+    """Verify each country derives a unique context-driven title and 2-to-4 word thumbnail hook."""
+    from src.studios.documentary_studio.doc_curiosity_title_service import derive_contextual_doc_titles
+
+    # Slovakia
+    t1, h1, vars1 = derive_contextual_doc_titles("Slovakia", "Slovakia: Fortress of the Carpathians")
+    assert "Fortress of the Carpathians" in t1
+    assert "Slovakia" in t1
+    assert h1 == "FORTRESS OF THE CARPATHIANS"
+    assert vars1[1]["headline"] == "SLOVAKIA'S SECRET"
+
+    # Croatia (uses different rotated formula than Slovakia)
+    t2, h2, vars2 = derive_contextual_doc_titles("Croatia", "Croatia: Jewel of the Adriatic")
+    assert "Jewel of the Adriatic" in t2
+    assert "Croatia" in t2
+    assert t2 != t1  # Formula varies!
+    assert h2 == "JEWEL OF THE ADRIATIC"
+    assert vars2[2]["headline"] == "HOW CROATIA SURVIVED"
+
+    # Estonia (uses modern republic / sovereign formula)
+    t3, h3, vars3 = derive_contextual_doc_titles("Estonia", "Estonia: Sovereign Sanctuary of Forest and Code")
+    assert "Sanctuary of Forest and Code" in t3
+    assert "Estonia" in t3
+    assert t3 != t2
+    assert len(h3.split()) <= 4
+
+    # Plain generic input (e.g. "Croatia: Travel")
+    t4, h4, vars4 = derive_contextual_doc_titles("Croatia", "Croatia: Travel")
+    assert "Croatia" in t4
+    assert "Travel" not in t4  # Strips generic junk
+    assert h4 == "THE REAL CROATIA"
+
+    # Dynamic Gemini authored title takes 100% precedence over fallbacks
+    gemini_yt = "The Secret Nation Out-Producing the World's Superpowers ? Slovakia 4K"
+    gemini_thumb = "EUROPE'S SECRET"
+    t5, h5, vars5 = derive_contextual_doc_titles(
+        "Slovakia",
+        "Slovakia: Fortress of the Carpathians",
+        gemini_yt_title=gemini_yt,
+        gemini_thumb_headline=gemini_thumb,
     )
-    assert isinstance(overlay, np.ndarray)
-    assert overlay.shape == (2160, 3840, 4)
-    # Check that card pixels have non-zero alpha
-    card_area = overlay[int(2160 * 0.75):, :int(3840 * 0.5), 3]
-    assert np.any(card_area > 200)
+    assert t5 == gemini_yt
+    assert h5 == gemini_thumb
 
 
 def test_all_new_archetypes_directives_and_templates():

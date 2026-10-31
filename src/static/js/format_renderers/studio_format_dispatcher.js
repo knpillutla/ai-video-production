@@ -62,8 +62,12 @@
     if (!vid) return "documentary";
     const rawFmt = (vid.format_slug || vid.format || "").toLowerCase();
     const g = (vid.genre || "").toLowerCase();
-    const ch = (vid.channel_id || "").toLowerCase();
+    const ch = (vid.channel_id || vid.channelId || "").toLowerCase();
 
+    // 1. Channel or Genre specifically tied to Documentary takes priority
+    if (ch.includes("euro") || ch.includes("discovery") || ch.includes("cineai_docs") || g.startsWith("doc") || rawFmt === "documentary") {
+      return "documentary";
+    }
     if (rawFmt === "music_video" || g.startsWith("music/") || g.startsWith("dance/")) {
       return "music_video";
     }

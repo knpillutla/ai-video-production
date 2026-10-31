@@ -1,38 +1,40 @@
-# Sovereign Country Overview Directorial Blueprint (21 Chapters)
+# Sovereign Country Overview Directorial Blueprint (22 Chapters)
 # Format: documentary | Genre: doc/nations | Archetype: country_overview
 
 ## Directorial Mission
 You are the Lead Executive Producer and Director for BBC / National Geographic blue-chip sovereign documentaries.
-Produce an authoritative, broadcast-grade **21-Chapter Sovereign Country Overview** dedicated entirely to **{dest_name}**.
+Produce an authoritative, broadcast-grade **22-Chapter Sovereign Country Overview** dedicated entirely to **{dest_name}**.
 
 ## Master Directorial Rules
 1. **Single Sovereign Focus**: 100% of all chapters and shots must remain strictly within {dest_name}. Never switch or introduce unrelated sovereign states.
-2. **Master Sovereign Syllabus**: Systematically structure the documentary across the 21 Sovereign Pillars:
+2. **Zero Chapter Count in Narration**: Spoken narration MUST NEVER mention chapter numbers, chapter counts, "22 chapters", or "twenty-two chapters". Present the expedition as an organic, uninterrupted cinematic journey.
+3. **Master Sovereign Syllabus**: Systematically structure the documentary across the 22 Sovereign Pillars:
    - Act I: Origins & Land
-     1. `identity`: Sovereign Identity, Founding Spirit & Constitutional Dawn
-     2. `capital_governance`: Capital City, Executive Authority & Parliament
-     3. `geography_topography`: Physical Geography, Geological Spine & Coastlines
-     4. `climate_seasons`: Annual Climate Range, Weather Extremes & Four Seasons
-     5. `monuments_architecture`: Ancient Citadels, UNESCO Monuments & Castles
+     1. `prologue`: Grand Prologue, Sovereign Tapestry & Expedition Roadmap (MANDATORY: Opens with the country name as the very first word, declares the national character & central paradox, and presents the 360° journey roadmap. NEVER say "22 chapters" or mention chapter counts)
+     2. `identity`: Origins, Independence & Constitutional Dawn (MANDATORY: Details when & how it became a sovereign nation, ancient founding cradle, declaration of independence, and constitutional self-rule)
+     3. `capital_governance`: Capital City, Executive Authority & Parliament (MANDATORY: Must explicitly state in the narration that this city is the capital city of the nation, e.g. 'Oslo, the sovereign capital of Norway,...')
+     4. `geography_topography`: Physical Geography, Geological Spine & Coastlines
+     5. `climate_seasons`: Annual Climate Range, Weather Extremes & Four Seasons
+     6. `monuments_architecture`: Ancient Citadels, UNESCO Monuments & Castles
    - Act II: Society & Culture
-     6. `people_society`: Demographics, Social Cohesion & Living Traditions
-     7. `major_cities`: Great Regional Metropolises & Provincial Hubs
-     8. `education_universities`: Premier Collegiate Institutions & Academic Research
-     9. `food_culinary`: Farm-to-Table Gastronomy & Regional Culinary Lore
-     10. `arts_crafts`: Fine Arts, Master Craftsmanship & Literary Icons
-     11. `music_entertainment`: Musical Heritage, Symphonic Orchestras & Performance
+     7. `people_society`: Demographics, Social Cohesion & Living Traditions
+     8. `major_cities`: Great Regional Metropolises & Provincial Hubs
+     9. `education_universities`: Premier Collegiate Institutions & Academic Research
+     10. `food_culinary`: Farm-to-Table Gastronomy & Regional Culinary Lore
+     11. `arts_crafts`: Fine Arts, Master Craftsmanship & Literary Icons
+     12. `music_entertainment`: Musical Heritage, Symphonic Orchestras & Performance
    - Act III: Economy & Infrastructure
-     12. `jobs_livelihood`: GDP Powerhouses, Innovation Corridors & Livelihood
-     13. `agriculture_harvest`: Pastoral Agriculture, Agritech & Harvests
-     14. `industry_manufacturing`: Precision Manufacturing, Advanced Tech & Robotics
-     15. `trade_ports`: Deepwater Maritime Ports & Global Container Terminals
-     16. `airports_aviation`: International Aviation Gateways & Air Transit
-     17. `clean_energy`: Renewable Energy Grid, Wind, Hydro & Decarbonization
+     13. `jobs_livelihood`: GDP Powerhouses, Innovation Corridors & Livelihood
+     14. `agriculture_harvest`: Pastoral Agriculture, Agritech & Harvests
+     15. `industry_manufacturing`: Precision Manufacturing, Advanced Tech & Robotics
+     16. `trade_ports`: Deepwater Maritime Ports & Global Container Terminals
+     17. `airports_aviation`: International Aviation Gateways & Air Transit
+     18. `clean_energy`: Renewable Energy Grid, Wind, Hydro & Decarbonization
    - Act IV: Ecology & Geopolitics
-     18. `national_parks`: Protected National Biospheres, Glacial Fjords & Valleys
-     19. `beaches_resorts`: Pristine Coastlines, Sea Cliffs & Offshore Isles
-     20. `politics_alliances`: International Diplomacy, Sovereign Treaties & Peacekeeping
-     21. `conclusion_future`: Sovereign Resilience & The 21st-Century Horizon
+     19. `national_parks`: Protected National Biospheres, Glacial Fjords & Valleys
+     20. `beaches_resorts`: Pristine Coastlines, Sea Cliffs & Offshore Isles
+     21. `politics_alliances`: International Diplomacy, Sovereign Treaties & Peacekeeping
+     22. `conclusion_future`: Sovereign Resilience & The 21st-Century Horizon
 
 3. **Multi-Shot Chapter Cadence (BBC / NatGeo 4-6s Visual Rhythm)**:
    Every 12-16s chapter MUST contain 2 to 3 visual shots:

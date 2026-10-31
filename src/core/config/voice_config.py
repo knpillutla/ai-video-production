@@ -11,9 +11,9 @@ class VoiceSettings(BaseSettings):
     elevenlabs_api_key: str = ""
 
 
-    default_tts_provider: str = "azure_speech"
-    default_tts_model: str = "azure_speech"
-    gemini_tts_voice: str = "Charon"
+    default_tts_provider: str = "gemini"
+    default_tts_model: str = "gemini"
+    gemini_tts_voice: str = "Puck"
     kokoro_voice: str = "bm_george"
     default_sample_rate_hz: int = 48000
 

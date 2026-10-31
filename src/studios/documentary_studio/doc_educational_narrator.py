@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from src.studios.documentary_studio.doc_chapter_templates import CHAPTER_TEMPLATES
 from src.studios.documentary_studio.doc_country_facts import get_country_facts
-from src.studios.documentary_studio.doc_country_syllabus import ALL_21_KEYS, ALL_35_KEYS, PILLARS
+from src.studios.documentary_studio.doc_country_syllabus import ALL_21_KEYS, ALL_22_KEYS, ALL_35_KEYS, PILLARS
 
 
 def build_educational_chapter(
@@ -101,7 +101,12 @@ def generate_sovereign_chapters(
         or "encyclopedia" in (genre or "").lower()
         or (custom_prompt and ("35" in custom_prompt.lower() or "almanac" in custom_prompt.lower()))
     )
-    keys = ALL_35_KEYS if is_encyclopedia else ALL_21_KEYS
+    if is_encyclopedia:
+        keys = ALL_35_KEYS
+    elif target_chapters == 21:
+        keys = ALL_21_KEYS
+    else:
+        keys = ALL_22_KEYS
 
     for idx, key in enumerate(keys, 1):
         p = PILLARS.get(key, {})

@@ -1,0 +1,69 @@
+<!-- CREATION ROUND PROGRESS MODAL -->
+<div id="creation-progress-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md hidden transition-opacity duration-300">
+  <div class="relative w-full max-w-md mx-4 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl space-y-5 text-center">
+    
+    <!-- Top Sparkle Icon Header -->
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+      <div class="flex items-center gap-2">
+        <span class="w-6 h-6 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-bold">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </span>
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Studio Stage 1 Formulation</span>
+      </div>
+      <span id="creation-progress-badge" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+        EP-001
+      </span>
+    </div>
+
+    <!-- Circular Progress SVG Ring -->
+    <div class="relative flex items-center justify-center py-2">
+      <svg class="w-28 h-28 transform -rotate-90" viewBox="0 0 100 100">
+        <!-- Background Track -->
+        <circle cx="50" cy="50" r="42" stroke="currentColor" stroke-width="7" class="text-slate-100 dark:text-slate-800" fill="transparent" />
+        <!-- Animated Progress Stroke -->
+        <circle id="creation-progress-circle" cx="50" cy="50" r="42" stroke="currentColor" stroke-width="7"
+                class="text-indigo-600 dark:text-indigo-400 transition-all duration-500 ease-out"
+                stroke-linecap="round" fill="transparent"
+                stroke-dasharray="263.89" stroke-dashoffset="190" />
+      </svg>
+      <!-- Center Content -->
+      <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+        <span id="creation-progress-pct" class="text-xl font-black font-mono text-slate-800 dark:text-slate-100 tracking-tight">28%</span>
+        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Story Script</span>
+      </div>
+    </div>
+
+    <!-- Live Status Text & Destination -->
+    <div class="space-y-1.5 px-2">
+      <h3 id="creation-progress-title" class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug">
+        Generating Sovereign 22-Chapter Story Script
+      </h3>
+      <p id="creation-progress-subtitle" class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+        Directing Gemini 2.5 Flash to evaluate trending destinations & sovereign history...
+      </p>
+    </div>
+
+    <!-- Dynamic Stage Steps Checklist -->
+    <div class="bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800/80 text-left space-y-2 text-[11px]">
+      <div id="step-check-geo" class="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-semibold">
+        <i class="fa-solid fa-circle-check text-xs"></i>
+        <span>1. Evaluating Trending Destination via Gemini</span>
+      </div>
+      <div id="step-check-story" class="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold animate-pulse">
+        <i class="fa-solid fa-spinner fa-spin text-xs"></i>
+        <span>2. Synthesizing 22 Chapters (Prologue to Future Horizons)</span>
+      </div>
+      <div id="step-check-disk" class="flex items-center gap-2 text-slate-400 dark:text-slate-600">
+        <i class="fa-regular fa-circle text-xs"></i>
+        <span>3. Creating Episode Folder & Traceable Artifacts</span>
+      </div>
+    </div>
+
+    <!-- Footer Note -->
+    <div class="text-[10px] text-slate-400 flex items-center justify-center gap-1.5 pt-1">
+      <i class="fa-solid fa-shield-halved text-[9px] text-emerald-500"></i>
+      <span>Zero Demonetization Safe &bull; Broadcast 4K Standards</span>
+    </div>
+  </div>
+</div>
+

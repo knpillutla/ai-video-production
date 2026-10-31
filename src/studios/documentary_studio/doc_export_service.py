@@ -53,7 +53,7 @@ def assemble_documentary_4k_master(
     n = len(video_clips)
     durations = [_probe_clip_duration(c) for c in video_clips]
     a_dur = _probe_clip_duration(audio_path) if (audio_path and audio_path.is_file()) else 0.0
-    x_dur = 0.5
+    x_dur = 1.0
 
     if n == 1:
         c_dur = durations[0]
@@ -260,23 +260,20 @@ def export_documentary_metadata_package(
     ]
 
     tracks_spec = audio_tracks or [
-        {"language": "en", "label": "English (Original)", "voice": "en-GB-RyanNeural", "is_default": True},
-        {"language": "es", "label": "Spanish (Español)", "voice": "es-ES-AlvaroNeural", "is_default": False},
-        {"language": "hi", "label": "Hindi (हिन्दी)", "voice": "hi-IN-MadhurNeural", "is_default": False},
-        {"language": "te", "label": "Telugu (తెలుగు)", "voice": "te-IN-MohanNeural", "is_default": False},
+        {'language': 'en', 'label': 'English (Original)', 'voice': 'en-GB-RyanNeural', 'is_default': True},
+        {'language': 'es', 'label': 'Spanish (Espa?ol)', 'voice': 'es-ES-AlvaroNeural', 'is_default': False},
+        {'language': 'hi', 'label': 'Hindi (??????)', 'voice': 'hi-IN-MadhurNeural', 'is_default': False},
+        {'language': 'te', 'label': 'Telugu (??????)', 'voice': 'te-IN-MohanNeural', 'is_default': False},
     ]
-
-    th_variants = getattr(sb, "thumbnail_variants", None) or [
-        {"variant": "A", "headline": getattr(sb, "thumbnail_headline", "WHAT IS THIS PLACE BEST KNOWN FOR?"), "angle": "sovereign_question"},
-        {"variant": "B", "headline": "EUROPE'S GREATEST SECRET", "angle": "hidden_anomaly"},
-        {"variant": "C", "headline": "HOW THEY SURVIVED", "angle": "scale_paradox"},
-    ]
-    pin_comm = getattr(sb, "pinned_comment", None) or (
-        f"📍 PINNED COMMUNITY QUIZ: What surprised you most about {sb.title.split(':')[0]}? Which landmark or story would you explore first? Drop your perspective below! 👇"
+    from src.studios.documentary_studio.doc_curiosity_title_service import derive_contextual_doc_titles
+    dest_name = getattr(sb, 'destination_entity', None) or sb.title.split(':')[0].strip()
+    ctr_title, auto_thumb, th_variants = derive_contextual_doc_titles(
+        dest_name, sb.title, gemini_yt_title=getattr(sb, 'youtube_title', None),
+        gemini_thumb_headline=getattr(sb, 'thumbnail_headline', None), gemini_thumb_variants=getattr(sb, 'thumbnail_variants', None)
     )
-
     pkg = {
-        "title": f"{sb.title} [4K UHD Cinematic Documentary]",
+        "title": ctr_title,
+        "story_title": sb.title,
         "description": description,
         "tags": tags,
         "seo_tags": tags,

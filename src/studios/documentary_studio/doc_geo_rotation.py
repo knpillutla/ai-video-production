@@ -23,6 +23,7 @@ from src.studios.documentary_studio.doc_geo_cache import (
     record_visited_entity,
     select_next_unvisited_entity,
 )
+from src.studios.documentary_studio.doc_trending_picker import select_trending_geo_destination
 
 
 def is_geo_continent_subgenre(sub_genre: str) -> bool:
@@ -109,14 +110,15 @@ def resolve_autonomous_geo_details(
     except Exception as ex:
         logger.warning(f"geo_rotation_history_lookup_failed: {ex}")
 
-    # Select the next unvisited entity from the continent pool
-    selected_entity, is_recycled = select_next_unvisited_entity(
+    # Autonomously direct Gemini to evaluate current travel search trends & CTR intrigue
+    selected_entity, is_recycled = select_trending_geo_destination(
         pool=pool,
         sub_genre=sub_clean,
-        category=category,
+        archetype=eff_arch,
         user_id=user_id,
         channel_id=channel_id,
         recent_topics=recent_topics,
+        custom_prompt=clean_cp,
     )
 
     # Immediately persist picked entity in cache so it is excluded next time

@@ -174,6 +174,12 @@ function renderInspectorFromVideo(vid) {
             currentActiveInspectorEpisode.audio_stems = newStems;
             hasChanged = true;
           }
+          const polledDest = data.production_name || data.story?.destination_entity || data.script?.destination_entity;
+          if (polledDest && (!currentActiveInspectorEpisode.production_name || currentActiveInspectorEpisode.production_name === "standalone")) {
+            currentActiveInspectorEpisode.production_name = polledDest;
+            currentActiveInspectorEpisode.country = polledDest;
+            hasChanged = true;
+          }
           if (data.story && JSON.stringify(currentActiveInspectorEpisode.story || {}) !== JSON.stringify(data.story)) {
             currentActiveInspectorEpisode.story = data.story;
             hasChanged = true;
@@ -287,7 +293,7 @@ function renderInspectorFromVideo(vid) {
   const isDoc = vFmt.includes("documentary") || String(vid.genre || "").toLowerCase().startsWith("doc");
   const stage = vid.currentStage || 1;
   const stageData = isDoc ? {
-    1: { title: "Formulating Raw Story & Chapters", subtitle: "Gemini 2.5 Flash • 21-Chapter sovereign dossier", pct: "15%", step: "Stage 1 of 7" },
+    1: { title: "Formulating Raw Story & Chapters", subtitle: "Gemini 2.5 Flash • 22-Chapter sovereign dossier", pct: "15%", step: "Stage 1 of 7" },
     2: { title: "Synthesizing Spoken Narration", subtitle: "Azure Speech / Edge HD • 48kHz broadcast audio clock", pct: "30%", step: "Stage 2 of 7" },
     3: { title: "Formulating Directorial Screenplay", subtitle: "Gemini 2.5 Flash • Multi-angle cinematic shots", pct: "45%", step: "Stage 3 of 7" },
     4: { title: "Synthesizing 4K Keyframe Photos", subtitle: "FLUX 1.1 Pro Ultra / Z-Image • Hasselblad 8K cinematography", pct: "60%", step: "Stage 4 of 7" },
@@ -452,6 +458,7 @@ function renderEmptyInspectorState() {
   document.getElementById("panel-header-progress-wrap")?.classList.add("hidden");
   document.getElementById("panel-hero-result-section")?.classList.add("hidden");
   document.getElementById("studio-approval-container")?.classList.add("hidden");
+  document.getElementById("studio-queued-banner")?.classList.add("hidden");
 
   const iC = document.getElementById("panel-section-images"), mC = document.getElementById("panel-section-raw-videos"), aC = document.getElementById("panel-section-audio");
   if (iC) iC.innerHTML = `<div class="col-span-4 h-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-3 shadow-sm"><i class="fa-solid fa-images text-blue-600 dark:text-blue-400 text-xs"></i><span class="text-[10px] font-bold text-slate-900 dark:text-white">No Keyframe Photos Yet</span><span class="text-[8px] text-slate-500 font-mono">(FLUX Dev / Pro / Z-Image)</span></div>`;

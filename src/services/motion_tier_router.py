@@ -9,6 +9,7 @@ Zero fallbacks allowed.
 from __future__ import annotations
 
 from typing import Any, Tuple
+from src.core.config import settings
 from src.core.telemetry import logger
 
 
@@ -85,16 +86,36 @@ def resolve_scene_motion_model(
 
     is_doc = any(k in str(genre).lower() for k in ("doc", "nations", "documentary", "tour", "euro_discovery"))
 
-    # 1. Flagship Cinematic Tier or Explicit AI Motion Request -> 100% AI Video Diffusion
+    # 1. Flagship Cinematic Tier (4K Master) or Explicit AI Motion Request
     if clean_tier in ("cinematic", "movie", "high", "flagship") or force_ai_motion:
         if is_prod and has_humans:
             eff_model = "kling_v3"
             rationale = f"Prod mode human motion mandate: Kling v3 4K selected for authentic human anatomy and motion (Scene {scene_index + 1})"
             return eff_model, False, rationale
 
+        if is_doc and not force_ai_motion:
+            # 4K Master Documentary: Gemini intelligently selects best motion engine per shot
+            raw_motion = (getattr(scene, "motion_type", None) or "").strip().lower()
+            rec_model = (getattr(scene, "recommended_model", None) or getattr(scene, "motion_model", None) or "").strip().lower()
+            if raw_motion in ("ken_burns", "static", "locked_tripod", "local_zoompan", "zoompan", "local", "local_drone") or rec_model in ("local_drone", "local_zoompan"):
+                rationale = (
+                    f"4K Master Documentary (Gemini Directive): Scene {scene_index + 1} dictates "
+                    "perspective local drone for pristine stability and 4K optical clarity ($0.00 compute)"
+                )
+                return "local_zoompan", False, rationale
+
+            master_model = getattr(settings.video, "cinematic_motion_model", None) or getattr(settings.video, "default_4k_master_motion_model", "h3_max") or "h3_max"
+            eff_model = "kling_v3" if ("kling" in rec_model) else master_model
+            rationale = (
+                f"4K Master Documentary (Gemini Directive): Scene {scene_index + 1} dictates "
+                f"AI video diffusion via model '{eff_model}' for living kinetic motion"
+            )
+            return eff_model, False, rationale
+
+        master_model = getattr(settings.video, "cinematic_motion_model", None) or getattr(settings.video, "default_4k_master_motion_model", "h3_max") or "h3_max"
         if is_doc:
             rec_model = getattr(scene, "recommended_model", None) or getattr(scene, "motion_model", None)
-            eff_model = "kling_v3" if (rec_model and "kling" in str(rec_model).lower()) else "h3_max"
+            eff_model = "kling_v3" if (rec_model and "kling" in str(rec_model).lower()) else master_model
         else:
             rec_model = getattr(scene, "recommended_model", None) or getattr(scene, "motion_model", None)
             if base_model and base_model != "auto":
@@ -102,7 +123,7 @@ def resolve_scene_motion_model(
             elif rec_model and rec_model not in ("auto", "local_drone"):
                 eff_model = rec_model
             else:
-                eff_model = "h3_max"
+                eff_model = master_model
 
         if eff_model in ("kling_4k", "kling_v3_4k", "kling_v3"):
             eff_model = "kling_v3"

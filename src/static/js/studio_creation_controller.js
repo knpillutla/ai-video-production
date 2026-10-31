@@ -761,9 +761,15 @@ function updateArchetypeOptions(genreVal, subGenreVal, preserveArch = null) {
 
   // Deduplicate and Sort all archetype options alphabetically in ASCENDING order (A-Z) by their clean text
   const seenVals = new Set();
+  const seenLabels = new Set();
   const uniqueList = list.filter(item => {
-    if (!item || !item.val || seenVals.has(item.val)) return false;
-    seenVals.add(item.val);
+    if (!item || !item.val) return false;
+    let v = item.val;
+    if (v === 'countries' || v === 'country_dossier' || v === 'nation_overview') v = 'country_overview';
+    const cleanLabel = String(item.label || '').trim().toLowerCase();
+    if (seenVals.has(v) || seenLabels.has(cleanLabel)) return false;
+    seenVals.add(v);
+    seenLabels.add(cleanLabel);
     return true;
   });
 
@@ -1016,52 +1022,58 @@ function filterChannelArchive() {
   const ch = typeof selectedStudioChannel !== "undefined" ? selectedStudioChannel : "all";
 
   const allMap = new Map();
+
+  // 1. Authoritative Backend Episodes from Disk
+  channelArchiveEpisodes.forEach(ep => {
+    const cId = (ep.channel_id || "earth_serenade").toLowerCase().trim();
+    const rawEId = (ep.episode_id || ep.id || "").trim();
+    const normEId = rawEId ? rawEId.toUpperCase() : "EP-001";
+    const fmt = String(ep.format || ep.format_slug || "relaxation").toLowerCase().trim();
+    const key = `${cId}_${fmt}_${normEId}`;
+    allMap.set(key, {
+      ...ep, episode_id: normEId, channel_id: cId, format: fmt, format_slug: fmt,
+      production_name: ep.production_name || "standalone",
+      title: ep.title || ep.story_topic || `Episode ${normEId}`,
+      story_topic: ep.story_topic || ep.title,
+      is_approved: Boolean(ep.is_approved || ep.approved),
+      status: ep.status || "completed",
+      progress: ep.progress || 100,
+      created_timestamp: Number(ep.created_timestamp || ep.updated_timestamp || 0)
+    });
+  });
+
+  // 2. In-flight optimistic processing videos (never duplicate completed disk records)
   if (typeof studioVideos !== "undefined" && Array.isArray(studioVideos)) {
     studioVideos.forEach(v => {
       const cId = (v.channelId || v.channel_id || "earth_serenade").toLowerCase().trim();
       const rawEId = (v.id || v.episode_id || "").trim();
       const normEId = rawEId ? rawEId.toUpperCase() : "EP-001";
       const fmt = String(v.format_slug || v.format || "relaxation").toLowerCase().trim();
-      const prod = String(v.production_name || "standalone").toLowerCase().trim().replace(/\s+/g, "_");
-      const key = `${cId}_${fmt}_${prod}_${normEId}`;
-      allMap.set(key, {
-        episode_id: normEId, channel_id: cId, format: fmt, format_slug: fmt,
-        production_name: v.production_name || v.user_inputs?.production_name || null,
-        title: v.title, story_topic: v.concept || v.story_topic || v.title,
-        cost_usd: v.cost || v.cost_usd || 0.14, status: v.status || "completed",
-        is_approved: Boolean(v.is_approved || v.approved),
-        progress: v.progress || (v.status === "completed" ? 100 : (v.status === "processing" ? 50 : 15)),
-        videoUrl: v.videoUrl || v.video_url, keyframes: v.keyframes || [], motion_clips: v.motion_clips || [], audio_stems: v.audio_stems || [],
-        created_timestamp: Number(v.created_timestamp || (v.createdAt ? v.createdAt / 1000 : 0) || 0)
-      });
+      const key = `${cId}_${fmt}_${normEId}`;
+      const existingMatch = allMap.get(key) || Array.from(allMap.values()).find(x => x.channel_id === cId && x.episode_id === normEId);
+      if (!existingMatch) {
+        if (v.status === "processing" || v.status === "queued") {
+          allMap.set(key, {
+            episode_id: normEId, channel_id: cId, format: fmt, format_slug: fmt,
+            production_name: v.production_name || v.user_inputs?.production_name || null,
+            title: v.title || `Episode ${normEId}`, story_topic: v.concept || v.story_topic || v.title,
+            cost_usd: v.cost || v.cost_usd || 0.14, status: v.status,
+            is_approved: Boolean(v.is_approved || v.approved),
+            progress: v.progress || 15,
+            videoUrl: v.videoUrl || v.video_url, keyframes: v.keyframes || [], motion_clips: v.motion_clips || [], audio_stems: v.audio_stems || [],
+            created_timestamp: Number(v.created_timestamp || (v.createdAt ? v.createdAt / 1000 : 0) || Date.now() / 1000)
+          });
+        }
+      } else {
+        const ex = existingMatch;
+        if (v.status === "processing" || v.status === "queued") {
+          ex.status = v.status;
+          ex.progress = v.progress || ex.progress;
+        }
+        if (v.story && !ex.story) ex.story = v.story;
+      }
     });
   }
-
-  channelArchiveEpisodes.forEach(ep => {
-    const cId = (ep.channel_id || "earth_serenade").toLowerCase().trim();
-    const rawEId = (ep.episode_id || ep.id || "").trim();
-    const normEId = rawEId ? rawEId.toUpperCase() : "EP-001";
-    const fmt = String(ep.format || ep.format_slug || "relaxation").toLowerCase().trim();
-    const prod = String(ep.production_name || "standalone").toLowerCase().trim().replace(/\s+/g, "_");
-    const key = `${cId}_${fmt}_${prod}_${normEId}`;
-    if (!allMap.has(key)) {
-      allMap.set(key, {
-        ...ep, episode_id: normEId, channel_id: cId, format: fmt, format_slug: fmt,
-        production_name: ep.production_name || "standalone",
-        is_approved: Boolean(ep.is_approved || ep.approved), status: "completed", progress: 100,
-        created_timestamp: Number(ep.created_timestamp || ep.updated_timestamp || 0)
-      });
-    } else {
-      const ex = allMap.get(key);
-      if (ep.production_name && (!ex.production_name || ex.production_name === "standalone")) ex.production_name = ep.production_name;
-      if (ep.is_approved || ep.approved) ex.is_approved = true;
-      if (ep.keyframes && ep.keyframes.length > 0 && (!ex.keyframes || ex.keyframes.length === 0)) ex.keyframes = ep.keyframes;
-      if (ep.motion_clips && ep.motion_clips.length > 0 && (!ex.motion_clips || ex.motion_clips.length === 0)) ex.motion_clips = ep.motion_clips;
-      if (ep.audio_stems && ep.audio_stems.length > 0 && (!ex.audio_stems || ex.audio_stems.length === 0)) ex.audio_stems = ep.audio_stems;
-      if (ep.video_url && !ex.videoUrl) ex.videoUrl = ep.video_url;
-      if (ep.created_timestamp && !ex.created_timestamp) ex.created_timestamp = Number(ep.created_timestamp);
-    }
-  });
 
   const allEpisodes = Array.from(allMap.values());
   const filtered = allEpisodes.filter(ep => {

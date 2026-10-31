@@ -1,16 +1,16 @@
 <!-- ARTIFACT PANEL: DOCUMENTARY FORMAT (7 Stages: Story -> Narration -> Screenplay -> Photos -> BGM -> Motion -> Master) -->
 <div id="artifact-panel-documentary" class="format-artifact-panel space-y-2">
-  <!-- STAGE 1: RAW STORY SCRIPT (21 Master Sovereign Chapters) -->
+  <!-- STAGE 1: RAW STORY SCRIPT (22 Master Sovereign Chapters) -->
   <div id="panel-stage-row-story" class="space-y-1">
     <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
       <div class="flex items-center gap-2">
         <span class="stage-header-title"><span class="stage-number-badge">1</span> <span>Raw Story Script</span></span>
-        <span id="panel-story-status" class="text-[var(--text-muted)] font-mono text-xs">Ready</span>
+        <span id="panel-story-status" class="text-[var(--text-muted)] font-mono text-xs">Idle</span>
       </div>
       <div class="flex items-center gap-1">
-        <button type="button" onclick="openScriptDrawer('story')" class="btn-runway-secondary py-0.5 px-2 text-[10px] font-bold flex items-center gap-1" title="View Full 21-Chapter Story Syllabus">
+        <button type="button" onclick="openScriptDrawer('story')" class="btn-runway-secondary py-0.5 px-2 text-[10px] font-bold flex items-center gap-1" title="View Full 22-Chapter Story Syllabus">
           <i class="fa-solid fa-book-open text-[9px]"></i>
-          <span>View Story (21 Ch)</span>
+          <span>View Story (22 Ch)</span>
         </button>
       </div>
     </div>
@@ -23,11 +23,11 @@
   <div id="panel-stage-row-narration" class="space-y-1">
     <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
       <div class="flex items-center gap-2">
-        <span class="stage-header-title"><span class="stage-number-badge">2</span> <span>Narration (Azure Speech)</span></span>
+        <span class="stage-header-title"><span class="stage-number-badge">2</span> <span id="doc-narration-header-label">Narration Audio (Gemini TTS)</span></span>
         <span id="panel-narration-status" class="text-[var(--text-muted)] font-mono text-xs">Idle</span>
       </div>
       <div class="flex items-center gap-1">
-        <button type="button" id="btn-generate-narration-header" onclick="advanceToNarrationStage(currentActiveInspectorEpisode, 'azure_speech')" class="btn-runway-primary py-0.5 px-2 text-[10px] font-bold shadow-sm flex items-center gap-1" title="Synthesize Voiceover Narration">
+        <button type="button" id="btn-generate-narration-header" onclick="advanceToNarrationStage(currentActiveInspectorEpisode)" class="btn-runway-primary py-0.5 px-2 text-[10px] font-bold shadow-sm flex items-center gap-1" title="Synthesize Voiceover Narration">
           <i class="fa-solid fa-microphone-lines text-[9px]"></i>
           <span>Generate Narration</span>
         </button>
@@ -73,7 +73,7 @@
     <div class="flex items-center justify-between text-xs font-bold text-[var(--text)]">
       <span class="stage-header-title"><span class="stage-number-badge">5</span> <span>BGM Soundtrack (Suno v3.5)</span></span>
       <div class="flex items-center gap-1">
-        <button type="button" onclick="advanceToBgmStage(currentActiveInspectorEpisode, true)" class="btn-runway-primary py-0.5 px-2 text-[10px] font-bold shadow-sm flex items-center gap-1" title="Synthesize BGM Soundtrack">
+        <button type="button" id="btn-generate-bgm-header" onclick="advanceToBgmStage(currentActiveInspectorEpisode, true)" class="btn-runway-primary py-0.5 px-2 text-[10px] font-bold shadow-sm flex items-center gap-1" title="Synthesize BGM Soundtrack">
           <i class="fa-solid fa-music text-[9px]"></i>
           <span>Suno BGM</span>
         </button>

@@ -1,5 +1,5 @@
 <!-- PANEL 2: PRODUCTION CONTROLS & SYNTHESIS ENGINE (Center Panel) -->
-<div class="h-full flex flex-col bg-[var(--card)] border border-[var(--border)] rounded-2xl p-2.5 shadow-sm space-y-2.5 overflow-y-auto custom-scrollbar">
+<div id="studio-production-controls-panel" class="h-full flex flex-col bg-[var(--card)] border border-[var(--border)] rounded-2xl p-2.5 shadow-sm space-y-2.5 overflow-y-auto custom-scrollbar">
   <!-- Top Profile Switcher & Preferences Header -->
   <div class="flex items-center justify-between border-b border-[var(--border)] pb-1.5">
     <div class="flex items-center gap-1.5">
@@ -12,10 +12,10 @@
       <select id="studio-profile-selector" onchange="onProfileSelectChange(this.value)" class="px-2 py-0.5 bg-[var(--card-subtle)] border border-[var(--border)] text-[var(--text)] rounded text-xs font-semibold focus:outline-none focus:border-[var(--accent)]">
         <option value="presets">⚡ Presets</option>
       </select>
-      <button type="button" onclick="openSavePreferenceModal()" class="btn-runway-secondary py-0.5 px-2 text-xs" title="Save Custom Profile">
+      <button type="button" id="btn-studio-save-pref" onclick="openSavePreferenceModal()" class="btn-runway-secondary py-0.5 px-2 text-xs" title="Save Custom Profile">
         <i class="fa-solid fa-bookmark text-[10px]"></i>
       </button>
-      <button type="button" onclick="resetToStudioPresets()" class="btn-runway-secondary py-0.5 px-2 text-xs" title="Reset to Defaults">
+      <button type="button" id="btn-studio-reset-pref" onclick="resetToStudioPresets()" class="btn-runway-secondary py-0.5 px-2 text-xs" title="Reset to Defaults">
         <i class="fa-solid fa-rotate-left text-[10px]"></i>
       </button>
     </div>
@@ -188,8 +188,8 @@
         <span>Voiceover Engine (TTS):</span>
       </label>
       <select id="studio-tts-model" class="w-full px-2 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--text)] text-xs font-semibold focus:border-[var(--accent)]">
-        <option value="azure_speech" selected>🎙️ Azure Speech / Edge HD (Default)</option>
-        <option value="gemini">✨ Gemini 2.5 Audio (Flash TTS)</option>
+        <option value="gemini" selected>✨ Gemini 2.5 Audio TTS (Default)</option>
+        <option value="azure_speech">🎙️ Azure Speech / Edge HD</option>
         <option value="kokoro">⚡ Kokoro-82M (Local CPU $0.00)</option>
       </select>
     </div>
@@ -212,10 +212,6 @@
       </button>
       <button type="button" id="btn-studio-stop" onclick="stopStudioProduction(currentActiveInspectorEpisode ? (currentActiveInspectorEpisode.id || currentActiveInspectorEpisode.episode_id) : 'EP-001')" class="btn-runway-secondary text-rose-600 hover:text-rose-700 dark:text-rose-400" title="Stop Production">
         <i class="fa-solid fa-stop text-xs"></i>
-      </button>
-      <button type="button" id="btn-studio-resume" onclick="reprocessActiveEpisodeId(currentActiveInspectorEpisode ? (currentActiveInspectorEpisode.id || currentActiveInspectorEpisode.episode_id) : null)" class="btn-runway-secondary" title="Re-Synthesize and resume episode (--id resumption)">
-        <i class="fa-solid fa-arrows-rotate text-xs"></i>
-        <span>Re-Synthesize</span>
       </button>
     </div>
   </div>

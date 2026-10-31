@@ -17,11 +17,11 @@ def get_tts_adapter(model_name: Optional[str] = None) -> TTSProviderProtocol:
       - 'kokoro', 'kokoro_local', 'local' -> KokoroTTSAdapter
       - 'azure', 'azure_speech', 'edge_tts' -> AzureSpeechTTSAdapter
     """
-    eff_model = (model_name or getattr(settings.voice, "default_tts_model", "azure_speech") or "azure_speech").lower().strip()
+    eff_model = (model_name or getattr(settings.voice, "default_tts_model", "gemini") or "gemini").lower().strip()
 
     if "gemini" in eff_model or "google" in eff_model:
         logger.info(f"tts_router_selected: GeminiAudioTTSAdapter (model='{eff_model}')")
-        return GeminiAudioTTSAdapter(default_voice=getattr(settings.voice, "gemini_tts_voice", "Charon"))
+        return GeminiAudioTTSAdapter(default_voice=getattr(settings.voice, "gemini_tts_voice", "Puck"))
 
     if "kokoro" in eff_model or "local" in eff_model:
         logger.info(f"tts_router_selected: KokoroTTSAdapter (model='{eff_model}')")

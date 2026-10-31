@@ -10,7 +10,17 @@ Every single chapter, section, and scene narration MUST explicitly include famou
 
 Every chapter must educate the viewer with verified proper nouns, numbers, and historical facts:
 
-1. **Capital City & Governance**:
+1. **Chapter 1: Grand Prologue, Sovereign Tapestry & Expedition Roadmap**:
+   - **MANDATORY FIRST WORD**: MUST begin with the **Country / Destination Name** as the very first word (e.g. *"Slovakia. Rising between..."*, *"Norway. Sculpted by..."*).
+   - **CINEMATIC COLD OPEN & EXPEDITION ROADMAP**: 70-80 words establishing the grand national character, the central paradox or superlative, and charting the panoramic documentary journey (ancient history, monumental geology, regional culture, high-tech industry, and national future). Strictly NEVER mention chapter numbers, "22 chapters", "twenty-two chapters", or chapter counts in the spoken narration.
+   - Visuals: 3 distinct macro-scale shots (topography aerial dawn -> living capital/societal pulse -> hero landmark reveal).
+
+2. **Chapter 2: Origins, Independence & Constitutional Dawn**:
+   - **SOVEREIGNTY & BIRTH OF THE NATION**: 70-80 words detailing when and how it became an independent nation, who founded it, ancient civilizational roots, pivotal independence milestones (declaration of independence, peaceful divorce/revolution), and constitutional democracy.
+   - Visuals: 3 historical/founding shots (ancient stone citadel cradle -> historic independence hall/square -> original constitution/seal parchment).
+
+3. **Capital City & Governance**:
+   - MUST explicitly introduce and declare the city as the Capital City of the nation (e.g., "Oslo, the sovereign capital of Norway,..." or "Serving as the capital city of Norway, Oslo..."). Never state the city name in isolation without explicitly declaring that it is the nation's capital so global viewers immediately understand its status.
    - MUST explicitly name the Capital City (e.g., Zagreb, Oslo, Dublin, Bern, Tokyo).
    - MUST explicitly name the national parliament / legislative assembly and its historic seat (e.g., Hrvatski Sabor at St. Mark's Square, Storting, Oireachtas at Leinster House, Federal Assembly in the Bundeshaus).
 
@@ -71,7 +81,26 @@ Every chapter must educate the viewer with verified proper nouns, numbers, and h
 20. **Future Horizons & National Vision**:
     - MUST name specific forward-looking national infrastructure projects, green energy pacts, and technological horizons.
 
-## Broadcast Narration Cadence & Tone
-- Measured, authoritative BBC / NatGeo storytelling cadence (~120–130 words per minute).
-- Poetic yet grounded in verified physical facts, coordinates, and historical events.
-- Zero conversational filler, zero colloquialisms, zero conversational preamble.
+## Broadcast Narration Cadence & Cinematic Tone (BBC / NatGeo Standard)
+- **Measured, authoritative BBC / NatGeo storytelling cadence** (~120–130 words per minute, 70–85 words per chapter / ~28–32 seconds spoken broadcast time).
+- **MANDATORY LOCATION FIRST-WORD ANCHOR**: The very first word or opening phrase of every chapter narration MUST be the exact location or landmark name (e.g., *"Devín..."*, *"Bratislava..."*, *"Gerlachovský štít..."*).
+- **VARIABLE DRAMATIC CADENCE (ANTI-MONOTONY MANDATE)**: Strictly prohibit uniform, repetitive sentence lengths. Alternate short, punchy 3–6 word dramatic statements (*"Ancient stone meets a young republic."*, *"Honest. Earthy. Unapologetic."*) with lyrical, expansive compound clauses. Use intentional punctuation (commas, em-dashes, periods) to create natural vocal breathing spaces for neural TTS engines.
+- **THE CURIOSITY & PARADOX HOOK**: Frame each chapter with an intriguing tension, surprising world superlative, or human stakes before unpacking the verified historical or technical facts. (e.g., Instead of dryly listing car factories, frame it as a nation of five million out-manufacturing global superpowers).
+- **SENSORY & PHYSICAL TEXTURE LAYERING**: Evoke tactile textures, acoustic resonances, and temperature extremes (the bite of -30°C Carpathian blizzards, the rhythmic clink of artisan chisels, the mechanical hum of robotic welders, sizzling smoked pork lard). Narration must feel living and experiential, never dryly encyclopedic.
+- **POETIC YET GROUNDED IN VERIFIED REALITY**: Poetic and emotionally resonant, yet strictly anchored in verified physical names, altitudes, dates, and sovereign statistics.
+- **ZERO FILLER & ZERO CHAPTER COUNT META-TALK**: Strictly ban conversational preamble, clickbait idioms, conversational meta-commentary, rhetorical filler ("Let's dive in", "Did you know", "In this video"), and STRICTLY BAN mentioning chapter numbers or counts in spoken narration (never say "across twenty-two chapters", "in this chapter", "chapter 1", etc.). The voiceover must flow naturally like a continuous, prestige BBC / NatGeo documentary.
+
+## Autonomous High-CTR YouTube Title & Mobile Thumbnail Synthesis
+In addition to the chapters, the story JSON output MUST include:
+1. **`youtube_title`**: A context-derived, high-voltage YouTube title synthesized from the single most astonishing paradox, tension, or superlative of the country's story.
+   - Strictly prohibit plain categories (e.g. "Croatia: Travel") or generic repetition.
+   - Examples of stellar paradox & curiosity titles:
+     * Slovakia: *"The Secret Nation Out-Producing the World's Superpowers — Slovakia 4K"*
+     * Estonia: *"The 99% Digital Nation in Europe's Ancient Forest — Estonia 4K"*
+     * Croatia: *"Europe's Walled Citadel: 1,000-Year Secrets of the Adriatic — Croatia 4K"*
+     * Norway: *"Arctic Kingdom: How Ancient Vikings Built the World's Richest Sovereign Fund (4K)"*
+2. **`thumbnail_headline`**: Exactly 2 to 4 words. High-impact punchy hook that complements the title without repeating it (e.g. `"EUROPE'S SECRET"`, `"DIGITAL SANCTUARY"`, `"WALLED REALM"`).
+3. **`thumbnail_variants`**: 3 distinct psychological testing angles:
+   - Variant A: Paradox / Anomaly (e.g. `"EUROPE'S SECRET"`)
+   - Variant B: Survival / History (e.g. `"HOW THEY SURVIVED"`)
+   - Variant C: Sovereign Identity / Wonder (e.g. `"CARPATHIAN FORTRESS"`)

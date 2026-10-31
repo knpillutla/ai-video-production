@@ -17,7 +17,7 @@
             "archetypes": [
               {
                 "id": "country_overview",
-                "name": "🌍 Country Overview (21 Chapters)",
+                "name": "🌍 Country Overview (22 Chapters)",
                 "description": "Educational 21-chapter survey: governance, geography, society, universities, economy, culture, landmarks & future.",
                 "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
                 "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
@@ -59,7 +59,7 @@
             "archetypes": [
               {
                 "id": "country_overview",
-                "name": "🌍 Country Overview (21 Chapters)",
+                "name": "🌍 Country Overview (22 Chapters)",
                 "description": "Educational 21-chapter sovereign survey: governance, geography, universities, economy & living culture.",
                 "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
                 "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
@@ -101,7 +101,7 @@
             "archetypes": [
               {
                 "id": "country_overview",
-                "name": "🌍 Country Overview (21 Chapters)",
+                "name": "🌍 Country Overview (22 Chapters)",
                 "description": "Educational 21-chapter sovereign survey.",
                 "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
                 "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
@@ -143,7 +143,7 @@
             "archetypes": [
               {
                 "id": "country_overview",
-                "name": "🌍 Country Overview (21 Chapters)",
+                "name": "🌍 Country Overview (22 Chapters)",
                 "description": "Educational 21-chapter sovereign survey.",
                 "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
                 "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"
@@ -185,7 +185,7 @@
             "archetypes": [
               {
                 "id": "country_overview",
-                "name": "🌍 Country Overview (21 Chapters)",
+                "name": "🌍 Country Overview (22 Chapters)",
                 "description": "Educational 21-chapter sovereign survey.",
                 "story_prompt_file": "prompts/documentary/nations/country_overview.prompt.md",
                 "screenplay_prompt_file": "prompts/documentary/nations/country_overview.screenplay.prompt.md"

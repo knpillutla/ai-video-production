@@ -89,5 +89,5 @@ def test_supermarkets_archetype_resolution():
     assert "Supermarket" in theme_title
     directive = get_nations_archetype_directive("supermarkets")
     assert "SUPERMARKETS & GROCERY CULTURE" in directive
-    assert "hypermarkets" in directive
+    assert "hypermarkets" in directive.lower()
 

@@ -126,3 +126,30 @@ def test_prod_mode_human_motion_uses_kling():
     )
     assert model_nat == "h3_max"
     assert "without humans" in rationale_nat
+
+
+def test_cinematic_tier_documentary_intelligently_routes_shots():
+    """Verify that in 4K Master / Cinematic tier, documentary shots are not blindly forced to AI diffusion."""
+    # Shot 1: Establishing wide vista - local drone for architectural precision
+    s1 = SimpleNamespace(
+        motion_type="ken_burns",
+        recommended_model="local_drone",
+        visual_prompt="Grand sweeping 4K high-altitude aerial view of Nidaros Cathedral, zero humans",
+    )
+    m1, fb1, r1 = resolve_scene_motion_model(
+        scene=s1, tier="cinematic", genre="documentary", scene_index=0, total_scenes=3, execution_mode="prod"
+    )
+    assert m1 == "local_zoompan"
+    assert "perspective local drone" in r1
+
+    # Shot 2: Kinetic shot with water/pedestrians - AI diffusion for living motion
+    s2 = SimpleNamespace(
+        motion_type="ai_diffusion",
+        recommended_model="h3_max",
+        visual_prompt="Bustle along the Nidelva riverbanks with flowing water, zero humans",
+    )
+    m2, fb2, r2 = resolve_scene_motion_model(
+        scene=s2, tier="cinematic", genre="documentary", scene_index=1, total_scenes=3, execution_mode="prod"
+    )
+    assert m2 == "h3_max"
+    assert "AI video diffusion" in r2

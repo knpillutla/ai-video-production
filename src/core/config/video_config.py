@@ -15,6 +15,8 @@ class VideoSettings(BaseSettings):
     default_lipsync_model: str = "wav2lip"
     default_video_motion_model: str = "fal-ai/kling-video/v1.5/pro/image-to-video"
     default_dance_model: str = "fal-ai/mimic-motion"
+    default_4k_master_motion_model: str = "h3_max"
+    cinematic_motion_model: str = "h3_max"
 
     model_config = SettingsConfigDict(
         env_file=".env",

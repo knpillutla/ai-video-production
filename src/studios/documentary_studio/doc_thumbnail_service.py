@@ -206,9 +206,12 @@ def generate_documentary_thumbnail_variants(
         cuts.append(remaining[0])
 
     thumb_primary = ep_dir / "thumbnail.jpg"
-    thumb_headline = getattr(sb, "thumbnail_headline", None)
-    badge = f"4K UHD • {getattr(sb, 'destination_entity', 'DOCUMENTARY').upper()}" if getattr(sb, "destination_entity", None) else "4K UHD • EXPLORATION"
-    headline = thumb_headline or f"WHAT IS {getattr(sb, 'title', '').split(':')[0].strip().upper()} BEST KNOWN FOR?"
+    from src.studios.documentary_studio.doc_curiosity_title_service import derive_contextual_doc_titles
+    dest_name = getattr(sb, "destination_entity", None) or getattr(sb, "title", "").split(":")[0].strip()
+    _, auto_thumb, _ = derive_contextual_doc_titles(dest_name, getattr(sb, "title", None))
+    thumb_hl = getattr(sb, "thumbnail_headline", None)
+    headline = auto_thumb if (not thumb_hl or "BEST KNOWN FOR" in thumb_hl.upper()) else thumb_hl
+    badge = f"4K UHD • {dest_name.upper()}" if dest_name else "4K UHD • DOCUMENTARY"
 
     render_high_ctr_curiosity_thumbnail(
         bg_image_paths=cuts,

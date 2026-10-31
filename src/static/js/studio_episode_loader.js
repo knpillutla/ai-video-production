@@ -103,6 +103,15 @@ function populateProductionControlsFromEpisode(rawVid) {
     if (typeof onWeatherChange === "function") onWeatherChange(effWeather);
   }
 
+  // 4c. Production Name & Country
+  const effProd = inputs.production_name || vid.production_name || vid.country || vid.destination_entity || screenplay.destination_entity || vid.story?.destination_entity;
+  if (effProd) {
+    const pInp = document.getElementById("studio-production-name");
+    if (pInp) pInp.value = effProd;
+    const cSel = document.getElementById("studio-country-selector");
+    if (cSel) cSel.value = effProd;
+  }
+
   // 5. Durations & Hours Resolution
   const rawDur = inputs.duration_seconds ?? inputs.duration_secs ?? inputs.requested_duration_seconds ?? vid.duration_seconds ?? vid.durationSeconds;
   const isAuto = (rawDur === -1 || rawDur === "-1" || rawDur === "auto" || rawDur === 0 || rawDur === "0");
@@ -178,71 +187,58 @@ function populateProductionControlsFromEpisode(rawVid) {
 }
 
 function setProductionControlsViewOnly(isViewOnly, episodeId) {
+  const panel = document.getElementById("studio-production-controls-panel");
   const banner = document.getElementById("studio-view-only-banner");
   const bannerText = document.getElementById("studio-view-only-text");
   const btnProduce = document.getElementById("btn-guided-generate");
   const btnProduceText = document.getElementById("btn-produce-text");
-  const btnResume = document.getElementById("btn-studio-resume");
   const btnReset = document.getElementById("btn-studio-reset");
   const btnStop = document.getElementById("btn-studio-stop");
 
   if (banner) {
     banner.classList.toggle("hidden", !isViewOnly);
-    if (isViewOnly && bannerText) bannerText.textContent = `Episode ${episodeId || ''} Loaded (View-Only Mode)`;
+    if (isViewOnly && bannerText) bannerText.textContent = `Episode ${episodeId || ''} Selected (Controls Locked)`;
   }
 
-  // Configure Action Buttons
-  [btnReset, btnStop].forEach(btn => {
+  // Configure Action Buttons in Production Controls
+  [btnReset, btnStop, btnProduce].forEach(btn => {
     if (btn) {
-      btn.disabled = false;
-      btn.classList.remove("opacity-40", "cursor-not-allowed", "pointer-events-none");
+      btn.disabled = isViewOnly;
+      btn.classList.toggle("opacity-40", isViewOnly);
+      btn.classList.toggle("cursor-not-allowed", isViewOnly);
+      btn.classList.toggle("pointer-events-none", isViewOnly);
     }
   });
   if (btnProduce) {
-    btnProduce.disabled = false;
-    btnProduce.classList.remove("opacity-40", "cursor-not-allowed", "pointer-events-none");
-    btnProduce.title = isViewOnly ? "Start producing a new sequential episode" : "Produce / Test Video";
+    btnProduce.title = isViewOnly ? "Controls locked while viewing an episode. Click New Video to create new content." : "Produce / Test Video";
     if (btnProduceText) {
-      btnProduceText.textContent = isViewOnly ? "+ New Episode" : ((typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test") ? `Run Test (${typeof activeShotsCount !== "undefined" ? activeShotsCount : 1} Shots)` : "Produce Master Video");
+      btnProduceText.textContent = isViewOnly ? "Controls Locked" : ((typeof activeExecutionMode !== "undefined" && activeExecutionMode === "test") ? `Run Test (${typeof activeShotsCount !== "undefined" ? activeShotsCount : 1} Shots)` : "Produce Master Video");
     }
   }
-  if (btnResume) {
-    btnResume.classList.toggle("ring-2", isViewOnly);
-    btnResume.classList.toggle("ring-emerald-500", isViewOnly);
-    btnResume.classList.toggle("bg-emerald-600/20", isViewOnly);
-    btnResume.classList.toggle("text-emerald-400", isViewOnly);
-  }
 
-  // Disable/Enable panel input fields
+  // Disable/Enable all panel input and dropdown fields
   const controlIds = [
-    "studio-test-shots", "studio-test-stretch",
-    "studio-prod-shots", "studio-stretch-hours",
-    "studio-custom-minutes-input",
-    "studio-toggle-bgm", "studio-toggle-voice-over",
-    "studio-toggle-tts", "studio-toggle-dual-editions",
-    "studio-toggle-fallback", "studio-fps",
-    "studio-profile-selector"
+    "studio-test-shots", "studio-test-stretch", "studio-prod-shots", "studio-stretch-hours",
+    "studio-custom-minutes-input", "studio-toggle-bgm", "studio-toggle-voice-over",
+    "studio-toggle-tts", "studio-toggle-dual-editions", "studio-toggle-fallback", "studio-fps",
+    "studio-profile-selector", "studio-tts-model", "btn-studio-save-pref", "btn-studio-reset-pref"
   ];
   controlIds.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.disabled = isViewOnly;
-  });
-
-  // Segmented mode & strategy buttons
-  ["btn-exec-test", "btn-exec-prod", "btn-pipe-auto", "btn-pipe-manual"].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) {
-      btn.style.pointerEvents = isViewOnly ? "none" : "auto";
-      btn.style.opacity = isViewOnly ? "0.6" : "1.0";
+    if (el) {
+      el.disabled = isViewOnly;
+      el.classList.toggle("opacity-50", isViewOnly);
+      el.classList.toggle("cursor-not-allowed", isViewOnly);
     }
   });
 
-  // Tier cards
-  ["tier-card-low_cost", "tier-card-balanced", "tier-card-cinematic"].forEach(id => {
-    const card = document.getElementById(id);
-    if (card) {
-      card.style.pointerEvents = isViewOnly ? "none" : "auto";
-      card.style.opacity = isViewOnly ? "0.75" : "1.0";
+  // Segmented mode, strategy, and tier buttons
+  ["btn-exec-test", "btn-exec-prod", "btn-pipe-auto", "btn-pipe-manual", "tier-card-low_cost", "tier-card-balanced", "tier-card-cinematic"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.pointerEvents = isViewOnly ? "none" : "auto";
+      el.style.opacity = isViewOnly ? "0.45" : "1.0";
+      el.classList.toggle("cursor-not-allowed", isViewOnly);
     }
   });
 

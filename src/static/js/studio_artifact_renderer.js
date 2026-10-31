@@ -446,10 +446,11 @@ function renderKeyframesList(vid) {
   if (!isProc && completedKfs.length === 0 && rawKfs.length === 0) {
     const rawStems = (vid.audio_stems && vid.audio_stems.length > 0) ? vid.audio_stems : (vid.artifacts?.audio_stems || []);
     const hasAudio = Boolean(rawStems.length > 0);
-    const hasScript = Boolean(vid.script || vid.story_topic || vid.title || vid.screenplay);
-    if (hasAudio || hasScript) {
+    const screenplayReady = Boolean(vid.screenplay || vid.raw_screenplay || (vid.script && vid.script.chapters));
+    const isReadyForPhotos = isDocFmt ? screenplayReady : (hasAudio || Boolean(vid.script || vid.story_topic));
+    if (isReadyForPhotos) {
       c.innerHTML = `<div class="col-span-4 p-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-300 dark:border-blue-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
-        <div class="flex items-center gap-1.5"><i class="fa-solid fa-images text-blue-600 dark:text-blue-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-blue-950 dark:text-white">${hasAudio ? 'Stage 2 Audio Ready' : 'Stage 1 Script Ready'}</span><span class="text-[7px] text-blue-700 dark:text-blue-300">Choose image engine:</span></div></div>
+        <div class="flex items-center gap-1.5"><i class="fa-solid fa-images text-blue-600 dark:text-blue-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-blue-950 dark:text-white">${isDocFmt ? 'Stage 3 Screenplay Ready' : (hasAudio ? 'Stage 2 Audio Ready' : 'Stage 1 Script Ready')}</span><span class="text-[7px] text-blue-700 dark:text-blue-300">Choose image engine:</span></div></div>
         <div class="flex items-center gap-1">
           <button type="button" onclick="advanceToKeyframesStage(currentActiveInspectorEpisode, 'gemini', true)" class="px-1.5 py-1 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow-sm active:scale-95" title="Generate with Google Imagen 3 (Gemini)"><i class="fa-solid fa-sparkles text-[7px]"></i><span>Gemini (Imagen 3)</span></button>
           <button type="button" onclick="advanceToKeyframesStage(currentActiveInspectorEpisode, 'flux_dev', true)" class="px-1.5 py-1 bg-white dark:bg-slate-900 hover:bg-slate-100 text-slate-800 dark:text-gray-200 rounded-lg text-[8px] font-bold border border-slate-300 dark:border-slate-700 transition flex items-center gap-1 shadow-sm active:scale-95" title="Generate with FLUX.1-dev (Test Mode)"><i class="fa-solid fa-vial text-blue-500 text-[7px]"></i><span>Test (FLUX Dev)</span></button>
@@ -458,7 +459,7 @@ function renderKeyframesList(vid) {
         </div>
       </div>`;
     } else {
-      c.innerHTML = `<div class="col-span-4 h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-2 shadow-sm"><i class="fa-solid fa-images text-blue-600 dark:text-blue-400 text-xs"></i><span class="text-[9px] font-bold text-slate-900 dark:text-white">No Keyframe Photos Yet</span><span class="text-[7px] text-slate-500 font-mono">(${numShots} Shot${numShots > 1 ? 's' : ''} via FLUX Dev / Pro / Z-Image)</span></div>`;
+      c.innerHTML = `<div class="col-span-4 h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-2 shadow-sm"><i class="fa-solid fa-images text-blue-600 dark:text-blue-400 text-xs"></i><span class="text-[9px] font-bold text-slate-900 dark:text-white">No Keyframe Photos Yet</span><span class="text-[7px] text-slate-500 font-mono">(${isDocFmt ? 'Awaiting Stage 3 Screenplay' : 'FLUX Dev / Pro / Z-Image'})</span></div>`;
     }
     return;
   }
@@ -723,11 +724,12 @@ function renderAudioStemsList(vid) {
   // If not processing and no target stems yet (for Doc: no BGM stem yet; for Relax: no stems at all)
   const missingTargetStems = isDoc ? (!sunoStem && !velvetStem) : (rawStems.length === 0);
   if (!isProc && missingTargetStems) {
-    const hasScript = Boolean(vid.script || vid.story_topic || vid.title || vid.screenplay);
-    if (hasScript) {
+    const spReady = Boolean(vid.screenplay || vid.raw_screenplay || (vid.script && vid.script.chapters));
+    const isReadyForBgm = isDoc ? spReady : Boolean(vid.script || vid.story_topic || vid.title);
+    if (isReadyForBgm) {
       if (isDoc) {
         c.innerHTML = `<div class="col-span-2 p-1.5 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/40 dark:to-blue-950/40 border border-cyan-300 dark:border-cyan-600/50 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
-          <div class="flex items-center gap-1.5"><i class="fa-solid fa-music text-cyan-600 dark:text-cyan-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-cyan-950 dark:text-white">Stage 5 BGM Soundtrack</span><span class="text-[7px] text-cyan-700 dark:text-cyan-300">Synthesize BGM soundtrack:</span></div></div>
+          <div class="flex items-center gap-1.5"><i class="fa-solid fa-music text-cyan-600 dark:text-cyan-400 text-xs"></i><div class="flex flex-col"><span class="text-[9px] font-bold text-cyan-950 dark:text-white">Stage 3 Screenplay Ready</span><span class="text-[7px] text-cyan-700 dark:text-cyan-300">Synthesize BGM soundtrack:</span></div></div>
           <button type="button" onclick="advanceToBgmStage(currentActiveInspectorEpisode, true)" class="px-2 py-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 text-white rounded-lg text-[8px] font-bold transition flex items-center gap-1 shadow active:scale-95" title="Synthesize BGM via Suno v3.5"><i class="fa-solid fa-music text-[7px]"></i><span>Generate Suno BGM ➔</span></button>
         </div>`;
       } else {
@@ -741,7 +743,7 @@ function renderAudioStemsList(vid) {
         </div>`;
       }
     } else {
-      c.innerHTML = `<div class="col-span-2 h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 px-2 shadow-sm"><i class="fa-solid fa-wave-square text-cyan-600 dark:text-cyan-400 text-xs"></i><span class="text-[9px] font-bold text-slate-900 dark:text-white">No Audio Stems Yet</span><span class="text-[7px] text-slate-500 font-mono">(Azure TTS, Gemini Audio, Kokoro, Suno &amp; 3D Velvet DSP)</span></div>`;
+      c.innerHTML = `<div class="col-span-2 h-9 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 px-2 shadow-sm"><i class="fa-solid fa-hourglass-half text-slate-400 text-xs"></i><span class="text-[9px] font-semibold text-slate-700 dark:text-slate-300">${isDoc ? 'Awaiting Stage 3 Screenplay' : 'Awaiting Stage 1 Storyboard'}</span><span class="text-[7px] text-slate-400 font-mono">(Audio stems require completed screenplay)</span></div>`;
     }
     return;
   }

@@ -67,7 +67,7 @@ def test_mock_mode_deterministic_story_generation():
             archetype="country_overview",
         )
         assert story["destination_entity"] == "Slovenia"
-        assert len(story["chapters"]) == 21
+        assert len(story["chapters"]) == 22
         assert story["gemini_story_inputs"]["model"] == "offline_deterministic_mock"
 
 
@@ -111,3 +111,33 @@ def test_scan_documentary_artifacts_syncs_pipeline_state_stages(tmp_path):
         )
         assert res2["pipeline_state"]["stages_completed"]["narration"] is True
 
+
+
+def test_network_episodes_scanner_detects_documentary_format(tmp_path):
+    """Verify that network_episodes_scanner sets format and format_slug to documentary."""
+    import json
+    from src.api.routes.network_episodes_scanner import scan_all_channel_episodes
+
+    ep_dir = tmp_path / "user-test" / "networks" / "euro_discovery" / "documentary" / "switzerland" / "ep-001"
+    ep_dir.mkdir(parents=True)
+    (ep_dir / "raw_gemini_story.json").write_text(json.dumps({
+        "title": "Switzerland Documentary",
+        "destination_entity": "Switzerland",
+        "chapters": [{"chapter_index": 1, "chapter_title": "Prologue", "narration": "Switzerland test"}]
+    }))
+    (ep_dir / "user_inputs.json").write_text(json.dumps({
+        "prompt": "Switzerland",
+        "production_name": "Switzerland",
+        "genre": "doc/nations",
+        "channel_id": "euro_discovery",
+        "episode_id": "EP-001",
+        "format": "documentary",
+        "format_slug": "documentary",
+    }))
+
+    episodes = scan_all_channel_episodes(tmp_path, user_id="user-test")
+    assert len(episodes) == 1
+    assert episodes[0]["format"] == "documentary"
+    assert episodes[0]["format_slug"] == "documentary"
+    assert episodes[0]["title"] == "Switzerland Documentary"
+    assert episodes[0]["story"] is not None

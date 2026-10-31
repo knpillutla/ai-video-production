@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 from src.studios.documentary_studio.doc_syllabus_catalog import (
     ALMANAC_35_KEYS,
     BROADCAST_21_KEYS,
+    BROADCAST_22_KEYS,
     CORE_10_KEYS,
     PILLARS_ALMANAC,
 )
@@ -17,6 +18,7 @@ from src.studios.documentary_studio.doc_syllabus_catalog import (
 # Backwards-compatibility aliases
 PILLARS: Dict[str, Dict[str, str]] = PILLARS_ALMANAC
 ALL_21_KEYS: List[str] = BROADCAST_21_KEYS
+ALL_22_KEYS: List[str] = BROADCAST_22_KEYS
 ALL_35_KEYS: List[str] = ALMANAC_35_KEYS
 
 PRINCIPAL_15_KEYS: List[str] = [
@@ -47,8 +49,8 @@ def build_country_syllabus_directive(
         keys = list(ALMANAC_35_KEYS)
         cadence_label = "DEFINITIVE SOVEREIGN ALMANAC (ALL 35 CHAPTERS - 5 THEMATIC ACTS)"
     elif force_all_21 or duration_seconds is None or duration_seconds <= 0 or duration_seconds == -1:
-        keys = list(BROADCAST_21_KEYS)
-        cadence_label = "COMPLETE MASTER DOSSIER (ALL 21 CHAPTERS - UNABRIDGED FULL STORY)"
+        keys = list(BROADCAST_22_KEYS)
+        cadence_label = "COMPLETE MASTER DOSSIER (ALL 22 CHAPTERS - UNABRIDGED FULL STORY)"
     elif duration_seconds <= 300.0:
         keys = list(CORE_10_KEYS)
         cadence_label = "SHORT MASTER DOSSIER (10 CORE CHAPTERS)"
@@ -56,8 +58,8 @@ def build_country_syllabus_directive(
         keys = list(PRINCIPAL_15_KEYS)
         cadence_label = "STANDARD EXTENDED DOSSIER (15 PRINCIPAL CHAPTERS)"
     else:
-        keys = list(BROADCAST_21_KEYS)
-        cadence_label = "25-MINUTE BROADCAST MASTER DOSSIER (21 COMPLETE CHAPTERS)"
+        keys = list(BROADCAST_22_KEYS)
+        cadence_label = "25-MINUTE BROADCAST MASTER DOSSIER (22 COMPLETE CHAPTERS)"
 
     # Prioritize user-specified focus areas (filter common stop words)
     stop_words = {"and", "the", "in", "of", "to", "for", "a", "an", "soul", "dossier", "complete", "country", "national"}

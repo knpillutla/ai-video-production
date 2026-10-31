@@ -1117,31 +1117,12 @@ def render_perspective_drone_clip_sync(
     if lower_third_hud and isinstance(lower_third_hud, dict):
         try:
             if lower_third_hud.get("is_documentary"):
-                from src.studios.documentary_studio.doc_overlay_service import (
-                    create_documentary_lower_third_overlay,
-                    create_documentary_chapter_title_card,
-                    create_documentary_fact_badge_overlay,
-                )
-                rgba = create_documentary_lower_third_overlay(
-                    attraction_name=lower_third_hud.get("attraction_name", "Landmark"),
-                    sub_location=lower_third_hud.get("sub_location") or lower_third_hud.get("timing_text"),
-                    target_res=output_size,
-                    position=lower_third_hud.get("position", "bottom_left"),
-                )
-                if lower_third_hud.get("chapter_title"):
-                    c_rgba = create_documentary_chapter_title_card(
-                        chapter_title=lower_third_hud.get("chapter_title"),
-                        chapter_subtitle=lower_third_hud.get("chapter_subtitle"),
-                        key_stats=lower_third_hud.get("chapter_stats"),
-                        target_res=output_size,
-                    )
-                    chap_bgr = cv2.cvtColor(c_rgba, cv2.COLOR_RGBA2BGR)
-                    chap_alpha = (c_rgba[:, :, 3] / 255.0).astype(np.float32)
-
-                if lower_third_hud.get("fact_badge"):
-                    f_rgba = create_documentary_fact_badge_overlay(lower_third_hud["fact_badge"], target_res=output_size)
-                    fact_bgr = cv2.cvtColor(f_rgba, cv2.COLOR_RGBA2BGR)
-                    fact_alpha = (f_rgba[:, :, 3] / 255.0).astype(np.float32)
+                loc_name = lower_third_hud.get("location_name") or lower_third_hud.get("attraction_name") or lower_third_hud.get("location_hub")
+                if loc_name:
+                    from src.studios.documentary_studio.doc_overlay_service import create_documentary_location_lower_third
+                    rgba = create_documentary_location_lower_third(location_name=loc_name, target_res=output_size)
+                else:
+                    rgba = None
             else:
                 from src.services.map_route_engine import create_lower_third_hud_overlay
                 rgba = create_lower_third_hud_overlay(
@@ -1153,8 +1134,8 @@ def render_perspective_drone_clip_sync(
                     transit_text=lower_third_hud.get("transit_text"),
                 )
 
-            # Top-Right Cartographic / Route Map Locator (Active for tours or doc geography chapters)
-            if lower_third_hud.get("show_map_locator") or (lower_third_hud.get("is_documentary") and any(w in str(lower_third_hud.get("chapter_title", "")).lower() for w in ("geography", "border", "climate", "coast", "area"))):
+            # Top-Right Cartographic / Route Map Locator (tour itineraries only; removed for documentaries)
+            if lower_third_hud.get("show_map_locator") and not lower_third_hud.get("is_documentary"):
                 from src.studios.documentary_studio.doc_cartography_service import create_cartographic_locator_overlay
                 c_query = lower_third_hud.get("country_entity") or lower_third_hud.get("sub_location") or lower_third_hud.get("attraction_name") or "France"
                 m_rgba = create_cartographic_locator_overlay(c_query, target_res=output_size)
@@ -1170,8 +1151,9 @@ def render_perspective_drone_clip_sync(
                 qr_bgr = cv2.cvtColor(q_rgba, cv2.COLOR_RGBA2BGR)
                 qr_alpha = (q_rgba[:, :, 3] / 255.0).astype(np.float32)
 
-            hud_bgr = cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGR)
-            hud_alpha = (rgba[:, :, 3] / 255.0).astype(np.float32)
+            if rgba is not None:
+                hud_bgr = cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGR)
+                hud_alpha = (rgba[:, :, 3] / 255.0).astype(np.float32)
         except Exception:
             hud_bgr = None
             chap_bgr = None

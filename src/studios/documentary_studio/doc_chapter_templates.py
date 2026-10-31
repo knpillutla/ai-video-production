@@ -7,11 +7,17 @@ from typing import Dict, Tuple
 
 CHAPTER_TEMPLATES: Dict[str, Tuple[str, str, str, str]] = {
     # --- ACT I: ORIGINS, SOVEREIGNTY & LAND ---
+    "prologue": (
+        "Prologue & The Sovereign Expedition of {dest_name}",
+        "🌍 {dest_name}: Sovereign Expedition",
+        "{area_km2} • Pop: {population} • {hdi_rank}",
+        "{dest_name}. A sovereign nation sculpted by monumental landscapes and forged in ancient resilience, spanning {area_km2} and home to {population}. Behind its breathtaking natural beauty lies a living society balancing centuries of proud heritage with cutting-edge 21st-century innovation. In this definitive 360-degree documentary expedition, we uncover the complete story of {dest_name}—from its ancient foundational citadels and primeval biospheres, to its industrial powerhouses, cultural soul, and future horizons.",
+    ),
     "identity": (
-        "The Sovereign Spirit & Constitutional Dawn of {dest_name}",
-        "🏛️ {official_name}",
-        "{head_of_state} • {hdi_rank}",
-        "Officially designated as {official_name}, this sovereign nation spans {area_km2} across Europe. Home to {population} and ranked {hdi_rank} on the Human Development Index, its constitutional democracy is guided by {head_of_state}, uniting centuries of historical self-determination with modern civic resilience.",
+        "Origins, Independence & Constitutional Dawn of {dest_name}",
+        "🏛️ Sovereignty Established: {official_name}",
+        "{head_of_state} • {parliament}",
+        "Officially proclaimed as {official_name}, the sovereign state was forged through centuries of historical self-determination and constitutional rebirth. Guided by {head_of_state} and the legislative authority of {parliament}, the nation's independence milestone cemented its sovereign self-rule, establishing an enduring democratic covenant rooted in ancestral fortitude and civic resilience.",
     ),
     "ancient_history": (
         "Prehistoric Settlements, Bronze Age & Medieval Kingdoms",

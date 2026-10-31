@@ -120,19 +120,15 @@ class LocalProduceResponse(BaseModel):
 def _reserve_next_episode_id(
     user_id: str,
     channel_id: str,
-    format_slug: Optional[str] = None,
-    production_name: Optional[str] = None,
+    format_slug: str | None = None,
+    production_name: str | None = None,
 ) -> str:
-    """Reserve next sequential episode ID code strictly scoped to production_name/title (starts at EP-001)."""
-    clean_fmt = re.sub(r"[^a-zA-Z0-9_-]", "_", str(format_slug or 'documentary').lower()).strip("_")
-    clean_prod = re.sub(r"[^a-zA-Z0-9_-]", "_", str(production_name or '').lower()).strip("_")
-    if not clean_prod or clean_prod in ("standalone", "none", "documentary", "relaxation"):
-        return "EP-001"
-
-    prod_dir = storage_service.get_channel_path(user_id, channel_id) / clean_fmt / clean_prod
+    """Reserve next sequential episode ID code across the channel and format (starts at EP-001)."""
+    clean_fmt = re.sub(r"[^a-zA-Z0-9_-]", "_", str(format_slug or "documentary").lower()).strip("_")
+    fmt_dir = storage_service.get_channel_path(user_id, channel_id) / clean_fmt
     highest = 0
-    if prod_dir.exists() and prod_dir.is_dir():
-        for sub in prod_dir.iterdir():
+    if fmt_dir.exists() and fmt_dir.is_dir():
+        for sub in fmt_dir.rglob("ep-*"):
             if sub.is_dir():
                 m = re.search(r"ep[-_]?(\d+)", sub.name, re.IGNORECASE)
                 if m:
@@ -219,6 +215,26 @@ async def produce_video_locally(req: LocalProduceRequest):
         logger.info(f"api_travel_shots_cadence: duration={capped_duration}s -> num_shots=-1 (autonomous cadence)")
 
     req_fmt = str(req.format_slug or req.format or "").lower()
+    if req_fmt == "documentary" or req_g_lower.startswith(("doc", "nations")) or eff_channel_id == "euro_discovery":
+        from src.studios.documentary_studio.doc_stage_orchestrator import dispatch_documentary_stage
+        target_stage = "story" if eff_script_only else (
+            "photos" if eff_photos_only else (
+                "motion" if eff_motion_only else (
+                    "master" if eff_master_only else (
+                        "narration" if eff_audio_only else "story"
+                    )
+                )
+            )
+        )
+        doc_res = await dispatch_documentary_stage(req, stage_name=target_stage)
+        eff_stage = doc_res.get("current_stage", 1)
+        job_manager.update_job(
+            job_id=job_id, stage=eff_stage, progress=100 if eff_stage >= 7 else eff_stage * 15,
+            status="ready", keyframes=doc_res.get("keyframes", []),
+            motion_clips=doc_res.get("motion_clips", []), audio_stems=doc_res.get("audio_stems", []),
+        )
+        return LocalProduceResponse(**doc_res)
+
     if req_fmt == "music_video" or req_g_lower.startswith(("music/", "dance/")):
         from src.studios.music_video_studio.music_pipeline import MusicVideoPipeline
         pipe = MusicVideoPipeline(

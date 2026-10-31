@@ -45,7 +45,7 @@ def generate_gemini_documentary_story(
         )
 
     is_encyclopedia = "encyclopedia" in (genre or "").lower() or (archetype or "").lower() == "country_encyclopedia"
-    target_chapters = 35 if is_encyclopedia else 21
+    target_chapters = 35 if is_encyclopedia else 22
     eff_arch = "country_encyclopedia" if is_encyclopedia else (archetype or "country_overview")
 
     blueprint = get_prompt_blueprint("documentary", genre, sub_genre, eff_arch, stage="story")
@@ -56,7 +56,23 @@ def generate_gemini_documentary_story(
         f"MANDATORY CONTRACT: Every single chapter narration MUST include famous, specific real-world proper names "
         f"and examples (capital city & parliament, top 5 universities by name, UNESCO citadels, mountain ranges, regional cities, "
         f"traditional gastronomy, celebrated artists, traditional music, national parks, and beaches).\n"
-        f"Output MUST be a single, strict JSON object with fields: title, destination_entity, synopsis, capital, population, "
+        f"MANDATORY PROLOGUE & SOVEREIGNTY SEPARATION (CHAPTERS 1 & 2):\n"
+        f"- Chapter 1 ('prologue'): MUST open with '{destination}' as its very first word. 70-80 words establishing national character, central paradox, and declaring the complete {target_chapters}-chapter roadmap.\n"
+        f"- Chapter 2 ('identity'): 70-80 words dedicated exclusively to the birth of the sovereign nation—ancient founding cradle, when and how it achieved independence, and constitutional democracy.\n"
+        f"MANDATORY CAPITAL CITY DECLARATION (CHAPTER 3 'capital_governance'):\n"
+        f"- The narration MUST explicitly declare that the city is the capital of {destination} (e.g. 'Oslo, the sovereign capital city of {destination},...' or 'Serving as the capital of {destination}, Oslo...'). Never state the city name without explicitly informing viewers that it is the nation's capital city.\n"
+        f"MANDATORY LOCATION FIRST-WORD ANCHOR: For every single chapter, the very first word (or opening phrase) "
+        f"of 'narration' MUST be the specific location or landmark name (Chapter 1: '{destination}'; Chapter 2+: the specific landmark/cradle/city).\n"
+        f"CINEMATIC NARRATION DIRECTIVE (BBC / NATGEO CADENCE):\n"
+        f"- Target 70-85 evocative words per chapter (~28-32s spoken broadcast time).\n"
+        f"- Enforce variable dramatic cadence: alternate punchy 3-6 word phrases with sweeping lyrical clauses. Avoid dry Wikipedia lists.\n"
+        f"- Layer sensory and tactile textures (whistling wind, echoing bronze bells, biting frost, sizzling cuisine, hum of machinery).\n"
+        f"- Frame each chapter with a curiosity hook, dramatic contrast, or surprising world record.\n"
+        f"HIGH-CTR YOUTUBE PACKAGING MANDATE:\n"
+        f"- Output 'youtube_title': Analyze the story's core national paradox or anomaly to author a compelling, high-CTR YouTube title (e.g. 'The Secret Nation Out-Producing the World's Superpowers — Slovakia 4K'). No plain titles!\n"
+        f"- Output 'thumbnail_headline': Exactly 2 to 4 words. Punchy mobile power hook (e.g. 'EUROPE\\'S SECRET').\n"
+        f"- Output 'thumbnail_variants': 3 distinct psychological testing angles (paradox, mystery, survival).\n"
+        f"Output MUST be a single, strict JSON object with fields: title, youtube_title, thumbnail_headline, thumbnail_variants, destination_entity, synopsis, capital, population, "
         f"area_km2, total_chapters ({target_chapters}), and chapters array. Each chapter must have: chapter_index, chapter_key, "
         f"chapter_title, chapter_subtitle, fact_badge, chapter_stats, location_hub, origin_coords, narration, visual_directive."
     )
@@ -127,7 +143,7 @@ def build_raw_documentary_story(
     if is_mock_mode():
         facts = get_country_facts(dest)
         is_encyclopedia = "encyclopedia" in (genre or "").lower() or (archetype or "").lower() == "country_encyclopedia"
-        target_ch = 35 if is_encyclopedia else 21
+        target_ch = 35 if is_encyclopedia else 22
         chapters = generate_sovereign_chapters(
             destination=dest,
             custom_prompt=custom_prompt,
@@ -136,8 +152,13 @@ def build_raw_documentary_story(
         )
         title = f"{dest}: Sovereign Heritage, Living Culture & {len(chapters)} Wonders"
         synopsis = f"An authoritative 360° BBC-grade educational documentary uncovering the history and living culture of {dest}."
+        from src.studios.documentary_studio.doc_curiosity_title_service import derive_contextual_doc_titles
+        ctr_title, thumb_head, thumb_vars = derive_contextual_doc_titles(dest, title, synopsis)
         return {
             "title": title,
+            "youtube_title": ctr_title,
+            "thumbnail_headline": thumb_head,
+            "thumbnail_variants": thumb_vars,
             "destination_entity": dest,
             "genre": genre,
             "synopsis": synopsis,
@@ -181,12 +202,33 @@ def build_raw_documentary_story(
     return gemini_story
 
 
+def _sanitize_narration_chapter_count(story: Dict[str, Any]) -> Dict[str, Any]:
+    """Guarantees voiceover narration never mentions chapter numbers or chapter counts."""
+    import re
+    pattern = re.compile(
+        r"\b(?:across\s+)?(?:twenty-two|22|twenty\s+two)\s+(?:comprehensive\s+)?chapters,?\s*",
+        re.IGNORECASE
+    )
+    for ch in story.get("chapters", []):
+        for k in ("narration", "narration_text"):
+            if ch.get(k):
+                text = ch[k]
+                text = pattern.sub("", text)
+                text = re.sub(r"^\s*,\s*", "", text)
+                text = re.sub(r"\s{2,}", " ", text).strip()
+                if text and text[0].islower():
+                    text = text[0].upper() + text[1:]
+                ch[k] = text
+    return story
+
+
 def persist_raw_documentary_story(
     episode_dir: Path,
     story_data: Dict[str, Any],
 ) -> Path:
     """Persists raw_gemini_story.json (untouched) & gemini_story_inputs.json to the target episode directory."""
     episode_dir.mkdir(parents=True, exist_ok=True)
+    story_data = _sanitize_narration_chapter_count(story_data)
     story_path = episode_dir / "raw_gemini_story.json"
     story_path.write_text(json.dumps(story_data, indent=2, ensure_ascii=False), encoding="utf-8")
     g_inputs = {
